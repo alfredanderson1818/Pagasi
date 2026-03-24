@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAGASI — Financiamiento de Motos</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,300;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F7F5F2;
+  --surface:#FFFFFF;
+  --surface2:#F0EDE8;
+  --surface3:#E8E4DE;
+  --border:#E2DDD6;
+  --border2:#D4CFC7;
+  --text:#1A1714;
+  --text2:#6B6560;
+  --text3:#A09A93;
+  --accent:#E8541A;
+  --accent-light:#FDF1EC;
+  --accent2:#2563EB;
+  --accent2-light:#EFF4FF;
+  --green:#16A34A;
+  --green-light:#F0FDF4;
+  --red:#DC2626;
+  --red-light:#FEF2F2;
+  --amber:#D97706;
+  --amber-light:#FFFBEB;
+  --purple:#7C3AED;
+  --purple-light:#F5F3FF;
+  --teal:#0891B2;
+  --teal-light:#F0FDFF;
+  --shadow-sm:0 1px 3px rgba(26,23,20,0.06),0 1px 2px rgba(26,23,20,0.04);
+  --shadow:0 4px 16px rgba(26,23,20,0.08),0 2px 6px rgba(26,23,20,0.04);
+  --shadow-lg:0 20px 48px rgba(26,23,20,0.12),0 8px 20px rgba(26,23,20,0.06);
+  --r:14px;--r-sm:9px;--r-lg:20px;--r-xl:28px;
+  --font:'Plus Jakarta Sans',sans-serif;
+  --font-display:'Fraunces',serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--text);font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ── LAYOUT ── */
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:252px;min-width:252px;background:var(--text);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.sidebar::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(232,84,26,0.2) 0%,transparent 70%);pointer-events:none}
+.sb-logo{padding:22px 20px 18px;display:flex;align-items:center;gap:12px}
+.sb-logomark{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),#FF7A47);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff;flex-shrink:0;box-shadow:0 4px 12px rgba(232,84,26,0.4)}
+.sb-brand{font-family:var(--font-display);font-weight:600;font-size:20px;color:#fff;letter-spacing:-0.3px}
+.sb-brand span{color:var(--accent)}
+.sb-tagline{font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;text-transform:uppercase;padding:0 20px 16px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.sb-nav{flex:1;overflow-y:auto;padding:12px 10px}
+.sb-section{margin-bottom:6px}
+.sb-section-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:10px 10px 5px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r-sm);cursor:pointer;transition:all .18s;color:rgba(255,255,255,0.55);position:relative;font-size:13px;font-weight:500}
+.sb-item:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85)}
+.sb-item.active{background:rgba(232,84,26,0.18);color:#fff}
+.sb-item.active .sb-ico{color:var(--accent)}
+.sb-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-badge{background:var(--accent);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:20px;margin-left:auto}
+.sb-footer{padding:12px 10px;border-top:1px solid rgba(255,255,255,0.06)}
+.sb-user{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;transition:all .18s}
+.sb-user:hover{background:rgba(255,255,255,0.05)}
+.sb-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#FF7A47);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0}
+.sb-uname{font-size:13px;font-weight:600;color:#fff}
+.sb-urole{font-size:10px;color:var(--accent);font-weight:600;letter-spacing:0.5px}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:62px;display:flex;align-items:center;gap:14px;flex-shrink:0;box-shadow:var(--shadow-sm)}
+.tb-title{font-family:var(--font-display);font-weight:600;font-size:19px;color:var(--text);flex:1;letter-spacing:-0.3px}
+.tb-actions{display:flex;align-items:center;gap:8px}
+.search-wrap{position:relative}
+.search-wrap input{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:8px 12px 8px 34px;font-size:13px;color:var(--text);font-family:var(--font);outline:none;width:240px;transition:all .2s}
+.search-wrap input:focus{border-color:var(--accent);background:var(--surface);width:280px}
+.search-wrap input::placeholder{color:var(--text3)}
+.search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none}
+.content{flex:1;overflow-y:auto;padding:26px 28px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--r-sm);border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font);transition:all .18s;white-space:nowrap;letter-spacing:-0.1px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#D4430D);color:#fff;box-shadow:0 2px 8px rgba(232,84,26,0.3)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(232,84,26,0.4)}
+.btn-primary:active{transform:translateY(0)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border)}
+.btn-secondary:hover{background:var(--surface3);border-color:var(--border2)}
+.btn-ghost{background:transparent;color:var(--text2);border:1.5px solid var(--border)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{background:var(--red-light);color:var(--red);border:1.5px solid rgba(220,38,38,0.15)}
+.btn-danger:hover{background:#fee2e2}
+.btn-success{background:var(--green-light);color:var(--green);border:1.5px solid rgba(22,163,74,0.15)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{width:34px;height:34px;padding:0;border-radius:8px;justify-content:center;flex-shrink:0}
+.notif-btn{position:relative}
+.notif-dot{position:absolute;top:6px;right:7px;width:7px;height:7px;background:var(--accent);border-radius:50%;border:2px solid var(--surface)}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:22px;box-shadow:var(--shadow-sm);transition:all .2s}
+.card:hover{box-shadow:var(--shadow)}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.card-title{font-weight:700;font-size:15px;color:var(--text);letter-spacing:-0.2px}
+.card-sub{font-size:12px;color:var(--text3);margin-top:2px}
+
+/* ── STAT CARDS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:20px;transition:all .2s;cursor:default;position:relative;overflow:hidden}
+.stat:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.stat-icon-wrap{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px}
+.stat-val{font-family:var(--font-display);font-weight:700;font-size:28px;letter-spacing:-1.5px;line-height:1;color:var(--text)}
+.stat-lbl{font-size:12px;color:var(--text3);margin-top:5px;font-weight:500}
+.stat-chg{font-size:11px;font-weight:700;margin-top:8px;display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px}
+.stat-chg.up{color:var(--green);background:var(--green-light)}
+.stat-chg.down{color:var(--red);background:var(--red-light)}
+.stat-chg.neutral{color:var(--amber);background:var(--amber-light)}
+.stat-deco{position:absolute;bottom:-16px;right:-10px;font-size:64px;opacity:0.05;pointer-events:none}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.2px}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-red{background:var(--red-light);color:var(--red)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-blue{background:var(--accent2-light);color:var(--accent2)}
+.badge-purple{background:var(--purple-light);color:var(--purple)}
+.badge-teal{background:var(--teal-light);color:var(--teal)}
+.badge-gray{background:var(--surface2);color:var(--text2)}
+.badge-orange{background:var(--accent-light);color:var(--accent)}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;margin:0 -22px;padding:0 22px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px 14px;font-size:10.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text3);border-bottom:1.5px solid var(--border)}
+td{padding:13px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);vertical-align:middle}
+tbody tr{transition:background .15s;cursor:default}
+tbody tr:hover td{background:var(--surface2)}
+tbody tr:last-child td{border-bottom:none}
+.td-main{color:var(--text);font-weight:600}
+.td-sm{font-size:12px;color:var(--text3)}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid.c3{grid-template-columns:1fr 1fr 1fr}
+.form-grid.c1{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:12px;font-weight:600;color:var(--text2)}
+.fi,.fs,.fta{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:all .2s;width:100%}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px rgba(232,84,26,0.1)}
+.fi::placeholder{color:var(--text3)}
+.fs{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23A09A93' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.fta{resize:vertical;min-height:78px}
+.form-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin:18px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(26,23,20,0.5);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-lg);width:100%;max-width:600px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:slideUp .22s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.modal-hd{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.modal-icon{width:42px;height:42px;border-radius:11px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.modal-title{font-family:var(--font-display);font-weight:600;font-size:18px;letter-spacing:-0.3px}
+.modal-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.modal-x{margin-left:auto;width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text2);transition:all .15s;flex-shrink:0}
+.modal-x:hover{background:var(--red-light);color:var(--red);border-color:transparent}
+.modal-body{padding:22px 24px;overflow-y:auto;flex:1}
+.modal-ft{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--surface2)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:3px;margin-bottom:20px}
+.tab{flex:1;padding:7px 12px;border-radius:7px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font);transition:all .18s;letter-spacing:0.2px}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
+.tab:hover:not(.active){color:var(--text2)}
+
+/* ── PROGRESS ── */
+.progress{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.progress-fill.orange{background:linear-gradient(90deg,var(--accent),#FF7A47)}
+.progress-fill.green{background:linear-gradient(90deg,var(--green),#22C55E)}
+.progress-fill.red{background:linear-gradient(90deg,var(--red),#F87171)}
+.progress-fill.blue{background:linear-gradient(90deg,var(--accent2),#60A5FA)}
+
+/* ── MOTO CARDS ── */
+.moto-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.moto-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:all .2s;cursor:pointer}
+.moto-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--border2)}
+.moto-card-top{background:linear-gradient(135deg,var(--text) 0%,#2D2622 100%);padding:20px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden}
+.moto-card-top::after{content:'🏍️';position:absolute;right:14px;bottom:-8px;font-size:62px;opacity:0.12;pointer-events:none}
+.moto-brand{font-family:var(--font-display);font-weight:600;font-size:17px;color:#fff}
+.moto-model{font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px}
+.moto-card-body{padding:16px}
+.moto-spec{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.moto-spec-item{background:var(--surface2);border-radius:8px;padding:8px 10px}
+.moto-spec-label{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:0.3px;text-transform:uppercase}
+.moto-spec-val{font-size:13px;font-weight:700;color:var(--text);margin-top:2px}
+.moto-card-ft{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)}
+.moto-price{font-family:var(--font-display);font-weight:600;font-size:18px;color:var(--accent);letter-spacing:-0.5px}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:56px 24px;color:var(--text3)}
+.empty-icon{font-size:48px;margin-bottom:14px;display:block}
+.empty-title{font-size:16px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:13px}
+
+/* ── CHART ── */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding:10px 0 0}
+.bar{flex:1;border-radius:6px 6px 0 0;transition:all .4s cubic-bezier(.4,0,.2,1);cursor:pointer;position:relative;min-height:4px}
+.bar:hover{opacity:0.85}
+.bar-label{text-align:center;font-size:10px;color:var(--text3);margin-top:6px;font-weight:600}
+.bar-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:var(--text2);white-space:nowrap}
+
+/* ── KPI ROW ── */
+.kpi{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border)}
+.kpi:last-child{border-bottom:none}
+.kpi-lbl{font-size:13px;color:var(--text2)}
+.kpi-val{font-size:14px;font-weight:700;color:var(--text)}
+
+/* ── LIST ITEMS ── */
+.list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;padding-right:2px}
+.list-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:11px;transition:all .15s;cursor:pointer}
+.list-item:hover{background:var(--surface3);border-color:var(--border2)}
+.list-item-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+
+/* ── MAP ── */
+.map-box{background:linear-gradient(135deg,#1e293b,#0f172a);border-radius:var(--r);height:340px;position:relative;overflow:hidden;border:1.5px solid var(--border)}
+.map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.06) 1px,transparent 1px);background-size:44px 44px}
+.map-dot{position:absolute;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer}
+.map-dot::before{content:'';position:absolute;inset:0;border-radius:50%;animation:ripple 2s infinite}
+.map-dot.g{background:#22C55E;box-shadow:0 0 8px #22C55E}
+.map-dot.g::before{background:rgba(34,197,94,0.3)}
+.map-dot.y{background:#F59E0B;box-shadow:0 0 8px #F59E0B}
+.map-dot.y::before{background:rgba(245,158,11,0.3)}
+.map-dot.r{background:#EF4444;box-shadow:0 0 8px #EF4444}
+.map-dot.r::before{background:rgba(239,68,68,0.3)}
+.map-tooltip{position:absolute;background:rgba(255,255,255,0.95);color:var(--text);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;transform:translate(-50%,-180%);white-space:nowrap;box-shadow:var(--shadow);pointer-events:none}
+@keyframes ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.8);opacity:0}}
+
+/* ── AMORT ── */
+.amort-hd{display:grid;grid-template-columns:.5fr 1.2fr 1fr 1fr 1fr 1fr;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3)}
+.amort-row{display:grid;grid-template-columns:.5fr 1.2fr 1fr 1fr 1fr 1fr;gap:8px;padding:9px 12px;border-radius:8px;font-size:12px;transition:background .12s}
+.amort-row:hover{background:var(--surface2)}
+.amort-row.paid{opacity:0.45}
+
+/* ── CONTRACT ── */
+.contract-doc{background:#fff;color:#1a1714;border-radius:var(--r);padding:36px;font-size:13px;line-height:1.75;box-shadow:var(--shadow)}
+.contract-doc h2{text-align:center;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.contract-doc h3{font-size:13px;font-weight:700;margin:18px 0 8px;color:#333}
+.contract-logo{text-align:center;font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--accent);letter-spacing:-1px;margin-bottom:4px}
+
+/* ── PAGE ANIM ── */
+.page{animation:pageIn .22s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── TOAST ── */
+.toasts{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-lg);animation:toastIn .25s ease;font-size:13px;font-weight:500;min-width:240px;pointer-events:all}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+.toast.info{border-left:3px solid var(--accent2)}
+.toast.warn{border-left:3px solid var(--amber)}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── GPS CONFIRM ── */
+.toggle-wrap{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm);border:1.5px solid var(--border)}
+.toggle{width:38px;height:22px;border-radius:11px;background:var(--border2);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:transform .2s}
+.toggle.on::after{transform:translateX(16px)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .sidebar{width:60px;min-width:60px}
+  .sb-brand,.sb-tagline,.sb-section-label,.sb-item span:last-child,.sb-badge,.sb-uname,.sb-urole{display:none}
+  .sb-item{justify-content:center}
+  .sb-user{justify-content:center}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ── HEADER DECORATIVE ── */
+.page-hero{background:linear-gradient(135deg,var(--text) 0%,#2D2622 100%);border-radius:var(--r);padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between}
+.page-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(232,84,26,0.3) 0%,transparent 65%);pointer-events:none}
+.page-hero-title{font-family:var(--font-display);font-weight:600;font-size:22px;color:#fff;letter-spacing:-0.5px}
+.page-hero-sub{font-size:13px;color:rgba(255,255,255,0.45);margin-top:4px}
+.page-hero-deco{font-size:56px;opacity:0.18;position:absolute;right:24px;bottom:-8px}
+</style>
+</head>
+<body>
+<div class="app">
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logomark">P</div>
+    <div class="sb-brand">PAGA<span>SI</span></div>
+  </div>
+  <div class="sb-tagline">Financiamiento de Motos</div>
+  <div class="sb-nav">
+    <div class="sb-section">
+      <div class="sb-section-label">Principal</div>
+      <div class="sb-item active" onclick="nav('dashboard')"><span class="sb-ico">◼</span><span>Dashboard</span></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Gestión</div>
+      <div class="sb-item" onclick="nav('clientes')"><span class="sb-ico">👤</span><span>Clientes</span></div>
+      <div class="sb-item" onclick="nav('motos')"><span class="sb-ico">🏍️</span><span>Motocicletas</span></div>
+      <div class="sb-item" onclick="nav('financiamientos')"><span class="sb-ico">📋</span><span>Financiamientos</span></div>
+      <div class="sb-item" onclick="nav('pagos')"><span class="sb-ico">💳</span><span>Pagos</span></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Operaciones</div>
+      <div class="sb-item" onclick="nav('cobranza')"><span class="sb-ico">🔔</span><span>Cobranza</span><span class="sb-badge">12</span></div>
+      <div class="sb-item" onclick="nav('contratos')"><span class="sb-ico">📄</span><span>Contratos</span></div>
+      <div class="sb-item" onclick="nav('gps')"><span class="sb-ico">📍</span><span>GPS Motos</span></div>
+      <div class="sb-item" onclick="nav('notificaciones')"><span class="sb-ico">💬</span><span>Notificaciones</span></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Análisis</div>
+      <div class="sb-item" onclick="nav('reportes')"><span class="sb-ico">📊</span><span>Reportes</span></div>
+      <div class="sb-item" onclick="nav('contabilidad')"><span class="sb-ico">🧾</span><span>Contabilidad</span></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Sistema</div>
+      <div class="sb-item" onclick="nav('configuracion')"><span class="sb-ico">⚙️</span><span>Configuración</span></div>
+      <div class="sb-item" onclick="nav('usuarios')"><span class="sb-ico">👥</span><span>Usuarios</span></div>
+    </div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar">JA</div>
+      <div><div class="sb-uname">Juan Admin</div><div class="sb-urole">Administrador</div></div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-title" id="pgTitle">Dashboard</div>
+    <div class="tb-actions">
+      <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar..."></div>
+      <button class="btn btn-ghost btn-icon notif-btn" onclick="nav('notificaciones')"><span>🔔</span><span class="notif-dot"></span></button>
+      <button class="btn btn-primary" id="topBtn" onclick="topAction()">＋ Nuevo</button>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-icon" id="modalIcon">🏍️</div>
+      <div><div class="modal-title" id="modalTitle">Modal</div><div class="modal-sub" id="modalSub"></div></div>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-ft" id="modalFt">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="modalSave" onclick="saveModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const S = {
+  motos: [
+    {id:1,marca:'Honda',modelo:'CB125F',anio:2024,vin:'1HGBH41JXMN109186',motor:'M123456',precio:2800,dealer:'AutoMoto Valencia',estado:'financiada',gps:true,cliente:'María González',color:'Rojo',cilindrada:'125cc',km:1240,notas:''},
+    {id:2,marca:'Yamaha',modelo:'YBR125',anio:2024,vin:'2HGBH41JXMN109187',motor:'M234567',precio:2600,dealer:'MotoMax Caracas',estado:'financiada',gps:true,cliente:'Carlos Rodríguez',color:'Azul',cilindrada:'125cc',km:3560,notas:''},
+    {id:3,marca:'Bajaj',modelo:'Pulsar 150',anio:2023,vin:'3HGBH41JXMN109188',motor:'M345678',precio:3100,dealer:'BajajVen Maracaibo',estado:'financiada',gps:false,cliente:'Ana Martínez',color:'Negro',cilindrada:'150cc',km:2100,notas:''},
+    {id:4,marca:'Honda',modelo:'Wave 110',anio:2024,vin:'4HGBH41JXMN109189',motor:'M456789',precio:2400,dealer:'AutoMoto Valencia',estado:'recuperada',gps:true,cliente:'Pedro Jiménez',color:'Blanco',cilindrada:'110cc',km:8700,notas:'Recuperada por mora'},
+    {id:5,marca:'Yamaha',modelo:'NMAX 155',anio:2024,vin:'5HGBH41JXMN109190',motor:'M567890',precio:4200,dealer:'MotoMax Caracas',estado:'financiada',gps:true,cliente:'Luisa Pérez',color:'Gris',cilindrada:'155cc',km:650,notas:''},
+    {id:6,marca:'AKT',modelo:'TT150',anio:2023,vin:'6HGBH41JXMN109191',motor:'M678901',precio:2200,dealer:'Motocentro Maracay',estado:'inventario',gps:false,cliente:null,color:'Verde',cilindrada:'150cc',km:0,notas:'Nueva, lista para financiar'},
+  ],
+  clientes: [
+    {id:1,nombre:'María González',cedula:'V-12345678',tel:'0412-555-0101',email:'maria@email.com',ciudad:'Caracas',trabajo:'Comerciante',ingreso:850,estado:'activo'},
+    {id:2,nombre:'Carlos Rodríguez',cedula:'V-18765432',tel:'0424-555-0202',email:'carlos@email.com',ciudad:'Valencia',trabajo:'Empleado',ingreso:600,estado:'mora'},
+    {id:3,nombre:'Ana Martínez',cedula:'V-15432198',tel:'0416-555-0303',email:'ana@email.com',ciudad:'Maracaibo',trabajo:'Taxista',ingreso:750,estado:'activo'},
+    {id:4,nombre:'Pedro Jiménez',cedula:'V-20123456',tel:'0426-555-0404',email:'pedro@email.com',ciudad:'Barquisimeto',trabajo:'Mototaxista',ingreso:500,estado:'mora'},
+    {id:5,nombre:'Luisa Pérez',cedula:'V-16789012',tel:'0412-555-0505',email:'luisa@email.com',ciudad:'Caracas',trabajo:'Vendedora',ingreso:700,estado:'activo'},
+    {id:6,nombre:'Roberto Silva',cedula:'V-14567890',tel:'0424-555-0606',email:'roberto@email.com',ciudad:'Maracay',trabajo:'Mecánico',ingreso:680,estado:'activo'},
+  ],
+  creditos: [
+    {id:'CRED-001',cliente:'María González',moto:'Honda CB125F',precio:2800,inicial:560,financiado:2240,tasa:5,plazo:18,cuota:142.80,inicio:'2024-02-01',estado:'activo',pagado:12,saldo:1285.20,mora:0},
+    {id:'CRED-002',cliente:'Carlos Rodríguez',moto:'Yamaha YBR125',precio:2600,inicial:520,financiado:2080,tasa:5,plazo:12,cuota:192.45,inicio:'2024-04-01',estado:'mora',pagado:5,saldo:1250.25,mora:62},
+    {id:'CRED-003',cliente:'Ana Martínez',moto:'Bajaj Pulsar 150',precio:3100,inicial:620,financiado:2480,tasa:5,plazo:24,cuota:121.50,inicio:'2024-03-15',estado:'activo',pagado:9,saldo:1763.50,mora:0},
+    {id:'CRED-004',cliente:'Pedro Jiménez',moto:'Honda Wave 110',precio:2400,inicial:480,financiado:1920,tasa:5,plazo:12,cuota:177.60,inicio:'2024-01-10',estado:'recuperado',pagado:3,saldo:1387.20,mora:90},
+    {id:'CRED-005',cliente:'Luisa Pérez',moto:'Yamaha NMAX 155',precio:4200,inicial:840,financiado:3360,tasa:5,plazo:24,cuota:164.80,inicio:'2024-05-01',estado:'activo',pagado:7,saldo:2503.40,mora:0},
+  ],
+  pagos: [
+    {id:'PAG-001',cliente:'María González',cred:'CRED-001',fecha:'2025-01-05',monto:142.80,metodo:'Transferencia',cobrador:'Ana Cobrador',estado:'confirmado'},
+    {id:'PAG-002',cliente:'Ana Martínez',cred:'CRED-003',fecha:'2025-01-08',monto:121.50,metodo:'Pago Móvil',cobrador:'Juan Admin',estado:'confirmado'},
+    {id:'PAG-003',cliente:'Luisa Pérez',cred:'CRED-005',fecha:'2025-01-10',monto:164.80,metodo:'Zelle',cobrador:'Ana Cobrador',estado:'confirmado'},
+    {id:'PAG-004',cliente:'Carlos Rodríguez',cred:'CRED-002',fecha:'2025-01-12',monto:100.00,metodo:'Efectivo',cobrador:'Pedro Cobrador',estado:'pendiente'},
+  ],
+  modalSaveFn: null,
+  currentPage: 'dashboard',
+  motoFilterTab: 'todas',
+};
+
+// ═══════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════
+const PAGE_LABELS = {dashboard:'Dashboard',clientes:'Clientes',motos:'Motocicletas',financiamientos:'Financiamientos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notificaciones:'Notificaciones',reportes:'Reportes',contabilidad:'Contabilidad',configuracion:'Configuración',usuarios:'Usuarios'};
+
+function nav(page){
+  S.currentPage = page;
+  document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(e=>{ if(e.getAttribute('onclick')?.includes(`'${page}'`)) e.classList.add('active'); });
+  document.getElementById('pgTitle').textContent = PAGE_LABELS[page]||page;
+  const fn = PAGES[page];
+  document.getElementById('content').innerHTML = fn ? fn() : `<div class="empty"><span class="empty-icon">🚧</span><div class="empty-title">Módulo en desarrollo</div></div>`;
+}
+
+// ═══════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════
+const $=id=>document.getElementById(id);
+const fmt=n=>`$${parseFloat(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const statusBadge=(s)=>({activo:'badge-green',mora:'badge-red',recuperada:'badge-amber',recuperado:'badge-amber',inventario:'badge-blue',financiada:'badge-orange',confirmado:'badge-green',pendiente:'badge-amber'}[s]||'badge-gray');
+const initials=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+
+function renderMotos(filter='todas'){
+  const all = S.motos;
+  const filtered = filter==='todas'?all:all.filter(m=>filter==='financiada'?m.estado==='financiada':filter==='inventario'?m.estado==='inventario':filter==='recuperada'?m.estado==='recuperada':true);
+  if(!filtered.length) return `<div class="empty"><span class="empty-icon">🏍️</span><div class="empty-title">Sin motocicletas</div><div class="empty-sub">Agrega tu primera moto para comenzar</div></div>`;
+  return `<div class="moto-grid">${filtered.map(m=>motoCard(m)).join('')}</div>`;
+}
+
+function motoCard(m){
+  const topColors={financiada:'linear-gradient(135deg,#1A1714,#2D2622)',inventario:'linear-gradient(135deg,#1e3a5f,#1e293b)',recuperada:'linear-gradient(135deg,#451a03,#292524)'};
+  return `<div class="moto-card">
+    <div class="moto-card-top" style="background:${topColors[m.estado]||topColors.financiada}">
+      <div>
+        <div class="moto-brand">${m.marca}</div>
+        <div class="moto-model">${m.modelo} · ${m.anio}</div>
+      </div>
+      <span class="badge badge-${statusBadge(m.estado).replace('badge-','')}">${m.estado}</span>
+      <div style="position:absolute;right:14px;bottom:-8px;font-size:60px;opacity:0.12;pointer-events:none">🏍️</div>
+    </div>
+    <div class="moto-card-body">
+      <div class="moto-spec">
+        <div class="moto-spec-item"><div class="moto-spec-label">Cilindr.</div><div class="moto-spec-val">${m.cilindrada}</div></div>
+        <div class="moto-spec-item"><div class="moto-spec-label">Año</div><div class="moto-spec-val">${m.anio}</div></div>
+        <div class="moto-spec-item"><div class="moto-spec-label">Color</div><div class="moto-spec-val">${m.color}</div></div>
+        <div class="moto-spec-item"><div class="moto-spec-label">Km</div><div class="moto-spec-val">${m.km.toLocaleString()}</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">VIN: ${m.vin.slice(-10)}</div>
+      ${m.cliente?`<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--surface2);padding:6px 10px;border-radius:8px"><span>👤</span>${m.cliente}</div>`:
+      `<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);background:var(--green-light);padding:6px 10px;border-radius:8px;font-weight:600"><span>✅</span>Disponible para financiar</div>`}
+      ${m.gps?`<div style="margin-top:6px;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--teal);font-weight:600"><span>📍</span>GPS Activo</div>`:''}
+      <div class="moto-card-ft">
+        <div class="moto-price">${fmt(m.precio)}</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="editMoto(${m.id})" title="Editar">✏️</button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteMoto(${m.id})" title="Eliminar">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+//  PAGES
+// ═══════════════════════════════════════════════
+const PAGES = {
+
+dashboard(){
+  const ingresos=[6200,7100,6800,7900,8200,7600,8420];
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul'];
+  const maxI=Math.max(...ingresos);
+  return `<div class="page">
+  <div class="page-hero">
+    <div>
+      <div class="page-hero-title">Bienvenido a PAGASI</div>
+      <div class="page-hero-sub">Resumen general del negocio · ${new Date().toLocaleDateString('es-VE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+    </div>
+    <div style="display:flex;gap:8px;z-index:1">
+      <button class="btn" style="background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.15)">📥 Exportar</button>
+    </div>
+    <div class="page-hero-deco">🏍️</div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="stat-icon-wrap" style="background:var(--accent-light)"><span>🏍️</span></div>
+      <div class="stat-val">${S.motos.length}</div>
+      <div class="stat-lbl">Motos en sistema</div>
+      <div class="stat-chg up">↑ +2 este mes</div>
+      <div class="stat-deco">🏍️</div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon-wrap" style="background:var(--green-light)"><span>✅</span></div>
+      <div class="stat-val">${S.creditos.filter(c=>c.estado==='activo').length}</div>
+      <div class="stat-lbl">Créditos Activos</div>
+      <div class="stat-chg up">↑ 87% del total</div>
+      <div class="stat-deco">✅</div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon-wrap" style="background:var(--accent-light)"><span>💰</span></div>
+      <div class="stat-val">$8,420</div>
+      <div class="stat-lbl">Ingresos del Mes</div>
+      <div class="stat-chg up">↑ +12% vs anterior</div>
+      <div class="stat-deco">💰</div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon-wrap" style="background:var(--red-light)"><span>⚠️</span></div>
+      <div class="stat-val">12</div>
+      <div class="stat-lbl">Clientes en Mora</div>
+      <div class="stat-chg down">↑ 25.5% índice</div>
+      <div class="stat-deco">⚠️</div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon-wrap" style="background:var(--purple-light)"><span>📦</span></div>
+      <div class="stat-val">$94.2k</div>
+      <div class="stat-lbl">Cartera Total</div>
+      <div class="stat-chg up">↑ creciendo</div>
+      <div class="stat-deco">📦</div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon-wrap" style="background:var(--green-light)"><span>🏆</span></div>
+      <div class="stat-val">$24,850</div>
+      <div class="stat-lbl">Ganancia Total</div>
+      <div class="stat-chg up">↑ intereses acum.</div>
+      <div class="stat-deco">🏆</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
+      <div class="card-hd"><div><div class="card-title">Ingresos Mensuales 2025</div><div class="card-sub">Pagos cobrados por mes</div></div><button class="btn btn-ghost btn-sm">📥 Exportar</button></div>
+      <div class="bar-chart">
+        ${ingresos.map((v,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center">
+          <div class="bar" style="width:100%;height:${Math.round(v/maxI*100)}%;background:${i===ingresos.length-1?'linear-gradient(0deg,var(--accent),#FF7A47)':'linear-gradient(0deg,var(--surface3),var(--border2))'}">
+            ${v?`<span class="bar-val">${v>0?'$'+Math.round(v/1000)+'k':''}</span>`:''}
+          </div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:0;margin-top:6px">
+        ${meses.map(m=>`<div class="bar-label" style="flex:1">${m}</div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">Estado de Cartera</div></div>
+      <div class="kpi"><span class="kpi-lbl">Activos</span><span class="badge badge-green"><span class="dot"></span> 41 — 87%</span></div>
+      <div class="kpi"><span class="kpi-lbl">En mora</span><span class="badge badge-red"><span class="dot"></span> 12 — 25.5%</span></div>
+      <div class="kpi"><span class="kpi-lbl">Recuperados</span><span class="badge badge-amber"><span class="dot"></span> 3</span></div>
+      <div class="kpi"><span class="kpi-lbl">Cancelados</span><span class="badge badge-purple"><span class="dot"></span> 8</span></div>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600">Tasa de mora</div>
+        <div class="progress"><div class="progress-fill red" style="width:25.5%"></div></div>
+      </div>
+      <div style="margin-top:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600">Tasa de recuperación</div>
+        <div class="progress"><div class="progress-fill green" style="width:74.5%"></div></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">Últimos Pagos</div><a style="font-size:12px;color:var(--accent);cursor:pointer;font-weight:600" onclick="nav('pagos')">Ver todos →</a></div>
+      <div class="list">
+        ${S.pagos.map(p=>`<div class="list-item"><div class="list-item-ico" style="background:var(--green-light)">💳</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">${p.cliente}</div><div style="font-size:11px;color:var(--text3)">${p.fecha} · ${p.metodo}</div></div><div style="text-align:right"><div style="font-weight:700;color:var(--green)">${fmt(p.monto)}</div><span class="badge ${statusBadge(p.estado)}" style="font-size:10px">${p.estado}</span></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">Alertas de Cobranza</div><span class="badge badge-red">12 en mora</span></div>
+      <div class="list">
+        ${S.creditos.filter(c=>c.mora>0).map(c=>`<div class="list-item"><div class="list-item-ico" style="background:var(--red-light)">⚠️</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">${c.cliente}</div><div style="font-size:11px;color:var(--text3)">${c.id} · ${c.mora} días de atraso</div></div><div style="text-align:right"><div style="font-weight:700;color:var(--red)">${fmt(c.saldo)}</div><button class="btn btn-danger btn-sm" onclick="toast('Llamada iniciada','success')">📞</button></div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+  </div>`;
+},
+
+motos(){
+  return `<div class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${[['todas','Todas ('+S.motos.length+')'],['financiada','Financiadas'],['inventario','Inventario'],['recuperada','Recuperadas']].map(([k,l])=>`<button class="btn ${S.motoFilterTab===k?'btn-primary':'btn-ghost'}" onclick="setMotoTab('${k}')">${l}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px">
+      <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar marca, modelo..." id="motoSearch" oninput="filterMotoSearch(this.value)" style="width:220px"></div>
+      <button class="btn btn-primary" onclick="openAddMoto()">＋ Nueva Moto</button>
+    </div>
+  </div>
+  <div id="motoGrid">${renderMotos(S.motoFilterTab)}</div>
+  </div>`;
+},
+
+clientes(){
+  return `<div class="page">
+  <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <div class="search-wrap" style="flex:1"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar por nombre, cédula..."></div>
+    <button class="btn btn-ghost">⬇ Filtros</button>
+    <button class="btn btn-primary" onclick="openAddCliente()">＋ Nuevo Cliente</button>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Cliente</th><th>Cédula</th><th>Teléfono</th><th>Ciudad</th><th>Ingresos</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${S.clientes.map(c=>`<tr>
+        <td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#FF7A47);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${initials(c.nombre)}</div><div><div class="td-main">${c.nombre}</div><div class="td-sm">${c.trabajo}</div></div></div></td>
+        <td class="td-sm">${c.cedula}</td>
+        <td class="td-sm">${c.tel}</td>
+        <td class="td-sm">${c.ciudad}</td>
+        <td class="td-main">${fmt(c.ingreso)}/mes</td>
+        <td><span class="badge ${statusBadge(c.estado)}">${c.estado}</span></td>
+        <td><div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm">Ver</button><button class="btn btn-ghost btn-sm btn-icon" onclick="editCliente(${c.id})">✏️</button></div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>`;
+},
+
+financiamientos(){
+  return `<div class="page">
+  <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+    <div class="stat"><div class="stat-val">$94.2k</div><div class="stat-lbl">Cartera Total</div></div>
+    <div class="stat"><div class="stat-val">5%</div><div class="stat-lbl">Tasa Mensual</div></div>
+    <div class="stat"><div class="stat-val">16 m</div><div class="stat-lbl">Plazo Promedio</div></div>
+    <div class="stat"><div class="stat-val">$148</div><div class="stat-lbl">Cuota Promedio</div></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title">Créditos Activos</div><button class="btn btn-primary btn-sm" onclick="openAddCredito()">＋ Nuevo Crédito</button></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Financiado</th><th>Cuota</th><th>Progreso</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${S.creditos.map(c=>`<tr>
+        <td class="td-main">${c.id}</td>
+        <td>${c.cliente}</td>
+        <td class="td-sm">${c.moto}</td>
+        <td class="td-main">${fmt(c.financiado)}</td>
+        <td style="color:var(--accent);font-weight:700">${fmt(c.cuota)}</td>
+        <td style="min-width:110px"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:600">${c.pagado}/${c.plazo} cuotas</div><div class="progress"><div class="progress-fill ${c.mora>0?'red':'orange'}" style="width:${Math.round(c.pagado/c.plazo*100)}%"></div></div></td>
+        <td style="color:var(--amber);font-weight:600">${fmt(c.saldo)}</td>
+        <td><span class="badge ${statusBadge(c.estado)}">${c.estado}</span></td>
+        <td><button class="btn btn-ghost btn-sm" onclick="openAmortizacion('${c.id}')">Tabla</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>`;
+},
+
+pagos(){
+  return `<div class="page">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+    <div class="stat"><div class="stat-icon-wrap" style="background:var(--green-light)">✅</div><div class="stat-val">$8,420</div><div class="stat-lbl">Cobrado este mes</div></div>
+    <div class="stat"><div class="stat-icon-wrap" style="background:var(--amber-light)">⏳</div><div class="stat-val">$3,240</div><div class="stat-lbl">Pendiente por cobrar</div></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title">Registro de Pagos</div><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">📥 Exportar</button><button class="btn btn-primary btn-sm" onclick="openAddPago()">＋ Registrar Pago</button></div></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha</th><th>Monto</th><th>Método</th><th>Cobrador</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${S.pagos.map(p=>`<tr>
+        <td class="td-main">${p.id}</td>
+        <td>${p.cliente}</td>
+        <td class="td-sm">${p.cred}</td>
+        <td class="td-sm">${p.fecha}</td>
+        <td style="color:var(--green);font-weight:700">${fmt(p.monto)}</td>
+        <td class="td-sm">${p.metodo}</td>
+        <td class="td-sm">${p.cobrador}</td>
+        <td><span class="badge ${statusBadge(p.estado)}">${p.estado}</span></td>
+        <td><button class="btn btn-ghost btn-sm">🧾</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>`;
+},
+
+cobranza(){
+  const mora = S.creditos.filter(c=>c.mora>0);
+  return `<div class="page">
+  <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+    <div class="stat"><div class="stat-val" style="color:var(--red)">${mora.length}</div><div class="stat-lbl">En mora</div></div>
+    <div class="stat"><div class="stat-val">$18,640</div><div class="stat-lbl">Deuda en mora</div></div>
+    <div class="stat"><div class="stat-val">45d</div><div class="stat-lbl">Mora promedio</div></div>
+    <div class="stat"><div class="stat-val">3</div><div class="stat-lbl">Recuperaciones</div></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title">Gestión de Cobranza</div><button class="btn btn-ghost btn-sm">⬇ Ordenar</button></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Cliente</th><th>Crédito</th><th>Teléfono</th><th>Días atraso</th><th>Deuda</th><th>Último pago</th><th>Acciones</th></tr></thead>
+      <tbody>${mora.map(c=>{const cl=S.clientes.find(x=>x.nombre===c.cliente)||{tel:'N/A'};return`<tr>
+        <td class="td-main">${c.cliente}</td>
+        <td class="td-sm">${c.id}</td>
+        <td class="td-sm">${cl.tel}</td>
+        <td><span style="color:var(--red);font-weight:800;font-size:15px">${c.mora}d</span></td>
+        <td style="color:var(--red);font-weight:700">${fmt(c.saldo)}</td>
+        <td class="td-sm">hace ${c.mora} días</td>
+        <td><div style="display:flex;gap:5px">
+          <button class="btn btn-success btn-sm" onclick="toast('Llamada a ${c.cliente} iniciada','success')">📞 Llamar</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('WhatsApp enviado','info')">💬</button>
+          <button class="btn btn-ghost btn-sm" onclick="openNotaCobranza('${c.id}')">📝</button>
+          <button class="btn btn-danger btn-sm" onclick="toast('Proceso de recuperación iniciado','warn')">🔑</button>
+        </div></td>
+      </tr>`}).join('')}</tbody>
+    </table></div>
+  </div></div>`;
+},
+
+contratos(){
+  return `<div class="page">
+  <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">📄 Generar Contrato</div></div>
+      <div class="form-grid c1" style="gap:10px">
+        <div class="fg"><label>Crédito</label><select class="fs">${S.creditos.map(c=>`<option>${c.id} — ${c.cliente}</option>`).join('')}</select></div>
+        <div class="fg"><label>Tipo de documento</label><select class="fs"><option>Contrato de Financiamiento</option><option>Pagaré</option><option>Carta de Instrucciones</option><option>Contrato de Prenda / Reserva de Dominio</option></select></div>
+        <div class="fg"><label>Lugar de firma</label><input class="fi" value="Caracas, Venezuela"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+        <button class="btn btn-primary" onclick="renderContrato()">👁 Vista Previa</button>
+        <button class="btn btn-ghost" onclick="toast('PDF descargado','success')">📥 PDF</button>
+      </div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="card-title" style="margin-bottom:10px">Contratos recientes</div>
+        <div class="list" style="max-height:220px">
+          ${S.creditos.map(c=>`<div class="list-item"><div class="list-item-ico" style="background:var(--accent-light)">📄</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${c.id} — ${c.cliente}</div><div style="font-size:11px;color:var(--text3)">Financiamiento · ${c.inicio}</div></div><button class="btn btn-ghost btn-sm" onclick="toast('Descargando PDF...','info')">📥</button></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div id="contratoZone">
+      <div class="empty" style="margin-top:60px"><span class="empty-icon">📄</span><div class="empty-title">Vista previa del contrato</div><div class="empty-sub">Selecciona un crédito y haz clic en Vista Previa</div></div>
+    </div>
+  </div></div>`;
+},
+
+gps(){
+  const dots=[{n:'Honda CB125F',x:38,y:42,c:'g'},{n:'NMAX 155',x:57,y:28,c:'g'},{n:'YBR125',x:27,y:62,c:'y'},{n:'Pulsar 150',x:68,y:66,c:'r'},{n:'Wave 110',x:45,y:55,c:'g'},{n:'CB125F #2',x:72,y:38,c:'g'},{n:'TT150',x:30,y:28,c:'g'}];
+  return `<div class="page">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+    <div class="stat"><div class="stat-icon-wrap" style="background:var(--green-light)">📍</div><div class="stat-val">38</div><div class="stat-lbl">GPS activos</div></div>
+    <div class="stat"><div class="stat-icon-wrap" style="background:var(--red-light)">❌</div><div class="stat-val">3</div><div class="stat-lbl">Sin señal</div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hd"><div class="card-title">Mapa de Rastreo en Tiempo Real</div><div style="display:flex;gap:8px"><span class="badge badge-green"><span class="dot"></span> Activa</span><span class="badge badge-amber"><span class="dot"></span> Sin señal</span><span class="badge badge-red"><span class="dot"></span> Alerta</span></div></div>
+    <div class="map-box">
+      <div class="map-grid"></div>
+      ${dots.map(d=>`<div class="map-dot ${d.c}" style="left:${d.x}%;top:${d.y}%"><div class="map-tooltip">${d.n}</div></div>`).join('')}
+      <div style="position:absolute;bottom:12px;left:12px;background:rgba(15,23,42,0.8);border-radius:8px;padding:8px 12px;font-size:11px;color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.08)">📍 Venezuela · Actualizado hace 23 seg</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">Detalle de Unidades</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Moto</th><th>Cliente</th><th>Última ubicación</th><th>Movimiento</th><th>GPS</th></tr></thead>
+      <tbody>${S.motos.filter(m=>m.gps).map(m=>`<tr>
+        <td class="td-main">${m.marca} ${m.modelo}</td>
+        <td>${m.cliente||'—'}</td>
+        <td class="td-sm">${m.dealer.includes('Caracas')?'Caracas, Miranda':m.dealer.includes('Valencia')?'Valencia, Carabobo':'Maracaibo, Zulia'}</td>
+        <td class="td-sm">hace 23 min</td>
+        <td><span class="badge badge-green"><span class="dot"></span> Activo</span></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>`;
+},
+
+notificaciones(){
+  return `<div class="page">
+  <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:16px">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">💬 Enviar Notificación</div></div>
+      <div class="form-grid c1" style="gap:10px">
+        <div class="fg"><label>Tipo de mensaje</label><select class="fs"><option>Recordatorio de pago</option><option>Cuota vencida</option><option>Próxima a vencer</option><option>Pago recibido</option><option>Mensaje personalizado</option></select></div>
+        <div class="fg"><label>Canal</label><select class="fs"><option>WhatsApp</option><option>SMS</option><option>Email</option><option>Todos los canales</option></select></div>
+        <div class="fg"><label>Destinatarios</label><select class="fs"><option>Clientes en mora</option><option>Cuotas venciendo esta semana</option><option>Todos los clientes activos</option><option>Cliente específico</option></select></div>
+        <div class="fg"><label>Mensaje personalizado (opcional)</label><textarea class="fta" placeholder="Escribe tu mensaje..."></textarea></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:10px" onclick="toast('Notificaciones enviadas exitosamente a 12 clientes','success')">📤 Enviar Ahora</button>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">Historial de Notificaciones</div></div>
+      <div class="list" style="max-height:400px">
+        ${[{i:'💬',m:'Recordatorio enviado a Carlos Rodríguez',s:'WhatsApp · hace 2 horas',b:'badge-green'},{i:'📧',m:'Email de mora a Pedro Jiménez',s:'Email · hace 4 horas',b:'badge-green'},{i:'📱',m:'SMS masivo — cuotas venciendo',s:'SMS · 47 destinatarios · ayer',b:'badge-green'},{i:'💬',m:'WhatsApp — pago confirmado a María',s:'WhatsApp · hace 2 días',b:'badge-green'},{i:'📧',m:'Estado de cuenta mensual',s:'Email · 41 destinatarios · hace 3 días',b:'badge-green'}].map(n=>`<div class="list-item"><div class="list-item-ico" style="background:var(--accent2-light)">${n.i}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${n.m}</div><div style="font-size:11px;color:var(--text3)">${n.s}</div></div><span class="badge ${n.b}">enviado</span></div>`).join('')}
+      </div>
+    </div>
+  </div></div>`;
+},
+
+reportes(){
+  return `<div class="page">
+  <div class="stats-grid" style="margin-bottom:18px">
+    <div class="stat"><div class="stat-val">$8,420</div><div class="stat-lbl">Ingresos del mes</div></div>
+    <div class="stat"><div class="stat-val">$3,180</div><div class="stat-lbl">Intereses generados</div></div>
+    <div class="stat"><div class="stat-val">$18,640</div><div class="stat-lbl">Cartera en mora</div></div>
+    <div class="stat"><div class="stat-val">$24,850</div><div class="stat-lbl">Ganancia acumulada</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">Reportes Disponibles</div></div>
+      <div class="list" style="max-height:none">
+        ${[{i:'📊',n:'Ingresos Mensuales',d:'Desglose de cobros por mes'},{i:'💳',n:'Créditos Activos',d:'Cartera vigente con saldos'},{i:'⚠️',n:'Reporte de Mora',d:'Clientes y montos vencidos'},{i:'💰',n:'Flujo de Caja',d:'Entradas y salidas'},{i:'📦',n:'Valor de Cartera',d:'Resumen del portafolio'},{i:'🏍️',n:'Inventario de Motos',d:'Estado de todas las unidades'},{i:'📈',n:'Crecimiento de Ventas',d:'Originations por período'},{i:'🧾',n:'Estado de Resultados',d:'P&L del período'}].map(r=>`<div class="list-item"><div class="list-item-ico" style="background:var(--accent-light)">${r.i}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${r.n}</div><div style="font-size:11px;color:var(--text3)">${r.d}</div></div><div style="display:flex;gap:5px"><button class="btn btn-danger btn-sm" onclick="toast('Generando PDF...','info')">PDF</button><button class="btn btn-success btn-sm" onclick="toast('Exportando Excel...','success')">XLS</button></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">Flujo de Caja — Enero 2025</div></div>
+      ${[['Cuotas iniciales','+$4,200','green'],['Pagos mensuales','+$8,420','green'],['Intereses por mora','+$320','green'],['Compra de motos','-$8,400','red'],['GPS instalados','-$150','red'],['Gastos operativos','-$820','red'],['Salarios','-$600','red']].map(([l,v,c])=>`<div class="kpi"><span class="kpi-lbl">${l}</span><span style="color:var(--${c==='green'?'green':'red'});font-weight:700">${v}</span></div>`).join('')}
+      <div style="margin-top:14px;padding:14px;background:var(--green-light);border-radius:10px;border:1.5px solid rgba(22,163,74,0.15);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:700">Utilidad neta</span>
+        <span style="color:var(--green);font-family:var(--font-display);font-size:22px;font-weight:700">+$2,650</span>
+      </div>
+    </div>
+  </div></div>`;
+},
+
+contabilidad(){
+  return `<div class="page">
+  <div class="stats-grid" style="margin-bottom:18px">
+    <div class="stat"><div class="stat-val" style="color:var(--green)">$12,620</div><div class="stat-lbl">Ingresos totales</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--red)">$9,970</div><div class="stat-lbl">Egresos totales</div></div>
+    <div class="stat"><div class="stat-val">$2,650</div><div class="stat-lbl">Utilidad neta</div></div>
+    <div class="stat"><div class="stat-val">$3,180</div><div class="stat-lbl">Intereses generados</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">💚 Ingresos</div><button class="btn btn-success btn-sm" onclick="toast('Ingreso agregado','success')">＋ Agregar</button></div>
+      ${[['Cuotas iniciales recibidas','$4,200'],['Pagos mensuales cobrados','$8,420'],['Intereses por mora','$320'],['Costos GPS (cobrados)','$150']].map(([l,v])=>`<div class="kpi"><span class="kpi-lbl">${l}</span><span style="color:var(--green);font-weight:700">${v}</span></div>`).join('')}
+      <div style="margin-top:12px;padding:12px;background:var(--green-light);border-radius:10px;border:1.5px solid rgba(22,163,74,0.15);display:flex;justify-content:space-between"><span style="font-weight:700">Total Ingresos</span><span style="color:var(--green);font-weight:800">$13,090</span></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">❤️ Egresos</div><button class="btn btn-danger btn-sm" onclick="toast('Egreso agregado','success')">＋ Agregar</button></div>
+      ${[['Compra de motocicletas','$8,400'],['GPS y accesorios','$150'],['Alquiler de oficina','$200'],['Salarios','$600'],['Teléfono y servicios','$80'],['Otros','$120']].map(([l,v])=>`<div class="kpi"><span class="kpi-lbl">${l}</span><span style="color:var(--red);font-weight:700">-${v}</span></div>`).join('')}
+      <div style="margin-top:12px;padding:12px;background:var(--red-light);border-radius:10px;border:1.5px solid rgba(220,38,38,0.12);display:flex;justify-content:space-between"><span style="font-weight:700">Total Egresos</span><span style="color:var(--red);font-weight:800">-$9,550</span></div>
+    </div>
+  </div></div>`;
+},
+
+configuracion(){
+  return `<div class="page">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">⚙️ Parámetros del Sistema</div></div>
+      <div class="form-grid c1" style="gap:10px">
+        <div class="fg"><label>Nombre de la empresa</label><input class="fi" value="PAGASI — Financiamiento de Motos"></div>
+      </div>
+      <div class="form-grid" style="gap:10px;margin-top:4px">
+        <div class="fg"><label>Tasa de interés mensual (%)</label><input class="fi" type="number" value="5"></div>
+        <div class="fg"><label>Interés por mora (%)</label><input class="fi" type="number" value="2"></div>
+        <div class="fg"><label>Cuota inicial mínima (%)</label><input class="fi" type="number" value="20"></div>
+        <div class="fg"><label>Costo GPS ($)</label><input class="fi" type="number" value="45"></div>
+        <div class="fg"><label>Plazo mínimo (meses)</label><input class="fi" type="number" value="6"></div>
+        <div class="fg"><label>Plazo máximo (meses)</label><input class="fi" type="number" value="36"></div>
+        <div class="fg"><label>Días de gracia</label><input class="fi" type="number" value="5"></div>
+        <div class="fg"><label>Moneda</label><select class="fs"><option>USD — Dólar</option><option>VES indexado</option></select></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="toast('Configuración guardada','success')">Guardar Cambios</button>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hd"><div class="card-title">🏪 Concesionarios</div><button class="btn btn-ghost btn-sm" onclick="toast('Concesionario agregado','success')">＋</button></div>
+        <div class="list">
+          ${['AutoMoto Valencia','MotoMax Caracas','BajajVen Maracaibo','Motocentro Maracay','MotoShop Barquisimeto'].map(d=>`<div class="list-item"><div class="list-item-ico" style="background:var(--accent-light)">🏪</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${d}</div></div><span class="badge badge-green">activo</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">💳 Métodos de Pago</div></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${['Transferencia','Pago móvil','Zelle','PayPal','Efectivo USD','Efectivo VES'].map(m=>`<span class="badge badge-blue">${m}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div></div>`;
+},
+
+usuarios(){
+  const roles=[{n:'Juan Administrador',e:'admin@pagasi.com',r:'Administrador',u:'hace 5 min',rk:'orange'},{n:'Ana Cobrador',e:'ana@pagasi.com',r:'Cobrador',u:'hace 1 hora',rk:'red'},{n:'Pedro Vendedor',e:'pedro@pagasi.com',r:'Vendedor',u:'hace 3 horas',rk:'green'},{n:'María Contadora',e:'maria@pagasi.com',r:'Contador',u:'ayer',rk:'amber'},{n:'Luis Gerente',e:'luis@pagasi.com',r:'Gerente',u:'hace 2 días',rk:'blue'}];
+  return `<div class="page">
+  <div class="card">
+    <div class="card-hd"><div class="card-title">Gestión de Usuarios</div><button class="btn btn-primary btn-sm" onclick="toast('Invitación enviada','success')">＋ Invitar Usuario</button></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Último acceso</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${roles.map(u=>`<tr>
+        <td><div style="display:flex;align-items:center;gap:9px"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#FF7A47);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">${initials(u.n)}</div><span class="td-main">${u.n}</span></div></td>
+        <td class="td-sm">${u.e}</td>
+        <td><span class="badge badge-${u.rk}">${u.r}</span></td>
+        <td class="td-sm">${u.u}</td>
+        <td><span class="badge badge-green">activo</span></td>
+        <td><button class="btn btn-ghost btn-sm">✏️</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>`;
+},
+
+};
+
+// ═══════════════════════════════════════════════
+//  MOTO CRUD
+// ═══════════════════════════════════════════════
+function openAddMoto(id=null){
+  const m = id ? S.motos.find(x=>x.id===id) : null;
+  const edit = !!m;
+  $('modalIcon').textContent = '🏍️';
+  $('modalTitle').textContent = edit ? 'Editar Motocicleta' : 'Nueva Motocicleta';
+  $('modalSub').textContent = edit ? `Editando: ${m.marca} ${m.modelo}` : 'Agrega una moto al inventario';
+  $('modalBody').innerHTML = `
+    <div class="form-section-title">Datos generales</div>
+    <div class="form-grid">
+      <div class="fg"><label>Marca</label><input class="fi" id="m_marca" placeholder="Honda, Yamaha, Bajaj..." value="${m?.marca||''}"></div>
+      <div class="fg"><label>Modelo</label><input class="fi" id="m_modelo" placeholder="CB125F, YBR125..." value="${m?.modelo||''}"></div>
+      <div class="fg"><label>Año</label><input class="fi" id="m_anio" type="number" placeholder="2024" value="${m?.anio||new Date().getFullYear()}"></div>
+      <div class="fg"><label>Color</label><input class="fi" id="m_color" placeholder="Rojo, Azul..." value="${m?.color||''}"></div>
+      <div class="fg"><label>Cilindrada</label><input class="fi" id="m_cilin" placeholder="125cc" value="${m?.cilindrada||''}"></div>
+      <div class="fg"><label>Kilometraje</label><input class="fi" id="m_km" type="number" placeholder="0" value="${m?.km??0}"></div>
+    </div>
+    <div class="form-section-title">Identificación</div>
+    <div class="form-grid">
+      <div class="fg"><label>Número VIN</label><input class="fi" id="m_vin" placeholder="17 caracteres" value="${m?.vin||''}"></div>
+      <div class="fg"><label>Número de motor</label><input class="fi" id="m_motor" placeholder="M000000" value="${m?.motor||''}"></div>
+    </div>
+    <div class="form-section-title">Comercial</div>
+    <div class="form-grid">
+      <div class="fg"><label>Precio (USD)</label><input class="fi" id="m_precio" type="number" placeholder="0.00" value="${m?.precio||''}"></div>
+      <div class="fg"><label>Concesionario</label><select class="fs" id="m_dealer">
+        ${['AutoMoto Valencia','MotoMax Caracas','BajajVen Maracaibo','Motocentro Maracay','MotoShop Barquisimeto'].map(d=>`<option ${m?.dealer===d?'selected':''}>${d}</option>`).join('')}
+      </select></div>
+      <div class="fg"><label>Estado</label><select class="fs" id="m_estado">
+        ${['inventario','financiada','recuperada'].map(s=>`<option ${m?.estado===s?'selected':''}>${s}</option>`).join('')}
+      </select></div>
+      <div class="fg"><label>Cliente asignado (opcional)</label><input class="fi" id="m_cliente" placeholder="Nombre del cliente" value="${m?.cliente||''}"></div>
+    </div>
+    <div class="toggle-wrap" style="margin-top:4px">
+      <button class="toggle ${m?.gps?'on':''}" id="m_gps_toggle" onclick="this.classList.toggle('on')"></button>
+      <span style="font-size:13px;font-weight:600">GPS instalado</span>
+      <span style="font-size:12px;color:var(--text3);margin-left:4px">— Unidad con rastreo activo</span>
+    </div>
+    <div class="form-grid c1" style="gap:8px;margin-top:10px">
+      <div class="fg"><label>Notas internas</label><textarea class="fta" id="m_notas" placeholder="Observaciones sobre la moto...">${m?.notas||''}</textarea></div>
+    </div>`;
+  S.modalSaveFn = ()=>{
+    const get=i=>$(i)?.value?.trim();
+    if(!get('m_marca')||!get('m_modelo')||!get('m_precio')){toast('Completa marca, modelo y precio','error');return false;}
+    const obj={
+      id: m?.id || (S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),
+      marca:get('m_marca'),modelo:get('m_modelo'),anio:parseInt(get('m_anio'))||2024,
+      color:get('m_color')||'N/A',cilindrada:get('m_cilin')||'N/A',km:parseInt($('m_km')?.value)||0,
+      vin:get('m_vin')||'N/A',motor:get('m_motor')||'N/A',
+      precio:parseFloat($('m_precio')?.value)||0,dealer:$('m_dealer')?.value,
+      estado:$('m_estado')?.value||'inventario',
+      cliente:get('m_cliente')||null,
+      gps:$('m_gps_toggle')?.classList.contains('on')||false,
+      notas:get('m_notas')||'',
+    };
+    if(edit){const idx=S.motos.findIndex(x=>x.id===m.id);S.motos[idx]=obj;}
+    else S.motos.push(obj);
+    closeModal();
+    nav('motos');
+    toast(edit?'Moto actualizada correctamente':'Moto agregada al inventario','success');
+    return true;
+  };
+  $('overlay').style.display='flex';
+}
+
+function editMoto(id){openAddMoto(id);}
+
+function deleteMoto(id){
+  const m=S.motos.find(x=>x.id===id);
+  if(!m)return;
+  $('modalIcon').textContent='🗑️';
+  $('modalTitle').textContent='Eliminar Motocicleta';
+  $('modalSub').textContent='Esta acción no se puede deshacer';
+  $('modalBody').innerHTML=`
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-size:48px;margin-bottom:14px">🏍️</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:6px">${m.marca} ${m.modelo} ${m.anio}</div>
+      <div style="color:var(--text3);margin-bottom:20px">VIN: ${m.vin}</div>
+      <div style="background:var(--red-light);border:1.5px solid rgba(220,38,38,0.15);border-radius:10px;padding:12px;color:var(--red);font-size:13px;font-weight:600">⚠️ ¿Confirmas que deseas eliminar esta moto?</div>
+    </div>`;
+  $('modalFt').innerHTML=`<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-danger" onclick="confirmDelete(${id})">🗑️ Eliminar definitivamente</button>`;
+  $('overlay').style.display='flex';
+}
+
+function confirmDelete(id){
+  S.motos=S.motos.filter(x=>x.id!==id);
+  closeModal();nav('motos');
+  toast('Moto eliminada del inventario','info');
+}
+
+// ═══════════════════════════════════════════════
+//  CLIENTE CRUD
+// ═══════════════════════════════════════════════
+function openAddCliente(id=null){
+  const c=id?S.clientes.find(x=>x.id===id):null;
+  const edit=!!c;
+  $('modalIcon').textContent='👤';
+  $('modalTitle').textContent=edit?'Editar Cliente':'Nuevo Cliente';
+  $('modalSub').textContent=edit?`Editando: ${c.nombre}`:'Registra un nuevo cliente en el sistema';
+  $('modalBody').innerHTML=`
+    <div class="form-grid">
+      <div class="fg"><label>Nombre completo</label><input class="fi" id="c_nombre" value="${c?.nombre||''}" placeholder="Nombre completo"></div>
+      <div class="fg"><label>N° Cédula</label><input class="fi" id="c_cedula" value="${c?.cedula||''}" placeholder="V-00000000"></div>
+      <div class="fg"><label>Teléfono</label><input class="fi" id="c_tel" value="${c?.tel||''}" placeholder="0412-000-0000"></div>
+      <div class="fg"><label>Email</label><input class="fi" id="c_email" type="email" value="${c?.email||''}" placeholder="correo@ejemplo.com"></div>
+    </div>
+    <div class="form-grid c1" style="margin-top:4px">
+      <div class="fg"><label>Dirección</label><input class="fi" id="c_dir" value="${c?.direccion||''}" placeholder="Dirección completa"></div>
+    </div>
+    <div class="form-grid" style="margin-top:4px">
+      <div class="fg"><label>Ciudad</label><input class="fi" id="c_ciudad" value="${c?.ciudad||''}" placeholder="Caracas"></div>
+      <div class="fg"><label>Trabajo / Ocupación</label><input class="fi" id="c_trabajo" value="${c?.trabajo||''}" placeholder="Trabajo o negocio"></div>
+      <div class="fg"><label>Ingreso mensual ($)</label><input class="fi" id="c_ingreso" type="number" value="${c?.ingreso||''}" placeholder="0"></div>
+      <div class="fg"><label>Contacto de emergencia</label><input class="fi" id="c_emerg" value="${c?.emergencia||''}" placeholder="Nombre y teléfono"></div>
+    </div>`;
+  S.modalSaveFn=()=>{
+    const get=i=>$(i)?.value?.trim();
+    if(!get('c_nombre')||!get('c_cedula')){toast('Nombre y cédula son obligatorios','error');return false;}
+    const obj={id:c?.id||(S.clientes.length?Math.max(...S.clientes.map(x=>x.id))+1:1),nombre:get('c_nombre'),cedula:get('c_cedula'),tel:get('c_tel')||'N/A',email:get('c_email')||'',ciudad:get('c_ciudad')||'',trabajo:get('c_trabajo')||'',ingreso:parseFloat($('c_ingreso')?.value)||0,estado:c?.estado||'activo'};
+    if(edit){const idx=S.clientes.findIndex(x=>x.id===c.id);S.clientes[idx]=obj;}
+    else S.clientes.push(obj);
+    closeModal();nav('clientes');
+    toast(edit?'Cliente actualizado':'Cliente registrado exitosamente','success');
+    return true;
+  };
+  $('modalFt').innerHTML=`<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveModal()">Guardar Cliente</button>`;
+  $('overlay').style.display='flex';
+}
+function editCliente(id){openAddCliente(id);}
+
+// ═══════════════════════════════════════════════
+//  CREDITO / PAGO MODALS
+// ═══════════════════════════════════════════════
+function openAddCredito(){
+  $('modalIcon').textContent='📋';
+  $('modalTitle').textContent='Nuevo Financiamiento';
+  $('modalSub').textContent='Calcula automáticamente la cuota mensual';
+  $('modalBody').innerHTML=`
+    <div class="form-grid">
+      <div class="fg"><label>Cliente</label><select class="fs" id="k_cli">${S.clientes.map(c=>`<option>${c.nombre}</option>`).join('')}</select></div>
+      <div class="fg"><label>Motocicleta</label><select class="fs" id="k_moto" onchange="updatePrecio(this)">${S.motos.map(m=>`<option data-precio="${m.precio}">${m.marca} ${m.modelo} · $${m.precio}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-grid c3" style="margin-top:4px">
+      <div class="fg"><label>Precio ($)</label><input class="fi" id="k_precio" type="number" value="2800" oninput="calcCuota()"></div>
+      <div class="fg"><label>Cuota inicial ($)</label><input class="fi" id="k_inicial" type="number" value="560" oninput="calcCuota()"></div>
+      <div class="fg"><label>Financiado ($)</label><input class="fi" id="k_fin" readonly></div>
+    </div>
+    <div class="form-grid c3" style="margin-top:4px">
+      <div class="fg"><label>Tasa mensual (%)</label><input class="fi" id="k_tasa" type="number" value="5" oninput="calcCuota()"></div>
+      <div class="fg"><label>Plazo (meses)</label><input class="fi" id="k_plazo" type="number" value="18" oninput="calcCuota()"></div>
+      <div class="fg"><label>Cuota mensual ($)</label><input class="fi" id="k_cuota" readonly></div>
+    </div>
+    <div class="form-grid" style="margin-top:4px">
+      <div class="fg"><label>Fecha de inicio</label><input class="fi" id="k_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div class="fg"><label>Mora mensual (%)</label><input class="fi" type="number" value="2"></div>
+    </div>
+    <div id="k_resumen" style="margin-top:12px;background:var(--accent-light);border:1.5px solid rgba(232,84,26,0.15);border-radius:12px;padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"></div>`;
+  S.modalSaveFn=()=>{toast('Financiamiento creado exitosamente','success');closeModal();nav('financiamientos');return true;};
+  $('modalFt').innerHTML=`<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveModal()">Crear Crédito</button>`;
+  $('overlay').style.display='flex';
+  calcCuota();
+}
+
+function updatePrecio(sel){const opt=sel.options[sel.selectedIndex];$('k_precio').value=opt.dataset.precio||2800;calcCuota();}
+function calcCuota(){
+  const p=parseFloat($('k_precio')?.value)||0,i=parseFloat($('k_inicial')?.value)||0,t=(parseFloat($('k_tasa')?.value)||5)/100,n=parseInt($('k_plazo')?.value)||12;
+  const f=p-i,c=f>0&&t>0?f*(t*Math.pow(1+t,n))/(Math.pow(1+t,n)-1):0;
+  if($('k_fin'))$('k_fin').value=`$${f.toFixed(2)}`;
+  if($('k_cuota'))$('k_cuota').value=`$${c.toFixed(2)}`;
+  const r=$('k_resumen');
+  if(r)r.innerHTML=[['Monto financiado',`$${f.toFixed(2)}`,true],['Cuota mensual',`$${c.toFixed(2)}`,true],['Total a pagar',`$${(c*n).toFixed(2)}`,false]].map(([l,v])=>`<div><div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:3px">${l}</div><div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--text)">${v}</div></div>`).join('');
+}
+
+function openAddPago(){
+  $('modalIcon').textContent='💳';
+  $('modalTitle').textContent='Registrar Pago';
+  $('modalSub').textContent='Registra un cobro realizado';
+  $('modalBody').innerHTML=`
+    <div class="form-grid c1" style="gap:10px">
+      <div class="fg"><label>Crédito</label><select class="fs">${S.creditos.map(c=>`<option>${c.id} — ${c.cliente}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-grid" style="margin-top:4px">
+      <div class="fg"><label>Fecha de pago</label><input class="fi" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div class="fg"><label>Monto ($)</label><input class="fi" type="number" placeholder="0.00"></div>
+      <div class="fg"><label>Método de pago</label><select class="fs"><option>Transferencia</option><option>Pago Móvil</option><option>Zelle</option><option>PayPal</option><option>Efectivo USD</option></select></div>
+      <div class="fg"><label>Referencia</label><input class="fi" placeholder="N° de referencia"></div>
+    </div>
+    <div class="form-grid c1" style="margin-top:4px">
+      <div class="fg"><label>Notas</label><textarea class="fta" placeholder="Observaciones..."></textarea></div>
+    </div>`;
+  S.modalSaveFn=()=>{toast('Pago registrado correctamente','success');closeModal();nav('pagos');return true;};
+  $('modalFt').innerHTML=`<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveModal()">Registrar Pago</button>`;
+  $('overlay').style.display='flex';
+}
+
+function openAmortizacion(id){
+  const c=S.creditos.find(x=>x.id===id);if(!c)return;
+  const t=c.tasa/100,n=c.plazo,pv=c.financiado;
+  const pmt=pv*(t*Math.pow(1+t,n))/(Math.pow(1+t,n)-1);
+  let sal=pv,rows='';
+  for(let i=1;i<=n;i++){const int=sal*t,cap=pmt-int;sal-=cap;const pd=i<=c.pagado;
+    rows+=`<div class="amort-row ${pd?'paid':''}"><div style="font-weight:600">${i}</div><div>${pd?'<span class="badge badge-green">✓ Pagada</span>':i===c.pagado+1?'<span class="badge badge-orange">Pendiente</span>':'<span class="badge badge-gray">—</span>'}</div><div style="font-weight:600;color:var(--accent)">$${pmt.toFixed(2)}</div><div style="color:var(--amber)">$${int.toFixed(2)}</div><div>$${cap.toFixed(2)}</div><div style="color:var(--text2)">$${Math.max(0,sal).toFixed(2)}</div></div>`;}
+  $('modalIcon').textContent='📊';
+  $('modalTitle').textContent='Tabla de Amortización';
+  $('modalSub').textContent=`${c.id} — ${c.cliente}`;
+  $('modalBody').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      ${[['Financiado',fmt(c.financiado),'accent'],['Cuota mensual',fmt(pmt),'green'],['Total intereses',fmt(pmt*n-pv),'amber']].map(([l,v,col])=>`<div style="background:var(--surface2);border-radius:10px;padding:11px"><div style="font-size:11px;color:var(--text3);font-weight:600">${l}</div><div style="font-weight:700;color:var(--${col});font-family:var(--font-display);font-size:17px;margin-top:3px">${v}</div></div>`).join('')}
+    </div>
+    <div class="amort-hd"><div>#</div><div>Estado</div><div>Cuota</div><div>Interés</div><div>Capital</div><div>Saldo</div></div>
+    <div style="max-height:340px;overflow-y:auto;margin-top:4px">${rows}</div>`;
+  $('modalFt').innerHTML=`<button class="btn btn-ghost" onclick="closeModal()">Cerrar</button><button class="btn btn-primary" onclick="toast('PDF descargado','success')">📥 Descargar PDF</button>`;
+  $('overlay').style.display='flex';
+}
+
+function openNotaCobranza(id){
+  $('modalIcon').textContent='📝';
+  $('modalTitle').textContent='Nota de Cobranza';
+  $('modalSub').textContent=`Gestión para ${id}`;
+  $('modalBody').innerHTML=`
+    <div class="form-grid c1" style="gap:10px">
+      <div class="fg"><label>Tipo de gestión</label><select class="fs"><option>Llamada telefónica</option><option>Visita domicilio</option><option>WhatsApp</option><option>Acuerdo de pago</option><option>Recuperación de unidad</option></select></div>
+      <div class="fg"><label>Resultado de la gestión</label><textarea class="fta" placeholder="Describe el resultado..." style="min-height:100px"></textarea></div>
+      <div class="fg"><label>Próxima acción</label><input class="fi" placeholder="Qué hacer después"></div>
+      <div class="fg"><label>Fecha de seguimiento</label><input class="fi" type="date"></div>
+    </div>`;
+  S.modalSaveFn=()=>{toast('Nota de cobranza guardada','success');closeModal();return true;};
+  $('modalFt').innerHTML=`<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveModal()">Guardar Nota</button>`;
+  $('overlay').style.display='flex';
+}
+
+function renderContrato(){
+  const c=S.creditos[0];
+  $('contratoZone').innerHTML=`<div class="contract-doc">
+    <div class="contract-logo">PAGASI</div>
+    <div style="text-align:center;font-size:11px;color:#666;margin-bottom:20px">Financiamiento de Motocicletas · RIF: J-00000000-0 · Caracas, Venezuela</div>
+    <h2>Contrato de Financiamiento de Motocicleta</h2>
+    <div style="text-align:center;font-size:12px;color:#888;margin-bottom:20px">N° ${c.id} · Caracas, ${new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'})}</div>
+    <h3>PARTES</h3>
+    <p><strong>LA EMPRESA:</strong> PAGASI FINANCIAMIENTO DE MOTOS, C.A., representada por su Representante Legal.</p>
+    <p style="margin-top:8px"><strong>EL CLIENTE:</strong> ${c.cliente}, titular de cédula de identidad, domiciliado en Venezuela.</p>
+    <h3>OBJETO</h3>
+    <p>Financiamiento para adquisición de motocicleta <strong>${c.moto}</strong>, precio total <strong>${fmt(c.precio)}</strong>, con cuota inicial <strong>${fmt(c.inicial)}</strong> y saldo financiado <strong>${fmt(c.financiado)}</strong>.</p>
+    <h3>CONDICIONES FINANCIERAS</h3>
+    <table style="width:100%;font-size:12px;border-collapse:collapse">
+      ${[['Tasa de interés mensual',c.tasa+'%'],['Plazo',c.plazo+' meses'],['Cuota mensual',fmt(c.cuota)],['Mora mensual','2%'],['Inicio',c.inicio]].map(([k,v])=>`<tr><td style="padding:6px 0;border-bottom:1px solid #eee;color:#666">${k}</td><td style="padding:6px 0;border-bottom:1px solid #eee;font-weight:600">${v}</td></tr>`).join('')}
+    </table>
+    <h3>RESERVA DE DOMINIO</h3>
+    <p>LA EMPRESA conserva la propiedad de la motocicleta hasta cancelación total. El incumplimiento de 3 cuotas consecutivas faculta a LA EMPRESA a recuperar la unidad.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px">
+      <div style="text-align:center"><div style="border-top:1px solid #333;padding-top:8px;margin-top:56px;font-size:12px">LA EMPRESA — PAGASI</div></div>
+      <div style="text-align:center"><div style="border-top:1px solid #333;padding-top:8px;margin-top:56px;font-size:12px">EL CLIENTE — ${c.cliente}</div></div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+//  FILTER MOTOS
+// ═══════════════════════════════════════════════
+function setMotoTab(tab){
+  S.motoFilterTab=tab;nav('motos');
+}
+function filterMotoSearch(q){
+  const filtered=q?S.motos.filter(m=>`${m.marca} ${m.modelo} ${m.vin} ${m.cliente||''}`.toLowerCase().includes(q.toLowerCase())):S.motos.filter(m=>S.motoFilterTab==='todas'?true:m.estado===S.motoFilterTab);
+  const g=$('motoGrid');
+  if(g)g.innerHTML=filtered.length?`<div class="moto-grid">${filtered.map(motoCard).join('')}</div>`:`<div class="empty"><span class="empty-icon">🔍</span><div class="empty-title">Sin resultados para "${q}"</div></div>`;
+}
+
+// ═══════════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════════
+function closeModal(){$('overlay').style.display='none';$('modalFt').innerHTML=`<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" id="modalSave" onclick="saveModal()">Guardar</button>`;}
+function saveModal(){if(S.modalSaveFn){S.modalSaveFn();}}
+
+function topAction(){
+  const p=S.currentPage;
+  if(p==='motos')openAddMoto();
+  else if(p==='clientes')openAddCliente();
+  else if(p==='financiamientos')openAddCredito();
+  else if(p==='pagos')openAddPago();
+  else toast('Usa el botón dentro del módulo para agregar','info');
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+function toast(msg,type='info'){
+  const c=$('toasts'),t=document.createElement('div');
+  t.className=`toast ${type}`;
+  const ico={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
+  t.innerHTML=`<span>${ico[type]||'ℹ️'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(20px)';t.style.transition='all .3s';},2800);
+  setTimeout(()=>t.remove(),3200);
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+nav('dashboard');
+</script>
+</body>
+</html>
