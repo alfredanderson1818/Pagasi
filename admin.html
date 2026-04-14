@@ -398,10 +398,12 @@ tbody tr:last-child td{border-bottom:none}
 /* Reset button styles for .si used as nav items */
 button.si {
   -webkit-appearance: none; appearance: none;
-  background: none; border: none;
+  background: none; border: 1px solid transparent;
   width: 100%; text-align: left;
-  font: inherit; color: inherit;
-  padding: 8px 10px;
+  font: inherit; color: var(--ink3);
+  padding: 8px 10px; display: flex;
+  align-items: center; gap: 9px;
+  border-radius: var(--r8); cursor: pointer;
 }
 @media(max-width:820px){
   button.si { padding: 12px 14px; min-height: 44px; }
