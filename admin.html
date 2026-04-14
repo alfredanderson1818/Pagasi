@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pagasi — Sistema de Financiamiento</title>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -269,8 +270,8 @@ tbody tr:last-child td{border-bottom:none}
     <div class="login-title">Sistema de Gestión</div>
     <div class="login-sub">Ingresa tus credenciales para continuar</div>
     <div class="login-fg">
-      <span class="login-lbl">Usuario</span>
-      <input class="login-inp" id="l_user" type="text" placeholder="Usuario" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <span class="login-lbl">Email</span>
+      <input class="login-inp" id="l_user" type="email" placeholder="correo@ejemplo.com" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="login-fg">
       <span class="login-lbl">Contraseña</span>
@@ -278,7 +279,7 @@ tbody tr:last-child td{border-bottom:none}
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar →</button>
     <div class="login-err" id="login-err">⛔ Usuario o contraseña incorrectos</div>
-    <div class="login-footer">Pagasi · Sistema interno · v7.0</div>
+    <div class="login-footer">Pagasi · Sistema interno · v7.0<br><span id="login-mode" style="font-size:9px;opacity:0.5">modo local</span></div>
   </div>
 </div>
 
@@ -326,7 +327,7 @@ tbody tr:last-child td{border-bottom:none}
     </div>
   </div>
   <div class="sb-foot">
-    <div class="sb-usr">
+    <div class="sb-usr" onclick="doLogout()" title="Cerrar sesión">
       <div class="sb-av">JA</div>
       <div><div class="sb-un">Juan Admin</div><div class="sb-ur">Administrador</div></div>
     </div>
@@ -361,12 +362,12 @@ tbody tr:last-child td{border-bottom:none}
 <div class="toasts" id="toasts"></div>
 <script>
 
-// ══════════════════════════════════════════
-// FIREBASE — CONFIGURA TU PROYECTO AQUÍ
-// ══════════════════════════════════════════
-// 1. Ve a console.firebase.google.com
-// 2. Crea proyecto → agrega app Web → copia el objeto firebaseConfig
-// 3. Pega los valores reales abajo (reemplaza los 'TU_...')
+// ╔══════════════════════════════════════════════════════════╗
+// ║   FIREBASE — PEGA TU CONFIG AQUÍ                        ║
+// ║   1. console.firebase.google.com                        ║
+// ║   2. Engranaje ⚙ → Configuración del proyecto           ║
+// ║   3. Tu app Web → copia el objeto firebaseConfig        ║
+// ╚══════════════════════════════════════════════════════════╝
 var FIREBASE_CONFIG = {
   apiKey:            'TU_API_KEY',
   authDomain:        'TU_PROYECTO.firebaseapp.com',
@@ -376,14 +377,32 @@ var FIREBASE_CONFIG = {
   appId:             'TU_APP_ID'
 };
 
-var db = null;
+// ── Notas de Firestore (consola → Firestore → Reglas): ──────
+// rules_version = '2';
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     match /{document=**} {
+//       allow read, write: if request.auth != null;
+//     }
+//   }
+// }
+// ────────────────────────────────────────────────────────────
+
+var db   = null;
+var auth = null;
+var FIREBASE_READY = false;
+
 try {
   if(FIREBASE_CONFIG.apiKey !== 'TU_API_KEY'){
     firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
-    console.log('Firebase Firestore inicializado ✅');
+    db   = firebase.firestore();
+    auth = firebase.auth();
+    FIREBASE_READY = true;
+    console.log('Firebase inicializado ✅ (Auth + Firestore)');
+  } else {
+    console.warn('⚠️ Firebase no configurado — usando modo local (admin/admin)');
   }
-} catch(e){ console.warn('Firebase no disponible:', e.message); }
+} catch(e){ console.warn('Firebase error:', e.message); }
 
 // Loader
 function showLoader(msg,sub){
@@ -1623,47 +1642,117 @@ function descargarAmortPDF(){
 
 
 // ══════════════════════════════════════════
-// LOGIN
+// LOGIN — Firebase Auth + fallback local
 // ══════════════════════════════════════════
-var USERS = [{user:'admin',pass:'admin',nombre:'Juan Admin',rol:'Administrador'}];
+// En Firebase Console → Authentication → Sign-in method → Email/Password → Habilitar
+// Luego agrega usuarios en Authentication → Users → Agregar usuario
 
 function doLogin(){
-  var u=($('l_user')?.value||'').trim().toLowerCase();
-  var p=($('l_pass')?.value||'').trim();
-  var found=USERS.find(function(x){return x.user===u && x.pass===p;});
-  if(found){
-    $('login-screen').style.display='none';
-    $('app-root').style.display='flex';
-    // Actualizar sidebar con usuario
-    var av=document.querySelector('.sb-av');
-    var un=document.querySelector('.sb-un');
-    var ur=document.querySelector('.sb-ur');
-    if(av) av.textContent=found.nombre.split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
-    if(un) un.textContent=found.nombre;
-    if(ur) ur.textContent=found.rol;
-    // Cargar datos de Supabase y luego mostrar dashboard
-    DB.load().then(function(){nav('dash');});
-  } else {
-    var err=$('login-err');
-    if(err){
-      err.style.display='block';
-      $('l_pass').value='';
-      $('l_pass').focus();
-      setTimeout(function(){err.style.display='none';},3500);
-    }
-    // shake animation
-    var card=document.querySelector('.login-card');
-    if(card){
-      card.style.transition='transform .08s';
-      card.style.transform='translateX(8px)';
-      setTimeout(function(){card.style.transform='translateX(-8px)';},80);
-      setTimeout(function(){card.style.transform='translateX(5px)';},160);
-      setTimeout(function(){card.style.transform='translateX(0)';},240);
+  var u = ($('l_user')?.value || '').trim();
+  var p = ($('l_pass')?.value || '').trim();
+
+  if(!u || !p){
+    _loginError('Completa usuario y contraseña');
+    return;
+  }
+
+  var btn = document.querySelector('.login-btn');
+  if(btn){ btn.textContent = 'Ingresando...'; btn.disabled = true; }
+
+  // ── Si Firebase Auth está activo ────────────────────────
+  if(FIREBASE_READY && auth){
+    auth.signInWithEmailAndPassword(u, p)
+      .then(function(cred){
+        var user = cred.user;
+        // Busca perfil del usuario en Firestore (colección 'usuarios')
+        return db.collection('usuarios').doc(user.uid).get().then(function(doc){
+          var perfil = doc.exists ? doc.data() : {nombre: user.email.split('@')[0], rol: 'Usuario'};
+          _loginSuccess(perfil.nombre, perfil.rol);
+        });
+      })
+      .catch(function(err){
+        var msgs = {
+          'auth/user-not-found':  'Usuario no encontrado',
+          'auth/wrong-password':  'Contraseña incorrecta',
+          'auth/invalid-email':   'Email inválido',
+          'auth/too-many-requests':'Demasiados intentos. Intenta más tarde',
+          'auth/invalid-credential':'Credenciales incorrectas'
+        };
+        _loginError(msgs[err.code] || err.message);
+      });
+  }
+  // ── Fallback local (sin Firebase configurado) ────────────
+  else {
+    var USERS_LOCAL = [{user:'admin',pass:'admin',nombre:'Juan Admin',rol:'Administrador'}];
+    var found = USERS_LOCAL.find(function(x){ return x.user === u && x.pass === p; });
+    if(found){
+      _loginSuccess(found.nombre, found.rol);
+    } else {
+      _loginError('Usuario o contraseña incorrectos');
     }
   }
 }
 
+function _loginSuccess(nombre, rol){
+  $('login-screen').style.display = 'none';
+  $('app-root').style.display = 'flex';
+  // Actualizar sidebar
+  var av = document.querySelector('.sb-av');
+  var un = document.querySelector('.sb-un');
+  var ur = document.querySelector('.sb-ur');
+  if(av) av.textContent = nombre.split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+  if(un) un.textContent = nombre;
+  if(ur) ur.textContent = rol;
+  // Restaurar botón
+  var btn = document.querySelector('.login-btn');
+  if(btn){ btn.textContent = 'Ingresar →'; btn.disabled = false; }
+  // Cargar datos y mostrar dashboard
+  DB.load().then(function(){ nav('dash'); });
+}
+
+function _loginError(msg){
+  var err = $('login-err');
+  if(err){
+    err.textContent = '⛔ ' + msg;
+    err.style.display = 'block';
+    $('l_pass').value = '';
+    $('l_pass').focus();
+    setTimeout(function(){ err.style.display = 'none'; }, 4000);
+  }
+  var btn = document.querySelector('.login-btn');
+  if(btn){ btn.textContent = 'Ingresar →'; btn.disabled = false; }
+  // Animación shake
+  var card = document.querySelector('.login-card');
+  if(card){
+    card.style.transition = 'transform .08s';
+    var steps = [8, -8, 5, 0];
+    steps.forEach(function(v, i){
+      setTimeout(function(){ card.style.transform = 'translateX('+v+'px)'; }, i*80);
+    });
+  }
+}
+
+function doLogout(){
+  if(FIREBASE_READY && auth){
+    auth.signOut().then(function(){
+      $('app-root').style.display = 'none';
+      $('login-screen').style.display = 'flex';
+      $('l_user').value = '';
+      $('l_pass').value = '';
+    });
+  } else {
+    $('app-root').style.display = 'none';
+    $('login-screen').style.display = 'flex';
+  }
+}
+
 // nav('dash') called after login
+
+// Mostrar modo en pantalla de login
+window.addEventListener('load', function(){
+  var m = document.getElementById('login-mode');
+  if(m) m.textContent = FIREBASE_READY ? '🔥 Firebase Auth activo' : '⚠️ modo local (configura Firebase)';
+});
 </script>
 </body>
 </html>
