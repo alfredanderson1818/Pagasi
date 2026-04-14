@@ -1939,93 +1939,223 @@ function saveConfig(){ guardarPlan(); }
 
 
 // ══════════════════════════════════════════
-// PDF REAL — html2canvas + jsPDF
 // ══════════════════════════════════════════
-function _loadPdfLibs(cb){
-  if(window.html2canvas && window.jspdf){cb();return;}
-  var s1=document.createElement('script');
-  s1.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-  s1.onload=function(){
-    var s2=document.createElement('script');
-    s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-    s2.onload=cb;
-    document.head.appendChild(s2);
-  };
-  document.head.appendChild(s1);
+// PDF — Impresión nativa del navegador
+// ══════════════════════════════════════════
+
+function _imprimirHTML(htmlContent, titulo) {
+  var win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) { toast('Permite ventanas emergentes para imprimir', 'warn'); return; }
+  win.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${titulo}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Inter', Arial, sans-serif; font-size: 11pt; color: #111; background: #fff; }
+    .doc { max-width: 720px; margin: 0 auto; padding: 40px 50px; }
+    h2 { text-align:center; font-size:13pt; font-weight:800; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; color:#111; }
+    h3 { font-size:10.5pt; font-weight:700; margin:18px 0 6px; color:#111; border-bottom:1px solid #e0e0e0; padding-bottom:4px; }
+    p { margin:5px 0; line-height:1.7; font-size:10.5pt; color:#222; text-align:justify; }
+    table { width:100%; border-collapse:collapse; margin:8px 0; font-size:10pt; }
+    td { padding:5px 4px; border-bottom:1px solid #eee; }
+    td:first-child { color:#555; width:55%; }
+    td:last-child { font-weight:700; color:#111; }
+    .header { text-align:center; margin-bottom:28px; padding-bottom:18px; border-bottom:2px solid #111; }
+    .logo { font-size:22pt; font-weight:800; letter-spacing:-1px; color:#111; }
+    .sub { font-size:9pt; color:#666; margin-top:3px; }
+    .num { text-align:center; font-size:9pt; color:#888; margin-bottom:20px; }
+    .firmas { display:grid; grid-template-columns:1fr 1fr; gap:60px; margin-top:50px; }
+    .firma { text-align:center; }
+    .linea { border-top:1px solid #333; padding-top:6px; margin-top:60px; font-size:9pt; color:#333; }
+    .pie { margin-top:24px; padding:10px 14px; border:1px solid #e0e0e0; border-radius:6px; font-size:8.5pt; color:#888; text-align:center; }
+    .alerta { background:#fff8e1; border:1px solid #f0c040; border-radius:5px; padding:10px 13px; font-size:9.5pt; color:#555; margin:16px 0; }
+    @media print {
+      body { font-size: 10.5pt; }
+      .doc { padding: 20px 30px; }
+      h3 { page-break-after: avoid; }
+      p, table { orphans: 3; widows: 3; }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc">
+    ${htmlContent}
+  </div>
+  <script>
+    window.onload = function() {
+      setTimeout(function(){ window.print(); }, 400);
+    };
+  <\/script>
+</body>
+</html>`);
+  win.document.close();
+  toast('Abriendo documento para imprimir / guardar como PDF', 'success');
 }
 
-function _captureAndSave(el, filename){
-  toast('Generando PDF...','info');
-  html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
-    var jsPDF=window.jspdf.jsPDF;
-    var pdf=new jsPDF('p','mm','a4');
-    var pw=pdf.internal.pageSize.getWidth()-20;
-    var ph=pdf.internal.pageSize.getHeight()-20;
-    var ih=canvas.height*pw/canvas.width;
-    var imgData=canvas.toDataURL('image/png');
-    var pos=10,left=ih;
-    pdf.addImage(imgData,'PNG',10,pos,pw,ih);
-    left-=ph;
-    while(left>0){
-      pdf.addPage();
-      pdf.addImage(imgData,'PNG',10,10-(ih-left-ph),pw,ih);
-      left-=ph;
-    }
-    pdf.save(filename);
-    toast('✅ PDF descargado · '+filename,'success');
-  }).catch(function(e){
-    toast('Error generando PDF','error');
-    console.error(e);
-  });
+function _buildContratoHTML(cred, cli, ciudad, hoy, cuotasRestantes) {
+  var logoSrc = document.querySelector('.sb-logo img')?.src || '';
+  return `
+    <div class="header">
+      ${logoSrc ? `<img src="${logoSrc}" style="height:50px;object-fit:contain;margin-bottom:8px"><br>` : ''}
+      <div class="logo">PAGASI</div>
+      <div class="sub">VENTA DE MOTOCICLETAS EN CUOTAS · RIF: J-00000000-0 · ${ciudad}, Venezuela</div>
+    </div>
+    <h2>Contrato de Compraventa en Cuotas</h2>
+    <div class="num">N° ${cred.id} · ${ciudad}, ${hoy}</div>
+
+    <h3>Primera: De las Partes</h3>
+    <p><strong>EL VENDEDOR:</strong> PAGASI VENTA DE MOTOS EN CUOTAS, C.A., debidamente constituida conforme a las leyes de la República Bolivariana de Venezuela, representada por su Representante Legal.</p>
+    <p style="margin-top:7px"><strong>EL COMPRADOR:</strong> ${cred.cli}, titular de la cédula de identidad N° ${cli.cedula||'—'}, domiciliado en ${cli.ciudad||ciudad}, teléfono ${cli.tel||'—'}.</p>
+
+    <h3>Segunda: Objeto del Contrato</h3>
+    <p>EL VENDEDOR da en venta a EL COMPRADOR la siguiente motocicleta:</p>
+    <table>
+      <tr><td>Modelo / Marca</td><td>${cred.modelo}</td></tr>
+      <tr><td>VIN / Serial</td><td>${cred.vin||('VIN-'+String(cred.motoId).padStart(4,'0'))}</td></tr>
+      <tr><td>Color</td><td>${cred.color||'—'}</td></tr>
+      <tr><td>Año</td><td>${cred.anio||'—'}</td></tr>
+      ${cred.placa && cred.placa!=='—' ? `<tr><td>Placa</td><td>${cred.placa}</td></tr>` : ''}
+    </table>
+
+    <h3>Tercera: Plan de Cuotas</h3>
+    <p>Las partes acuerdan el siguiente plan de cuotas quincenales para la cancelación de la motocicleta:</p>
+    <table>
+      <tr><td>Número de cuotas</td><td>${cred.totalCuotas||cred.plazo*2} cuotas quincenales</td></tr>
+      <tr><td>Monto de cada cuota</td><td><strong>$${parseFloat(cred.cuotaQ||cred.cuota).toFixed(2)}</strong></td></tr>
+      <tr><td>Frecuencia</td><td>Cada 15 días</td></tr>
+      <tr><td>Cuotas canceladas</td><td>${cred.pagado} de ${cred.totalCuotas||cred.plazo*2}</td></tr>
+      <tr><td>Cuotas pendientes</td><td>${cuotasRestantes} restantes</td></tr>
+      <tr><td>Fecha de inicio</td><td>${cred.fecha}</td></tr>
+    </table>
+    <p style="margin-top:8px;font-size:9.5pt;color:#666">EL COMPRADOR declara conocer y aceptar el monto de cada cuota. Las cuotas deberán cancelarse puntualmente sin necesidad de cobro previo por parte de EL VENDEDOR.</p>
+
+    <h3>Cuarta: Forma de Pago</h3>
+    <p>EL COMPRADOR se obliga a cancelar cada cuota mediante: transferencia bancaria, pago móvil, Zelle, PayPal o efectivo en USD. El pago se considera efectuado únicamente cuando EL VENDEDOR confirme la recepción del monto completo. Pagos parciales no interrumpen el cómputo de mora.</p>
+
+    <h3>Quinta: Reserva de Dominio</h3>
+    <p>EL VENDEDOR se reserva el dominio y la propiedad de la motocicleta hasta tanto EL COMPRADOR cancele la <strong>totalidad del precio pactado</strong>. El incumplimiento de <strong>tres (3) cuotas consecutivas</strong> o <strong>cinco (5) cuotas alternadas</strong> faculta a EL VENDEDOR a recuperar la unidad de forma inmediata y sin intervención judicial.</p>
+
+    <h3>Sexta: Mora e Incumplimiento</h3>
+    <p>Transcurridos <strong>cinco (5) días calendario</strong> del vencimiento sin pago, EL COMPRADOR incurrirá en mora con un recargo del <strong>5% mensual</strong> sobre el saldo vencido. El incumplimiento reiterado faculta a EL VENDEDOR a declarar vencida la totalidad de la deuda.</p>
+
+    <h3>Séptima: Prohibición de Enajenación</h3>
+    <p>Mientras subsista saldo pendiente, EL COMPRADOR queda prohibido de vender, ceder, pignorar o de cualquier forma transferir la motocicleta sin autorización previa y escrita de EL VENDEDOR. Cualquier acto contrario será nulo de pleno derecho.</p>
+
+    <h3>Octava: Mantenimiento y Uso</h3>
+    <p>EL COMPRADOR se obliga a mantener la motocicleta en buen estado, no modificarla, no utilizarla para actividades ilegales ni trasladarla fuera del país sin autorización. Notificará a EL VENDEDOR ante cualquier accidente o deterioro significativo.</p>
+
+    <h3>Novena: Dispositivo de Rastreo GPS</h3>
+    <p>EL COMPRADOR autoriza la instalación y activación de un dispositivo GPS en la motocicleta durante toda la vigencia del plan. La desactivación o manipulación del dispositivo facultará a EL VENDEDOR a recuperar la unidad de inmediato.</p>
+
+    <h3>Décima: Responsabilidad y Garantía</h3>
+    <p>EL COMPRADOR responde con la totalidad de sus bienes ante el incumplimiento. De existir fiador, este responde solidaria e ilimitadamente por todas las obligaciones derivadas del presente contrato.</p>
+
+    <h3>Décima Primera: Declaración de Veracidad</h3>
+    <p>EL COMPRADOR declara bajo juramento que toda información suministrada es veraz. Cualquier falsedad dará derecho a EL VENDEDOR a resolver el contrato y ejercer las acciones penales correspondientes. EL COMPRADOR autoriza a EL VENDEDOR a verificar y conservar sus datos personales con fines de gestión del crédito.</p>
+
+    <h3>Décima Segunda: Jurisdicción</h3>
+    <p>Las partes se someten a la jurisdicción de los Tribunales de ${ciudad}, renunciando a cualquier otro fuero. Los gastos del proceso serán a cargo de la parte vencida.</p>
+
+    <div class="alerta">
+      <strong>DECLARACIÓN FINAL:</strong> Las partes manifiestan haber leído, entendido y aceptado en su totalidad el presente contrato, firmado en dos (2) ejemplares de igual valor, en ${ciudad}, a los ${hoy}.
+    </div>
+
+    <div class="firmas">
+      <div class="firma">
+        <div class="linea">
+          <strong>EL VENDEDOR</strong><br>
+          PAGASI — Venta de Motos en Cuotas<br>
+          Representante Legal
+        </div>
+      </div>
+      <div class="firma">
+        <div class="linea">
+          <strong>EL COMPRADOR</strong><br>
+          ${cred.cli}<br>
+          C.I.: ${cli.cedula||'—'}
+        </div>
+      </div>
+    </div>
+
+    <div class="pie">Documento N° ${cred.id} · ${hoy} · Pagasi Venezuela</div>
+  `;
 }
 
 function descargarContratoPDF(){
   renderContrato();
-  var cdoc=document.querySelector('#cz .cdoc');
-  if(!cdoc){toast('Selecciona un crédito primero','warn');return;}
-  var cred=S.creds.find(function(x){return x.id===($('sel-cred')?.value);})||S.creds[0];
-  var fname='Contrato-'+cred.id+'-'+cred.cli.replace(/\s+/g,'-')+'.pdf';
-  _loadPdfLibs(function(){_captureAndSave(cdoc,fname);});
+  var cred = S.creds.find(function(x){ return x.id===($('sel-cred')?.value); }) || S.creds[0];
+  if(!cred){ toast('Selecciona un crédito primero','warn'); return; }
+  _abrirContratoPrint(cred);
 }
 
 function descargarContratoPDFById(credId){
-  // Switch selector to this cred and render
-  var sel=$('sel-cred');
-  if(sel) sel.value=credId;
+  var sel = $('sel-cred');
+  if(sel) sel.value = credId;
   renderContrato();
-  var cdoc=document.querySelector('#cz .cdoc');
-  if(!cdoc){
-    // We're not on the contratos page, navigate there first
+  var cred = S.creds.find(function(x){ return x.id===credId; }) || S.creds[0];
+  if(!cred){ toast('Crédito no encontrado','error'); return; }
+  if(S.page !== 'contratos'){
     nav('contratos');
-    setTimeout(function(){
-      var sel2=$('sel-cred');
-      if(sel2) sel2.value=credId;
-      renderContrato();
-      var cdoc2=document.querySelector('#cz .cdoc');
-      if(!cdoc2){toast('Error al generar contrato','error');return;}
-      var cred=S.creds.find(function(x){return x.id===credId;})||S.creds[0];
-      var fname='Contrato-'+cred.id+'-'+cred.cli.replace(/\s+/g,'-')+'.pdf';
-      _loadPdfLibs(function(){_captureAndSave(cdoc2,fname);});
-    },200);
+    setTimeout(function(){ _abrirContratoPrint(cred); }, 300);
     return;
   }
-  var cred=S.creds.find(function(x){return x.id===credId;})||S.creds[0];
-  var fname='Contrato-'+cred.id+'-'+cred.cli.replace(/\s+/g,'-')+'.pdf';
-  _loadPdfLibs(function(){_captureAndSave(cdoc,fname);});
+  _abrirContratoPrint(cred);
+}
+
+function _abrirContratoPrint(cred){
+  var cli    = S.clientes.find(function(x){ return x.nombre===cred.cli; }) || {cedula:'—',tel:'—',ciudad:'Venezuela'};
+  var ciudad = $('sel-ciudad')?.value || 'Caracas';
+  var hoy    = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
+  var cuotasRestantes = (cred.totalCuotas||cred.plazo*2) - (cred.pagado||0);
+  var html = _buildContratoHTML(cred, cli, ciudad, hoy, cuotasRestantes);
+  _imprimirHTML(html, 'Contrato-'+cred.id+'-'+cred.cli);
 }
 
 function descargarAmortPDF(){
-  var box=document.querySelector('#modal-box .m-bd');
-  if(!box){toast('Abre la tabla de amortización primero','warn');return;}
-  // Temporarily set bg white for capture
-  var orig=box.style.background;
-  box.style.background='#fff';
-  box.style.color='#111';
-  var fname='Amortizacion-'+new Date().toISOString().split('T')[0]+'.pdf';
-  _loadPdfLibs(function(){
-    _captureAndSave(box,fname);
-    setTimeout(function(){box.style.background=orig;box.style.color='';},500);
-  });
+  var c = S.creds.find(function(x){ return x.id===($('sel-cred')?.value); }) || S.creds[0];
+  if(!c){ toast('Selecciona un crédito primero','warn'); return; }
+  var tQ = PLAN.tasaMensual/100/2;
+  var cuota = c.cuotaQ||c.cuota;
+  var n = c.totalCuotas||(c.plazo*2);
+  var startDate = new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
+  var sal = c.fin, rows = '';
+  for(var i=1;i<=n;i++){
+    var int=sal*tQ, cap=cuota-int; sal-=cap;
+    var fd=new Date(startDate.getTime()+(i*15*24*60*60*1000));
+    var fecha=fd.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    var pd=i<=(c.pagado||0);
+    rows+=`<tr style="${pd?'color:#aaa;':''}">
+      <td style="text-align:center">${i}</td>
+      <td>${fecha}</td>
+      <td style="${pd?'':'color:#333;font-weight:600'}">${pd?'Pagada':i===(c.pagado||0)+1?'<b>Próxima</b>':'Pendiente'}</td>
+      <td style="text-align:right">$${cuota.toFixed(2)}</td>
+      <td style="text-align:right;color:#a07000">$${Math.max(0,int).toFixed(2)}</td>
+      <td style="text-align:right">$${Math.max(0,cap).toFixed(2)}</td>
+      <td style="text-align:right;color:#555">$${Math.max(0,sal).toFixed(2)}</td>
+    </tr>`;
+  }
+  var hoy = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
+  var html = `
+    <div class="header">
+      <div class="logo">PAGASI</div>
+      <div class="sub">Tabla de Amortización</div>
+    </div>
+    <h2>Plan de Pagos — ${c.id}</h2>
+    <div class="num">${c.cli} · ${c.modelo} · ${hoy}</div>
+    <table style="font-size:9.5pt">
+      <tr style="background:#f5f5f5;font-weight:700;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.5px">
+        <td style="text-align:center">#</td><td>Fecha</td><td>Estado</td>
+        <td style="text-align:right">Cuota</td><td style="text-align:right">Interés</td>
+        <td style="text-align:right">Capital</td><td style="text-align:right">Saldo</td>
+      </tr>
+      ${rows}
+    </table>
+    <div class="pie">Pagadas: ${c.pagado||0} · Pendientes: ${n-(c.pagado||0)} · Cuota: $${cuota.toFixed(2)} · Inicio: ${c.fecha}</div>
+  `;
+  _imprimirHTML(html, 'Amortizacion-'+c.id);
 }
 
 
