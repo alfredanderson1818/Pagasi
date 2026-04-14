@@ -634,11 +634,17 @@ var DB = {
     ]).then(function(snaps){
       function read(snap){return snap.docs.map(function(d){return d.data();});}
       var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]);
+      // Solo reemplaza datos demo si Firestore tiene datos reales
       if(m.length)  S.motos    = m.map(mapMoto);
       if(cl.length) S.clientes = cl;
       if(cr.length) S.creds    = cr.map(mapCred);
       if(p.length)  S.pagos    = p.map(mapPago);
       if(e.length)  S.egresos  = e;
+      // Si todo vacío, avisar al usuario
+      var totalDocs = m.length + cl.length + cr.length + p.length;
+      if(totalDocs === 0){
+        toast('Base de datos vacía — mostrando datos de ejemplo','info');
+      }
       hideLoader();
     }).catch(function(e){
       hideLoader();
