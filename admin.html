@@ -51,7 +51,7 @@ body{font-family:var(--f);color:var(--ink);font-size:14px;line-height:1.5;-webki
 .sb-nav{flex:1;overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:1px}
 .sb-grp{margin-bottom:4px}
 .sb-lbl{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);padding:10px 10px 5px}
-.si{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r8);cursor:pointer;transition:all .15s;color:var(--ink3);font-size:12.5px;font-weight:600;position:relative;border:1px solid transparent;user-select:none}
+.si{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r8);cursor:pointer;transition:all .15s;color:var(--ink3);font-size:12.5px;font-weight:600;position:relative;border:1px solid transparent;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .si:hover{background:rgba(124,92,246,0.07);color:var(--ink2);border-color:var(--rim)}
 .si.on{background:rgba(124,92,246,0.12);color:var(--ink);border-color:var(--rim2)}
 .si.on .sic{color:var(--p1)}
@@ -284,12 +284,13 @@ tbody tr:last-child td{border-bottom:none}
   .sb-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.55); z-index: 999;
+    -webkit-tap-highlight-color: transparent;
   }
   .sb-overlay.open { display: block; }
 
   /* Mostrar todos los textos del sidebar en mobile */
   .sb-un, .sb-ur, .sb-lbl, .si span:not(.sic), .si-bx { display: initial; }
-  .si { justify-content: flex-start; }
+  .si { justify-content: flex-start; padding: 12px 14px; min-height: 44px; }
   .sb-usr { justify-content: flex-start; }
   .sb-logo img { height: 30px; }
 
@@ -304,10 +305,11 @@ tbody tr:last-child td{border-bottom:none}
   }
   .mob-menu-btn {
     display: flex; align-items: center; justify-content: center;
-    width: 36px; height: 36px; border-radius: 8px;
+    width: 44px; height: 44px; border-radius: 8px;
     background: var(--surf2); border: 1px solid var(--rim);
-    cursor: pointer; font-size: 16px; color: var(--ink);
-    flex-shrink: 0;
+    cursor: pointer; font-size: 18px; color: var(--ink);
+    flex-shrink: 0; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   #pgT { font-size: 14px; font-weight: 800; flex: 1; }
 
@@ -753,12 +755,13 @@ function updateBadge(){
 }
 
 function nav(p){
+  if(typeof closeMobileMenu==='function') closeMobileMenu();
   // Verificar permiso
   if(S.currentUser && S.currentUser.rol !== 'Administrador'){
     var perms = S.currentUser.permisos || [];
     if(!perms.includes(p)){
       document.querySelectorAll('.si').forEach(function(e){e.classList.remove('on');});
-      $('pgT').textContent = 'Sin acceso';
+      $('pgT').textContent = 'Sin acceso'; if($('pgT-mob')) $('pgT-mob').textContent='Sin acceso';
       $('cnt').innerHTML = '<div class="empty"><div style="font-size:36px;margin-bottom:14px;opacity:0.3">🔒</div><div class="e-tt">Acceso restringido</div><div style="font-size:12px;margin-top:5px">No tienes permiso para ver este módulo.<br>Contacta al administrador.</div></div>';
       return;
     }
@@ -767,7 +770,7 @@ function nav(p){
   S.clienteFiltro='';
   document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.si[data-nav]').forEach(e=>{if(e.dataset.nav===p)e.classList.add('on');});
-  $('pgT').textContent=PGL[p]||p;
+  $('pgT').textContent=PGL[p]||p; if($('pgT-mob')) $('pgT-mob').textContent=PGL[p]||p;
   const fn=PG[p];
   $('cnt').innerHTML=fn?fn():`<div class="empty"><span class="e-ic">🚧</span><div class="e-tt">En desarrollo</div></div>`;
   updateBadge();
@@ -2729,22 +2732,6 @@ window.addEventListener('resize', updateMobileTopbar);
 var _origNavMob = null;
 document.addEventListener('DOMContentLoaded', function(){
   updateMobileTopbar();
-  if(typeof nav === 'function') {
-    var _origNav = nav;
-    window.nav = function(p){
-      var r = _origNav(p);
-      closeMobileMenu();
-      // Update mobile title
-      var pgT = document.getElementById('pgT');
-      var pgTMob = document.getElementById('pgT-mob');
-      if(pgT && pgTMob) pgTMob.textContent = pgT.textContent;
-      // Sync avatar initial
-      var av = document.getElementById('mob-av');
-      var sbAv = document.querySelector('.sb-av');
-      if(av && sbAv) av.textContent = sbAv.textContent.trim().charAt(0);
-      return r;
-    };
-  }
 });
 
 </script>
