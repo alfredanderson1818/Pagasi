@@ -2381,6 +2381,16 @@ function updateSidebar() {
   document.querySelectorAll('.si[data-nav]').forEach(function(el){
     var page = el.dataset.nav;
     el.style.display = (isAdmin || perms.includes(page)) ? '' : 'none';
+    // Fix iOS touch events - add touchend listener once
+    if(!el._iosTouch){
+      el._iosTouch = true;
+      el.addEventListener('touchend', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        var p = el.getAttribute('data-nav');
+        if(p && el.style.display !== 'none') nav(p);
+      }, {passive: false});
+    }
   });
   var av = document.querySelector('.sb-av');
   var un = document.querySelector('.sb-un');
