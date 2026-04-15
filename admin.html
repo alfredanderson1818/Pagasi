@@ -495,7 +495,7 @@ button.si {
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Operaciones</div>
-      <button type="button" class="si" data-nav="cobranza" onclick="nav('cobranza')"><span class="sic">🔔</span><span>Cobranza</span><div class="si-bx" id="sb-badge-cob"></div></button>
+      <button type="button" class="si" data-nav="cobranza" onclick="nav('cobranza')"><span class="sic">🔔</span><span>Cobranza</span><span class="si-bx" id="sb-badge-cob"></span></button>
       <button type="button" class="si" data-nav="contratos" onclick="nav('contratos')"><span class="sic">📄</span><span>Contratos</span></button>
       <button type="button" class="si" data-nav="gps" onclick="nav('gps')"><span class="sic">📍</span><span>GPS Motos</span></button>
       <button type="button" class="si" data-nav="notif" onclick="nav('notif')"><span class="sic">💬</span><span>Notificaciones</span></button>
@@ -512,6 +512,7 @@ button.si {
       <button type="button" class="si" data-nav="users" onclick="nav('users')"><span class="sic">👥</span><span>Usuarios</span></button>
     </div>
   </div>
+  <div class="sb-foot">
 <div class="sb-usr" onclick="doLogout()" title="Cerrar sesión">
       <div class="sb-av">JA</div>
       <div><div class="sb-un">Juan Admin</div><div class="sb-ur">Administrador</div></div>
@@ -538,6 +539,7 @@ button.si {
   </div>
   <div class="content" id="cnt"></div>
 </div>
+</div><!-- /app-root -->
 <div class="ov" id="ov" style="display:none" onclick="if(event.target===this)closeM()">
   <div class="modal" id="modal-box">
     <div class="m-hd">
