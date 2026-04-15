@@ -1350,7 +1350,7 @@ reportes(){return`<div class="page">
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div class="card"><div class="ch"><div class="ct">Reportes Disponibles</div></div>
-      <div class="lst" style="max-height:none">${[['📊','Ingresos Mensuales','Cobros por mes'],['💎','Reporte del Plan 10M','Cuotas y factor 1.90x'],['💳','Créditos Activos','Cartera vigente'],['⚠️','Reporte de Mora','Clientes vencidos'],['💰','Flujo de Caja','Entradas y salidas'],['🏍️','Inventario Motos','Estado del catálogo'],['📈','Crecimiento','Originations por mes'],['🧾','P&L del Período','Estado de resultados']].map(([i,n,d])=>`<div class="li"><div class="li-ic" style="background:var(--gs)">${i}</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${n}</div><div style="font-size:10.5px;color:var(--ink3)">${d}</div></div><div style="display:flex;gap:4px"><button class="btn btn-d btn-xs" onclick="toast('Generando PDF...','info')">PDF</button><button class="btn btn-s btn-xs" onclick="toast('Exportando...','success')">XLS</button></div></div>`).join('')}</div>
+      <div class="lst" style="max-height:none">${[['📊','Ingresos Mensuales','Cobros por mes','ingresos'],['💎','Reporte del Plan 10M','Cuotas y factor 1.90x','plan'],['💳','Créditos Activos','Cartera vigente','creditos'],['⚠️','Reporte de Mora','Clientes vencidos','mora'],['💰','Flujo de Caja','Entradas y salidas','flujo'],['🏍️','Inventario Motos','Estado del catálogo','inventario'],['🧾','P&L del Período','Estado de resultados','pyl']].map(([i,n,d,fn])=>`<div class="li"><div class="li-ic" style="background:var(--gs)">${i}</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${n}</div><div style="font-size:10.5px;color:var(--ink3)">${d}</div></div><button class="btn btn-p btn-xs" onclick="generarReporte('${fn}')">📄 Generar</button></div>`).join('')}</div>
     </div>
     <div class="card"><div class="ch"><div class="ct">Resumen Financiero</div></div>
       ${[['Iniciales cobradas',fmt(S.creds.reduce((a,c)=>a+c.ini,0)),'green'],['Pagos mensuales',fmt(S.pagos.filter(p=>p.estado==='confirmado').reduce((a,p)=>a+p.monto,0)),'green'],['Pendiente cartera',fmt(S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+(c.fin*(1-(c.pagado/c.plazo))),0)),'amber'],['Créditos recuperados',fmt(S.creds.filter(c=>c.estado==='recuperado').reduce((a,c)=>a+c.cuota,0)),'red']].map(([l,v,c])=>`<div class="kpi"><span class="kpi-l">${l}</span><span style="color:var(--${c});font-weight:800;font-family:var(--fd)">${v}</span></div>`).join('')}
@@ -1826,8 +1826,9 @@ function openAddPago(){
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
-      <div class="fg"><label>Método de pago</label><select class="fs" id="p_metodo"><option>Transferencia</option><option>Pago Móvil</option><option>Zelle</option><option>PayPal</option><option>Efectivo USD</option></select></div>
-      <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Referencia de la transacción"></div>
+      <div class="fg"><label>Forma de pago</label><select class="fs" id="p_forma" onchange="toggleCuentaField(this)"><option value="Efectivo USD">💵 Efectivo USD</option><option value="Efectivo BS">💴 Efectivo BS</option><option value="Transferencia">🏦 Transferencia bancaria</option><option value="Pago Móvil">📱 Pago Móvil</option><option value="Zelle">💸 Zelle</option><option value="PayPal">🅿️ PayPal</option><option value="Otro">📋 Otro</option></select></div>
+      <div class="fg" id="p_cuenta_wrap" style="display:none"><label>Cuenta destino</label><select class="fs" id="p_cuenta">${(_cuentas&&_cuentas.length?_cuentas:['Sin cuentas registradas']).map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
       <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${_cobradores.map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
   setTimeout(()=>updPagoMonto($('p_cred')),50);
@@ -1842,8 +1843,9 @@ function openAddPago(){
       cli:cred.cli,cred:credId,
       fecha:($('p_fecha')&&$('p_fecha').value)||new Date().toISOString().split('T')[0],
       monto:monto,
-      metodo:($('p_metodo')&&$('p_metodo').value)||'Transferencia',
-      cobrador:($('p_cobrador')&&$('p_cobrador').value)||'Juan Admin',
+      metodo:($('p_forma')&&$('p_forma').value)||'Efectivo USD',
+      cuenta:($('p_cuenta')&&$('p_cuenta_wrap')&&$('p_cuenta_wrap').style.display!=='none'?$('p_cuenta').value:'—')||'—',
+      cobrador:($('p_cobrador')&&$('p_cobrador').value)||'Admin',
       referencia:($('p_ref')&&$('p_ref').value)||'',
       estado:'confirmado'
     };
@@ -1862,6 +1864,17 @@ function openAddPago(){
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Registrar Pago</button>`;
   $('ov').style.display='flex';
 }
+
+var _cuentas = ['Bancamiga Cta. 0172-xxxx','Banesco Cta. 0134-xxxx','Zelle: pagasi@email.com'];
+
+function toggleCuentaField(sel){
+  var wrap = $('p_cuenta_wrap');
+  if(!wrap) return;
+  var v = sel ? sel.value : '';
+  var showCuenta = (v==='Transferencia'||v==='Pago Móvil'||v==='Zelle'||v==='PayPal');
+  wrap.style.display = showCuenta ? '' : 'none';
+}
+
 function updPagoMonto(sel){
   const opt=(sel&&sel.options)&&_i_[sel.selectedIndex];if(!opt)return;
   const monto=opt.dataset.cuotaq||opt.dataset.cuota;
@@ -2311,6 +2324,149 @@ function openAddPlan(){
   $('ov').style.display='flex';
 }
 
+
+// ══════════════════════════════════════════
+// GENERACIÓN DE REPORTES (imprime como PDF)
+// ══════════════════════════════════════════
+function generarReporte(tipo){
+  var titulo, html_content;
+  var empresa = ($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
+  var fecha = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
+  var estilos = '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:24px}h1{font-size:18px;font-weight:900;margin-bottom:4px}h2{font-size:13px;color:#555;font-weight:400;margin-bottom:16px}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#6C5CE7;color:#fff;padding:7px 9px;text-align:left;font-size:11px}td{padding:6px 9px;border-bottom:1px solid #eee;font-size:11px}tr:nth-child(even){background:#f9f9ff}.total-row{font-weight:900;background:#ede8ff!important}.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.green{background:#d4f5e9;color:#0a7a50}.red{background:#fde8ec;color:#b5162d}.blue{background:#e0d9ff;color:#4834d4}.gray{background:#f0f0f0;color:#555}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #6C5CE7}.logo-area{}.meta{text-align:right;color:#666;font-size:11px}.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.stat-box{background:#f8f7ff;border:1px solid #e0d9ff;border-radius:8px;padding:12px;text-align:center}.stat-v{font-size:18px;font-weight:900;color:#6C5CE7}.stat-l{font-size:10px;color:#888;margin-top:2px}@media print{button{display:none!important}}</style>';
+
+  if(tipo==='ingresos'){
+    titulo = 'Reporte de Ingresos Mensuales';
+    var pagosConf = S.pagos.filter(function(p){return p.estado==='confirmado';});
+    var totalCobrado = pagosConf.reduce(function(a,p){return a+p.monto;},0);
+    var totalIni = S.creds.reduce(function(a,c){return a+c.ini;},0);
+    // Group by month
+    var byMonth = {};
+    pagosConf.forEach(function(p){
+      var mes = p.fecha ? p.fecha.substr(0,7) : 'Sin fecha';
+      if(!byMonth[mes]) byMonth[mes]={mes:mes,cant:0,total:0};
+      byMonth[mes].cant++; byMonth[mes].total+=p.monto;
+    });
+    var rows = Object.values(byMonth).sort(function(a,b){return b.mes.localeCompare(a.mes);})
+      .map(function(m){ return '<tr><td>'+m.mes+'</td><td>'+m.cant+' pagos</td><td>$'+m.total.toFixed(2)+'</td></tr>'; }).join('');
+    html_content = '<div class="stat-grid">'
+      +'<div class="stat-box"><div class="stat-v">$'+totalCobrado.toFixed(2)+'</div><div class="stat-l">Total cobrado</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+pagosConf.length+'</div><div class="stat-l">Pagos registrados</div></div>'
+      +'<div class="stat-box"><div class="stat-v">$'+totalIni.toFixed(2)+'</div><div class="stat-l">Iniciales recibidas</div></div>'
+      +'<div class="stat-box"><div class="stat-v">$'+(totalCobrado+totalIni).toFixed(2)+'</div><div class="stat-l">Ingreso total</div></div>'
+      +'</div>'
+      +'<table><thead><tr><th>Mes</th><th>Cantidad</th><th>Monto</th></tr></thead><tbody>'+rows
+      +'<tr class="total-row"><td>TOTAL</td><td>'+pagosConf.length+' pagos</td><td>$'+totalCobrado.toFixed(2)+'</td></tr>'
+      +'</tbody></table>'
+      +'<h2 style="margin-top:20px;border-top:1px solid #eee;padding-top:14px">Detalle de pagos</h2>'
+      +'<table><thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha</th><th>Monto</th><th>Forma</th><th>Cuenta</th><th>Referencia</th></tr></thead><tbody>'
+      +pagosConf.map(function(p){
+        return '<tr><td>'+p.id+'</td><td>'+p.cli+'</td><td>'+p.cred+'</td><td>'+(p.fecha||'—')+'</td><td>$'+p.monto.toFixed(2)+'</td><td>'+(p.metodo||'—')+'</td><td>'+(p.cuenta||'—')+'</td><td>'+(p.referencia||'—')+'</td></tr>';
+      }).join('')
+      +'</tbody></table>';
+
+  } else if(tipo==='creditos'){
+    titulo = 'Reporte de Créditos Activos';
+    var activos = S.creds.filter(function(c){return c.estado==='activo';});
+    var totalCartera = activos.reduce(function(a,c){return a+(c.total-(c.pagado*(c.cuotaQ||0)*2));},0);
+    html_content = '<div class="stat-grid">'
+      +'<div class="stat-box"><div class="stat-v">'+activos.length+'</div><div class="stat-l">Créditos activos</div></div>'
+      +'<div class="stat-box"><div class="stat-v">$'+totalCartera.toFixed(2)+'</div><div class="stat-l">Cartera vigente</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return c.estado==='completado';}).length+'</div><div class="stat-l">Completados</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return c.mora>0;}).length+'</div><div class="stat-l">En mora</div></div>'
+      +'</div>'
+      +'<table><thead><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Fecha</th><th>Cuota Q.</th><th>Pagadas</th><th>Estado</th></tr></thead><tbody>'
+      +activos.map(function(c){
+        var est = c.mora>0?'<span class="badge red">Mora</span>':'<span class="badge green">Al día</span>';
+        return '<tr><td>'+c.id+'</td><td>'+c.cli+'</td><td>'+c.modelo+'</td><td>'+(c.fecha||'—')+'</td><td>$'+(c.cuotaQ||c.cuota||0).toFixed(2)+'</td><td>'+(c.pagado||0)+' / '+((c.totalCuotas||20))+'</td><td>'+est+'</td></tr>';
+      }).join('')
+      +'</tbody></table>';
+
+  } else if(tipo==='mora'){
+    titulo = 'Reporte de Mora';
+    var enMora = S.creds.filter(function(c){return c.mora>0||c.estado==='vencido';});
+    html_content = '<div class="stat-grid">'
+      +'<div class="stat-box"><div class="stat-v">'+enMora.length+'</div><div class="stat-l">Clientes en mora</div></div>'
+      +'<div class="stat-box"><div class="stat-v">$'+enMora.reduce(function(a,c){return a+(c.cuotaQ||c.cuota||0);},0).toFixed(2)+'</div><div class="stat-l">Cuotas pendientes</div></div>'
+      +'</div>'
+      +'<table><thead><tr><th>Crédito</th><th>Cliente</th><th>Moto</th><th>Cuotas vencidas</th><th>Cuota</th><th>Cobrador</th></tr></thead><tbody>'
+      +enMora.map(function(c){
+        return '<tr><td>'+c.id+'</td><td>'+c.cli+'</td><td>'+c.modelo+'</td><td><span class="badge red">'+c.mora+' vencidas</span></td><td>$'+(c.cuotaQ||c.cuota||0).toFixed(2)+'</td><td>'+(c.cobrador||'—')+'</td></tr>';
+      }).join('')
+      +'</tbody></table>';
+
+  } else if(tipo==='inventario'){
+    titulo = 'Inventario de Motocicletas';
+    html_content = '<div class="stat-grid">'
+      +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return m.estado==='disponible';}).length+'</div><div class="stat-l">Disponibles</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return m.estado==='financiada';}).length+'</div><div class="stat-l">Financiadas</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return m.estado==='recuperada';}).length+'</div><div class="stat-l">Recuperadas</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.motos.length+'</div><div class="stat-l">Total</div></div>'
+      +'</div>'
+      +'<table><thead><tr><th>ID</th><th>Modelo</th><th>VIN</th><th>Color</th><th>Precio</th><th>Estado</th><th>Cliente</th><th>GPS</th></tr></thead><tbody>'
+      +S.motos.map(function(m){
+        var est={'disponible':'<span class="badge green">Disponible</span>','financiada':'<span class="badge blue">Financiada</span>','recuperada':'<span class="badge red">Recuperada</span>','inventario':'<span class="badge gray">Inventario</span>'}[m.estado]||m.estado;
+        return '<tr><td>'+m.id+'</td><td>'+m.modelo+'</td><td>'+(m.vin||'—')+'</td><td>'+(m.color||'—')+'</td><td>$'+m.precio.toFixed(2)+'</td><td>'+est+'</td><td>'+(m.cliente||'—')+'</td><td>'+(m.gps?'✅':'—')+'</td></tr>';
+      }).join('')
+      +'</tbody></table>';
+
+  } else if(tipo==='pyl'){
+    titulo = 'Estado de Resultados (P&L)';
+    var tIngresos = S.creds.reduce(function(a,c){return a+c.ini;},0) + S.pagos.filter(function(p){return p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0);
+    var tEgresos = S.egresos.reduce(function(a,e){return a+e.monto;},0);
+    var utilidad = tIngresos - tEgresos;
+    html_content = '<div class="stat-grid">'
+      +'<div class="stat-box"><div class="stat-v" style="color:#0a7a50">$'+tIngresos.toFixed(2)+'</div><div class="stat-l">Ingresos totales</div></div>'
+      +'<div class="stat-box"><div class="stat-v" style="color:#b5162d">$'+tEgresos.toFixed(2)+'</div><div class="stat-l">Egresos totales</div></div>'
+      +'<div class="stat-box"><div class="stat-v" style="color:'+(utilidad>=0?'#0a7a50':'#b5162d')+'">$'+Math.abs(utilidad).toFixed(2)+'</div><div class="stat-l">'+(utilidad>=0?'Utilidad neta':'Pérdida neta')+'</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return c.estado==='activo';}).length+'</div><div class="stat-l">Créditos activos</div></div>'
+      +'</div>'
+      +'<table><thead><tr><th>Concepto</th><th>Monto</th></tr></thead><tbody>'
+      +'<tr><td>Iniciales cobradas</td><td>$'+S.creds.reduce(function(a,c){return a+c.ini;},0).toFixed(2)+'</td></tr>'
+      +'<tr><td>Pagos de cuotas</td><td>$'+S.pagos.filter(function(p){return p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0).toFixed(2)+'</td></tr>'
+      +'<tr class="total-row"><td>TOTAL INGRESOS</td><td>$'+tIngresos.toFixed(2)+'</td></tr>'
+      +S.egresos.map(function(e){return '<tr><td>(-) '+e.concepto+'</td><td>$'+e.monto.toFixed(2)+'</td></tr>';}).join('')
+      +'<tr class="total-row"><td>TOTAL EGRESOS</td><td>$'+tEgresos.toFixed(2)+'</td></tr>'
+      +'<tr class="total-row" style="background:#6C5CE7!important;color:#fff"><td>UTILIDAD NETA</td><td>$'+utilidad.toFixed(2)+'</td></tr>'
+      +'</tbody></table>';
+
+  } else if(tipo==='flujo'){
+    titulo = 'Flujo de Caja';
+    var allPagos = S.pagos.filter(function(p){return p.estado==='confirmado';});
+    html_content = '<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Entrada</th><th>Salida</th><th>Forma</th><th>Cuenta</th></tr></thead><tbody>'
+      +allPagos.map(function(p){
+        return '<tr><td>'+(p.fecha||'—')+'</td><td><span class="badge green">Ingreso</span></td><td>'+p.cli+' · '+p.cred+'</td><td>$'+p.monto.toFixed(2)+'</td><td>—</td><td>'+(p.metodo||'—')+'</td><td>'+(p.cuenta||'—')+'</td></tr>';
+      }).join('')
+      +S.egresos.map(function(e){
+        return '<tr><td>'+(e.fecha||'—')+'</td><td><span class="badge red">Egreso</span></td><td>'+e.concepto+'</td><td>—</td><td>$'+e.monto.toFixed(2)+'</td><td>—</td><td>—</td></tr>';
+      }).join('')
+      +'</tbody></table>';
+
+  } else if(tipo==='plan'){
+    titulo = 'Reporte del Plan Financiero';
+    html_content = '<div class="stat-grid">'
+      +'<div class="stat-box"><div class="stat-v">'+PLAN.plazo+'</div><div class="stat-l">Meses plazo</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+PLAN.factor+'x</div><div class="stat-l">Factor</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+(PLAN.inicial*100)+'%</div><div class="stat-l">Inicial mínima</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+PLAN.tasaMensual+'%</div><div class="stat-l">Tasa mensual</div></div>'
+      +'</div>'
+      +'<table><thead><tr><th>Modelo</th><th>Precio</th><th>Inicial 40%</th><th>Financiado</th><th>Cuota mensual</th><th>Cuota quincenal</th><th>Total pagado</th></tr></thead><tbody>'
+      +CATALOGO.map(function(c){
+        var r = calcMoto(c.precio);
+        return '<tr><td>'+c.modelo+'</td><td>$'+c.precio.toFixed(2)+'</td><td>$'+r.ini.toFixed(2)+'</td><td>$'+r.fin.toFixed(2)+'</td><td>$'+r.cuotaM.toFixed(2)+'</td><td>$'+r.cuotaQ.toFixed(2)+'</td><td>$'+r.totalPagado.toFixed(2)+'</td></tr>';
+      }).join('')
+      +'</tbody></table>';
+  } else {
+    toast('Reporte no implementado aún','info'); return;
+  }
+
+  var doc = window.open('','_blank','width=900,height=700');
+  doc.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+' — '+empresa+'</title>'+estilos+'</head><body>'
+    +'<div class="header"><div class="logo-area"><h1>'+empresa+'</h1><h2>'+titulo+'</h2></div>'
+    +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#6C5CE7;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px">🖨️ Imprimir / Guardar PDF</button></div>'
+    +'</div>'+html_content+'</body></html>');
+  doc.document.close();
+}
+
 function guardarPlan(){
   var factor = parseFloat(($('cfg_factor')&&$('cfg_factor').value));
   var ini    = parseFloat(($('cfg_ini')&&$('cfg_ini').value))/100;
@@ -2703,6 +2859,9 @@ function _loginSuccess(nombre, rol, uid, permisos) {
       }).catch(function(){});
       db.collection('config').doc('planes').get().then(function(doc){
         if(doc.exists && doc.data().items) window._planesExtra = doc.data().items;
+      }).catch(function(){});
+      db.collection('config').doc('cuentas').get().then(function(doc){
+        if(doc.exists && doc.data().lista && doc.data().lista.length) _cuentas = doc.data().lista;
       }).catch(function(){});
     }
     nav('dash');
