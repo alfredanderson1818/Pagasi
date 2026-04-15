@@ -650,6 +650,7 @@ var DB = {
       if(totalDocs === 0){
         toast('Base de datos vacía — mostrando datos de ejemplo','info');
       }
+      calcularMoraAuto();
       hideLoader();
     }).catch(function(e){
       hideLoader();
@@ -977,7 +978,19 @@ dash(){
   const chartData=getMonthlyIngresos();
   const iv=chartData.map(function(x){return x.total;}),ms=chartData.map(function(x){return x.label;});
   const mx=Math.max(...iv)||1;
-  const hoy=S.creds.filter(c=>c.estado==='activo').slice(0,3);
+  const hoy=(function(){
+    var hoyStr=new Date().toISOString().split('T')[0];
+    var prox=S.creds.filter(function(c){
+      if(c.estado!=='activo') return false;
+      if(!c.fecha) return false;
+      var start=new Date(c.fecha);
+      var cuotaNum=c.pagado+1;
+      var vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
+      var diffDays=Math.round((vence-new Date())/(24*60*60*1000));
+      return diffDays<=3 && diffDays>=-3;
+    });
+    return prox.length?prox:S.creds.filter(function(c){return c.estado==='activo';}).slice(0,3);
+  })();
   const pendPagos=S.pagos.filter(p=>p.estado==='pendiente').length;
 
   // stat cards: [icon, label, value, change, changeClass, bg, color, navTarget, navHint]
@@ -992,7 +1005,7 @@ dash(){
 
   return`<div class="page">
   <div class="hero">
-    <div><div class="hero-tt">Bienvenido, Juan</div><div class="hero-sb">${new Date().toLocaleDateString('es-VE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div></div>
+    <div><div class="hero-tt">Bienvenido, ${(S.currentUser&&S.currentUser.nombre?S.currentUser.nombre.split(' ')[0]:'')}</div><div class="hero-sb">${new Date().toLocaleDateString('es-VE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div></div>
     <div style="display:flex;gap:7px;z-index:1">
       <button class="btn btn-g btn-sm" onclick="nav('reportes')">Reportes</button>
       <button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nuevo crédito</button>
@@ -1196,7 +1209,7 @@ pagos(){return`<div class="page">
       <td style="color:var(--green);font-weight:800;font-family:var(--fd)">${fmt(p.monto)}</td>
       <td class="tds">${p.metodo}</td><td class="tds">${p.cobrador}</td>
       <td><span class="bdg ${sbg(p.estado)}">${p.estado}</span></td>
-      <td><button class="btn btn-g btn-xs btn-ic">🧾</button></td>
+      <td>${p.estado==='pendiente'?`<button class="btn btn-s btn-xs" onclick="confirmarPago('${p.id}')">✅ Confirmar</button>`:`<button class="btn btn-g btn-xs btn-ic">🧾</button>`}</td>
     </tr>`).join('')}</tbody>
   </table></div></div></div>`;},
 
@@ -1215,10 +1228,10 @@ cobranza(){const mora=S.creds.filter(c=>c.mora>0);return`<div class="page">
       <td><span style="color:var(--red);font-weight:900;font-size:15px;font-family:var(--fd)">${c.mora}d</span></td>
       <td style="color:var(--red);font-weight:800;font-family:var(--fd)">${fmt(c.cuota)}</td>
       <td><div style="display:flex;gap:4px">
-        <button class="btn btn-s btn-xs" onclick="toast('Llamada a ${c.cli}','success')">📞</button>
-        <button class="btn btn-g btn-xs" onclick="toast('WhatsApp enviado','info')">💬</button>
+        <button class="btn btn-s btn-xs" onclick="llamarCliente('${c.id}')" title="Llamar">📞</button>
+        <button class="btn btn-g btn-xs" onclick="whatsappCliente('${c.id}')" title="WhatsApp">💬</button>
         <button class="btn btn-g btn-xs" onclick="openNota('${c.id}')">📝</button>
-        <button class="btn btn-d btn-xs" onclick="toast('Recuperación iniciada','warn')">🔑</button>
+        <button class="btn btn-d btn-xs" onclick="confirmarRecuperacion('${c.id}')">🔑</button>
       </div></td>
     </tr>`;}).join('')}</tbody>
   </table></div>`:`<div style="text-align:center;padding:32px;color:var(--green)"><div style="font-size:40px;margin-bottom:10px">✅</div><div style="font-weight:800;font-size:16px">Todos los clientes al día</div><div style="font-size:12px;color:var(--ink3);margin-top:6px">No hay clientes en mora actualmente</div></div>`}
@@ -1666,7 +1679,7 @@ function openAddCred(motoId=null){
     <div class="fsec" style="margin-top:14px">Opciones del Crédito</div>
     <div class="fgr">
       <div class="fg"><label>GPS incluido</label><select class="fs" id="k_gps"><option value="si">Sí — GPS instalado</option><option value="no">No</option></select></div>
-      <div class="fg"><label>Cobrador asignado</label><select class="fs" id="k_cobrador">${['Juan Admin','Ana Cobrador','Pedro Vendedor'].map(u=>`<option>${u}</option>`).join('')}</select></div>
+      <div class="fg"><label>Cobrador asignado</label><select class="fs" id="k_cobrador">${_cobradores.map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>
     <div class="fgr c1" style="margin-top:8px">
       <div class="fg"><label>Notas del crédito</label><textarea class="fta" id="k_notas" placeholder="Observaciones, condiciones especiales..."></textarea></div>
@@ -1748,7 +1761,7 @@ function openAddPago(){
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
       <div class="fg"><label>Método de pago</label><select class="fs" id="p_metodo"><option>Transferencia</option><option>Pago Móvil</option><option>Zelle</option><option>PayPal</option><option>Efectivo USD</option></select></div>
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Referencia de la transacción"></div>
-      <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${['Juan Admin','Ana Cobrador','Pedro Vendedor'].map(u=>`<option>${u}</option>`).join('')}</select></div>
+      <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${_cobradores.map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
   setTimeout(()=>updPagoMonto($('p_cred')),50);
   S.saveFn=()=>{
@@ -1843,6 +1856,87 @@ function openAmort(id){
     <div style="max-height:310px;overflow-y:auto;margin-top:3px">${rows}</div>`;
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="descargarAmortPDF()">📥 PDF</button>`;
   $('ov').style.display='flex';
+}
+
+// ── COBRANZA: LLAMADA, WHATSAPP, RECUPERACION ──
+function llamarCliente(credId){
+  var c=S.creds.find(function(x){return x.id===credId;});
+  if(!c){toast('Crédito no encontrado','error');return;}
+  var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
+  var tel=(cl.tel||'').replace(/\D/g,'');
+  if(!tel){toast('Este cliente no tiene teléfono registrado','error');return;}
+  window.open('tel:+58'+tel.replace(/^0/,''));
+}
+
+function whatsappCliente(credId){
+  var c=S.creds.find(function(x){return x.id===credId;});
+  if(!c){toast('Crédito no encontrado','error');return;}
+  var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
+  var tel=(cl.tel||'').replace(/\D/g,'').replace(/^0/,'');
+  if(!tel){toast('Este cliente no tiene teléfono registrado','error');return;}
+  var msg=encodeURIComponent('Hola '+c.cli.split(' ')[0]+', te contactamos de Pagasi. Tu cuota del crédito '+credId+' ('+c.modelo+') está pendiente. Por favor comunícate con nosotros para regularizar tu situación. Gracias.');
+  window.open('https://wa.me/58'+tel+'?text='+msg);
+}
+
+function confirmarRecuperacion(credId){
+  var c=S.creds.find(function(x){return x.id===credId;});
+  if(!c) return;
+  $('mic').textContent='🔑';
+  $('mtt').textContent='Recuperar Unidad';
+  $('msb').textContent=c.cli+' · '+c.modelo;
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div style="text-align:center;padding:14px 0">'
+    +'<div style="font-size:40px;margin-bottom:12px">🏍️</div>'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:6px">'+c.modelo+'</div>'
+    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:18px">Crédito '+credId+' · Cliente: '+c.cli+'</div>'
+    +'<div style="background:var(--reds);border:1px solid rgba(240,75,106,0.2);border-radius:var(--r8);padding:12px;color:var(--red);font-size:13px;font-weight:700">'
+    +'⚠️ ¿Confirmas la recuperación de esta unidad? El crédito pasará a estado "recuperado" y la moto quedará disponible.</div></div>';
+  S.saveFn=function(){
+    var ci=S.creds.findIndex(function(x){return x.id===credId;});
+    if(ci>=0){
+      S.creds[ci].estado='recuperado';
+      DB.updateCred(credId,{estado:'recuperado'});
+      var mi=S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
+      if(mi>=0){S.motos[mi].estado='recuperada';S.motos[mi].cliente=null;DB.saveMoto(S.motos[mi]);}
+    }
+    toast('Unidad recuperada — crédito cerrado','info');
+    closeM();nav('cobranza');return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">🔑 Confirmar Recuperación</button>';
+  $('ov').style.display='flex';
+}
+
+// ── PAGOS: CONFIRMAR PAGO PENDIENTE ──
+function confirmarPago(pagoId){
+  var pi=S.pagos.findIndex(function(x){return x.id===pagoId;});
+  if(pi<0) return;
+  S.pagos[pi].estado='confirmado';
+  DB.savePago(S.pagos[pi]);
+  var ci=S.creds.findIndex(function(x){return x.id===S.pagos[pi].cred;});
+  if(ci>=0){
+    S.creds[ci].pagado=Math.min(S.creds[ci].pagado+1,S.creds[ci].totalCuotas||S.creds[ci].plazo*2);
+    if(S.creds[ci].mora>0) S.creds[ci].mora=0;
+    if(S.creds[ci].pagado>=(S.creds[ci].totalCuotas||S.creds[ci].plazo*2)) S.creds[ci].estado='completado';
+    DB.updateCred(S.creds[ci].id,{pagado:S.creds[ci].pagado,mora:S.creds[ci].mora,estado:S.creds[ci].estado});
+  }
+  toast('✅ Pago confirmado · '+pagoId,'success');
+  nav('pagos');
+}
+
+// ── MORA: CALCULAR DÍAS AUTOMÁTICAMENTE AL CARGAR ──
+function calcularMoraAuto(){
+  var hoy=new Date();
+  hoy.setHours(0,0,0,0);
+  S.creds.forEach(function(c){
+    if(c.estado!=='activo'||!c.fecha) return;
+    var inicio=new Date(c.fecha);
+    var cuotaSiguiente=c.pagado+1;
+    var fechaVence=new Date(inicio.getTime()+(cuotaSiguiente*15*24*60*60*1000));
+    fechaVence.setHours(0,0,0,0);
+    var diasAtraso=Math.floor((hoy-fechaVence)/(24*60*60*1000));
+    var gracia=PLAN.diasGracia||5;
+    c.mora=diasAtraso>gracia?diasAtraso:0;
+  });
 }
 
 // NOTA COBRANZA
