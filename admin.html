@@ -508,6 +508,7 @@ button.si {
     <div class="sb-grp">
       <div class="sb-lbl">Análisis</div>
       <button type="button" class="si" data-nav="reportes" onclick="nav('reportes')"><span class="sic">📊</span><span>Reportes</span></button>
+      <button type="button" class="si" data-nav="cuentas" onclick="nav('cuentas')"><span class="sic">🏦</span><span>Cuentas</span></button>
       <button type="button" class="si" data-nav="conta" onclick="nav('conta')"><span class="sic">📒</span><span>Contabilidad</span></button>
     </div>
     <div class="sb-grp">
@@ -643,15 +644,19 @@ var DB = {
       db.collection('creditos').get(),
       db.collection('pagos').get(),
       db.collection('egresos').get(),
+      db.collection('cuentas').get(),
+      db.collection('movimientos').get(),
     ]).then(function(snaps){
       function read(snap){return snap.docs.map(function(d){return d.data();});}
-      var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]);
+      var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),cu=read(snaps[5]),mv=read(snaps[6]);
       // Solo reemplaza datos demo si Firestore tiene datos reales
-      if(m.length)  S.motos    = m.map(mapMoto);
-      if(cl.length) S.clientes = cl;
-      if(cr.length) S.creds    = cr.map(mapCred);
-      if(p.length)  S.pagos    = p.map(mapPago);
-      if(e.length)  S.egresos  = e;
+      if(m.length)  S.motos       = m.map(mapMoto);
+      if(cl.length) S.clientes    = cl;
+      if(cr.length) S.creds       = cr.map(mapCred);
+      if(p.length)  S.pagos       = p.map(mapPago);
+      if(e.length)  S.egresos     = e;
+      if(cu.length) S.cuentas     = cu;
+      if(mv.length) S.movimientos = mv;
       // Si todo vacío, avisar al usuario
       var totalDocs = m.length + cl.length + cr.length + p.length;
       if(totalDocs === 0){
@@ -679,9 +684,15 @@ var DB = {
 DB.getUsuarios    = function(){ if(!db) return Promise.resolve([]); return db.collection('usuarios').get().then(function(s){return s.docs.map(function(d){return Object.assign({uid:d.id},d.data());});}); };
 DB.saveUsuario    = function(uid,data){ if(!db) return; return db.collection('usuarios').doc(uid).set(data); };
 DB.updateUsuario  = function(uid,data){ if(!db) return; db.collection('usuarios').doc(uid).update(data); };
+DB.deleteUsuario  = function(uid){ if(!db) return; db.collection('usuarios').doc(uid).delete().catch(function(e){ toast('Error al eliminar: '+e.message,'error'); }); };
 DB.saveInvitacion = function(token,data){ if(!db) return; return db.collection('invitaciones').doc(token).set(data); };
 DB.getInvitacion  = function(token){ if(!db) return Promise.resolve(null); return db.collection('invitaciones').doc(token).get(); };
-DB.usarInvitacion = function(token,uid){ if(!db) return; db.collection('invitaciones').doc(token).update({usado:true,uid:uid,fechaUso:new Date().toISOString()}); };
+DB.usarInvitacion = function(token,uid){ if(!db) return; db.collection('invitaciones').doc(token).update({usado:true,uid:uid,fechaUso:new Date().toISOString()})
+DB.saveCuenta      = function(o){ if(!db)return; db.collection('cuentas').doc(String(o.id)).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');}); };
+DB.delCuenta       = function(id){ if(!db)return; db.collection('cuentas').doc(String(id)).delete(); };
+DB.updateCuenta    = function(id,u){ if(!db)return; db.collection('cuentas').doc(String(id)).update(u); };
+DB.saveMovimiento  = function(o){ if(!db)return; db.collection('movimientos').doc(o.id).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');}); };
+DB.delMovimiento   = function(id){ if(!db)return; db.collection('movimientos').doc(id).delete(); };; };
 
 // ── Lista de módulos disponibles ──
 var MODULOS = [
@@ -695,6 +706,7 @@ var MODULOS = [
   {id:'gps',        label:'GPS Rastreo',       grupo:'Operaciones'},
   {id:'notif',      label:'Notificaciones',    grupo:'Operaciones'},
   {id:'reportes',   label:'Reportes',          grupo:'Análisis'},
+  {id:'cuentas',    label:'Cuentas',           grupo:'Análisis'},
   {id:'conta',      label:'Contabilidad',      grupo:'Análisis'},
   {id:'plan',       label:'Plan & Precios',    grupo:'Sistema'},
   {id:'config',     label:'Configuración',     grupo:'Sistema'},
@@ -778,6 +790,11 @@ const S = {
     {id:4,concepto:'Salarios',monto:600,fecha:'2025-01-05',categoria:'nomina'},
     {id:5,concepto:'Otros gastos',monto:200,fecha:'2025-01-08',categoria:'otros'},
   ],
+  cuentas:[
+    {id:1,nombre:'Efectivo USD',tipo:'efectivo',moneda:'USD',saldo:0,banco:'',numero:'',descripcion:'Caja principal'},
+    {id:2,nombre:'Efectivo BS',tipo:'efectivo',moneda:'BS',saldo:0,banco:'',numero:'',descripcion:'Caja bolívares'},
+  ],
+  movimientos:[],
   page:'dash', mTab:'disponible', saveFn:null, clienteFiltro:'',
   currentUser: null
 };
@@ -786,7 +803,7 @@ const $=id=>document.getElementById(id);
 const fmt=n=>'$'+parseFloat(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a'}[s]||'b-x');
-const PGL={dash:'Dashboard',clientes:'Clientes',motos:'Motocicletas',creditos:'Financiamientos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Reportes',conta:'Contabilidad',plan:'Plan & Precios',config:'Configuración',users:'Usuarios'};
+const PGL={dash:'Dashboard',clientes:'Clientes',motos:'Motocicletas',creditos:'Financiamientos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Reportes',cuentas:'Cuentas',conta:'Contabilidad',plan:'Plan & Precios',config:'Configuración',users:'Usuarios'};
 
 // Update mora badge
 function updateBadge(){
@@ -1378,7 +1395,7 @@ conta(){
       <div style="margin-top:10px;padding:11px;background:var(--greens);border-radius:var(--r8);border:1px solid rgba(14,203,129,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total ingresos</span><span style="color:var(--green);font-weight:900;font-family:var(--fd)">${fmt(totalIngresos)}</span></div>
     </div>
     <div class="card"><div class="ch"><div class="ct">❤️ Egresos</div><button class="btn btn-d btn-xs" onclick="openAddEgreso()">＋ Agregar</button></div>
-      ${S.egresos.map(e=>`<div class="kpi"><span class="kpi-l">${e.concepto}</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--red);font-weight:800;font-family:var(--fd)">-${fmt(e.monto)}</span><button class="btn btn-d btn-xs btn-ic" onclick="delEgreso(${e.id})" title="Eliminar">✕</button></div></div>`).join('')}
+      ${S.egresos.map(e=>`<div class="kpi"><span class="kpi-l">${e.concepto}${e.cuentaNombre?'<div style="font-size:9.5px;color:var(--ink3);margin-top:1px">🏦 '+e.cuentaNombre+'</div>':''}</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--red);font-weight:800;font-family:var(--fd)">-${fmt(e.monto)}</span><button class="btn btn-d btn-xs btn-ic" onclick="delEgreso(${e.id})" title="Eliminar">✕</button></div></div>`).join('')}
       <div style="margin-top:10px;padding:11px;background:var(--reds);border-radius:var(--r8);border:1px solid rgba(240,75,106,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total egresos</span><span style="color:var(--red);font-weight:900;font-family:var(--fd)">-${fmt(totalEgresos)}</span></div>
     </div>
   </div></div>`;},
@@ -1517,7 +1534,7 @@ users(){
           +'<td class="tds">'+u.email+'</td>'
           +'<td><span class="bdg '+rc+'">'+u.rol+'</span></td>'
           +'<td class="tds">'+mods+' módulos</td>'
-          +'<td><button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button></td>'
+          +'<td style="display:flex;gap:5px;align-items:center">'+'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'+((!esMio&&(S.currentUser&&(S.currentUser.rol==='Administrador'||S.currentUser.rol==='Gerente')))?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email)+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">🗑</button>':'')+'</td>'
 +'</tr>';
       }).join('');
     }).catch(function(){ /* sin Firebase, no hay lista */ });
@@ -2142,9 +2159,18 @@ function openAddEgreso(){
     var monto=parseFloat(($('eg_monto')&&$('eg_monto').value))||0;
     if(!conc||monto<=0){toast('Concepto y monto son obligatorios','error');return false;}
     var newId=S.egresos.length?Math.max.apply(null,S.egresos.map(function(x){return x.id;}))+1:1;
-    var newEg={id:newId,concepto:conc,monto:monto,fecha:($('eg_fecha')&&$('eg_fecha').value)||new Date().toISOString().split('T')[0],categoria:($('eg_cat')&&$('eg_cat').value)||'otros',notas:($('eg_notas')&&$('eg_notas').value)||''};
+    var cuentaId=parseInt(($('eg_cuenta')&&$('eg_cuenta').value)||0)||null;
+    var cuentaNombre=cuentaId?(S.cuentas.find(function(x){return x.id===cuentaId;})||{}).nombre||'':'Sin especificar';
+    var newEg={id:newId,concepto:conc,monto:monto,fecha:($('eg_fecha')&&$('eg_fecha').value)||new Date().toISOString().split('T')[0],categoria:($('eg_cat')&&$('eg_cat').value)||'otros',cuentaId:cuentaId,cuentaNombre:cuentaNombre,notas:($('eg_notas')&&$('eg_notas').value)||''};
     S.egresos.push(newEg);
     DB.saveEgreso(newEg);
+    // Descontar saldo de la cuenta y registrar movimiento
+    if(cuentaId){
+      var ci=S.cuentas.findIndex(function(x){return x.id===cuentaId;});
+      if(ci>=0){S.cuentas[ci].saldo-=monto;DB.updateCuenta(cuentaId,{saldo:S.cuentas[ci].saldo});}
+      var mov={id:'MOV-'+Date.now(),tipo:'egreso',concepto:conc,monto:monto,cuentaOrigen:cuentaId,cuentaDestino:null,fecha:newEg.fecha,referencia:newEg.notas||''};
+      S.movimientos.push(mov);DB.saveMovimiento(mov);
+    }
     toast('Egreso registrado · '+fmt(monto),'success');closeM();nav('conta');return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar Egreso</button>`;
@@ -2465,6 +2491,305 @@ function generarReporte(tipo){
     +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#6C5CE7;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px">🖨️ Imprimir / Guardar PDF</button></div>'
     +'</div>'+html_content+'</body></html>');
   doc.document.close();
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO CUENTAS — Gestión contable por cuentas
+// ══════════════════════════════════════════════════════════════
+function saldoCuenta(cid){
+  // Saldo = depósitos - retiros + transferencias entrantes - transferencias salientes
+  var base = (S.cuentas.find(function(c){return c.id===cid;})||{}).saldo||0;
+  return base;
+}
+
+function totalCuentas(){
+  return S.cuentas.filter(function(c){return c.moneda==='USD';}).reduce(function(a,c){return a+c.saldo;},0);
+}
+
+function movsCuenta(cid){
+  return S.movimientos.filter(function(m){ return m.cuentaOrigen===cid || m.cuentaDestino===cid; })
+    .sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
+}
+
+// ── PAGE RENDER ──
+function renderCuentas(){
+  var totalUSD = S.cuentas.filter(function(c){return c.moneda==='USD';}).reduce(function(a,c){return a+c.saldo;},0);
+  var totalBS  = S.cuentas.filter(function(c){return c.moneda==='BS'; }).reduce(function(a,c){return a+c.saldo;},0);
+  var iconTipo = function(t){ return t==='efectivo'?'💵':t==='banco'?'🏦':t==='zelle'?'💸':'💳'; };
+
+  var cuentasHTML = S.cuentas.map(function(c){
+    var movs = movsCuenta(c.id).slice(0,5);
+    var ultimosMovs = movs.length ? movs.map(function(m){
+      var esEntrada = m.cuentaDestino===c.id;
+      var signo = esEntrada ? '+' : '-';
+      var color = esEntrada ? 'var(--green)' : 'var(--red)';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--rim)">'
+        +'<div><div style="font-size:11.5px;font-weight:600">'+(m.concepto||m.tipo)+'</div>'
+        +'<div style="font-size:10px;color:var(--ink3)">'+(m.fecha||'')+(m.referencia?' · '+m.referencia:'')+'</div></div>'
+        +'<div style="font-weight:800;font-size:12px;color:'+color+'">'+signo+fmt(m.monto)+'</div>'
+        +'</div>';
+    }).join('') : '<div style="color:var(--ink3);font-size:11px;padding:8px 0">Sin movimientos</div>';
+
+    return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:var(--r12);padding:16px;display:flex;flex-direction:column;gap:10px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+      +'<div style="display:flex;align-items:center;gap:9px">'
+      +'<div style="width:38px;height:38px;border-radius:10px;background:var(--gs);display:flex;align-items:center;justify-content:center;font-size:20px">'+iconTipo(c.tipo)+'</div>'
+      +'<div><div style="font-weight:800;font-size:13px">'+c.nombre+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3)">'+(c.banco||c.tipo)+' · '+c.moneda+(c.numero?' · ···'+c.numero.slice(-4):'')+'</div></div></div>'
+      +'<div style="text-align:right">'
+      +'<div style="font-family:var(--fd);font-weight:900;font-size:20px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">'
+      +(c.moneda==='BS'?'Bs. ':'')+fmt(c.saldo).replace('$',c.moneda==='BS'?'':'$')+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3)">Saldo disponible</div></div></div>'
+      +'<div style="display:flex;gap:6px">'
+      +'<button class="btn btn-p btn-xs" onclick="openDeposito('+c.id+')">＋ Depósito</button>'
+      +'<button class="btn btn-d btn-xs" onclick="openRetiro('+c.id+')">− Retiro</button>'
+      +'<button class="btn btn-g btn-xs" onclick="openTransferencia('+c.id+')">⇄ Transferir</button>'
+      +'<button class="btn btn-g btn-xs" style="margin-left:auto" onclick="openEditCuenta('+c.id+')">✏️</button>'
+      +'<button class="btn btn-d btn-xs" onclick="confirmarDelCuenta('+c.id+')">🗑</button>'
+      +'</div>'
+      +'<div style="border-top:1px solid var(--rim);padding-top:9px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px">Últimos movimientos</div>'
+      +ultimosMovs+'</div>'
+      +'</div>';
+  }).join('');
+
+  var movAll = S.movimientos.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  var movHTML = movAll.length ? movAll.map(function(m){
+    var cOrig = S.cuentas.find(function(c){return c.id===m.cuentaOrigen;});
+    var cDest = S.cuentas.find(function(c){return c.id===m.cuentaDestino;});
+    var tipoIcon = m.tipo==='deposito'?'💚':m.tipo==='retiro'?'🔴':m.tipo==='transferencia'?'🔄':'💳';
+    var tipoLabel = {deposito:'Depósito',retiro:'Retiro',transferencia:'Transferencia',ingreso_pago:'Ingreso pago',egreso:'Egreso'}[m.tipo]||m.tipo;
+    return '<tr>'
+      +'<td>'+(m.fecha||'—')+'</td>'
+      +'<td>'+tipoIcon+' '+tipoLabel+'</td>'
+      +'<td class="tdm">'+(m.concepto||'—')+'</td>'
+      +'<td>'+(cOrig?cOrig.nombre:'—')+'</td>'
+      +'<td>'+(cDest?cDest.nombre:'—')+'</td>'
+      +'<td style="font-weight:700;color:var(--p1)">'+fmt(m.monto)+'</td>'
+      +'<td class="tds">'+(m.referencia||'—')+'</td>'
+      +'<td><button class="btn btn-d btn-xs" onclick="delMovimiento(\''+m.id+'\')">🗑</button></td>'
+      +'</tr>';
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--ink3);padding:20px">Sin movimientos registrados</td></tr>';
+
+  return `<div class="page">
+  <div class="sg" style="margin-bottom:14px">
+    <div class="stat"><div class="st-v" style="color:var(--p1)">${fmt(totalUSD)}</div><div class="st-l">Total USD en cuentas</div></div>
+    <div class="stat"><div class="st-v">${S.cuentas.length}</div><div class="st-l">Cuentas registradas</div></div>
+    <div class="stat"><div class="st-v">${S.movimientos.length}</div><div class="st-l">Movimientos totales</div></div>
+    <div class="stat"><div class="st-v" style="color:var(--green)">${S.movimientos.filter(m=>m.tipo==='deposito').length}</div><div class="st-l">Depósitos</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="ch">
+      <div><div class="ct">Cuentas Bancarias y Caja</div><div class="cs">Saldos y movimientos por cuenta</div></div>
+      <button class="btn btn-p btn-sm" onclick="openAddCuenta()">＋ Nueva Cuenta</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:10px">
+      ${cuentasHTML}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="ct">Todos los Movimientos</div></div>
+    <div style="overflow-x:auto;margin-top:8px">
+      <table class="tbl"><thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Origen</th><th>Destino</th><th>Monto</th><th>Referencia</th><th></th></tr></thead>
+      <tbody>${movHTML}</tbody></table>
+    </div>
+  </div>
+  </div>`;
+}
+
+// ── ADD/EDIT CUENTA ──
+function openAddCuenta(){ openEditCuenta(null); }
+function openEditCuenta(id){
+  var c = id ? S.cuentas.find(function(x){return x.id===id;}) : null;
+  var ed = !!c;
+  $('mic').textContent = ed?'✏️':'🏦';
+  $('mtt').textContent = ed?'Editar Cuenta':'Nueva Cuenta';
+  $('msb').textContent = ed?c.nombre:'Banco, caja o cuenta digital';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = '<div class="fgr" style="gap:8px">'
+    +'<div class="fg"><label>Nombre *</label><input class="fi" id="cu_nombre" value="'+(c?c.nombre:'')+'" placeholder="Ej: Bancamiga Principal"></div>'
+    +'<div class="fg"><label>Tipo</label><select class="fs" id="cu_tipo">'
+    +'<option value="banco" '+(c&&c.tipo==='banco'?'selected':'')+'>🏦 Banco</option>'
+    +'<option value="efectivo" '+(c&&c.tipo==='efectivo'?'selected':'')+'>💵 Efectivo / Caja</option>'
+    +'<option value="zelle" '+(c&&c.tipo==='zelle'?'selected':'')+'>💸 Zelle</option>'
+    +'<option value="digital" '+(c&&c.tipo==='digital'?'selected':'')+'>💳 Cuenta digital</option>'
+    +'</select></div></div>'
+    +'<div class="fgr" style="gap:8px;margin-top:8px">'
+    +'<div class="fg"><label>Banco / Institución</label><input class="fi" id="cu_banco" value="'+(c?c.banco||'':'')+'" placeholder="Ej: Bancamiga, Banesco..."></div>'
+    +'<div class="fg"><label>Número / Últimos 4 dígitos</label><input class="fi" id="cu_numero" value="'+(c?c.numero||'':'')+'" placeholder="Ej: 1234"></div></div>'
+    +'<div class="fgr" style="gap:8px;margin-top:8px">'
+    +'<div class="fg"><label>Moneda</label><select class="fs" id="cu_moneda">'
+    +'<option value="USD" '+(c&&c.moneda==='USD'?'selected':'')+'>$ USD</option>'
+    +'<option value="BS" '+(c&&c.moneda==='BS'?'selected':'')+'>Bs. Bolívares</option>'
+    +'</select></div>'
+    +'<div class="fg"><label>Saldo inicial ($)</label><input class="fi" id="cu_saldo" type="number" step="0.01" value="'+(c?c.saldo||0:0)+'" placeholder="0.00"></div></div>'
+    +'<div class="fg" style="margin-top:8px"><label>Descripción</label><input class="fi" id="cu_desc" value="'+(c?c.descripcion||'':'')+'" placeholder="Opcional"></div>';
+  S.saveFn = function(){
+    var nombre = ($('cu_nombre')&&$('cu_nombre').value.trim())||'';
+    if(!nombre){ toast('El nombre es obligatorio','error'); return false; }
+    var obj = {
+      id: ed ? c.id : (S.cuentas.length ? Math.max.apply(null,S.cuentas.map(function(x){return x.id;}))+1 : 1),
+      nombre: nombre,
+      tipo: ($('cu_tipo')&&$('cu_tipo').value)||'banco',
+      banco: ($('cu_banco')&&$('cu_banco').value)||'',
+      numero: ($('cu_numero')&&$('cu_numero').value)||'',
+      moneda: ($('cu_moneda')&&$('cu_moneda').value)||'USD',
+      saldo: parseFloat(($('cu_saldo')&&$('cu_saldo').value))||0,
+      descripcion: ($('cu_desc')&&$('cu_desc').value)||''
+    };
+    if(ed){ var idx=S.cuentas.findIndex(function(x){return x.id===c.id;}); S.cuentas[idx]=obj; }
+    else S.cuentas.push(obj);
+    DB.saveCuenta(obj);
+    // Update _cuentas for payment dropdown
+    _cuentas = S.cuentas.map(function(cu){ return cu.nombre+(cu.numero?' (···'+cu.numero.slice(-4)+')':''); });
+    closeM(); nav('cuentas'); toast(ed?'Cuenta actualizada':'Cuenta creada','success'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-p" onclick="saveM()">'+(ed?'Guardar cambios':'Crear cuenta')+'</button>';
+  $('ov').style.display='flex';
+}
+function confirmarDelCuenta(id){
+  var c=S.cuentas.find(function(x){return x.id===id;}); if(!c) return;
+  window._delCuentaId=id;
+  $('mic').textContent='🗑️';$('mtt').textContent='Eliminar Cuenta';$('msb').textContent='No se puede deshacer';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div style="text-align:center;padding:16px 0">'
+    +'<div style="font-size:42px;margin-bottom:10px">🏦</div>'
+    +'<div style="font-size:15px;font-weight:700">¿Eliminar '+c.nombre+'?</div>'
+    +'<div style="color:var(--ink3);font-size:13px;margin-top:6px">Saldo: '+fmt(c.saldo)+' · Los movimientos históricos se conservan</div></div>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-d" onclick="ejecutarDelCuenta()">🗑️ Eliminar</button>';
+  $('ov').style.display='flex';
+}
+function ejecutarDelCuenta(){
+  var id=window._delCuentaId;
+  S.cuentas=S.cuentas.filter(function(x){return x.id!==id;});
+  DB.delCuenta(id);
+  closeM(); nav('cuentas'); toast('Cuenta eliminada','success');
+}
+
+// ── DEPÓSITO ──
+function openDeposito(cuentaId){
+  var c=S.cuentas.find(function(x){return x.id===cuentaId;});
+  $('mic').textContent='💚';$('mtt').textContent='Registrar Depósito';$('msb').textContent=c?c.nombre:'';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div class="fgr c1" style="gap:9px">'
+    +'<div class="fg"><label>Cuenta destino</label>'
+    +'<select class="fs" id="dep_cuenta">'
+    +S.cuentas.map(function(cu){return '<option value="'+cu.id+'" '+(cu.id===cuentaId?'selected':'')+'>'+cu.nombre+' — '+fmt(cu.saldo)+'</option>';}).join('')
+    +'</select></div>'
+    +'<div class="fg"><label>Concepto *</label><input class="fi" id="dep_conc" placeholder="Ej: Pago inicial cliente, cobro cuota..."></div>'
+    +'<div class="fgr" style="gap:8px">'
+    +'<div class="fg"><label>Monto *</label><input class="fi" id="dep_monto" type="number" step="0.01" placeholder="0.00"></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="dep_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Referencia / N° comprobante</label><input class="fi" id="dep_ref" placeholder="Opcional"></div>'
+    +'</div>';
+  S.saveFn=function(){
+    var cid=parseInt(($('dep_cuenta')&&$('dep_cuenta').value)||cuentaId);
+    var conc=($('dep_conc')&&$('dep_conc').value.trim())||'';
+    var monto=parseFloat(($('dep_monto')&&$('dep_monto').value))||0;
+    if(!conc||monto<=0){toast('Concepto y monto obligatorios','error');return false;}
+    var mov={id:'MOV-'+Date.now(),tipo:'deposito',concepto:conc,monto:monto,
+      cuentaOrigen:null,cuentaDestino:cid,
+      fecha:($('dep_fecha')&&$('dep_fecha').value)||new Date().toISOString().split('T')[0],
+      referencia:($('dep_ref')&&$('dep_ref').value)||''};
+    S.movimientos.push(mov); DB.saveMovimiento(mov);
+    var ci=S.cuentas.findIndex(function(x){return x.id===cid;});
+    if(ci>=0){S.cuentas[ci].saldo+=monto; DB.updateCuenta(cid,{saldo:S.cuentas[ci].saldo});}
+    closeM(); nav('cuentas'); toast('Depósito registrado · '+fmt(monto),'success'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-p" onclick="saveM()">Registrar Depósito</button>';
+  $('ov').style.display='flex';
+}
+
+// ── RETIRO ──
+function openRetiro(cuentaId){
+  var c=S.cuentas.find(function(x){return x.id===cuentaId;});
+  $('mic').textContent='🔴';$('mtt').textContent='Registrar Retiro';$('msb').textContent=c?c.nombre+' — '+fmt(c.saldo):'';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div class="fgr c1" style="gap:9px">'
+    +'<div class="fg"><label>Cuenta origen</label>'
+    +'<select class="fs" id="ret_cuenta">'
+    +S.cuentas.map(function(cu){return '<option value="'+cu.id+'" '+(cu.id===cuentaId?'selected':'')+'>'+cu.nombre+' — '+fmt(cu.saldo)+'</option>';}).join('')
+    +'</select></div>'
+    +'<div class="fg"><label>Concepto *</label><input class="fi" id="ret_conc" placeholder="Ej: Pago proveedor, nómina..."></div>'
+    +'<div class="fgr" style="gap:8px">'
+    +'<div class="fg"><label>Monto *</label><input class="fi" id="ret_monto" type="number" step="0.01" placeholder="0.00"></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="ret_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Referencia</label><input class="fi" id="ret_ref" placeholder="Opcional"></div>'
+    +'</div>';
+  S.saveFn=function(){
+    var cid=parseInt(($('ret_cuenta')&&$('ret_cuenta').value)||cuentaId);
+    var conc=($('ret_conc')&&$('ret_conc').value.trim())||'';
+    var monto=parseFloat(($('ret_monto')&&$('ret_monto').value))||0;
+    if(!conc||monto<=0){toast('Concepto y monto obligatorios','error');return false;}
+    var cu=S.cuentas.find(function(x){return x.id===cid;});
+    if(cu&&monto>cu.saldo){toast('Saldo insuficiente en '+cu.nombre,'error');return false;}
+    var mov={id:'MOV-'+Date.now(),tipo:'retiro',concepto:conc,monto:monto,
+      cuentaOrigen:cid,cuentaDestino:null,
+      fecha:($('ret_fecha')&&$('ret_fecha').value)||new Date().toISOString().split('T')[0],
+      referencia:($('ret_ref')&&$('ret_ref').value)||''};
+    S.movimientos.push(mov); DB.saveMovimiento(mov);
+    var ci=S.cuentas.findIndex(function(x){return x.id===cid;});
+    if(ci>=0){S.cuentas[ci].saldo-=monto; DB.updateCuenta(cid,{saldo:S.cuentas[ci].saldo});}
+    closeM(); nav('cuentas'); toast('Retiro registrado · '+fmt(monto),'success'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-d" onclick="saveM()">Registrar Retiro</button>';
+  $('ov').style.display='flex';
+}
+
+// ── TRANSFERENCIA ──
+function openTransferencia(cuentaOrigenId){
+  $('mic').textContent='🔄';$('mtt').textContent='Transferencia entre Cuentas';$('msb').textContent='Mueve dinero entre cuentas';
+  $('modal-box').className='modal';
+  var opts = S.cuentas.map(function(cu){return '<option value="'+cu.id+'">'+cu.nombre+' — '+fmt(cu.saldo)+'</option>';}).join('');
+  $('mbd').innerHTML='<div class="fgr c1" style="gap:9px">'
+    +'<div class="fg"><label>Cuenta origen *</label>'
+    +'<select class="fs" id="tr_origen">'+S.cuentas.map(function(cu){return '<option value="'+cu.id+'" '+(cu.id===cuentaOrigenId?'selected':'')+'>'+cu.nombre+' — '+fmt(cu.saldo)+'</option>';}).join('')+'</select></div>'
+    +'<div style="text-align:center;font-size:22px;color:var(--p1);margin:4px 0">⬇️</div>'
+    +'<div class="fg"><label>Cuenta destino *</label>'
+    +'<select class="fs" id="tr_destino">'+opts+'</select></div>'
+    +'<div class="fgr" style="gap:8px">'
+    +'<div class="fg"><label>Monto *</label><input class="fi" id="tr_monto" type="number" step="0.01" placeholder="0.00"></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="tr_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Concepto</label><input class="fi" id="tr_conc" placeholder="Ej: Traspaso operativo, conversión USD/BS..."></div>'
+    +'<div class="fg"><label>Referencia</label><input class="fi" id="tr_ref" placeholder="Opcional"></div>'
+    +'</div>';
+  S.saveFn=function(){
+    var orig=parseInt(($('tr_origen')&&$('tr_origen').value)||0);
+    var dest=parseInt(($('tr_destino')&&$('tr_destino').value)||0);
+    var monto=parseFloat(($('tr_monto')&&$('tr_monto').value))||0;
+    if(!orig||!dest){toast('Selecciona origen y destino','error');return false;}
+    if(orig===dest){toast('El origen y destino deben ser distintos','error');return false;}
+    if(monto<=0){toast('Ingresa un monto válido','error');return false;}
+    var cuOrig=S.cuentas.find(function(x){return x.id===orig;});
+    if(cuOrig&&monto>cuOrig.saldo){toast('Saldo insuficiente en '+cuOrig.nombre,'error');return false;}
+    var conc=($('tr_conc')&&$('tr_conc').value)||'Transferencia interna';
+    var mov={id:'MOV-'+Date.now(),tipo:'transferencia',concepto:conc,monto:monto,
+      cuentaOrigen:orig,cuentaDestino:dest,
+      fecha:($('tr_fecha')&&$('tr_fecha').value)||new Date().toISOString().split('T')[0],
+      referencia:($('tr_ref')&&$('tr_ref').value)||''};
+    S.movimientos.push(mov); DB.saveMovimiento(mov);
+    var io=S.cuentas.findIndex(function(x){return x.id===orig;});
+    var id2=S.cuentas.findIndex(function(x){return x.id===dest;});
+    if(io>=0){S.cuentas[io].saldo-=monto; DB.updateCuenta(orig,{saldo:S.cuentas[io].saldo});}
+    if(id2>=0){S.cuentas[id2].saldo+=monto; DB.updateCuenta(dest,{saldo:S.cuentas[id2].saldo});}
+    closeM(); nav('cuentas'); toast('Transferencia registrada · '+fmt(monto),'success'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-p" onclick="saveM()">Transferir</button>';
+  $('ov').style.display='flex';
+}
+
+function delMovimiento(id){
+  S.movimientos=S.movimientos.filter(function(x){return x.id!==id;});
+  DB.delMovimiento(id);
+  nav('cuentas'); toast('Movimiento eliminado','info');
 }
 
 function guardarPlan(){
@@ -2864,6 +3189,8 @@ function _loginSuccess(nombre, rol, uid, permisos) {
         if(doc.exists && doc.data().lista && doc.data().lista.length) _cuentas = doc.data().lista;
       }).catch(function(){});
     }
+    // Sync _cuentas dropdown from S.cuentas
+    _cuentas = S.cuentas.map(function(cu){ return cu.nombre+(cu.numero?' (···'+cu.numero.slice(-4)+')':''); });
     nav('dash');
   });
 }
@@ -3039,6 +3366,44 @@ function copiarLink(token){
   navigator.clipboard.writeText(link).then(function(){ toast('Link copiado','success'); });
 }
 
+
+function confirmarEliminarUsuario(uid, nombre){
+  if(!S.currentUser || S.currentUser.rol !== 'Administrador'){
+    toast('Solo los Administradores pueden eliminar usuarios','error'); return;
+  }
+  if(S.currentUser.uid === uid){
+    toast('No puedes eliminarte a ti mismo','error'); return;
+  }
+  window._delUserId   = uid;
+  window._delUserName = nombre;
+  $('mic').textContent='🗑️';
+  $('mtt').textContent='Eliminar Usuario';
+  $('msb').textContent='Esta acción no se puede deshacer';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div style="text-align:center;padding:18px 0">'
+    +'<div style="font-size:46px;margin-bottom:12px">👤</div>'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:6px">¿Eliminar a '+nombre+'?</div>'
+    +'<div style="color:var(--ink3);font-size:13px;line-height:1.5">'
+    +'Se eliminará el registro en Firestore.<br>'
+    +'<strong>Nota:</strong> para revocar el acceso completamente,<br>'
+    +'desactiva la cuenta en Firebase Console → Authentication.'
+    +'</div></div>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-d" onclick="ejecutarEliminarUsuario()">🗑️ Eliminar</button>';
+  $('ov').style.display='flex';
+}
+
+function ejecutarEliminarUsuario(){
+  var uid    = window._delUserId;
+  var nombre = window._delUserName;
+  if(!uid) return;
+  DB.deleteUsuario(uid);
+  window._delUserId = null; window._delUserName = null;
+  closeM();
+  toast('Usuario ' + nombre + ' eliminado','success');
+  setTimeout(function(){ nav('users'); }, 300);
+}
+
 function editarUsuario(uid){
   var user = null;
   DB.getUsuarios().then(function(lista){
@@ -3088,7 +3453,8 @@ function editarUsuario(uid){
       toast('Permisos actualizados','success');
       closeM(); nav('users'); return true;
     };
-    $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar cambios</button>`;
+    var canDelete = !esMio && S.currentUser && S.currentUser.rol==='Administrador';
+    $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button>`+(canDelete?`<button class="btn btn-d" onclick="closeM();setTimeout(function(){confirmarEliminarUsuario('${uid}','${user.nombre||user.email}');},100)">🗑️ Eliminar</button>`:'')+`<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>`;
     $('ov').style.display='flex';
   });
 }
