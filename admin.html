@@ -1427,7 +1427,6 @@ config(){
       var lista = doc.exists && doc.data().lista ? doc.data().lista : [];
       renderCuentasBanc(lista);
     }).catch(function(){ renderCuentasBanc([]); });
-// _metodos synced from cuentasBanc
     db.collection('config').doc('cobradores').get().then(function(doc){
       var lista = doc.exists ? doc.data().lista : ['Juan Admin'];
       renderCobradores(lista);
@@ -1848,7 +1847,7 @@ function openAddPago(){
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
 ${(function(){
-  var opts = getMetodos().map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('');
+  var opts = (_cuentasBanc||[]).map(function(c){return c.nombre;}).map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('');
   return '<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">'+opts+'</select></div>';
 })()} 
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
@@ -2153,12 +2152,7 @@ function renderContrato(){
 function openAddEgreso(){
   $('mic').textContent='💸';$('mtt').textContent='Registrar Egreso';$('msb').textContent='Contabilidad';
   $('modal-box').className='modal';
-    var _cuentasOpts = S.cuentas.map(function(cu){
-    return '<option value="'+cu.id+'">'+cu.nombre+' — '+fmt(cu.saldo)+'</option>';
-  }).join('');
-  var _metodosOpts = getMetodos().map(function(m){
-    return '<option>'+m+'</option>';
-  }).join('');
+  var _metodosOpts = (_cuentasBanc||[]).map(function(c){return '<option>'+c.nombre+'</option>';}).join('');
   $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
     +'<div class="fg"><label>Concepto *</label><input class="fi" id="eg_conc" placeholder="Ej: Compra de motos, GPS..."></div>'
     +'<div class="fgr" style="gap:8px">'
@@ -2776,9 +2770,7 @@ function guardarPlan(){
 }
 
 // Listas dinámicas de métodos y cobradores
-var _metodos    = ['Transferencia bancaria','Pago móvil','Zelle','PayPal','Efectivo USD'];
-// _metodos is always derived from _cuentasBanc when available
-function getMetodos(){ return _cuentasBanc&&_cuentasBanc.length ? _cuentasBanc.map(function(c){return c.nombre;}) : _metodos; }
+// Métodos de pago = _cuentasBanc (misma variable)
 var _cobradores = ['Juan Admin'];
 
 
@@ -2787,9 +2779,8 @@ var _cuentasBanc = [];  // {nombre, banco, numero, tipo}
 
 function renderCuentasBanc(lista){
   _cuentasBanc = lista;
-  // Sync _cuentas AND _metodos — same source for payments and accounts
+  // _cuentasBanc = single source for accounts AND payment methods
   _cuentas = lista.map(function(c){ return c.nombre + (c.numero?' (···'+c.numero.slice(-4)+')':''); });
-  _metodos = lista.map(function(c){ return c.nombre; });
   var el = $('cuentasBanc-list');
   if(!el) return;
   if(!lista.length){
@@ -2864,44 +2855,6 @@ function saveCuentasBanc(){
   if(db) db.collection('config').doc('cuentasBanc').set({lista:_cuentasBanc}).catch(function(){});
 }
 
-function renderMetodos(lista){
-  _metodos = lista;
-  var c = $('metodos-list');
-  if(!c) return;
-  c.innerHTML = lista.map(function(m,i){
-    return '<span class="bdg b-b" style="cursor:default;gap:5px">'+m
-      +' <span onclick="eliminarMetodo('+i+')" style="opacity:0.6;cursor:pointer;font-weight:900;font-size:11px">×</span></span>';
-  }).join('') + (lista.length===0?'<span style="color:var(--ink3);font-size:12px">Sin métodos</span>':'');
-}
-
-function renderCobradores(lista){
-  _cobradores = lista;
-  var c = $('cobradores-list');
-  if(!c) return;
-  c.innerHTML = lista.length ? lista.map(function(n,i){
-    return '<div class="li"><div style="flex:1;font-size:12.5px;font-weight:700">'+n+'</div>'
-      +'<button class="btn btn-d btn-xs" onclick="eliminarCobrador('+i+')">Eliminar</button></div>';
-  }).join('') : '<div style="color:var(--ink3);font-size:12px;padding:8px">Sin cobradores</div>';
-}
-
-function agregarMetodo(){
-  var m = prompt('Nombre del método de pago:');
-  if(!m||!m.trim()) return;
-  _metodos.push(m.trim());
-  guardarMetodos();
-  renderMetodos(_metodos);
-}
-
-function eliminarMetodo(i){
-  _metodos.splice(i,1);
-  guardarMetodos();
-  renderMetodos(_metodos);
-}
-
-function guardarMetodos(){
-  if(db) db.collection('config').doc('metodos').set({lista:_metodos});
-  toast('Métodos actualizados','success');
-}
 
 function agregarCobrador(){
   var n = prompt('Nombre del cobrador:');
