@@ -1427,10 +1427,7 @@ config(){
       var lista = doc.exists && doc.data().lista ? doc.data().lista : [];
       renderCuentasBanc(lista);
     }).catch(function(){ renderCuentasBanc([]); });
-    db.collection('config').doc('metodos').get().then(function(doc){
-      var metodos = doc.exists ? doc.data().lista : ['Transferencia bancaria','Pago móvil','Zelle','PayPal','Efectivo USD'];
-      renderMetodos(metodos);
-    });
+// _metodos synced from cuentasBanc
     db.collection('config').doc('cobradores').get().then(function(doc){
       var lista = doc.exists ? doc.data().lista : ['Juan Admin'];
       renderCobradores(lista);
@@ -1499,7 +1496,7 @@ config(){
   <!-- Cuentas bancarias -->
   <div class="card">
     <div class="ch">
-      <div><div class="ct">Cuentas Bancarias</div><div class="cs">Cuentas disponibles para pagos y movimientos</div></div>
+      <div><div class="ct">Cuentas y Métodos de Pago</div><div class="cs">Cada cuenta es también un método de cobro y pago</div></div>
       <button class="btn btn-g btn-xs" onclick="agregarCuentaBanc()">＋ Agregar</button>
     </div>
     <div id="cuentasBanc-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
@@ -1507,16 +1504,6 @@ config(){
     </div>
   </div>
 
-  <!-- Métodos de pago -->
-  <div class="card">
-    <div class="ch">
-      <div class="ct">Métodos de Pago</div>
-      <button class="btn btn-g btn-xs" onclick="agregarMetodo()">＋ Agregar</button>
-    </div>
-    <div id="metodos-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-      <span style="color:var(--ink3);font-size:12px">Cargando...</span>
-    </div>
-  </div>
 
   <!-- Cobradores -->
   <div class="card">
@@ -1860,8 +1847,10 @@ function openAddPago(){
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
-      <div class="fg"><label>Forma de pago</label><select class="fs" id="p_forma" onchange="toggleCuentaField(this)"><option value="Efectivo USD">💵 Efectivo USD</option><option value="Efectivo BS">💴 Efectivo BS</option><option value="Transferencia">🏦 Transferencia bancaria</option><option value="Pago Móvil">📱 Pago Móvil</option><option value="Zelle">💸 Zelle</option><option value="PayPal">🅿️ PayPal</option><option value="Otro">📋 Otro</option></select></div>
-      <div class="fg" id="p_cuenta_wrap" style="display:none"><label>Cuenta destino</label><select class="fs" id="p_cuenta">${(_cuentas&&_cuentas.length?_cuentas:['Sin cuentas registradas']).map(c=>`<option>${c}</option>`).join('')}</select></div>
+${(function(){
+  var opts = getMetodos().map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('');
+  return '<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">'+opts+'</select></div>';
+})()} 
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
       <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${_cobradores.map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
@@ -1878,7 +1867,7 @@ function openAddPago(){
       fecha:($('p_fecha')&&$('p_fecha').value)||new Date().toISOString().split('T')[0],
       monto:monto,
       metodo:($('p_forma')&&$('p_forma').value)||'Efectivo USD',
-      cuenta:($('p_cuenta')&&$('p_cuenta_wrap')&&$('p_cuenta_wrap').style.display!=='none'?$('p_cuenta').value:'—')||'—',
+      cuenta:($('p_forma')&&$('p_forma').value)||'—',
       cobrador:($('p_cobrador')&&$('p_cobrador').value)||'Admin',
       referencia:($('p_ref')&&$('p_ref').value)||'',
       estado:'confirmado'
@@ -2167,7 +2156,7 @@ function openAddEgreso(){
     var _cuentasOpts = S.cuentas.map(function(cu){
     return '<option value="'+cu.id+'">'+cu.nombre+' — '+fmt(cu.saldo)+'</option>';
   }).join('');
-  var _metodosOpts = (_metodos&&_metodos.length?_metodos:['Efectivo USD','Pago Móvil','Transferencia']).map(function(m){
+  var _metodosOpts = getMetodos().map(function(m){
     return '<option>'+m+'</option>';
   }).join('');
   $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
@@ -2788,6 +2777,8 @@ function guardarPlan(){
 
 // Listas dinámicas de métodos y cobradores
 var _metodos    = ['Transferencia bancaria','Pago móvil','Zelle','PayPal','Efectivo USD'];
+// _metodos is always derived from _cuentasBanc when available
+function getMetodos(){ return _cuentasBanc&&_cuentasBanc.length ? _cuentasBanc.map(function(c){return c.nombre;}) : _metodos; }
 var _cobradores = ['Juan Admin'];
 
 
@@ -2796,8 +2787,9 @@ var _cuentasBanc = [];  // {nombre, banco, numero, tipo}
 
 function renderCuentasBanc(lista){
   _cuentasBanc = lista;
-  // Sync _cuentas string array for payment dropdowns
+  // Sync _cuentas AND _metodos — same source for payments and accounts
   _cuentas = lista.map(function(c){ return c.nombre + (c.numero?' (···'+c.numero.slice(-4)+')':''); });
+  _metodos = lista.map(function(c){ return c.nombre; });
   var el = $('cuentasBanc-list');
   if(!el) return;
   if(!lista.length){
