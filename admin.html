@@ -528,7 +528,7 @@ button.si {
 <div class="main">
   <!-- Mobile topbar (solo visible en móvil) -->
   <div class="topbar" id="mobile-topbar" style="display:none">
-    <div class="mob-menu-btn" onclick="openMobileMenu()">☰</div>
+    <button type="button" class="mob-menu-btn" onclick="openMobileMenu()">☰</button>
     <span id="pgT-mob" style="font-size:14px;font-weight:800;flex:1;color:var(--ink)">Dashboard</span>
     <div id="mob-av" style="width:32px;height:32px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">A</div>
   </div>
@@ -2396,6 +2396,7 @@ function _loginSuccess(nombre, rol, uid, permisos) {
   var btn = document.querySelector('.login-btn');
   if(btn){ btn.textContent = 'Ingresar →'; btn.disabled = false; }
   updateSidebar();
+  updateMobileTopbar();
   DB.load().then(function(){ nav('dash'); });
 }
 
@@ -2746,17 +2747,6 @@ function openMobileMenu(){
   if(sb) sb.classList.add('open');
   if(ov) ov.classList.add('open');
   document.body.style.overflow = 'hidden';
-  // Attach touch listeners to sidebar items (fix for iOS)
-  document.querySelectorAll('.si[data-nav]').forEach(function(el){
-    if(!el._touchBound){
-      el._touchBound = true;
-      el.addEventListener('touchend', function(e){
-        e.preventDefault();
-        var p = el.getAttribute('data-nav');
-        if(p) nav(p);
-      }, {passive: false});
-    }
-  });
 }
 function closeMobileMenu(){
   var sb = document.getElementById('main-sidebar');
