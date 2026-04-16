@@ -538,7 +538,7 @@ button.si {
   <div class="topbar" id="desktop-topbar">
     <div class="tb-ttl" id="pgT">Dashboard</div>
     <div class="tb-acts">
-      <div class="srch"><span class="srch-i">🔍</span><input type="text" id="globalSearch" placeholder="Buscar..." oninput="globalSearch(this.value)"></div>
+      <div style="position:relative"><div class="srch"><span class="srch-i">🔍</span><input type="text" id="globalSearch" placeholder="Buscar en todo..." oninput="globalSearch(this.value)" onblur="setTimeout(closeGlobalSearch,200)" style="width:200px"></div><div id="gs-panel" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:360px;max-height:400px;overflow-y:auto;background:var(--surf);border:1px solid var(--rim2);border-radius:var(--r12);box-shadow:var(--shadow-md);z-index:9999"></div></div>
       <button class="btn btn-g btn-ic nb" onclick="nav('notif')">🔔<span class="nd"></span></button>
       <button class="btn btn-p" onclick="topAct()">＋ Nuevo</button>
     </div>
@@ -644,18 +644,17 @@ var DB = {
       db.collection('creditos').get(),
       db.collection('pagos').get(),
       db.collection('egresos').get(),
-      db.collection('cuentas').get(),
+      Promise.resolve({docs:[]}), // cuentas cargadas desde config/cuentasBanc
       db.collection('movimientos').get(),
     ]).then(function(snaps){
       function read(snap){return snap.docs.map(function(d){return d.data();});}
-      var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),cu=read(snaps[5]),mv=read(snaps[6]);
+      var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]);
       // Solo reemplaza datos demo si Firestore tiene datos reales
       if(m.length)  S.motos       = m.map(mapMoto);
       if(cl.length) S.clientes    = cl;
       if(cr.length) S.creds       = cr.map(mapCred);
       if(p.length)  S.pagos       = p.map(mapPago);
       if(e.length)  S.egresos     = e;
-      if(cu.length) S.cuentas     = cu;
       if(mv.length) S.movimientos = mv;
       // Si todo vacío, avisar al usuario
       var totalDocs = m.length + cl.length + cr.length + p.length;
@@ -836,14 +835,102 @@ function nav(p){
 // ══════════════════════════════════════════
 // GLOBAL SEARCH
 // ══════════════════════════════════════════
+
 function globalSearch(q){
-  if(!q.trim()) return;
-  // search clients
-  const clMatch = S.clientes.filter(c=>`${c.nombre} ${c.cedula} ${c.tel}`.toLowerCase().includes(q.toLowerCase()));
-  const motoMatch = S.motos.filter(m=>`${m.modelo} ${m.vin}`.toLowerCase().includes(q.toLowerCase()));
+  var val = q.trim().toLowerCase();
+
+  // Always filter current page live
   if(S.page==='clientes') renderClienteList(q);
   if(S.page==='motos') filterMotos(q);
+
+  // Show/hide global results panel
+  var panel = $('gs-panel');
+  if(!val){
+    if(panel) panel.style.display='none';
+    return;
+  }
+  if(!panel) return;
+
+  // Search across ALL modules
+  var results = [];
+
+  // Clientes
+  S.clientes.filter(c=>!c.eliminado).forEach(function(c){
+    if((c.nombre+' '+c.cedula+' '+c.tel+' '+(c.email||'')).toLowerCase().includes(val)){
+      results.push({tipo:'cliente',icon:'👤',titulo:c.nombre,sub:c.cedula+' · '+c.tel+' · '+c.ciudad,
+        accion:function(){ nav('clientes'); setTimeout(function(){verCliente(c.id);},100); }});
+    }
+  });
+
+  // Créditos
+  S.creds.filter(c=>!c.eliminado).forEach(function(c){
+    if((c.id+' '+c.cli+' '+c.modelo+' '+(c.vin||'')).toLowerCase().includes(val)){
+      results.push({tipo:'credito',icon:'📋',titulo:c.id+' — '+c.cli,
+        sub:c.modelo+' · '+c.estado+' · '+(c.pagado||0)+' cuotas pagadas',
+        accion:function(){ nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
+    }
+  });
+
+  // Motos
+  S.motos.filter(m=>!m.eliminado).forEach(function(m){
+    if((m.modelo+' '+(m.vin||'')+' '+(m.cliente||'')+' '+(m.color||'')).toLowerCase().includes(val)){
+      results.push({tipo:'moto',icon:'🏍️',titulo:m.modelo,
+        sub:(m.vin||'Sin VIN')+' · '+m.estado+(m.cliente?' · '+m.cliente:''),
+        accion:function(){ nav('motos'); }});
+    }
+  });
+
+  // Pagos
+  S.pagos.filter(p=>!p.eliminado).forEach(function(p){
+    if((p.id+' '+p.cli+' '+(p.referencia||'')+(p.metodo||'')).toLowerCase().includes(val)){
+      results.push({tipo:'pago',icon:'💳',titulo:p.id+' — '+p.cli,
+        sub:fmt(p.monto)+' · '+p.fecha+' · '+(p.metodo||''),
+        accion:function(){ nav('pagos'); }});
+    }
+  });
+
+  // Egresos
+  S.egresos.filter(function(e){return !e.eliminado;}).forEach(function(e){
+    if((e.concepto+' '+(e.categoria||'')+(e.forma||'')).toLowerCase().includes(val)){
+      results.push({tipo:'egreso',icon:'💸',titulo:e.concepto,
+        sub:fmt(e.monto)+' · '+(e.fecha||'')+(e.forma?' · '+e.forma:''),
+        accion:function(){ nav('conta'); }});
+    }
+  });
+
+  // Render panel
+  panel.style.display = 'block';
+  if(!results.length){
+    panel.innerHTML = '<div style="padding:12px;color:var(--ink3);font-size:12px;text-align:center">Sin resultados para "'+q+'"</div>';
+    return;
+  }
+  panel.innerHTML = '<div style="padding:6px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);border-bottom:1px solid var(--rim)">'
+    +results.length+' resultado'+(results.length!==1?'s':'')+' para "'+q+'"</div>'
+    +results.slice(0,12).map(function(r,i){
+      return '<div style="display:flex;align-items:center;gap:9px;padding:8px 11px;cursor:pointer;border-bottom:1px solid var(--rim);transition:background .1s" '
+        +'onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'" '
+        +'onclick="window._gsActions['+i+']()">'
+        +'<span style="font-size:16px">'+r.icon+'</span>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.titulo+'</div>'
+        +'<div style="font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.sub+'</div>'
+        +'</div>'
+        +'<span style="font-size:10px;color:var(--ink3);background:var(--surf2);padding:2px 7px;border-radius:5px">'+r.tipo+'</span>'
+        +'</div>';
+    }).join('')
+    +(results.length>12?'<div style="padding:8px;text-align:center;font-size:11px;color:var(--ink3)">+'+(results.length-12)+' más</div>':'');
+
+  // Store actions (can't use closures in innerHTML onclick)
+  window._gsActions = results.slice(0,12).map(function(r){ return r.accion; });
 }
+
+function closeGlobalSearch(){
+  var panel = $('gs-panel');
+  if(panel) panel.style.display='none';
+  var input = $('globalSearch');
+  if(input) input.value='';
+}
+
 
 // ══════════════════════════════════════════
 // MOTO CARD
@@ -897,14 +984,16 @@ function renderMotoGrid(){
 function filterMotos(q){
   const f = q?S.motos.filter(m=>`${m.modelo} ${m.vin} ${m.cliente||''}`.toLowerCase().includes(q.toLowerCase())):S.motos.filter(m=>!m.eliminado&&(S.mTab==='todas'?true:m.estado===S.mTab));
   const g=$('mgr');
-  if(g) g.innerHTML=f.length?`<div class="moto-plan-grid">${f.map(motoCard).join('')}</div>`:`<div class="empty"><span class="e-ic">🔍</span><div class="e-tt">Sin resultados para "${q}"</div></div>`;
+  var elimHTML=S.motos.filter(m=>m.eliminado).length
+  ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+S.motos.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+m.modelo+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+m.vin+'</span></div>'+'<span style="font-size:10px;color:var(--red)">🗑 '+(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?'· '+m.eliminadoRazon:'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?'· '+m.eliminadoEn.split('T')[0]:'')+'</span>'+'</div>';}).join('')+'</div>':'';
+if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join('')}</div>`:`<div class="empty"><span class="e-ic">🔍</span><div class="e-tt">Sin resultados para "${q}"</div></div>`)+elimHTML;
 }
 
 // ══════════════════════════════════════════
 // CLIENTE DETAIL + SEARCH
 // ══════════════════════════════════════════
 function renderClienteList(q=''){
-  const filtered = q?S.clientes.filter(c=>!c.eliminado&&`${c.nombre} ${c.cedula} ${c.tel} ${c.ciudad} ${c.trabajo}`.toLowerCase().includes(q.toLowerCase())):S.clientes;
+  const filtered = q?S.clientes.filter(c=>!c.eliminado&&`${c.nombre} ${c.cedula} ${c.tel} ${c.ciudad} ${c.trabajo}`.toLowerCase().includes(q.toLowerCase())):S.clientes.filter(c=>!c.eliminado);
   if(!filtered.length) return `<div class="empty"><span class="e-ic">🔍</span><div class="e-tt">Sin resultados para "${q}"</div></div>`;
   return `<div class="card"><div class="tw"><table>
     <thead><tr><th>Cliente</th><th>Cédula</th><th>Teléfono</th><th>Ciudad</th><th>Ingresos</th><th>Estado</th><th>Acciones</th></tr></thead>
@@ -922,18 +1011,24 @@ function renderClienteList(q=''){
         <button class="btn btn-d btn-xs btn-ic" onclick="delCliente(${c.id})">🗑️</button>
       </div></td>
     </tr>`).join('')}</tbody>
-  </table></div></div>`;
+  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>🗑 Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><span style='color:var(--ink3)'>${c.eliminadoRazon?'· '+c.eliminadoRazon:''}</span><span style='color:var(--ink3)'>${c.eliminadoEn?c.eliminadoEn.split('T')[0]:''}</span></div>`).join('')}</div>`:''}</div>`;
 }
 
 function verCliente(id){
   const c = S.clientes.find(x=>x.id===id);if(!c)return;
   const creditos = S.creds.filter(x=>x.cli===c.nombre);
-  const pagos = S.pagos.filter(x=>x.cli===c.nombre);
+  const pagos = S.pagos.filter(x=>x.cli===c.nombre&&!x.eliminado);
   $('mic').textContent='👤';
   $('mtt').textContent=c.nombre;
   $('msb').textContent=c.cedula+' · '+c.ciudad;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
+    <div class="sg" style="margin-bottom:12px">
+      <div class="stat"><div class="st-v" style="font-size:16px">${creditos.length}</div><div class="st-l">Créditos</div></div>
+      <div class="stat"><div class="st-v" style="font-size:16px;color:var(--green)">${fmt(pagos.reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Total pagado</div></div>
+      <div class="stat"><div class="st-v" style="font-size:16px">${pagos.length}</div><div class="st-l">Pagos realizados</div></div>
+      <div class="stat"><div class="st-v" style="font-size:16px;color:var(--red)">${creditos.filter(cr=>cr.mora>0).length}</div><div class="st-l">En mora</div></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="detail-item"><div class="detail-lbl">Teléfono</div><div class="detail-val">${c.tel}</div></div>
       <div class="detail-item"><div class="detail-lbl">Email</div><div class="detail-val" style="font-size:12px">${c.email||'—'}</div></div>
@@ -997,7 +1092,7 @@ dash(){
   const mora=S.creds.filter(c=>c.mora>0).length;
   const activos=S.creds.filter(c=>c.estado==='activo').length;
   const cartera=S.creds.reduce((a,c)=>a+(c.fin-(c.pagado/c.plazo*c.fin)),0);
-  const ingMes=S.pagos.filter(p=>p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
+  const ingMes=S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
   const dispMotos=S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
   const chartData=getMonthlyIngresos();
   const iv=chartData.map(function(x){return x.total;}),ms=chartData.map(function(x){return x.label;});
@@ -1172,13 +1267,14 @@ dash(){
 
 motos(){
   return`<div class="page">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:9px 13px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim);font-size:11.5px;color:var(--ink3)">🏍️ <strong style="color:var(--ink)">Inventario</strong> = unidades físicas (VIN, color, estado) &nbsp;·&nbsp; 💎 <strong style="color:var(--ink)">Catálogo</strong> = modelos y precios → <button class="btn btn-g btn-xs" onclick="nav('plan')">Ver catálogo</button></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap">
     <div style="display:flex;gap:5px;flex-wrap:wrap">
       ${[['todas','Todas ('+S.motos.length+')'],['disponible','Disponibles ('+S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length+')'],['financiada','Financiadas'],['inventario','Inventario'],['recuperada','Recuperadas']].map(([k,l])=>`<button class="btn ${S.mTab===k?'btn-p':'btn-g'} btn-sm" onclick="setMTab('${k}')">${l}</button>`).join('')}
     </div>
     <div style="display:flex;gap:7px">
       <div class="srch"><span class="srch-i">🔍</span><input type="text" placeholder="Buscar moto..." id="mQ" oninput="filterMotos(this.value)" style="width:180px"></div>
-      <button class="btn btn-p btn-sm" onclick="openAddMoto()">＋ Nueva Moto</button>
+      <button class="btn btn-p btn-sm" onclick="openAddMoto()">＋ Nueva Unidad</button>
     </div>
   </div>
   <div id="mgr">${renderMotoGrid()}</div>
@@ -1189,7 +1285,7 @@ clientes(){
   return`<div class="page">
   <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap">
     <div class="srch" style="flex:1"><span class="srch-i">🔍</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
-    <button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button>
+    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">📥 CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
   </div>
   <div id="clienteList">${renderClienteList()}</div>
   </div>`;
@@ -1203,10 +1299,10 @@ creditos(){
     <div class="stat"><div class="st-v" style="font-size:20px">1.90x</div><div class="st-l">Factor</div></div>
     <div class="stat"><div class="st-v" style="font-size:20px">40%</div><div class="st-l">Inicial</div></div>
   </div>
-  <div class="card"><div class="ch"><div class="ct">Financiamientos Activos</div><button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nuevo Financiamiento</button></div>
+  <div class="card"><div class="ch"><div class="ct">Financiamientos Activos</div><div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">📥 CSV</button><button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nuevo Financiamiento</button></div></div>
   <div class="tw"><table>
     <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN / Serial</th><th>Cuota Quincenal</th><th>Progreso</th><th>Estado</th><th></th></tr></thead>
-    <tbody>${S.creds.map(c=>`<tr>
+    <tbody>${S.creds.filter(c=>!c.eliminado).map(c=>`<tr>
       <td class="tdm" style="font-family:var(--fd)">${c.id}</td>
       <td><span class="tdm">${c.cli}</span></td>
       <td class="tds">${c.modelo}</td>
@@ -1214,30 +1310,50 @@ creditos(){
       <td style="font-weight:900;font-family:var(--fd);background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmt(c.cuotaQ||c.cuota)}</td>
       <td style="min-width:100px"><div class="tds" style="margin-bottom:3px">${c.pagado}/${c.totalCuotas||c.plazo*2} cuotas quinc.</div><div class="prog"><div class="pf ${c.mora>0?'p-r':'p-p'}" style="width:${Math.round(c.pagado/(c.totalCuotas||c.plazo*2)*100)}%"></div></div></td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
-      <td style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Tabla</button></td>
-    </tr>`).join('')}</tbody>
+      <td style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">📊</button><button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">✏️</button>${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}</td>
+    </tr>`).join('')}${S.creds.filter(c=>c.estado==='cancelado').length?`<tr><td colspan='8' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px'>Cancelados (${S.creds.filter(c=>c.estado==='cancelado').length})</div>${S.creds.filter(c=>c.estado==='cancelado').map(c=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px"><span style="font-family:var(--fd);font-weight:700;min-width:90px;opacity:0.6">'+c.id+'</span><span style="flex:1;opacity:0.6;text-decoration:line-through">'+c.cli+' — '+c.modelo+'</span><span style="color:var(--red)">✕ '+(c.canceladoPor||'Admin')+'</span><span style="color:var(--ink3)">'+(c.canceladoRazon?'· '+c.canceladoRazon:'')+'</span><span style="color:var(--ink3)">'+(c.canceladoEn?'· '+c.canceladoEn.split('T')[0]:'')+'</span></div>').join('')}</div></td></tr>`:''}}</tbody>
   </table></div></div></div>`;
 },
 
 pagos(){return`<div class="page">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    <div class="stat"><div class="st-ic" style="background:var(--greens)">✅</div><div class="st-v">${fmt(S.pagos.filter(p=>p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Cobrado (confirmado)</div></div>
-    <div class="stat"><div class="st-ic" style="background:var(--ambers)">⏳</div><div class="st-v">${fmt(S.pagos.filter(p=>p.estado==='pendiente').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Pendiente por confirmar</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--greens)">✅</div><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Cobrado (confirmado)</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--ambers)">⏳</div><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='pendiente').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Pendiente por confirmar</div></div>
   </div>
-  <div class="card"><div class="ch"><div class="ct">Registro de Pagos</div><div style="display:flex;gap:6px"><button class="btn btn-g btn-sm">📥 Exportar</button><button class="btn btn-p btn-sm" onclick="openAddPago()">＋ Registrar Pago</button></div></div>
+  <div class="card"><div class="ch"><div class="ct">Registro de Pagos</div><div style="display:flex;gap:6px"><div style="display:flex;gap:5px"><button class="btn btn-g btn-sm" onclick="exportarCSV('pagos')">📥 CSV Pagos</button><button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">📥 CSV Créditos</button><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">📥 CSV Clientes</button></div><button class="btn btn-p btn-sm" onclick="openAddPago()">＋ Registrar Pago</button></div></div>
   <div class="tw"><table>
     <thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha</th><th>Monto</th><th>Método</th><th>Cobrador</th><th>Estado</th><th></th></tr></thead>
-    <tbody>${S.pagos.map(p=>`<tr>
+    <tbody>${S.pagos.filter(p=>!p.eliminado).map(p=>`<tr>
       <td class="tdm" style="font-family:var(--fd)">${p.id}</td><td class="tdm">${p.cli}</td>
       <td class="tds">${p.cred}</td><td class="tds">${p.fecha}</td>
       <td style="color:var(--green);font-weight:800;font-family:var(--fd)">${fmt(p.monto)}</td>
       <td class="tds">${p.metodo}</td><td class="tds">${p.cobrador}</td>
       <td><span class="bdg ${sbg(p.estado)}">${p.estado}</span></td>
-      <td>${p.estado==='pendiente'?`<button class="btn btn-s btn-xs" onclick="confirmarPago('${p.id}')">✅ Confirmar</button>`:`<button class="btn btn-g btn-xs btn-ic">🧾</button>`}</td>
-    </tr>`).join('')}</tbody>
+      <td><div style="display:flex;gap:4px">${p.estado==='pendiente'?`<button class="btn btn-s btn-xs" onclick="confirmarPago('${p.id}')">✅</button>`:''}<button class="btn btn-p btn-xs" onclick="openEditPago('${p.id}')" title="Editar">✏️</button><button class="btn btn-d btn-xs" onclick="confirmarDelPago('${p.id}')" title="Eliminar">🗑</button></div></td>
+    </tr>`).join('')}${S.pagos.filter(p=>p.eliminado).length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:6px'>Eliminados (${S.pagos.filter(p=>p.eliminado).length})</div>${S.pagos.filter(p=>p.eliminado).map(p=>'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim);opacity:0.7"><span style="font-size:11px;font-family:var(--fd);font-weight:700;min-width:70px">'+p.id+'</span><span style="font-size:11px;flex:1">'+p.cli+' · '+fmt(p.monto)+'</span><span style="font-size:10px;color:var(--red)">🗑 '+(p.eliminadoPor||'Admin')+' · '+(p.eliminadoEn?p.eliminadoEn.split('T')[0]:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( p.eliminadoRazon||'')+'</span></div>').join('')}</div></td></tr>`:''}</tbody>
   </table></div></div></div>`;},
 
-cobranza(){const mora=S.creds.filter(c=>c.mora>0);return`<div class="page">
+cobranza(){
+  const mora=S.creds.filter(c=>c.mora>0&&!c.eliminado);
+  // Load notas after render
+  setTimeout(function(){
+    var el=$('cobranza-notas-list');
+    if(!el||!db) return;
+    db.collection('notas_cobranza').orderBy('fecha','desc').limit(30).get()
+      .then(function(snap){
+        if(!$('cobranza-notas-list')) return;
+        if(snap.empty){$('cobranza-notas-list').innerHTML='<div style="color:var(--ink3);font-size:12px;padding:8px 0">Sin gestiones registradas aún</div>';return;}
+        $('cobranza-notas-list').innerHTML=snap.docs.map(function(d){
+          var n=d.data();
+          return '<div class="li"><div class="li-ic" style="background:var(--gs)">📝</div>'
+            +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+n.tipo+' — '+n.credId+'</div>'
+            +'<div class="tds">'+n.resultado+'</div>'
+            +(n.fechaCompromiso?'<div class="tds" style="color:var(--p1)">Compromiso: '+n.fechaCompromiso+'</div>':'')
+            +'</div><div style="text-align:right"><div class="tds">'+n.cobrador+'</div><div class="tds">'+n.fecha+'</div></div></div>';
+        }).join('');
+      }).catch(function(){});
+  }, 120);
+  return`<div class="page">
   <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
     <div class="stat"><div class="st-v" style="color:var(--red)">${mora.length}</div><div class="st-l">Clientes en mora</div></div>
     <div class="stat"><div class="st-v">${fmt(mora.reduce((a,c)=>a+c.cuota*c.mora/30,0))}</div><div class="st-l">Deuda estimada</div></div>
@@ -1251,15 +1367,23 @@ cobranza(){const mora=S.creds.filter(c=>c.mora>0);return`<div class="page">
       <td class="tdm">${c.cli}</td><td class="tds">${c.id}</td><td class="tds">${c.modelo}</td><td class="tds">${cl.tel}</td>
       <td><span style="color:var(--red);font-weight:900;font-size:15px;font-family:var(--fd)">${c.mora}d</span></td>
       <td style="color:var(--red);font-weight:800;font-family:var(--fd)">${fmt(c.cuota)}</td>
-      <td><div style="display:flex;gap:4px">
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-p btn-xs" onclick="openPagoRapido('${c.id}')" title="Registrar pago">💳 Cobrar</button>
         <button class="btn btn-s btn-xs" onclick="llamarCliente('${c.id}')" title="Llamar">📞</button>
         <button class="btn btn-g btn-xs" onclick="whatsappCliente('${c.id}')" title="WhatsApp">💬</button>
         <button class="btn btn-g btn-xs" onclick="openNota('${c.id}')">📝</button>
-        <button class="btn btn-d btn-xs" onclick="confirmarRecuperacion('${c.id}')">🔑</button>
+        <button class="btn btn-d btn-xs" onclick="confirmarRecuperacion('${c.id}')">🔑 Recuperar</button>
       </div></td>
     </tr>`;}).join('')}</tbody>
   </table></div>`:`<div style="text-align:center;padding:32px;color:var(--green)"><div style="font-size:40px;margin-bottom:10px">✅</div><div style="font-weight:800;font-size:16px">Todos los clientes al día</div><div style="font-size:12px;color:var(--ink3);margin-top:6px">No hay clientes en mora actualmente</div></div>`}
-  </div></div>`;},
+  <div class="card" style="margin-top:12px">
+    <div class="ch"><div class="ct">📝 Historial de Gestiones de Cobro</div></div>
+    <div id="cobranza-notas-list" class="lst" style="margin-top:6px;max-height:300px">
+      <div style="color:var(--ink3);font-size:12px">Cargando...</div>
+    </div>
+  </div>
+  </div></div>`;
+},
 
 plan(){
   // Listas de planes (principal + extras)
@@ -1357,12 +1481,19 @@ contratos(){return`<div class="page"><div style="display:grid;grid-template-colu
 </div></div>`;},
 
 gps(){
-  const dots=[{n:'NEW HORSE 150 · María G.',x:38,y:42,c:'g'},{n:'NMAX · Ana M.',x:57,y:28,c:'g'},{n:'EK XPRESS · Carlos R.',x:27,y:62,c:'y'},{n:'EK XPRESS 200S',x:68,y:66,c:'r'},{n:'OWEN 200S',x:45,y:55,c:'g'},{n:'RK 200',x:72,y:38,c:'g'},{n:'MATRIX 150',x:30,y:25,c:'g'}];
   const gpsMotos=S.motos.filter(m=>!m.eliminado&&m.gps);
+  const dots=gpsMotos.map(function(m,i){
+    var seed=(m.id||i+1)*17;
+    var x=15+(seed*13%65); var y=10+(seed*7%70);
+    var c=m.estado==='financiada'?'g':m.estado==='recuperada'?'r':'y';
+    return {n:m.modelo+(m.cliente?' · '+m.cliente.split(' ')[0]:''),x:x,y:y,c:c,m:m};
+  });
   return`<div class="page">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px">
     <div class="stat"><div class="st-ic" style="background:var(--greens)">📍</div><div class="st-v">${gpsMotos.length}</div><div class="st-l">GPS activos</div></div>
-    <div class="stat"><div class="st-ic" style="background:var(--reds)">❌</div><div class="st-v">${S.motos.filter(m=>!m.gps).length}</div><div class="st-l">Sin GPS</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--reds)">❌</div><div class="st-v">${S.motos.filter(m=>!m.eliminado&&!m.gps).length}</div><div class="st-l">Sin GPS</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--ambers)">⚠️</div><div class="st-v">${S.motos.filter(m=>!m.eliminado&&m.gps&&m.estado==='recuperada').length}</div><div class="st-l">GPS en recuperación</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--surf2)">🏍️</div><div class="st-v">${S.motos.filter(m=>!m.eliminado).length}</div><div class="st-l">Total unidades</div></div>
   </div>
   <div class="card" style="margin-bottom:12px">
     <div class="ch"><div class="ct">Mapa de Rastreo</div><div style="display:flex;gap:6px"><span class="bdg b-g"><span class="dot"></span>Activa</span><span class="bdg b-a"><span class="dot"></span>Sin señal</span><span class="bdg b-r"><span class="dot"></span>Alerta</span></div></div>
@@ -1372,34 +1503,106 @@ gps(){
     </div>
   </div>
   <div class="card"><div class="ct" style="margin-bottom:11px">Unidades con GPS</div>
-    <div class="tw"><table><thead><tr><th>Modelo</th><th>Cliente</th><th>Estado</th><th>Último movimiento</th><th>GPS</th></tr></thead>
+    <div class="tw"><table><thead><tr><th>Modelo</th><th>Cliente</th><th>Estado</th><th>VIN / Serial</th><th>GPS</th></tr></thead>
     <tbody>${gpsMotos.map(m=>`<tr>
       <td class="tdm">${m.modelo}</td><td>${m.cliente||'—'}</td>
       <td><span class="bdg ${sbg(m.estado)}">${m.estado}</span></td>
-      <td class="tds">hace ${Math.floor(Math.random()*60)+1} min</td>
-      <td><span class="bdg b-g"><span class="dot"></span>Activo</span></td>
+      <td class="tds">${m.vin||'—'}</td>
+      <td><span class="bdg b-g"><span class="dot"></span>GPS activo</span>${m.estado==="recuperada"?'<span class="bdg b-r" style="margin-left:4px">⚠️ Recuperada</span>':''}</td>
     </tr>`).join('')}</tbody></table></div>
   </div></div>`;},
 
-notif(){return`<div class="page"><div style="display:grid;grid-template-columns:1fr 1.2fr;gap:12px">
-  <div class="card"><div class="ch"><div class="ct">💬 Enviar Notificación</div></div>
-    <div class="fgr c1" style="gap:9px">
-      <div class="fg"><label>Tipo</label><select class="fs"><option>Recordatorio de cuota</option><option>Cuota vencida</option><option>Cuota quincenal próxima</option><option>Pago recibido</option><option>Oferta de nueva moto</option><option>Personalizado</option></select></div>
-      <div class="fg"><label>Canal</label><select class="fs"><option>WhatsApp</option><option>SMS</option><option>Email</option><option>Todos los canales</option></select></div>
-      <div class="fg"><label>Destinatarios</label><select class="fs"><option>Clientes en mora</option><option>Cuotas venciendo esta semana</option><option>Todos los clientes activos</option><option>Cliente específico</option></select></div>
-      <div class="fg"><label>Mensaje personalizado</label><textarea class="fta" placeholder="Hola {nombre}, tu cuota de {monto} vence el {fecha}..."></textarea></div>
-    </div>
-    <button class="btn btn-p" style="width:100%;margin-top:10px" onclick="toast('Notificaciones enviadas','success')">📤 Enviar Ahora</button>
-  </div>
-  <div class="card"><div class="ch"><div class="ct">Historial</div></div>
-    <div class="lst" style="max-height:380px">${[{i:'💬',m:'Recordatorio de cuota → María González',s:'WhatsApp · hace 2 horas',b:'b-g'},{i:'📧',m:'Cuota vencida → Carlos Rodríguez',s:'Email · hace 4 horas',b:'b-r'},{i:'📱',m:'Cuota quincenal → 8 clientes',s:'SMS · ayer',b:'b-g'},{i:'💬',m:'Pago confirmado → Ana Martínez',s:'WhatsApp · hace 2 días',b:'b-g'},{i:'📧',m:'Resumen de cartera mensual',s:'Email · hace 3 días',b:'b-g'}].map(n=>`<div class="li"><div class="li-ic" style="background:var(--gs)">${n.i}</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${n.m}</div><div style="font-size:10.5px;color:var(--ink3)">${n.s}</div></div><span class="bdg ${n.b}">enviado</span></div>`).join('')}</div>
-  </div></div></div>`;},
+notif(){
+  // Build real recipient lists
+  var moraClientes = S.creds.filter(c=>c.mora>0).map(function(c){
+    var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
+    return {nombre:c.cli, tel:cl.tel||'', cred:c.id, mora:c.mora, cuota:c.cuotaQ||c.cuota, modelo:c.modelo};
+  });
+  var proximasCuotas = S.creds.filter(function(c){
+    if(c.estado!=='activo'||!c.fecha) return false;
+    var inicio=new Date(c.fecha);
+    var siguiente=new Date(inicio.getTime()+((c.pagado+1)*15*24*60*60*1000));
+    var diff=Math.floor((siguiente-new Date())/(24*60*60*1000));
+    return diff>=0&&diff<=7;
+  }).map(function(c){
+    var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
+    return {nombre:c.cli, tel:cl.tel||'', cred:c.id, cuota:c.cuotaQ||c.cuota, modelo:c.modelo};
+  });
 
-cuentas(){ return renderCuentas(); },
+  setTimeout(function(){
+    // Bind send button
+    var btn=$('notif-send-btn');
+    if(btn) btn.onclick=function(){ enviarNotificaciones(); };
+    // Bind tipo change to update preview
+    var tipoSel=$('notif-tipo');
+    if(tipoSel) tipoSel.onchange=function(){ actualizarPreviewNotif(); };
+    var destSel=$('notif-dest');
+    if(destSel) destSel.onchange=function(){ actualizarPreviewNotif(); };
+    actualizarPreviewNotif();
+  }, 80);
+
+  return`<div class="page"><div style="display:grid;grid-template-columns:1fr 1.2fr;gap:12px">
+  <div class="card">
+    <div class="ch"><div class="ct">💬 Enviar Notificación</div></div>
+    <div class="fgr c1" style="gap:9px">
+      <div class="fg"><label>Tipo de notificación</label>
+        <select class="fs" id="notif-tipo">
+          <option value="mora">⚠️ Recordatorio de mora</option>
+          <option value="cuota">📅 Cuota próxima (7 días)</option>
+          <option value="confirmado">✅ Pago confirmado</option>
+          <option value="custom">✏️ Mensaje personalizado</option>
+        </select>
+      </div>
+      <div class="fg"><label>Canal</label>
+        <select class="fs" id="notif-canal">
+          <option value="whatsapp">💬 WhatsApp (abre app)</option>
+          <option value="sms">📱 Copiar para SMS</option>
+          <option value="clipboard">📋 Copiar al portapapeles</option>
+        </select>
+      </div>
+      <div class="fg"><label>Destinatarios</label>
+        <select class="fs" id="notif-dest">
+          <option value="mora">Clientes en mora (${moraClientes.length})</option>
+          <option value="proximas">Cuotas esta semana (${proximasCuotas.length})</option>
+          <option value="todos">Todos los clientes activos</option>
+          <option value="especifico">Cliente específico</option>
+        </select>
+      </div>
+      <div class="fg" id="notif-especifico-wrap" style="display:none">
+        <label>Seleccionar cliente</label>
+        <select class="fs" id="notif-cliente-sel">
+          ${S.clientes.filter(c=>!c.eliminado).map(c=>`<option value="${c.id}">${c.nombre} — ${c.tel}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Mensaje personalizado</label>
+        <textarea class="fta" id="notif-msg" rows="4" placeholder="Hola {nombre}, tu cuota de {monto} está pendiente..."></textarea>
+      </div>
+    </div>
+    <div id="notif-preview" style="margin:10px 0;padding:10px 12px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim);font-size:12px;color:var(--ink3);min-height:40px"></div>
+    <button class="btn btn-p" style="width:100%;margin-top:8px" id="notif-send-btn">📤 Enviar / Copiar mensajes</button>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Historial de envíos</div></div>
+    <div class="lst" id="notif-historial" style="max-height:420px">
+      ${(window._notifHistorial||[]).length
+        ? (window._notifHistorial||[]).map(n=>`<div class="li">
+            <div class="li-ic" style="background:var(--gs)">${n.canal==='whatsapp'?'💬':'📋'}</div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:700">${n.tipo} → ${n.dest}</div>
+              <div class="tds">${n.fecha} · ${n.cantidad} mensaje${n.cantidad!==1?'s':''}</div>
+            </div>
+            <span class="bdg b-g">enviado</span>
+          </div>`).join('')
+        : '<div style="color:var(--ink3);font-size:12px;padding:12px 0">Sin envíos registrados. Los mensajes enviados aparecerán aquí.</div>'}
+    </div>
+  </div>
+  </div></div>`;},
+
 
 reportes(){return`<div class="page">
   <div class="sg" style="margin-bottom:14px">
-    <div class="stat"><div class="st-v">${fmt(S.pagos.filter(p=>p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Cobrado confirmado</div></div>
+    <div class="stat"><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Cobrado confirmado</div></div>
     <div class="stat"><div class="st-v">${fmt(S.creds.reduce((a,c)=>a+c.ini,0))}</div><div class="st-l">Iniciales recibidas</div></div>
     <div class="stat"><div class="st-v">${S.creds.filter(c=>c.mora>0).length}</div><div class="st-l">Créditos en mora</div></div>
     <div class="stat"><div class="st-v">${S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length}</div><div class="st-l">Motos disponibles</div></div>
@@ -1409,7 +1612,7 @@ reportes(){return`<div class="page">
       <div class="lst" style="max-height:none">${[['📊','Ingresos Mensuales','Cobros por mes','ingresos'],['💎','Reporte del Plan 10M','Cuotas y factor 1.90x','plan'],['💳','Créditos Activos','Cartera vigente','creditos'],['⚠️','Reporte de Mora','Clientes vencidos','mora'],['💰','Flujo de Caja','Entradas y salidas','flujo'],['🏍️','Inventario Motos','Estado del catálogo','inventario'],['🧾','P&L del Período','Estado de resultados','pyl']].map(([i,n,d,fn])=>`<div class="li"><div class="li-ic" style="background:var(--gs)">${i}</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${n}</div><div style="font-size:10.5px;color:var(--ink3)">${d}</div></div><button class="btn btn-p btn-xs" onclick="generarReporte('${fn}')">📄 Generar</button></div>`).join('')}</div>
     </div>
     <div class="card"><div class="ch"><div class="ct">Resumen Financiero</div></div>
-      ${[['Iniciales cobradas',fmt(S.creds.reduce((a,c)=>a+c.ini,0)),'green'],['Pagos mensuales',fmt(S.pagos.filter(p=>p.estado==='confirmado').reduce((a,p)=>a+p.monto,0)),'green'],['Pendiente cartera',fmt(S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+(c.fin*(1-(c.pagado/c.plazo))),0)),'amber'],['Créditos recuperados',fmt(S.creds.filter(c=>c.estado==='recuperado').reduce((a,c)=>a+c.cuota,0)),'red']].map(([l,v,c])=>`<div class="kpi"><span class="kpi-l">${l}</span><span style="color:var(--${c});font-weight:800;font-family:var(--fd)">${v}</span></div>`).join('')}
+      ${[['Iniciales cobradas',fmt(S.creds.reduce((a,c)=>a+c.ini,0)),'green'],['Pagos mensuales',fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0)),'green'],['Pendiente cartera',fmt(S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+(c.fin*(1-(c.pagado/c.plazo))),0)),'amber'],['Créditos recuperados',fmt(S.creds.filter(c=>c.estado==='recuperado').reduce((a,c)=>a+c.cuota,0)),'red']].map(([l,v,c])=>`<div class="kpi"><span class="kpi-l">${l}</span><span style="color:var(--${c});font-weight:800;font-family:var(--fd)">${v}</span></div>`).join('')}
       <div style="margin-top:11px;padding:12px;background:var(--greens);border-radius:var(--r8);border:1px solid rgba(14,203,129,0.2);display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">Margen del plan (1.90x − 1 = 90%)</span><span style="color:var(--green);font-family:var(--fd);font-size:19px;font-weight:900">90%</span></div>
     </div>
   </div></div>`;},
@@ -1433,9 +1636,10 @@ conta(){
       ${[['Cuotas iniciales recibidas',fmt(totalIni)],['Pagos de cuotas cobrados',fmt(totalPagos)],['Intereses por mora',fmt(0)],['Otros ingresos',fmt(0)]].map(([l,v])=>`<div class="kpi"><span class="kpi-l">${l}</span><span style="color:var(--green);font-weight:800;font-family:var(--fd)">${v}</span></div>`).join('')}
       <div style="margin-top:10px;padding:11px;background:var(--greens);border-radius:var(--r8);border:1px solid rgba(14,203,129,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total ingresos</span><span style="color:var(--green);font-weight:900;font-family:var(--fd)">${fmt(totalIngresos)}</span></div>
     </div>
-    <div class="card"><div class="ch"><div class="ct">❤️ Egresos</div><button class="btn btn-d btn-xs" onclick="openAddEgreso()">＋ Agregar</button></div>
-      ${S.egresos.filter(function(e){return !e.eliminado;}).map(e=>`<div class="kpi"><span class="kpi-l">${e.concepto}${e.cuentaNombre?'<div style="font-size:9.5px;color:var(--ink3);margin-top:1px">🏦 '+e.cuentaNombre+'</div>':''}</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--red);font-weight:800;font-family:var(--fd)">-${fmt(e.monto)}</span><button class="btn btn-d btn-xs btn-ic" onclick="delEgreso(${e.id})" title="Eliminar">✕</button></div></div>`).join('')}
-      <div style="margin-top:10px;padding:11px;background:var(--reds);border-radius:var(--r8);border:1px solid rgba(240,75,106,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total egresos</span><span style="color:var(--red);font-weight:900;font-family:var(--fd)">-${fmt(totalEgresos)}</span></div>
+    <div class="card"><div class="ch"><div class="ct">❤️ Egresos</div><div style="display:flex;gap:5px"><button class="btn btn-g btn-xs" onclick="exportarCSV('egresos')">📥 CSV</button><button class="btn btn-d btn-xs" onclick="openAddEgreso()">＋ Agregar</button></div></div>
+      ${S.egresos.filter(function(e){return !e.eliminado;}).map(e=>`<div class="kpi"><span class="kpi-l">${e.concepto}${e.forma?'<div style="font-size:9.5px;color:var(--ink3);margin-top:1px">'+e.forma+'</div>':''}</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--red);font-weight:800;font-family:var(--fd)">-${fmt(e.monto)}</span><button class="btn btn-d btn-xs btn-ic" onclick="delEgreso(${e.id})" title="Eliminar">✕</button></div></div>`).join('')}
+      <div style="margin-top:10px;padding:11px;background:var(--reds);border-radius:var(--r8);border:1px solid rgba(240,75,106,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total egresos</span><span style="color:var(--red);font-weight:900;font-family:var(--fd)">-${fmt(totalEgresos)}</span>
+      ${S.egresos.filter(function(e){return e.eliminado;}).length?'<div style="margin-top:8px;padding:9px 11px;background:var(--surf2);border-radius:8px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px">Registros eliminados</div>'+S.egresos.filter(function(e){return e.eliminado;}).map(function(e){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--rim)"><span style="flex:1;font-size:11px;font-weight:600;opacity:0.7;text-decoration:line-through">'+e.concepto+'</span><span style="font-size:11px;color:var(--red)">-'+fmt(e.monto)+'</span><span style="font-size:10px;color:var(--ink3)">🗑 '+(e.eliminadoPor||'Admin')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoRazon?'· '+e.eliminadoRazon:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoEn?'· '+e.eliminadoEn.split('T')[0]:'')+'</span></div>';}).join('')+'</div>':''}</div>
     </div>
   </div></div>`;},
 
@@ -1552,7 +1756,26 @@ config(){
     </div>
   </div>
 
-  </div></div>`;},
+
+  <!-- Acceso local (sin Firebase) -->
+  <div class="card">
+    <div class="ch"><div><div class="ct">Acceso Local</div><div class="cs">Credenciales de emergencia cuando Firebase no está disponible</div></div></div>
+    <div style="background:var(--ambers);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:12px">
+      ⚠️ Este acceso solo funciona cuando Firebase no está configurado o sin conexión.
+    </div>
+    <div style="background:var(--ambers);border-radius:8px;padding:9px 12px;font-size:11.5px;margin-bottom:10px">⚠️ Solo activo cuando Firebase Auth no está configurado.</div>
+    <div class="fgr" style="gap:8px">
+      <div class="fg"><label>Usuario *</label><input class="fi" id="cfg_local_user" value="${USERS_LOCAL[0]&&USERS_LOCAL[0].user||'admin'}" placeholder="usuario"></div>
+      <div class="fg"><label>Contraseña nueva *</label><input class="fi" id="cfg_local_pass" type="password" placeholder="Mín. 6 caracteres"></div>
+    </div>
+    <div class="fgr" style="gap:8px;margin-top:8px">
+      <div class="fg"><label>Nombre para mostrar</label><input class="fi" id="cfg_local_nombre" value="${USERS_LOCAL[0]&&USERS_LOCAL[0].nombre||'Admin'}" placeholder="Nombre"></div>
+    </div>
+    <button class="btn btn-p btn-sm" style="margin-top:12px" onclick="guardarCredencialesLocales()">Guardar credenciales</button>
+  </div>
+
+  </div></div>`;
+},
 
 users(){
   const rolBadge = {Administrador:'b-p',Gerente:'b-b',Cobrador:'b-r',Vendedor:'b-g',Contador:'b-a'};
@@ -1627,11 +1850,11 @@ function liveSearchCliente(q){
 function openAddMoto(id=null){
   const m=id?S.motos.find(x=>x.id===id):null,ed=!!m;
   $('mic').textContent='🏍️';
-  $('mtt').textContent=ed?'Editar Moto':'Nueva Moto al Catálogo';
-  $('msb').textContent=ed?m.modelo:'Se calculará con el plan 10M automáticamente';
+  $('mtt').textContent=ed?'Editar Moto':'Nueva Unidad al Inventario';
+  $('msb').textContent=ed?m.modelo:'Unidad física — VIN, color, estado';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`
-    <div class="fsec">Modelo y precio</div>
+    <div class="fsec">Modelo (del catálogo)</div>
     <div class="fgr">
       <div class="fg"><label>Modelo *</label>
         <select class="fs" id="m_mod_sel" onchange="onCatalogoSelect(this)">
@@ -1666,7 +1889,8 @@ function openAddMoto(id=null){
     // Resolver nombre del modelo (dropdown catálogo o personalizado)
     var _selMod = ($('m_mod')&&$('m_mod').value)||'';
     var _modeloFinal = _selMod==='__custom__' ? g('m_mod_custom') : _selMod;
-    if(!_modeloFinal||!($('m_pr')&&$('m_pr').value)){toast('Modelo y precio son obligatorios','error');return false;}
+    if(!_modeloFinal){toast('Selecciona un modelo del catálogo','error');return false;}
+    if(!($('m_pr')&&$('m_pr').value)){toast('El precio es obligatorio','error');return false;}
     const precio=parseFloat($('m_pr').value)||0;
     const calc=calcMoto(precio);
     const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,color:g('m_color')||'',vin:g('m_vin')||'VIN-'+Date.now().toString().slice(-4),estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',...calc};
@@ -1714,7 +1938,89 @@ function delMoto(id){
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="cDel(${id})">🗑️ Eliminar</button>`;
   $('ov').style.display='flex';
 }
-function cDel(id){var i=S.motos.findIndex(x=>x.id===id);if(i>=0){S.motos[i].eliminado=true;DB.saveMoto(S.motos[i]);}closeM();nav('motos');toast('Moto eliminada','info');}
+// ══════════════════════════════════════════════════════════════
+// SISTEMA DE AUDITORÍA DE ELIMINACIONES
+// ══════════════════════════════════════════════════════════════
+function confirmarEliminacion(opts){
+  // opts: { titulo, descripcion, onConfirm }
+  window._delAuditCallback = opts.onConfirm;
+  $('mic').textContent='🗑️';
+  $('mtt').textContent = opts.titulo || 'Eliminar registro';
+  $('msb').textContent = 'Esta acción quedará registrada con tu nombre';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = '<div style="text-align:center;padding:8px 0 14px">'
+    +'<div style="font-size:40px;margin-bottom:10px">⚠️</div>'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+(opts.descripcion||'¿Confirmar eliminación?')+'</div>'
+    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:14px">Quedará registrado como eliminado por <strong>'+((S.currentUser&&S.currentUser.nombre)||'Administrador')+'</strong></div>'
+    +'</div>'
+    +'<div class="fg"><label>Razón de la eliminación (obligatorio)</label>'
+    +'<select class="fs" id="del_razon">'
+    +'<option value="">— Seleccionar —</option>'
+    +'<option>Error de captura</option>'
+    +'<option>Pago duplicado</option>'
+    +'<option>Cliente solicitó reverso</option>'
+    +'<option>Monto incorrecto</option>'
+    +'<option>Operación cancelada</option>'
+    +'<option>Orden del administrador</option>'
+    +'<option>Otro</option>'
+    +'</select></div>'
+    +'<div class="fg" style="margin-top:8px" id="del_otro_wrap" style="display:none">'
+    +'<label>Especifica la razón</label>'
+    +'<input class="fi" id="del_otro" placeholder="Describe la razón..."></div>';
+  // Show text input when "Otro" selected
+  setTimeout(function(){
+    var sel = $('del_razon');
+    if(sel) sel.onchange = function(){
+      var wrap = $('del_otro_wrap');
+      if(wrap) wrap.style.display = sel.value==='Otro' ? 'block' : 'none';
+    };
+  }, 50);
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-d" onclick="ejecutarEliminacionAuditada()">🗑️ Eliminar</button>';
+  $('ov').style.display='flex';
+}
+
+function ejecutarEliminacionAuditada(){
+  var razon = ($('del_razon')&&$('del_razon').value)||'';
+  if(razon==='Otro') razon = ($('del_otro')&&$('del_otro').value.trim())||'Otro';
+  if(!razon){ toast('Debes seleccionar una razón','error'); return; }
+  var auditInfo = {
+    eliminado: true,
+    eliminadoPor: (S.currentUser&&S.currentUser.nombre)||'Administrador',
+    eliminadoPorUid: (S.currentUser&&S.currentUser.uid)||'',
+    eliminadoEn: new Date().toISOString(),
+    eliminadoRazon: razon
+  };
+  closeM();
+  if(window._delAuditCallback) window._delAuditCallback(auditInfo);
+  window._delAuditCallback = null;
+}
+
+function auditBadge(item){
+  if(!item||!item.eliminado) return '';
+  var por = item.eliminadoPor || 'Admin';
+  var razon = item.eliminadoRazon || '';
+  var fecha = item.eliminadoEn ? item.eliminadoEn.split('T')[0] : '';
+  return '<div style="background:var(--reds);border:1px solid rgba(240,75,106,0.3);border-radius:6px;padding:4px 9px;font-size:10px;display:flex;align-items:center;gap:6px;margin-top:4px">'
+    +'<span style="font-weight:900;color:var(--red)">🗑 ELIMINADO</span>'
+    +'<span style="color:var(--ink3)">por <strong>'+por+'</strong>'+(fecha?' · '+fecha:'')+(razon?' · '+razon:'')+'</span>'
+    +'</div>';
+}
+
+
+function cDel(id){
+  var i=S.motos.findIndex(x=>x.id===id); if(i<0) return;
+  var m=S.motos[i];
+  confirmarEliminacion({
+    titulo:'Eliminar Moto',
+    descripcion:'¿Eliminar '+m.modelo+' — '+m.vin+'?',
+    onConfirm:function(audit){
+      Object.assign(S.motos[i],audit);
+      DB.saveMoto(S.motos[i]);
+      nav('motos'); toast('Moto eliminada','info');
+    }
+  });
+}
 
 // ══════════════════════════════════════════
 // CLIENTE CRUD
@@ -1751,7 +2057,7 @@ function editCliente(id){openAddCliente(id);}
 function delCliente(id){
   const c=S.clientes.find(x=>x.id===id);if(!c)return;
   if(S.creds.some(cr=>cr.cli===c.nombre&&cr.estado==='activo')){toast('No puedes eliminar un cliente con crédito activo','error');return;}
-  c.eliminado=true; DB.saveCliente(c);nav('clientes');toast('Cliente marcado como eliminado','info');
+  confirmarEliminacion({titulo:'Eliminar Cliente',descripcion:'¿Eliminar a '+c.nombre+'?',onConfirm:function(audit){Object.assign(c,audit);DB.saveCliente(c);nav('clientes');toast('Cliente eliminado','info');}});
 }
 
 // ══════════════════════════════════════════
@@ -1839,6 +2145,110 @@ function openAddCred(motoId=null){
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear Financiamiento</button>`;
   $('ov').style.display='flex';
 }
+
+
+function cancelarCred(credId){
+  var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
+  window._cancelCredId = credId;
+  $('mic').textContent='✕'; $('mtt').textContent='Cancelar Financiamiento'; $('msb').textContent=c.id+' · '+c.cli;
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = '<div style="text-align:center;padding:12px 0">'
+    +'<div style="font-size:38px;margin-bottom:10px">📋</div>'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+c.cli+' — '+c.modelo+'</div>'
+    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:16px">'
+    +c.pagado+' cuotas pagadas de '+(c.totalCuotas||c.plazo*2)+' · Pagado: '+fmt((c.pagado||0)*(c.cuotaQ||c.cuota||0))
+    +'</div></div>'
+    +'<div class="fg"><label>Razón de cancelación *</label>'
+    +'<select class="fs" id="cc_razon">'
+    +'<option value="">— Seleccionar —</option>'
+    +'<option>Acuerdo entre las partes</option>'
+    +'<option>Cliente no puede pagar</option>'
+    +'<option>Moto recuperada</option>'
+    +'<option>Refinanciamiento</option>'
+    +'<option>Error administrativo</option>'
+    +'<option>Otro</option>'
+    +'</select></div>'
+    +'<div class="fg" style="margin-top:8px"><label>Notas adicionales</label>'
+    +'<textarea class="fta" id="cc_notas" placeholder="Detalles de la cancelación..."></textarea></div>'
+    +'<div style="margin-top:12px;padding:9px 11px;background:var(--ambers);border-radius:8px;font-size:12px">'
+    +'⚠️ El crédito quedará como <strong>cancelado</strong>. La moto volverá al inventario como disponible.</div>';
+  S.saveFn = function(){
+    var razon = ($('cc_razon')&&$('cc_razon').value)||'';
+    if(!razon){ toast('Selecciona una razón de cancelación','error'); return false; }
+    var ci = S.creds.findIndex(function(x){return x.id===credId;});
+    if(ci>=0){
+      S.creds[ci].estado='cancelado';
+      S.creds[ci].canceladoPor  = (S.currentUser&&S.currentUser.nombre)||'Admin';
+      S.creds[ci].canceladoEn   = new Date().toISOString();
+      S.creds[ci].canceladoRazon= razon;
+      S.creds[ci].canceladoNotas= ($('cc_notas')&&$('cc_notas').value)||'';
+      DB.updateCred(credId,{
+        estado:'cancelado',
+        canceladoPor:S.creds[ci].canceladoPor,
+        canceladoEn:S.creds[ci].canceladoEn,
+        canceladoRazon:razon,
+        canceladoNotas:S.creds[ci].canceladoNotas
+      });
+      // Return moto to inventory
+      var mi = S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
+      if(mi>=0&&S.motos[mi].estado==='financiada'){
+        S.motos[mi].estado='recuperada'; S.motos[mi].cliente=null;
+        DB.saveMoto(S.motos[mi]);
+      }
+    }
+    closeM(); nav('creditos');
+    toast('Crédito '+credId+' cancelado — moto liberada','info');
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-d" onclick="saveM()">✕ Confirmar cancelación</button>';
+  $('ov').style.display='flex';
+}
+
+function openEditCred(credId){
+  var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
+  $('mic').textContent='📋'; $('mtt').textContent='Editar Financiamiento'; $('msb').textContent=c.id+' · '+c.cli;
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
+    // Info only (read-only)
+    +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:9px;padding:11px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">'
+    +'<div><span style="color:var(--ink3)">Cliente</span><div style="font-weight:700">'+c.cli+'</div></div>'
+    +'<div><span style="color:var(--ink3)">Moto</span><div style="font-weight:700">'+c.modelo+'</div></div>'
+    +'<div><span style="color:var(--ink3)">Cuota quincenal</span><div style="font-weight:800;color:var(--p1)">'+fmt(c.cuotaQ||c.cuota)+'</div></div>'
+    +'<div><span style="color:var(--ink3)">Avance</span><div style="font-weight:700">'+(c.pagado||0)+'/'+(c.totalCuotas||c.plazo*2)+' cuotas</div></div>'
+    +'</div>'
+    // Editable fields
+    +'<div class="fgr" style="gap:8px">'
+    +'<div class="fg"><label>Estado</label><select class="fs" id="ec_estado">'
+    +['activo','mora','completado','recuperado','cancelado'].map(function(s){return '<option value="'+s+'" '+(c.estado===s?'selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')
+    +'</select></div>'
+    +'<div class="fg"><label>Cobrador asignado</label><select class="fs" id="ec_cobrador">'
+    +(_cobradores||[]).map(function(u){return '<option '+(c.cobrador===u?'selected':'')+'>'+u+'</option>';}).join('')
+    +'</select></div>'
+    +'</div>'
+    +'<div class="fgr" style="gap:8px">'
+    +'<div class="fg"><label>Fecha de inicio</label><input class="fi" id="ec_fecha" type="date" value="'+(c.fecha||'')+'"></div>'
+    +'<div class="fg"><label>GPS instalado</label><select class="fs" id="ec_gps"><option value="si" '+(c.gps?'selected':'')+'>Sí</option><option value="no" '+(!c.gps?'selected':'')+'>No</option></select></div>'
+    +'</div>'
+    +'<div class="fg"><label>Notas del crédito</label><textarea class="fta" id="ec_notas" rows="3">'+(c.notas||'')+'</textarea></div>'
+    +'</div>';
+  S.saveFn = function(){
+    var upd = {
+      estado:   ($('ec_estado')&&$('ec_estado').value)||c.estado,
+      cobrador: ($('ec_cobrador')&&$('ec_cobrador').value)||c.cobrador,
+      fecha:    ($('ec_fecha')&&$('ec_fecha').value)||c.fecha,
+      gps:      ($('ec_gps')&&$('ec_gps').value)==='si',
+      notas:    ($('ec_notas')&&$('ec_notas').value)||''
+    };
+    var ci = S.creds.findIndex(function(x){return x.id===credId;});
+    if(ci>=0){ Object.assign(S.creds[ci], upd); DB.updateCred(credId, upd); }
+    closeM(); nav('creditos'); toast('Crédito actualizado','success'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
+  $('ov').style.display='flex';
+}
+
 function openAddCredConMoto(motoId){openAddCred(motoId);}
 
 function updCredFill(sel){
@@ -1883,10 +2293,7 @@ function openAddPago(){
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
-${(function(){
-  var opts = (_cuentasBanc||[]).map(function(c){return c.nombre;}).map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('');
-  return '<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">'+opts+'</select></div>';
-})()} 
+<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc||[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}</select></div>
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
       <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${_cobradores.map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
@@ -1910,11 +2317,20 @@ ${(function(){
     };
     S.pagos.push(newPago);
     DB.savePago(newPago);
+    // Crear movimiento en Cuentas si hay cuenta seleccionada
+    var pagoMetodo=($('p_forma')&&$('p_forma').value)||'';
+    if(pagoMetodo){
+      var mov={id:'MOV-'+Date.now(),tipo:'deposito',
+        concepto:'Pago cuota · '+cred.cli+' · '+credId,
+        monto:monto,cuentaOrigen:null,cuentaDestino:pagoMetodo,
+        fecha:newPago.fecha,referencia:newPago.referencia||''};
+      S.movimientos.push(mov); DB.saveMovimiento(mov);
+    }
     const ci=S.creds.findIndex(function(x){return x.id===credId;});
     if(ci>=0){
-      S.creds[ci].pagado=Math.min(S.creds[ci].pagado+1,S.creds[ci].plazo);
-      if(S.creds[ci].mora>0) S.creds[ci].mora=0;
-      if(S.creds[ci].pagado>=S.creds[ci].plazo) S.creds[ci].estado='completado';
+      S.creds[ci].pagado=Math.min(S.creds[ci].pagado+1,S.creds[ci].totalCuotas||S.creds[ci].plazo*2);
+      if(S.creds[ci].mora>0){S.creds[ci].mora=0;S.creds[ci].estado='activo';}
+      if(S.creds[ci].pagado>=(S.creds[ci].totalCuotas||S.creds[ci].plazo*2)) S.creds[ci].estado='completado';
       DB.updateCred(credId,{pagado:S.creds[ci].pagado,mora:S.creds[ci].mora,estado:S.creds[ci].estado});
     }
     toast('✅ Pago registrado · '+fmt(monto),'success');
@@ -1926,16 +2342,10 @@ ${(function(){
 
 var _cuentas = ['Bancamiga Cta. 0172-xxxx','Banesco Cta. 0134-xxxx','Zelle: pagasi@email.com'];
 
-function toggleCuentaField(sel){
-  var wrap = $('p_cuenta_wrap');
-  if(!wrap) return;
-  var v = sel ? sel.value : '';
-  var showCuenta = (v==='Transferencia'||v==='Pago Móvil'||v==='Zelle'||v==='PayPal');
-  wrap.style.display = showCuenta ? '' : 'none';
-}
+
 
 function updPagoMonto(sel){
-  const opt=(sel&&sel.options)&&_i_[sel.selectedIndex];if(!opt)return;
+  const opt=(sel&&sel.options)&&sel.options[sel.selectedIndex];if(!opt)return;
   const monto=opt.dataset.cuotaq||opt.dataset.cuota;
   if($('p_monto')&&monto)$('p_monto').value=parseFloat(monto).toFixed(2);
 }
@@ -2013,7 +2423,10 @@ function whatsappCliente(credId){
   var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
   var tel=(cl.tel||'').replace(/\D/g,'').replace(/^0/,'');
   if(!tel){toast('Este cliente no tiene teléfono registrado','error');return;}
-  var msg=encodeURIComponent('Hola '+c.cli.split(' ')[0]+', te contactamos de Pagasi. Tu cuota del crédito '+credId+' ('+c.modelo+') está pendiente. Por favor comunícate con nosotros para regularizar tu situación. Gracias.');
+  var empresa=($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
+  var cuotaStr=fmt(c.cuotaQ||c.cuota||0);
+  var moraStr=c.mora>0?' Tienes '+c.mora+' día'+(c.mora!==1?'s':'')+' de atraso.':'';
+  var msg=encodeURIComponent('Hola '+c.cli.split(' ')[0]+'! Te escribimos de '+empresa+'. Tu cuota quincenal de '+cuotaStr+' por tu '+c.modelo+' ('+credId+') está pendiente.'+moraStr+' Por favor comunícate con nosotros para regularizar. ¡Gracias!');
   window.open('https://wa.me/58'+tel+'?text='+msg);
 }
 
@@ -2046,6 +2459,138 @@ function confirmarRecuperacion(credId){
 }
 
 // ── PAGOS: CONFIRMAR PAGO PENDIENTE ──
+
+function confirmarDelPago(id){
+  var p=S.pagos.find(function(x){return x.id===id;});if(!p)return;
+  window._delPagoId=id;
+  window._delPagoRazon='';
+  $('mic').textContent='🗑️';$('mtt').textContent='Eliminar Pago';$('msb').textContent='El crédito se revertirá';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div style="text-align:center;padding:16px 0">'
+    +'<div style="font-size:42px;margin-bottom:10px">💳</div>'
+    +'<div style="font-size:15px;font-weight:800">¿Eliminar pago '+p.id+'?</div>'
+    +'<div style="color:var(--ink3);font-size:13px;margin-top:6px">'+p.cli+' · '+fmt(p.monto)+' · '+p.fecha+'</div>'
+    +'<div style="margin-top:10px;padding:9px;background:var(--ambers);border-radius:8px;font-size:12px;color:var(--ink)">'
+    +'⚠️ La cuota pagada se restará del crédito y el movimiento en Cuentas se eliminará.</div></div>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-d" onclick="auditarYEliminarPago()">🗑️ Eliminar</button>';
+  $('ov').style.display='flex';
+}
+
+
+function auditarYEliminarPago(){
+  var id=window._delPagoId; var p=S.pagos.find(function(x){return x.id===id;});if(!p)return;
+  closeM();
+  confirmarEliminacion({
+    titulo:'Eliminar Pago',
+    descripcion:'Pago '+p.id+' · '+p.cli+' · '+fmt(p.monto),
+    onConfirm:function(audit){
+      window._delPagoRazon=audit.eliminadoRazon;
+      ejecutarDelPago();
+    }
+  });
+}
+
+function ejecutarDelPago(){
+  var id=window._delPagoId; if(!id)return;
+  var pi=S.pagos.findIndex(function(x){return x.id===id;});
+  if(pi<0){closeM();return;}
+  var p=S.pagos[pi];
+  // Soft delete con auditoría
+  S.pagos[pi].eliminadoPor=(S.currentUser&&S.currentUser.nombre)||'Admin';
+  S.pagos[pi].eliminadoPorUid=(S.currentUser&&S.currentUser.uid)||'';
+  S.pagos[pi].eliminadoEn=new Date().toISOString();
+  S.pagos[pi].eliminadoRazon=window._delPagoRazon||'Sin especificar';
+  S.pagos[pi].eliminado=true; DB.savePago(S.pagos[pi]);
+  // Revertir cuota del crédito
+  var ci=S.creds.findIndex(function(x){return x.id===p.cred;});
+  if(ci>=0){
+    S.creds[ci].pagado=Math.max(0,S.creds[ci].pagado-1);
+    if(S.creds[ci].estado==='completado') S.creds[ci].estado='activo';
+    DB.updateCred(p.cred,{pagado:S.creds[ci].pagado,estado:S.creds[ci].estado});
+  }
+  // Eliminar movimiento relacionado (buscar por concepto)
+  var mi=S.movimientos.findIndex(function(m){return m.concepto&&m.concepto.includes(p.cred)&&m.monto===p.monto&&m.fecha===p.fecha;});
+  if(mi>=0){S.movimientos[mi].eliminado=true;DB.saveMovimiento(S.movimientos[mi]);}
+  window._delPagoId=null;
+  closeM(); nav('pagos'); toast('Pago eliminado · crédito revertido','info');
+}
+
+function openPagoRapido(credId){
+  openAddPago();
+  setTimeout(function(){
+    var sel=$('p_cred');
+    if(sel){
+      for(var i=0;i<sel.options.length;i++){
+        if(sel.options[i].value===credId){sel.selectedIndex=i;break;}
+      }
+      updPagoMonto(sel);
+    }
+  },80);
+}
+
+
+function openEditPago(pagoId){
+  var p = S.pagos.find(function(x){return x.id===pagoId;}); if(!p) return;
+  $('mic').textContent='✏️'; $('mtt').textContent='Editar Pago'; $('msb').textContent=pagoId+' · '+p.cli;
+  $('modal-box').className='modal';
+  var metOpts = (_cuentasBanc||[]).map(function(c){
+    return '<option value="'+c.nombre+'" '+(p.metodo===c.nombre?'selected':'')+'>'+c.nombre+'</option>';
+  }).join('');
+  var cobrOpts = (_cobradores||[]).map(function(u){
+    return '<option '+(p.cobrador===u?'selected':'')+'>'+u+'</option>';
+  }).join('');
+  $('mbd').innerHTML = '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:9px;padding:10px 12px;margin-bottom:12px;font-size:11px">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'
+    +'<div><span style="color:var(--ink3)">Cliente</span><div style="font-weight:700">'+p.cli+'</div></div>'
+    +'<div><span style="color:var(--ink3)">Crédito</span><div style="font-weight:700">'+p.cred+'</div></div>'
+    +'<div><span style="color:var(--ink3)">Estado actual</span><div style="font-weight:700">'+p.estado+'</div></div>'
+    +'</div></div>'
+    +'<div class="fgr" style="gap:8px">'
+    +'<div class="fg"><label>Monto ($) *</label>'
+    +'<input class="fi" id="ep_monto" type="number" step="0.01" value="'+(p.monto||0)+'"></div>'
+    +'<div class="fg"><label>Fecha *</label>'
+    +'<input class="fi" id="ep_fecha" type="date" value="'+(p.fecha||'')+'"></div>'
+    +'</div>'
+    +'<div class="fgr" style="gap:8px;margin-top:8px">'
+    +'<div class="fg"><label>Recibido en</label>'
+    +'<select class="fs" id="ep_metodo">'+(metOpts||'<option>'+p.metodo+'</option>')+'</select></div>'
+    +'<div class="fg"><label>Estado</label>'
+    +'<select class="fs" id="ep_estado">'
+    +'<option value="confirmado" '+(p.estado==='confirmado'?'selected':'')+'>Confirmado</option>'
+    +'<option value="pendiente" '+(p.estado==='pendiente'?'selected':'')+'>Pendiente</option>'
+    +'</select></div>'
+    +'</div>'
+    +'<div class="fgr" style="gap:8px;margin-top:8px">'
+    +'<div class="fg"><label>N° Referencia</label>'
+    +'<input class="fi" id="ep_ref" value="'+(p.referencia||'')+'"></div>'
+    +'<div class="fg"><label>Cobrador</label>'
+    +'<select class="fs" id="ep_cobrador">'+(cobrOpts||'<option>'+p.cobrador+'</option>')+'</select></div>'
+    +'</div>'
+    +'<div style="margin-top:10px;padding:8px 11px;background:var(--ambers);border-radius:8px;font-size:11.5px">'
+    +'⚠️ Editar el monto NO recalcula el crédito automáticamente. Si cambias el monto por un error, verifica el progreso del crédito.</div>';
+  S.saveFn = function(){
+    var nuevoMonto = parseFloat(($('ep_monto')&&$('ep_monto').value))||0;
+    if(nuevoMonto<=0){ toast('El monto debe ser mayor a 0','error'); return false; }
+    var pi = S.pagos.findIndex(function(x){return x.id===pagoId;});
+    if(pi<0){ toast('Pago no encontrado','error'); return false; }
+    // Save who edited and when for audit trail
+    S.pagos[pi].monto      = nuevoMonto;
+    S.pagos[pi].fecha      = ($('ep_fecha')&&$('ep_fecha').value)||p.fecha;
+    S.pagos[pi].metodo     = ($('ep_metodo')&&$('ep_metodo').value)||p.metodo;
+    S.pagos[pi].estado     = ($('ep_estado')&&$('ep_estado').value)||p.estado;
+    S.pagos[pi].referencia = ($('ep_ref')&&$('ep_ref').value)||'';
+    S.pagos[pi].cobrador   = ($('ep_cobrador')&&$('ep_cobrador').value)||p.cobrador;
+    S.pagos[pi].editadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+    S.pagos[pi].editadoEn  = new Date().toISOString();
+    DB.savePago(S.pagos[pi]);
+    closeM(); nav('pagos'); toast('Pago actualizado ✅','success'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
+  $('ov').style.display='flex';
+}
+
 function confirmarPago(pagoId){
   var pi=S.pagos.findIndex(function(x){return x.id===pagoId;});
   if(pi<0) return;
@@ -2064,8 +2609,7 @@ function confirmarPago(pagoId){
 
 // ── MORA: CALCULAR DÍAS AUTOMÁTICAMENTE AL CARGAR ──
 function calcularMoraAuto(){
-  var hoy=new Date();
-  hoy.setHours(0,0,0,0);
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
   S.creds.forEach(function(c){
     if(c.estado!=='activo'||!c.fecha) return;
     var inicio=new Date(c.fecha);
@@ -2074,22 +2618,96 @@ function calcularMoraAuto(){
     fechaVence.setHours(0,0,0,0);
     var diasAtraso=Math.floor((hoy-fechaVence)/(24*60*60*1000));
     var gracia=PLAN.diasGracia||5;
-    c.mora=diasAtraso>gracia?diasAtraso:0;
+    var nuevaMora=diasAtraso>gracia?diasAtraso:0;
+    if(nuevaMora!==c.mora){
+      c.mora=nuevaMora;
+      if(nuevaMora>0&&c.estado==='activo') c.estado='mora';
+      if(nuevaMora===0&&c.estado==='mora') c.estado='activo';
+      DB.updateCred(c.id,{mora:c.mora,estado:c.estado});
+    } else { c.mora=nuevaMora; }
   });
 }
 
 // NOTA COBRANZA
 function openNota(id){
   $('mic').textContent='📝';$('mtt').textContent='Nota de Cobranza';$('msb').textContent=id;
-  $('modal-box').className='modal';
-  $('mbd').innerHTML=`<div class="fgr c1" style="gap:9px">
-    <div class="fg"><label>Tipo de gestión</label><select class="fs"><option>Llamada telefónica</option><option>Visita domicilio</option><option>WhatsApp</option><option>Acuerdo de pago</option><option>Recuperación de unidad</option></select></div>
-    <div class="fg"><label>Resultado de la gestión</label><textarea class="fta" placeholder="Describe el resultado..." style="min-height:95px"></textarea></div>
-    <div class="fg"><label>Acuerdo de pago (monto)</label><input class="fi" type="number" placeholder="Monto acordado..."></div>
-    <div class="fg"><label>Fecha compromiso de pago</label><input class="fi" type="date"></div>
-    <div class="fg"><label>Próxima acción</label><input class="fi" placeholder="Qué hacer después"></div>
-  </div>`;
-  S.saveFn=()=>{toast('Nota de cobranza guardada','success');closeM();return true;};
+  $('modal-box').className='modal modal-lg';
+  $('mbd').innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    +'<div>'
+    +'<div class="fsec" style="margin-bottom:8px">Nueva gestión</div>'
+    +'<div class="fgr c1" style="gap:9px">'
+    +'<div class="fg"><label>Tipo de gestión</label>'
+    +'<select class="fs" id="nota_tipo">'
+    +'<option>Llamada telefónica</option><option>Visita domicilio</option>'
+    +'<option>WhatsApp</option><option>Acuerdo de pago</option>'
+    +'<option>Recuperación de unidad</option></select></div>'
+    +'<div class="fg"><label>Resultado *</label>'
+    +'<textarea class="fta" id="nota_result" placeholder="Describe el resultado..." rows="3"></textarea></div>'
+    +'<div class="fgr" style="gap:8px">'
+    +'<div class="fg"><label>Monto acordado ($)</label>'
+    +'<input class="fi" id="nota_monto" type="number" placeholder="0.00"></div>'
+    +'<div class="fg"><label>Fecha compromiso</label>'
+    +'<input class="fi" id="nota_fecha" type="date"></div></div>'
+    +'<div class="fg"><label>Próxima acción</label>'
+    +'<input class="fi" id="nota_prox" placeholder="Qué hacer después..."></div>'
+    +'</div></div>'
+    +'<div>'
+    +'<div class="fsec" style="margin-bottom:8px">Historial de gestiones</div>'
+    +'<div id="nota_historial" class="lst" style="max-height:280px"><div style="color:var(--ink3);font-size:11px">Cargando...</div></div>'
+    +'</div></div>';
+  // Load previous notes for this credit
+  setTimeout(function(){
+    var el=$('nota_historial'); if(!el) return;
+    if(!db){ el.innerHTML='<div style="color:var(--ink3);font-size:11px">Sin conexión Firebase</div>'; return; }
+    db.collection('notas_cobranza').where('credId','==',id).orderBy('fecha','desc').get()
+      .then(function(snap){
+        if(!$('nota_historial')) return;
+        if(snap.empty){
+          $('nota_historial').innerHTML='<div style="color:var(--ink3);font-size:11px;padding:8px 0">Sin gestiones previas para este crédito</div>';
+          return;
+        }
+        $('nota_historial').innerHTML=snap.docs.map(function(d){
+          var n=d.data();
+          return '<div style="padding:7px 0;border-bottom:1px solid var(--rim)">'
+            +'<div style="display:flex;justify-content:space-between;margin-bottom:2px">'
+            +'<span style="font-size:11px;font-weight:700;color:var(--p1)">'+n.tipo+'</span>'
+            +'<span style="font-size:10px;color:var(--ink3)">'+n.fecha+'</span></div>'
+            +'<div style="font-size:11.5px;color:var(--ink)">'+n.resultado+'</div>'
+            +(n.fechaCompromiso?'<div style="font-size:10px;color:var(--green);margin-top:2px">💰 Compromiso: '+n.fechaCompromiso+'</div>':'')
+            +(n.montoAcordado?'<div style="font-size:10px;color:var(--ink3)">Monto: $'+n.montoAcordado+'</div>':'')
+            +'<div style="font-size:10px;color:var(--ink3)">'+n.cobrador+'</div>'
+            +'</div>';
+        }).join('');
+      }).catch(function(e){ $('nota_historial').innerHTML='<div style="color:var(--red);font-size:11px">'+e.message+'</div>'; });
+  }, 80);
+
+  S.saveFn=()=>{
+    var tipo    = ($('nota_tipo')&&$('nota_tipo').value)||'Gestión';
+    var result  = ($('nota_result')&&$('nota_result').value.trim())||'';
+    var monto   = ($('nota_monto')&&$('nota_monto').value)||'';
+    var fechaComp = ($('nota_fecha')&&$('nota_fecha').value)||'';
+    var prox    = ($('nota_prox')&&$('nota_prox').value.trim())||'';
+    if(!result){ toast('Describe el resultado de la gestión','error'); return false; }
+    var nota = {
+      id: 'NOTA-'+Date.now(),
+      credId: id,
+      tipo: tipo,
+      resultado: result,
+      montoAcordado: monto ? parseFloat(monto) : null,
+      fechaCompromiso: fechaComp,
+      proximaAccion: prox,
+      fecha: new Date().toISOString().split('T')[0],
+      cobrador: (S.currentUser&&S.currentUser.nombre)||'Admin'
+    };
+    if(db){
+      db.collection('notas_cobranza').add(nota)
+        .then(function(){ toast('Nota guardada ✅','success'); })
+        .catch(function(e){ toast('Error al guardar: '+e.message,'error'); });
+    } else {
+      toast('Nota guardada (sin conexión)','info');
+    }
+    closeM(); return true;
+  };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar</button>`;
   $('ov').style.display='flex';
 }
@@ -2226,11 +2844,17 @@ function openAddEgreso(){
 }
 function delEgreso(id){
   var i=S.egresos.findIndex(function(x){return x.id===id;});
-  if(i>=0){
-    S.egresos[i].eliminado=true;
-    DB.saveEgreso(S.egresos[i]);
-  }
-  nav('conta');toast('Egreso marcado como eliminado','info');
+  if(i<0) return;
+  var eg=S.egresos[i];
+  confirmarEliminacion({
+    titulo:'Eliminar Egreso',
+    descripcion:'¿Eliminar egreso: '+eg.concepto+' — '+fmt(eg.monto)+'?',
+    onConfirm:function(audit){
+      Object.assign(S.egresos[i],audit);
+      DB.saveEgreso(S.egresos[i]);
+      nav('conta'); toast('Egreso eliminado','info');
+    }
+  });
 }
 
 // UTILS
@@ -2250,6 +2874,80 @@ function toast(msg,type='info'){
 }
 
 // GUARDAR CONFIGURACIÓN
+
+function guardarCredencialesLocales(){
+  var user   = ($('cfg_local_user')&&$('cfg_local_user').value.trim())||'';
+  var pass   = ($('cfg_local_pass')&&$('cfg_local_pass').value)||'';
+  var nombre = ($('cfg_local_nombre')&&$('cfg_local_nombre').value.trim())||'Admin';
+  if(!user){ toast('El usuario no puede estar vacío','error'); return; }
+  if(pass && pass.length < 6){ toast('La contraseña debe tener al menos 6 caracteres','error'); return; }
+  // Update in memory
+  if(!USERS_LOCAL.length) USERS_LOCAL.push({});
+  USERS_LOCAL[0].user   = user;
+  USERS_LOCAL[0].nombre = nombre;
+  if(pass) USERS_LOCAL[0].pass = pass;
+  // Persist in localStorage for next session
+  try {
+    localStorage.setItem('pagasi_local_creds', JSON.stringify({
+      user: user,
+      pass: pass ? pass : USERS_LOCAL[0].pass,
+      nombre: nombre,
+      rol: 'Administrador'
+    }));
+    toast('✅ Credenciales locales actualizadas', 'success');
+    if($('cfg_local_pass')) $('cfg_local_pass').value = '';
+  } catch(e) {
+    toast('Error al guardar: '+e.message, 'error');
+  }
+}
+
+// Load local creds from localStorage on startup
+(function(){
+  try {
+    var saved = localStorage.getItem('pagasi_local_creds');
+    if(saved){
+      var creds = JSON.parse(saved);
+      if(creds.user && creds.pass){
+        USERS_LOCAL[0] = creds;
+      }
+    }
+  } catch(e) {}
+})();
+
+
+function guardarCredencialesLocales(){
+  var user   = ($('cfg_local_user')  && $('cfg_local_user').value.trim())   || '';
+  var pass   = ($('cfg_local_pass')  && $('cfg_local_pass').value.trim())   || '';
+  var nombre = ($('cfg_local_nombre')&& $('cfg_local_nombre').value.trim()) || '';
+  if(!user){ toast('El usuario no puede estar vacío','error'); return; }
+  if(!pass){ toast('Ingresa una contraseña','error'); return; }
+  if(pass.length < 6){ toast('La contraseña debe tener al menos 6 caracteres','error'); return; }
+  // Update in memory
+  USERS_LOCAL[0] = { user: user, pass: pass, nombre: nombre||user, rol: 'Administrador' };
+  // Persist in localStorage so it survives reloads
+  try {
+    localStorage.setItem('pagasi_local_creds', JSON.stringify(USERS_LOCAL[0]));
+    toast('✅ Credenciales locales actualizadas', 'success');
+    // Clear password field for security
+    if($('cfg_local_pass')) $('cfg_local_pass').value = '';
+  } catch(e) {
+    toast('Credenciales actualizadas (solo esta sesión)', 'info');
+  }
+}
+
+// Restore local credentials from localStorage on startup
+(function(){
+  try {
+    var saved = localStorage.getItem('pagasi_local_creds');
+    if(saved){
+      var creds = JSON.parse(saved);
+      if(creds && creds.user && creds.pass){
+        USERS_LOCAL[0] = creds;
+      }
+    }
+  } catch(e) {}
+})();
+
 function guardarEmpresa(){
   var nombre = (($('cfg_empresa')&&$('cfg_empresa').value)||'').trim();
   var rif    = (($('cfg_rif')&&$('cfg_rif').value)||'').trim();
@@ -2434,10 +3132,22 @@ function generarReporte(tipo){
       +'<table><thead><tr><th>Mes</th><th>Cantidad</th><th>Monto</th></tr></thead><tbody>'+rows
       +'<tr class="total-row"><td>TOTAL</td><td>'+pagosConf.length+' pagos</td><td>$'+totalCobrado.toFixed(2)+'</td></tr>'
       +'</tbody></table>'
+      +(function(){
+        var byMetodo={};
+        pagosConf.forEach(function(p){
+          var k=(p.metodo||'Sin especificar'); 
+          if(!byMetodo[k])byMetodo[k]={metodo:k,cant:0,total:0};
+          byMetodo[k].cant++; byMetodo[k].total+=p.monto;
+        });
+        var mrows=Object.values(byMetodo).sort(function(a,b){return b.total-a.total;})
+          .map(function(m){return '<tr><td>'+m.metodo+'</td><td>'+m.cant+'</td><td>$'+m.total.toFixed(2)+'</td><td>'+(m.total/totalCobrado*100).toFixed(1)+'%</td></tr>';}).join('');
+        return '<h2 style="margin-top:20px;border-top:1px solid #eee;padding-top:14px">Por método / cuenta</h2>'
+          +'<table><thead><tr><th>Cuenta / Método</th><th>Cantidad</th><th>Monto</th><th>% del total</th></tr></thead><tbody>'+mrows+'</tbody></table>';
+      })()
       +'<h2 style="margin-top:20px;border-top:1px solid #eee;padding-top:14px">Detalle de pagos</h2>'
-      +'<table><thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha</th><th>Monto</th><th>Forma</th><th>Cuenta</th><th>Referencia</th></tr></thead><tbody>'
+      +'<table><thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha</th><th>Monto</th><th>Recibido en</th><th>Referencia</th><th>Cobrador</th></tr></thead><tbody>'
       +pagosConf.map(function(p){
-        return '<tr><td>'+p.id+'</td><td>'+p.cli+'</td><td>'+p.cred+'</td><td>'+(p.fecha||'—')+'</td><td>$'+p.monto.toFixed(2)+'</td><td>'+(p.metodo||'—')+'</td><td>'+(p.cuenta||'—')+'</td><td>'+(p.referencia||'—')+'</td></tr>';
+        return '<tr><td>'+p.id+'</td><td>'+p.cli+'</td><td>'+p.cred+'</td><td>'+(p.fecha||'—')+'</td><td>$'+p.monto.toFixed(2)+'</td><td><strong>'+(p.metodo||'—')+'</strong></td><td>'+(p.referencia||'—')+'</td><td>'+(p.cobrador||'—')+'</td></tr>';
       }).join('')
       +'</tbody></table>';
 
@@ -2548,14 +3258,17 @@ function generarReporte(tipo){
 // ══════════════════════════════════════════════════════════════
 // MÓDULO CUENTAS — Gestión contable por cuentas
 // ══════════════════════════════════════════════════════════════
-function saldoCuenta(cid){
-  // Saldo = depósitos - retiros + transferencias entrantes - transferencias salientes
-  var base = (S.cuentas.find(function(c){return c.id===cid;})||{}).saldo||0;
-  return base;
+function saldoCuenta(nombre){
+  var s=0;
+  S.movimientos.filter(function(m){return !m.eliminado;}).forEach(function(m){
+    if(m.cuentaDestino===nombre) s+=m.monto;
+    if(m.cuentaOrigen===nombre)  s-=m.monto;
+  });
+  return s;
 }
 
 function totalCuentas(){
-  return S.cuentas.filter(function(c){return c.moneda==='USD';}).reduce(function(a,c){return a+c.saldo;},0);
+  return (_cuentasBanc||[]).reduce(function(a,c){return a+saldoCuenta(c.nombre);},0);
 }
 
 function movsCuenta(cid){
@@ -2781,8 +3494,205 @@ function openTransferencia(cuentaNombre){
 
 function delMovimiento(id){
   var i=S.movimientos.findIndex(function(x){return x.id===id;});
-  if(i>=0){S.movimientos[i].eliminado=true;DB.saveMovimiento(S.movimientos[i]);}
-  nav('cuentas'); toast('Movimiento eliminado','info');
+  if(i<0) return;
+  var mv=S.movimientos[i];
+  confirmarEliminacion({
+    titulo:'Eliminar Movimiento',
+    descripcion:mv.concepto+' — '+fmt(mv.monto),
+    onConfirm:function(audit){
+      Object.assign(S.movimientos[i],audit);
+      DB.saveMovimiento(S.movimientos[i]);
+      nav('cuentas'); toast('Movimiento eliminado','info');
+    }
+  });
+}
+
+
+// ══════════════════════════════════════════
+// NOTIFICACIONES — funciones reales
+// ══════════════════════════════════════════
+function actualizarPreviewNotif(){
+  var tipo   = ($('notif-tipo')&&$('notif-tipo').value)||'mora';
+  var dest   = ($('notif-dest')&&$('notif-dest').value)||'mora';
+  var wrap   = $('notif-especifico-wrap');
+  if(wrap) wrap.style.display = dest==='especifico' ? 'block' : 'none';
+  var destinatarios = getDestinatariosNotif(dest);
+  var msg = buildMensajeNotif(tipo, destinatarios[0]||{nombre:'Cliente',cuota:0,mora:0});
+  var preview = $('notif-preview');
+  if(preview){
+    preview.innerHTML = '<strong style="color:var(--p1)">Vista previa (' + destinatarios.length + ' destinatario'+(destinatarios.length!==1?'s':'')+'):</strong><br>'
+      + '<span style="color:var(--ink)">' + msg.replace(/\n/g,'<br>') + '</span>';
+  }
+}
+
+function getDestinatariosNotif(dest){
+  if(dest==='mora'){
+    return S.creds.filter(c=>c.mora>0).map(function(c){
+      var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
+      return {nombre:c.cli, tel:cl.tel||'', mora:c.mora, cuota:c.cuotaQ||c.cuota, modelo:c.modelo, cred:c.id};
+    });
+  }
+  if(dest==='proximas'){
+    return S.creds.filter(function(c){
+      if(c.estado!=='activo'||!c.fecha) return false;
+      var sig=new Date(new Date(c.fecha).getTime()+((c.pagado+1)*15*24*60*60*1000));
+      var diff=Math.floor((sig-new Date())/(24*60*60*1000));
+      return diff>=0&&diff<=7;
+    }).map(function(c){
+      var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
+      return {nombre:c.cli, tel:cl.tel||'', cuota:c.cuotaQ||c.cuota, modelo:c.modelo, cred:c.id};
+    });
+  }
+  if(dest==='especifico'){
+    var selId=parseInt(($('notif-cliente-sel')&&$('notif-cliente-sel').value)||0);
+    var cl=S.clientes.find(function(x){return x.id===selId;});
+    if(!cl) return [];
+    var cred=S.creds.find(function(c){return c.cli===cl.nombre&&c.estado==='activo';});
+    return [{nombre:cl.nombre, tel:cl.tel||'', cuota:(cred&&(cred.cuotaQ||cred.cuota))||0, modelo:(cred&&cred.modelo)||''}];
+  }
+  // todos activos
+  return S.clientes.filter(c=>!c.eliminado&&c.estado==='activo').map(function(cl){
+    var cred=S.creds.find(function(c){return c.cli===cl.nombre&&c.estado==='activo';});
+    return {nombre:cl.nombre, tel:cl.tel||'', cuota:(cred&&(cred.cuotaQ||cred.cuota))||0, modelo:(cred&&cred.modelo)||''};
+  });
+}
+
+function buildMensajeNotif(tipo, d){
+  var nombre = d.nombre||'Cliente';
+  var cuota  = d.cuota ? fmt(d.cuota) : '';
+  var mora   = d.mora  || 0;
+  var modelo = d.modelo||'';
+  var empresa = ($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
+  if(tipo==='mora'){
+    return 'Hola '+nombre+', te recordamos que tienes '+mora+' día'+(mora!==1?'s':'')+' de atraso en tu cuota de financiamiento'+(modelo?' ('+modelo+')':'')+'. Tu cuota quincenal es de '+cuota+'. Por favor comunícate con nosotros para regularizar. — '+empresa;
+  }
+  if(tipo==='cuota'){
+    return 'Hola '+nombre+', te recordamos que tu próxima cuota quincenal'+(modelo?' por tu '+modelo:'')+' de '+cuota+' vence en los próximos días. — '+empresa;
+  }
+  if(tipo==='confirmado'){
+    return 'Hola '+nombre+', confirmamos que recibimos tu pago de '+cuota+'. Gracias por mantenerte al día. — '+empresa;
+  }
+  // custom
+  var custom=($('notif-msg')&&$('notif-msg').value)||'Hola {nombre}';
+  return custom.replace('{nombre}',nombre).replace('{cuota}',cuota).replace('{mora}',mora).replace('{modelo}',modelo);
+}
+
+function enviarNotificaciones(){
+  var tipo   = ($('notif-tipo')&&$('notif-tipo').value)||'mora';
+  var canal  = ($('notif-canal')&&$('notif-canal').value)||'whatsapp';
+  var dest   = ($('notif-dest')&&$('notif-dest').value)||'mora';
+  var destinatarios = getDestinatariosNotif(dest);
+  if(!destinatarios.length){ toast('No hay destinatarios para este filtro','error'); return; }
+
+  if(canal==='whatsapp'){
+    // Open WhatsApp for each recipient (up to 5 at once to avoid popup blocking)
+    var count=0;
+    destinatarios.slice(0,5).forEach(function(d,i){
+      var tel=(d.tel||'').replace(/[^0-9]/g,'');
+      if(!tel){ return; }
+      var msg=encodeURIComponent(buildMensajeNotif(tipo,d));
+      setTimeout(function(){ window.open('https://wa.me/58'+tel.replace(/^0/,'')+'?text='+msg,'_blank'); }, i*500);
+      count++;
+    });
+    if(destinatarios.length>5){
+      toast('WhatsApp: abriendo primeros 5 de '+destinatarios.length+'. El resto: usa "Copiar".','info');
+    } else {
+      toast('Abriendo WhatsApp para '+count+' contacto'+(count!==1?'s':'')+'...','success');
+    }
+  } else {
+    // Copy all messages to clipboard
+    var allMsgs = destinatarios.map(function(d,i){
+      return '--- '+(i+1)+'. '+d.nombre+(d.tel?' ('+d.tel+')':'')+'---\n'+buildMensajeNotif(tipo,d);
+    }).join('\n\n');
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(allMsgs).then(function(){
+        toast(destinatarios.length+' mensajes copiados al portapapeles','success');
+      });
+    } else {
+      var ta=document.createElement('textarea');
+      ta.value=allMsgs; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast(destinatarios.length+' mensajes copiados','success');
+    }
+  }
+
+  // Save to history
+  if(!window._notifHistorial) window._notifHistorial=[];
+  window._notifHistorial.unshift({
+    tipo: {mora:'Mora',cuota:'Cuota próxima',confirmado:'Pago confirmado',custom:'Personalizado'}[tipo]||tipo,
+    canal: canal, dest: dest,
+    cantidad: destinatarios.length,
+    fecha: new Date().toLocaleDateString('es-VE')
+  });
+  // Refresh historial
+  var h=$('notif-historial');
+  if(h) h.innerHTML=window._notifHistorial.map(function(n){
+    return '<div class="li"><div class="li-ic" style="background:var(--gs)">'+(n.canal==='whatsapp'?'💬':'📋')+'</div>'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+n.tipo+' → '+n.dest+'</div>'
+      +'<div class="tds">'+n.fecha+' · '+n.cantidad+' mensaje'+(n.cantidad!==1?'s':'')+'</div></div>'
+      +'<span class="bdg b-g">enviado</span></div>';
+  }).join('');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// EXPORTAR CSV
+// ══════════════════════════════════════════════════════════════
+function exportarCSV(tipo){
+  var rows, headers, filename;
+  var hoy = new Date().toISOString().split('T')[0];
+
+  if(tipo==='pagos'){
+    headers = ['ID','Cliente','Crédito','Fecha','Monto','Recibido en','Referencia','Cobrador','Estado','Editado por','Editado en'];
+    rows = S.pagos.filter(function(p){return !p.eliminado;}).map(function(p){
+      return [p.id, p.cli, p.cred, p.fecha, p.monto, p.metodo||'', p.referencia||'', p.cobrador||'', p.estado, p.editadoPor||'', p.editadoEn?p.editadoEn.split('T')[0]:''];
+    });
+    filename = 'pagos_'+hoy+'.csv';
+
+  } else if(tipo==='creditos'){
+    headers = ['ID','Cliente','Modelo','VIN','Precio','Inicial','Financiado','Total','Cuota Quinc.','Pagadas','Total Cuotas','Fecha Inicio','Estado','Cobrador','Notas'];
+    rows = S.creds.filter(function(c){return !c.eliminado;}).map(function(c){
+      return [c.id, c.cli, c.modelo, c.vin||'', c.precio, c.ini, c.fin, c.total, c.cuotaQ||c.cuota, c.pagado||0, c.totalCuotas||c.plazo*2, c.fecha||'', c.estado, c.cobrador||'', (c.notas||'').replace(/,/g,';')];
+    });
+    filename = 'creditos_'+hoy+'.csv';
+
+  } else if(tipo==='clientes'){
+    headers = ['ID','Nombre','Cédula','Teléfono','Email','Ciudad','Trabajo','Ingreso mensual','Contacto emergencia','Estado','Notas'];
+    rows = S.clientes.filter(function(c){return !c.eliminado;}).map(function(c){
+      return [c.id, c.nombre, c.cedula, c.tel||'', c.email||'', c.ciudad||'', c.trabajo||'', c.ingreso||0, (c.emergencia||'').replace(/,/g,';'), c.estado, (c.notas||'').replace(/,/g,';')];
+    });
+    filename = 'clientes_'+hoy+'.csv';
+
+  } else if(tipo==='egresos'){
+    headers = ['ID','Concepto','Categoría','Forma de pago','Monto','Fecha','Referencia'];
+    rows = S.egresos.filter(function(e){return !e.eliminado;}).map(function(e){
+      return [e.id, e.concepto, e.categoria||'', e.forma||'', e.monto, e.fecha||'', e.notas||''];
+    });
+    filename = 'egresos_'+hoy+'.csv';
+
+  } else { toast('Tipo de exportación no reconocido','error'); return; }
+
+  // Build CSV
+  var csv = [headers].concat(rows).map(function(row){
+    return row.map(function(cell){
+      var str = cell===null||cell===undefined ? '' : String(cell);
+      // Wrap in quotes if contains comma, quote, or newline
+      if(str.includes(',') || str.includes('"') || str.includes('\n')){
+        str = '"' + str.replace(/"/g,'""') + '"';
+      }
+      return str;
+    }).join(',');
+  }).join('\n');
+
+  // Add BOM for Excel UTF-8
+  var blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('✅ '+rows.length+' registros exportados — '+filename,'success');
 }
 
 function guardarPlan(){
@@ -3229,8 +4139,7 @@ function _loginSuccess(nombre, rol, uid, permisos) {
         }
       }).catch(function(){});
     }
-    // Sync _cuentas dropdown from S.cuentas
-    _cuentas = S.cuentas.map(function(cu){ return cu.nombre+(cu.numero?' (···'+cu.numero.slice(-4)+')':''); });
+    // _cuentas se sincroniza desde _cuentasBanc en renderCuentasBanc
     nav('dash');
   });
 }
