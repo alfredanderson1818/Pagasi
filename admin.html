@@ -2462,7 +2462,7 @@ function openAddPago(){
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
-<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc||[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}</select></div>
+<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">— Sin cuentas configuradas —</option>':''}</select></div>
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
       <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${(_cobradores||[]).map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
@@ -2498,17 +2498,26 @@ function openAddPago(){
     };
     S.pagos.push(newPago);
     DB.savePago(newPago);
-    // Crear movimiento en Cuentas si hay cuenta seleccionada
+    // Crear movimiento en Cuentas — usar nombre exacto de la cuenta seleccionada
     var pagoMetodo=($('p_forma')&&$('p_forma').value)||'';
+    // Si no hay cuenta seleccionada pero hay cuentas configuradas, usar la primera
+    if(!pagoMetodo && _cuentasBanc && _cuentasBanc.length>0) pagoMetodo=_cuentasBanc[0].nombre;
     if(pagoMetodo){
-      var mov={id:'MOV-'+Date.now(),tipo:'deposito',
+      var mov={
+        id:'MOV-'+Date.now(),
+        tipo:'deposito',
         concepto:'Pago cuota · '+cred.cli+' · '+credId,
-        monto:monto,cuentaOrigen:null,cuentaDestino:pagoMetodo,
-        fecha:newPago.fecha,referencia:newPago.referencia||'',
+        monto:monto,
+        cuentaOrigen:null,
+        cuentaDestino:pagoMetodo,
+        fecha:newPago.fecha,
+        referencia:newPago.referencia||'',
         realizadoPor:newPago.realizadoPor||'Admin',
         tasaBs:window._tasaBsGlobal||1,
-        hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})};
-      S.movimientos.push(mov); DB.saveMovimiento(mov);
+        hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
+      };
+      S.movimientos.push(mov);
+      DB.saveMovimiento(mov);
     }
 
     // ── Lógica de cuotas con sobrante ──────────────────────────
@@ -2518,16 +2527,18 @@ function openAddPago(){
       var cuotaVal=parseFloat(c2.cuotaQ||c2.cuota||0);
       var totalCuotas=c2.totalCuotas||c2.plazo*2;
 
-      // Historial de pagos por cuota: [{cuota:1, montoPagado:60, fecha:'2025-01-01'}, ...]
-      var historial=c2.pagosRegistrados ? JSON.parse(JSON.stringify(c2.pagosRegistrados)) : [];
+      // Leer historial desde memoria (ya actualizado por pagos anteriores en esta sesión)
+      var historial=Array.isArray(c2.pagosRegistrados)
+        ? JSON.parse(JSON.stringify(c2.pagosRegistrados))
+        : [];
 
-      // Construir estado actual de cada cuota basado en historial
-      // Cada cuota tiene un saldo pendiente; el monto ingresado se aplica secuencialmente
-      var saldoPorCuota=[]; // saldoPorCuota[i] = cuánto falta pagar de la cuota i+1
+      // Reconstruir saldo por cuota desde el historial completo
+      var saldoPorCuota=[];
       for(var qi=0;qi<totalCuotas;qi++) saldoPorCuota[qi]=cuotaVal;
       historial.forEach(function(h){
         var idx=h.cuota-1;
-        if(idx>=0&&idx<totalCuotas) saldoPorCuota[idx]=Math.max(0,parseFloat((saldoPorCuota[idx]-h.montoPagado).toFixed(2)));
+        if(idx>=0&&idx<totalCuotas)
+          saldoPorCuota[idx]=Math.max(0,parseFloat((saldoPorCuota[idx]-h.montoPagado).toFixed(2)));
       });
 
       // Aplicar el nuevo monto secuencialmente cuota por cuota
@@ -2549,22 +2560,28 @@ function openAddPago(){
       var cuotasPagadas=0;
       for(var qi=0;qi<totalCuotas;qi++){
         if(saldoPorCuota[qi]<=0.001) cuotasPagadas++;
-        else break; // cuotas deben pagarse en orden
+        else break;
       }
 
-      // Calcular saldo pendiente de la próxima cuota parcialmente pagada
-      var proxCuotaIdx=cuotasPagadas; // índice base 0
+      var proxCuotaIdx=cuotasPagadas;
       var saldoProxCuota=proxCuotaIdx<totalCuotas ? saldoPorCuota[proxCuotaIdx] : 0;
 
-      c2.pagado=cuotasPagadas;
-      c2.pagosRegistrados=historial;
-      c2.saldoProxCuota=saldoProxCuota; // cuánto falta de la próxima cuota
-      if(c2.mora>0){c2.mora=0;c2.estado='activo';}
-      if(c2.pagado>=totalCuotas) c2.estado='completado';
+      // Actualizar en memoria PRIMERO para que el próximo pago lea datos correctos
+      S.creds[ci].pagado=cuotasPagadas;
+      S.creds[ci].pagosRegistrados=historial;
+      S.creds[ci].saldoProxCuota=saldoProxCuota;
+      if(S.creds[ci].mora>0){S.creds[ci].mora=0;S.creds[ci].estado='activo';}
+      if(S.creds[ci].pagado>=totalCuotas) S.creds[ci].estado='completado';
 
-      DB.updateCred(credId,{pagado:c2.pagado,mora:c2.mora,estado:c2.estado,pagosRegistrados:c2.pagosRegistrados,saldoProxCuota:c2.saldoProxCuota});
+      // Luego persistir en Firestore
+      DB.updateCred(credId,{
+        pagado:S.creds[ci].pagado,
+        mora:S.creds[ci].mora,
+        estado:S.creds[ci].estado,
+        pagosRegistrados:historial,
+        saldoProxCuota:saldoProxCuota
+      });
 
-      // Toast informativo
       var msg='✅ Pago de '+fmt(monto)+' registrado';
       if(cuotasAfectadas.length>1) msg+=' · Cuotas '+cuotasAfectadas[0]+' a '+cuotasAfectadas[cuotasAfectadas.length-1]+' cubiertas';
       if(saldoProxCuota>0&&saldoProxCuota<cuotaVal) msg+=' · Próxima cuota: solo '+fmt(saldoProxCuota)+' pendiente';
