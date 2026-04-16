@@ -400,6 +400,11 @@ tbody tr:last-child td{border-bottom:none}
 /* Overlay oculto globalmente por defecto */
 .sb-overlay { display: none; }
 @media(max-width:820px){ .mob-menu-btn { display: flex; } }
+@media(max-width:820px){
+  .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; position:fixed; z-index:999; height:100vh; top:0; left:0; }
+  .sidebar.mob-open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.18); }
+  .sb-overlay { position:fixed; inset:0; z-index:998; background:rgba(0,0,0,0.4); display:none; }
+}
 
 /* Reset button styles for .si used as nav items */
 button.si {
@@ -667,6 +672,7 @@ var DB = {
         toast('Base de datos vacía — mostrando datos de ejemplo','info');
       }
       calcularMoraAuto();
+      cargarCuentasBanc();
       hideLoader();
     }).catch(function(e){
       hideLoader();
@@ -808,6 +814,56 @@ const fmt=n=>'$'+parseFloat(n).toLocaleString('es-VE',{minimumFractionDigits:2,m
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a'}[s]||'b-x');
 const PGL={dash:'Dashboard',clientes:'Clientes',motos:'Motocicletas',creditos:'Financiamientos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Reportes',cuentas:'Cuentas',conta:'Contabilidad',plan:'Plan & Precios',config:'Configuración',users:'Usuarios'};
+
+// Variables globales de configuración
+var _cuentasBanc = [];
+var _cobradores = ['Juan Admin'];
+
+// Carga las cuentas bancarias y cobradores desde Firebase al iniciar la app
+function cargarCuentasBanc(){
+  if(!db) return;
+  db.collection('config').doc('cuentasBanc').get().then(function(doc){
+    var lista = doc.exists && doc.data().lista ? doc.data().lista : [];
+    renderCuentasBanc(lista);
+  }).catch(function(){ _cuentasBanc = []; });
+  db.collection('config').doc('cobradores').get().then(function(doc){
+    _cobradores = (doc.exists && doc.data().lista) ? doc.data().lista : ['Juan Admin'];
+    renderCobradores(_cobradores);
+  }).catch(function(){ _cobradores = ['Juan Admin']; });
+}
+
+// Actualiza la variable global y refresca la UI de configuración si está visible
+function renderCuentasBanc(lista){
+  _cuentasBanc = lista || [];
+  var el = document.getElementById('cuentasBanc-list');
+  if(el){
+    el.innerHTML = _cuentasBanc.length
+      ? _cuentasBanc.map(function(c,i){
+          return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surf2);border-radius:8px;border:1px solid var(--rim)">'
+            +'<span style="font-size:18px">🏦</span>'
+            +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.nombre+'</div>'
+            +'<div style="font-size:11px;color:var(--ink3)">'+c.tipo+' · '+c.moneda+'</div></div>'
+            +'<button class="btn btn-d btn-xs" onclick="_cuentasBanc.splice('+i+',1);guardarCuentasBanc()">✕</button>'
+            +'</div>';
+        }).join('')
+      : '<div style="font-size:12px;color:var(--ink3);padding:8px">Sin cuentas registradas.</div>';
+  }
+}
+
+function renderCobradores(lista){
+  _cobradores = lista || ['Juan Admin'];
+  var el = document.getElementById('cobradores-list');
+  if(el){
+    el.innerHTML = _cobradores.length
+      ? _cobradores.map(function(u,i){
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surf2);border-radius:8px;border:1px solid var(--rim);margin-bottom:4px">'
+            +'<span style="font-weight:700;font-size:13px">'+u+'</span>'
+            +'<button class="btn btn-d btn-xs" onclick="_cobradores.splice('+i+',1);guardarCobradores()">✕</button>'
+            +'</div>';
+        }).join('')
+      : '<div style="font-size:12px;color:var(--ink3);padding:8px">Sin cobradores registrados.</div>';
+  }
+}
 
 // Update mora badge
 function updateBadge(){
@@ -1967,7 +2023,7 @@ function openAddMoto(id=null){
   S.saveFn=()=>{
     const g=i=>{ var el=$(i); return el?el.value.trim():null; };
     // Resolver nombre del modelo (dropdown catálogo o personalizado)
-    var _selMod = ($('m_mod')&&$('m_mod').value)||'';
+    var _selMod = ($('m_mod_sel')&&$('m_mod_sel').value)||'';
     var _modeloFinal = _selMod==='__custom__' ? g('m_mod_custom') : _selMod;
     if(!_modeloFinal){toast('Selecciona un modelo del catálogo','error');return false;}
     if(!($('m_pr')&&$('m_pr').value)){toast('El precio es obligatorio','error');return false;}
@@ -2181,7 +2237,7 @@ function openAddCred(motoId=null){
     <div class="fsec" style="margin-top:14px">Opciones del Crédito</div>
     <div class="fgr">
       <div class="fg"><label>GPS incluido</label><select class="fs" id="k_gps"><option value="si">Sí — GPS instalado</option><option value="no">No</option></select></div>
-      <div class="fg"><label>Cobrador asignado</label><select class="fs" id="k_cobrador">${_cobradores.map(u=>`<option>${u}</option>`).join('')}</select></div>
+      <div class="fg"><label>Cobrador asignado</label><select class="fs" id="k_cobrador">${(_cobradores||[]).map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>
     <div class="fgr c1" style="margin-top:8px">
       <div class="fg"><label>Notas del crédito</label><textarea class="fta" id="k_notas" placeholder="Observaciones, condiciones especiales..."></textarea></div>
@@ -2197,7 +2253,7 @@ function openAddCred(motoId=null){
     const r=calcMoto(moto.precio);
     const newCred={
       id:'CRED-'+String(S.creds.length+1).padStart(3,'0'),
-      cli:S.clientes.find(x=>String(x.id)===($('k_cli')&&$('k_cli').value))&&(_tmp_&&_tmp_.nombre)||($('k_cli')&&$('k_cli').options)[$('k_cli').selectedIndex].text.split(' —')[0]||'',
+      cli:(function(){ var sel=$('k_cli'); if(!sel) return ''; var opt=sel.options[sel.selectedIndex]; return opt ? opt.text.split(' —')[0].trim() : ''; })(),
       clienteId:($('k_cli')&&$('k_cli').value),
       motoId:moto.id,
       modelo:moto.modelo,
@@ -2381,7 +2437,7 @@ function openAddPago(){
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
 <div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc||[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}</select></div>
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
-      <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${_cobradores.map(u=>`<option>${u}</option>`).join('')}</select></div>
+      <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${(_cobradores||[]).map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
   setTimeout(()=>updPagoMonto($('p_cred')),50);
   S.saveFn=()=>{
@@ -3038,10 +3094,87 @@ function guardarEmpresa(){
   }
 }
 
+function guardarPlan(){
+  var factor  = parseFloat(($('cfg_factor')&&$('cfg_factor').value))||PLAN.factor;
+  var inicial = (parseFloat(($('cfg_ini')&&$('cfg_ini').value))||40)/100;
+  var gracia  = parseInt(($('cfg_gracia')&&$('cfg_gracia').value))||5;
+  var mora    = parseFloat(($('cfg_mora')&&$('cfg_mora').value))||5;
+  PLAN.factor      = factor;
+  PLAN.inicial     = inicial;
+  PLAN.diasGracia  = gracia;
+  PLAN.moraPct     = mora;
+  var data = {factor, inicial, diasGracia:gracia, moraPct:mora, updated:new Date().toISOString()};
+  if(db){
+    db.collection('config').doc('plan').set(data)
+      .then(function(){ toast('Plan financiero guardado','success'); nav('config'); })
+      .catch(function(e){ toast('Error: '+e.message,'error'); });
+  } else {
+    toast('Plan guardado (local)','success'); nav('config');
+  }
+}
 
-// ══════════════════════════════════════════
-// CATÁLOGO CRUD
-// ══════════════════════════════════════════
+function agregarCuentaBanc(){
+  $('mic').textContent='🏦'; $('mtt').textContent='Agregar Cuenta / Método de Pago'; $('msb').textContent='Se usará como método de cobro y en el módulo Cuentas';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div class="fgr c1" style="gap:10px">'
+    +'<div class="fg"><label>Nombre *</label><input class="fi" id="cb_nombre" placeholder="Ej: Bancamiga Bs, Zelle USD, Efectivo..."></div>'
+    +'<div class="fg"><label>Tipo</label><select class="fs" id="cb_tipo"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option><option value="digital">Pago Digital / Zelle</option><option value="otro">Otro</option></select></div>'
+    +'<div class="fg"><label>Moneda</label><select class="fs" id="cb_moneda"><option value="USD">USD ($)</option><option value="BS">Bolívares (Bs)</option></select></div>'
+    +'<div class="fg"><label>Número de cuenta (opcional)</label><input class="fi" id="cb_numero" placeholder="Ej: 0172-xxxx-xxxx"></div>'
+    +'</div>';
+  S.saveFn = function(){
+    var nombre = (($('cb_nombre')&&$('cb_nombre').value)||'').trim();
+    if(!nombre){ toast('El nombre es obligatorio','error'); return false; }
+    var cuenta = {
+      nombre: nombre,
+      tipo:   ($('cb_tipo')&&$('cb_tipo').value)||'banco',
+      moneda: ($('cb_moneda')&&$('cb_moneda').value)||'USD',
+      numero: ($('cb_numero')&&$('cb_numero').value)||''
+    };
+    _cuentasBanc.push(cuenta);
+    guardarCuentasBanc();
+    closeM(); nav('config'); toast('Cuenta agregada','success'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Agregar</button>';
+  $('ov').style.display='flex';
+}
+
+function guardarCuentasBanc(){
+  var data = {lista: _cuentasBanc, updated: new Date().toISOString()};
+  if(db){
+    db.collection('config').doc('cuentasBanc').set(data)
+      .then(function(){ renderCuentasBanc(_cuentasBanc); toast('Cuentas guardadas','success'); })
+      .catch(function(e){ toast('Error: '+e.message,'error'); });
+  } else {
+    renderCuentasBanc(_cuentasBanc); toast('Cuentas guardadas (local)','success');
+  }
+}
+
+function agregarCobrador(){
+  $('mic').textContent='👤'; $('mtt').textContent='Agregar Cobrador'; $('msb').textContent='Se mostrará en los formularios de pago y cobranza';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div class="fg"><label>Nombre del cobrador *</label><input class="fi" id="cob_nombre" placeholder="Ej: Juan Pérez"></div>';
+  S.saveFn = function(){
+    var nombre = (($('cob_nombre')&&$('cob_nombre').value)||'').trim();
+    if(!nombre){ toast('El nombre es obligatorio','error'); return false; }
+    _cobradores.push(nombre);
+    guardarCobradores();
+    closeM(); nav('config'); toast('Cobrador agregado','success'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Agregar</button>';
+  $('ov').style.display='flex';
+}
+
+function guardarCobradores(){
+  var data = {lista: _cobradores, updated: new Date().toISOString()};
+  if(db){
+    db.collection('config').doc('cobradores').set(data)
+      .then(function(){ renderCobradores(_cobradores); toast('Cobradores guardados','success'); })
+      .catch(function(e){ toast('Error: '+e.message,'error'); });
+  } else {
+    renderCobradores(_cobradores); toast('Cobradores guardados (local)','success');
+  }
+}
 function openAddCatalogo(){ openEditCatalogo(null); }
 function openEditCatalogo(id){
   var item = id ? CATALOGO.find(function(c){return c.id===id;}) : null;
@@ -4462,6 +4595,20 @@ if (auth) {
     ? USERS_LOCAL[0].user + '/' + USERS_LOCAL[0].pass
     : 'admin/admin';
   if (mEl) mEl.textContent = 'modo local (' + localCreds + ')';
+}
+
+// ── Mobile Menu ──────────────────────────
+function openMobileMenu(){
+  var sidebarEl = document.querySelector('.sidebar');
+  var ov = $('sb-overlay');
+  if(sidebarEl) sidebarEl.classList.add('mob-open');
+  if(ov) ov.style.display = 'block';
+}
+function closeMobileMenu(){
+  var sidebarEl = document.querySelector('.sidebar');
+  var ov = $('sb-overlay');
+  if(sidebarEl) sidebarEl.classList.remove('mob-open');
+  if(ov) ov.style.display = 'none';
 }
 
 // Responsive: ajustar topbars en resize
