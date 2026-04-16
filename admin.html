@@ -1775,7 +1775,7 @@ config(){
   </div>
 
   </div></div>`;
-},
+},cuentas(){ return renderCuentas(); },
 
 users(){
   const rolBadge = {Administrador:'b-p',Gerente:'b-b',Cobrador:'b-r',Vendedor:'b-g',Contador:'b-a'};
@@ -3520,8 +3520,14 @@ function actualizarPreviewNotif(){
   var msg = buildMensajeNotif(tipo, destinatarios[0]||{nombre:'Cliente',cuota:0,mora:0});
   var preview = $('notif-preview');
   if(preview){
-    preview.innerHTML = '<strong style="color:var(--p1)">Vista previa (' + destinatarios.length + ' destinatario'+(destinatarios.length!==1?'s':'')+'):</strong><br>'
-      + '<span style="color:var(--ink)">' + msg.replace(/\n/g,'<br>') + '</span>';
+    if(!destinatarios.length){
+      preview.innerHTML = '<span style="color:var(--red)">⚠️ Sin destinatarios con este filtro — al enviar podrás escribir un número manualmente.</span>';
+    } else {
+      preview.innerHTML = '<strong style="color:var(--p1)">Vista previa (' + destinatarios.length + ' destinatario'+(destinatarios.length!==1?'s':'')
+        +(destinatarios.filter(function(d){return !d.tel||d.tel.replace(/[^0-9]/g,'').length<7;}).length?' · <span style="color:var(--amber)">'+destinatarios.filter(function(d){return !d.tel||d.tel.replace(/[^0-9]/g,'').length<7;}).length+' sin teléfono</span>':'')
+        +'):</strong><br>'
+        + '<span style="color:var(--ink)">' + msg.replace(/\n/g,'<br>') + '</span>';
+    }
   }
 }
 
@@ -3578,35 +3584,70 @@ function buildMensajeNotif(tipo, d){
 }
 
 function enviarNotificaciones(){
-  var tipo   = ($('notif-tipo')&&$('notif-tipo').value)||'mora';
-  var canal  = ($('notif-canal')&&$('notif-canal').value)||'whatsapp';
-  var dest   = ($('notif-dest')&&$('notif-dest').value)||'mora';
+  var tipo  = ($('notif-tipo') &&$('notif-tipo').value) ||'mora';
+  var canal = ($('notif-canal')&&$('notif-canal').value)||'whatsapp';
+  var dest  = ($('notif-dest') &&$('notif-dest').value) ||'mora';
   var destinatarios = getDestinatariosNotif(dest);
-  if(!destinatarios.length){ toast('No hay destinatarios para este filtro','error'); return; }
+
+  // ── Si no hay destinatarios con el filtro, abrir de todos modos ──
+  if(!destinatarios.length){
+    // Fallback: ofrece abrir WhatsApp con número manual
+    $('mic').textContent='💬'; $('mtt').textContent='Enviar mensaje'; $('msb').textContent='Sin destinatarios automáticos';
+    $('modal-box').className='modal';
+    $('mbd').innerHTML='<div class="fg"><label>No se encontraron destinatarios con el filtro seleccionado.<br>Puedes enviar manualmente:</label></div>'
+      +'<div class="fgr" style="gap:8px;margin-top:10px">'
+      +'<div class="fg"><label>Número de teléfono (sin código de país)</label>'
+      +'<input class="fi" id="notif_tel_manual" placeholder="Ej: 04141234567" type="tel"></div></div>'
+      +'<div class="fg" style="margin-top:8px"><label>Mensaje</label>'
+      +'<textarea class="fta" id="notif_msg_manual" rows="4">'+buildMensajeNotif(tipo,{nombre:'Cliente',cuota:0,mora:0})+'</textarea></div>';
+    S.saveFn=function(){
+      var tel=($('notif_tel_manual')&&$('notif_tel_manual').value.trim())||'';
+      tel=tel.replace(/[^0-9]/g,'').replace(/^0/,'');
+      if(!tel){toast('Ingresa un número de teléfono','error');return false;}
+      var msg=encodeURIComponent(($('notif_msg_manual')&&$('notif_msg_manual').value)||'');
+      window.open('https://wa.me/58'+tel+'?text='+msg,'_blank');
+      closeM(); return true;
+    };
+    $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+      +'<button class="btn btn-p" onclick="saveM()">💬 Abrir WhatsApp</button>';
+    $('ov').style.display='flex';
+    return;
+  }
 
   if(canal==='whatsapp'){
-    // Open WhatsApp for each recipient (up to 5 at once to avoid popup blocking)
-    var count=0;
-    destinatarios.slice(0,5).forEach(function(d,i){
-      var tel=(d.tel||'').replace(/[^0-9]/g,'');
-      if(!tel){ return; }
-      var msg=encodeURIComponent(buildMensajeNotif(tipo,d));
-      setTimeout(function(){ window.open('https://wa.me/58'+tel.replace(/^0/,'')+'?text='+msg,'_blank'); }, i*500);
-      count++;
-    });
-    if(destinatarios.length>5){
-      toast('WhatsApp: abriendo primeros 5 de '+destinatarios.length+'. El resto: usa "Copiar".','info');
-    } else {
-      toast('Abriendo WhatsApp para '+count+' contacto'+(count!==1?'s':'')+'...','success');
+    // Separate contacts with and without phone numbers
+    var conTel    = destinatarios.filter(function(d){ return d.tel && d.tel.replace(/[^0-9]/g,'').length>=7; });
+    var sinTel    = destinatarios.filter(function(d){ return !d.tel || d.tel.replace(/[^0-9]/g,'').length<7; });
+
+    if(!conTel.length){
+      // None have phone — show manual option
+      toast('Ningún destinatario tiene teléfono registrado. Agrega teléfonos en la ficha del cliente.','error');
+      return;
     }
+
+    // Open WhatsApp for up to 5 at a time (browser popup limit)
+    var opened=0;
+    conTel.slice(0,5).forEach(function(d,i){
+      var tel=d.tel.replace(/[^0-9]/g,'').replace(/^0/,'');
+      var msg=encodeURIComponent(buildMensajeNotif(tipo,d));
+      setTimeout(function(){ window.open('https://wa.me/58'+tel+'?text='+msg,'_blank'); }, i*600);
+      opened++;
+    });
+
+    var msgs=[];
+    if(opened>0) msgs.push('✅ Abriendo WhatsApp para '+opened+' contacto'+(opened!==1?'s':''));
+    if(conTel.length>5) msgs.push('⚠️ Solo se abren 5 a la vez. Quedan '+(conTel.length-5)+' más — usa "Copiar" para el resto');
+    if(sinTel.length>0) msgs.push('ℹ️ '+sinTel.length+' cliente'+(sinTel.length!==1?'s':'')+' sin teléfono: '+sinTel.map(function(d){return d.nombre.split(' ')[0];}).join(', '));
+    toast(msgs.join('\n'), opened>0?'success':'info');
+
   } else {
     // Copy all messages to clipboard
-    var allMsgs = destinatarios.map(function(d,i){
-      return '--- '+(i+1)+'. '+d.nombre+(d.tel?' ('+d.tel+')':'')+'---\n'+buildMensajeNotif(tipo,d);
-    }).join('\n\n');
+    var allMsgs=destinatarios.map(function(d,i){
+      return '('+(i+1)+') '+d.nombre+(d.tel?' — '+d.tel:' — SIN TELÉFONO')+'\n'+buildMensajeNotif(tipo,d);
+    }).join('\n\n─────────────────\n\n');
     if(navigator.clipboard){
       navigator.clipboard.writeText(allMsgs).then(function(){
-        toast(destinatarios.length+' mensajes copiados al portapapeles','success');
+        toast(destinatarios.length+' mensaje'+(destinatarios.length!==1?'s':'')+' copiados al portapapeles ✅','success');
       });
     } else {
       var ta=document.createElement('textarea');
@@ -3619,12 +3660,11 @@ function enviarNotificaciones(){
   // Save to history
   if(!window._notifHistorial) window._notifHistorial=[];
   window._notifHistorial.unshift({
-    tipo: {mora:'Mora',cuota:'Cuota próxima',confirmado:'Pago confirmado',custom:'Personalizado'}[tipo]||tipo,
-    canal: canal, dest: dest,
-    cantidad: destinatarios.length,
-    fecha: new Date().toLocaleDateString('es-VE')
+    tipo:{mora:'Mora',cuota:'Cuota próxima',confirmado:'Pago confirmado',custom:'Personalizado'}[tipo]||tipo,
+    canal:canal, dest:dest,
+    cantidad:destinatarios.length,
+    fecha:new Date().toLocaleDateString('es-VE')
   });
-  // Refresh historial
   var h=$('notif-historial');
   if(h) h.innerHTML=window._notifHistorial.map(function(n){
     return '<div class="li"><div class="li-ic" style="background:var(--gs)">'+(n.canal==='whatsapp'?'💬':'📋')+'</div>'
@@ -3635,931 +3675,3 @@ function enviarNotificaciones(){
 }
 
 
-// ══════════════════════════════════════════════════════════════
-// EXPORTAR CSV
-// ══════════════════════════════════════════════════════════════
-function exportarCSV(tipo){
-  var rows, headers, filename;
-  var hoy = new Date().toISOString().split('T')[0];
-
-  if(tipo==='pagos'){
-    headers = ['ID','Cliente','Crédito','Fecha','Monto','Recibido en','Referencia','Cobrador','Estado','Editado por','Editado en'];
-    rows = S.pagos.filter(function(p){return !p.eliminado;}).map(function(p){
-      return [p.id, p.cli, p.cred, p.fecha, p.monto, p.metodo||'', p.referencia||'', p.cobrador||'', p.estado, p.editadoPor||'', p.editadoEn?p.editadoEn.split('T')[0]:''];
-    });
-    filename = 'pagos_'+hoy+'.csv';
-
-  } else if(tipo==='creditos'){
-    headers = ['ID','Cliente','Modelo','VIN','Precio','Inicial','Financiado','Total','Cuota Quinc.','Pagadas','Total Cuotas','Fecha Inicio','Estado','Cobrador','Notas'];
-    rows = S.creds.filter(function(c){return !c.eliminado;}).map(function(c){
-      return [c.id, c.cli, c.modelo, c.vin||'', c.precio, c.ini, c.fin, c.total, c.cuotaQ||c.cuota, c.pagado||0, c.totalCuotas||c.plazo*2, c.fecha||'', c.estado, c.cobrador||'', (c.notas||'').replace(/,/g,';')];
-    });
-    filename = 'creditos_'+hoy+'.csv';
-
-  } else if(tipo==='clientes'){
-    headers = ['ID','Nombre','Cédula','Teléfono','Email','Ciudad','Trabajo','Ingreso mensual','Contacto emergencia','Estado','Notas'];
-    rows = S.clientes.filter(function(c){return !c.eliminado;}).map(function(c){
-      return [c.id, c.nombre, c.cedula, c.tel||'', c.email||'', c.ciudad||'', c.trabajo||'', c.ingreso||0, (c.emergencia||'').replace(/,/g,';'), c.estado, (c.notas||'').replace(/,/g,';')];
-    });
-    filename = 'clientes_'+hoy+'.csv';
-
-  } else if(tipo==='egresos'){
-    headers = ['ID','Concepto','Categoría','Forma de pago','Monto','Fecha','Referencia'];
-    rows = S.egresos.filter(function(e){return !e.eliminado;}).map(function(e){
-      return [e.id, e.concepto, e.categoria||'', e.forma||'', e.monto, e.fecha||'', e.notas||''];
-    });
-    filename = 'egresos_'+hoy+'.csv';
-
-  } else { toast('Tipo de exportación no reconocido','error'); return; }
-
-  // Build CSV
-  var csv = [headers].concat(rows).map(function(row){
-    return row.map(function(cell){
-      var str = cell===null||cell===undefined ? '' : String(cell);
-      // Wrap in quotes if contains comma, quote, or newline
-      if(str.includes(',') || str.includes('"') || str.includes('\n')){
-        str = '"' + str.replace(/"/g,'""') + '"';
-      }
-      return str;
-    }).join(',');
-  }).join('\n');
-
-  // Add BOM for Excel UTF-8
-  var blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast('✅ '+rows.length+' registros exportados — '+filename,'success');
-}
-
-function guardarPlan(){
-  var factor = parseFloat(($('cfg_factor')&&$('cfg_factor').value));
-  var ini    = parseFloat(($('cfg_ini')&&$('cfg_ini').value))/100;
-  var gracia = parseInt(($('cfg_gracia')&&$('cfg_gracia').value))||5;
-  var mora   = parseFloat(($('cfg_mora')&&$('cfg_mora').value))||5;
-  if(!factor||factor<=0){ toast('Factor inválido','error'); return; }
-  if(!ini||ini<=0){ toast('Inicial inválida','error'); return; }
-  PLAN.factor = factor;
-  PLAN.inicial = ini;
-  PLAN.diasGracia = gracia;
-  PLAN.moraPct = mora;
-  var data = {factor, inicial:ini, gracia, mora_pct:mora, updated: new Date().toISOString()};
-  if(db){
-    db.collection('config').doc('plan').set(data)
-      .then(function(){ toast('Plan guardado · Factor '+factor+'x','success'); })
-      .catch(function(e){ toast('Error: '+e.message,'error'); });
-  } else {
-    toast('Plan guardado · Factor '+factor+'x','success');
-  }
-}
-
-// Listas dinámicas de métodos y cobradores
-// Métodos de pago = _cuentasBanc (misma variable)
-var _cobradores = ['Juan Admin'];
-
-
-// ── CUENTAS BANCARIAS CONFIG ──
-var _cuentasBanc = [];  // {nombre, banco, numero, tipo}
-
-function renderCuentasBanc(lista){
-  _cuentasBanc = lista;
-  // _cuentasBanc = single source for accounts AND payment methods
-  _cuentas = lista.map(function(c){ return c.nombre + (c.numero?' (···'+c.numero.slice(-4)+')':''); });
-  var el = $('cuentasBanc-list');
-  if(!el) return;
-  if(!lista.length){
-    el.innerHTML='<div style="color:var(--ink3);font-size:12px;padding:4px 0">Sin cuentas registradas</div>';
-    return;
-  }
-  el.innerHTML = lista.map(function(c,i){
-    var icon = c.tipo==='efectivo'?'💵':c.tipo==='zelle'?'💸':'🏦';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surf2);border:1px solid var(--rim);border-radius:8px">'
-      +'<span style="font-size:16px">'+icon+'</span>'
-      +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+c.nombre+'</div>'
-      +'<div style="font-size:10.5px;color:var(--ink3)">'+(c.banco||c.tipo||'')+(c.numero?' · ···'+c.numero.slice(-4):'')+'</div></div>'
-      +'<span onclick="editarCuentaBanc('+i+')" style="cursor:pointer;opacity:0.6;font-size:13px;padding:2px 6px" title="Editar">✏️</span>'
-      +'<span onclick="eliminarCuentaBanc('+i+')" style="cursor:pointer;color:var(--red);font-size:13px;padding:2px 6px" title="Eliminar">✕</span>'
-      +'</div>';
-  }).join('');
-}
-
-function agregarCuentaBanc(){ abrirModalCuentaBanc(null); }
-function editarCuentaBanc(idx){ abrirModalCuentaBanc(idx); }
-
-function abrirModalCuentaBanc(idx){
-  var ed = idx !== null;
-  var c = ed ? _cuentasBanc[idx] : {};
-  $('mic').textContent='🏦';
-  $('mtt').textContent = ed ? 'Editar Cuenta' : 'Nueva Cuenta Bancaria';
-  $('msb').textContent = 'Configuración de cuentas';
-  $('modal-box').className='modal';
-  $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
-    +'<div class="fg"><label>Nombre de la cuenta *</label>'
-    +'<input class="fi" id="cb_nombre" value="'+(c.nombre||'')+'" placeholder="Ej: Bancamiga Principal, Caja USD..."></div>'
-    +'<div class="fgr" style="gap:8px">'
-    +'<div class="fg"><label>Tipo</label><select class="fs" id="cb_tipo">'
-    +'<option value="banco" '+(c.tipo==='banco'?'selected':'')+'>🏦 Banco</option>'
-    +'<option value="efectivo" '+(c.tipo==='efectivo'?'selected':'')+'>💵 Efectivo / Caja</option>'
-    +'<option value="zelle" '+(c.tipo==='zelle'?'selected':'')+'>💸 Zelle</option>'
-    +'<option value="digital" '+(c.tipo==='digital'?'selected':'')+'>💳 Digital</option>'
-    +'</select></div>'
-    +'<div class="fg"><label>Banco / Institución</label>'
-    +'<input class="fi" id="cb_banco" value="'+(c.banco||'')+'" placeholder="Ej: Bancamiga, Banesco..."></div>'
-    +'</div>'
-    +'<div class="fg"><label>Número / Últimos 4 dígitos</label>'
-    +'<input class="fi" id="cb_numero" value="'+(c.numero||'')+'" placeholder="Ej: 1234 (últimos 4 del número de cuenta)"></div>'
-    +'</div>';
-  S.saveFn = function(){
-    var nombre = ($('cb_nombre')&&$('cb_nombre').value.trim())||'';
-    if(!nombre){ toast('El nombre es obligatorio','error'); return false; }
-    var obj = {
-      nombre: nombre,
-      tipo:   ($('cb_tipo')&&$('cb_tipo').value)||'banco',
-      banco:  ($('cb_banco')&&$('cb_banco').value)||'',
-      numero: ($('cb_numero')&&$('cb_numero').value)||''
-    };
-    if(ed) _cuentasBanc[idx]=obj; else _cuentasBanc.push(obj);
-    saveCuentasBanc();
-    renderCuentasBanc(_cuentasBanc);
-    closeM(); toast(ed?'Cuenta actualizada':'Cuenta agregada','success'); return true;
-  };
-  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-p" onclick="saveM()">'+(ed?'Guardar cambios':'Agregar cuenta')+'</button>';
-  $('ov').style.display='flex';
-}
-
-function eliminarCuentaBanc(idx){
-  _cuentasBanc.splice(idx,1);
-  saveCuentasBanc();
-  renderCuentasBanc(_cuentasBanc);
-  toast('Cuenta eliminada','info');
-}
-
-function saveCuentasBanc(){
-  if(db) db.collection('config').doc('cuentasBanc').set({lista:_cuentasBanc}).catch(function(){});
-}
-
-
-function agregarCobrador(){
-  var n = prompt('Nombre del cobrador:');
-  if(!n||!n.trim()) return;
-  _cobradores.push(n.trim());
-  guardarCobradores();
-  renderCobradores(_cobradores);
-}
-
-function eliminarCobrador(i){
-  _cobradores.splice(i,1);
-  guardarCobradores();
-  renderCobradores(_cobradores);
-}
-
-function guardarCobradores(){
-  if(db) db.collection('config').doc('cobradores').set({lista:_cobradores});
-  toast('Cobradores actualizados','success');
-}
-
-// Compat con botón viejo
-function saveConfig(){ guardarPlan(); }
-
-
-// ══════════════════════════════════════════
-// ══════════════════════════════════════════
-// PDF — Impresión nativa del navegador
-// ══════════════════════════════════════════
-
-function _imprimirHTML(htmlContent, titulo) {
-  var win = window.open('', '_blank', 'width=900,height=700');
-  if (!win) { toast('Permite ventanas emergentes para imprimir', 'warn'); return; }
-  win.document.write(`<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>${titulo}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Inter', Arial, sans-serif; font-size: 11pt; color: #111; background: #fff; }
-    .doc { max-width: 720px; margin: 0 auto; padding: 40px 50px; }
-    h2 { text-align:center; font-size:13pt; font-weight:800; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; color:#111; }
-    h3 { font-size:10.5pt; font-weight:700; margin:18px 0 6px; color:#111; border-bottom:1px solid #e0e0e0; padding-bottom:4px; }
-    p { margin:5px 0; line-height:1.7; font-size:10.5pt; color:#222; text-align:justify; }
-    table { width:100%; border-collapse:collapse; margin:8px 0; font-size:10pt; }
-    td { padding:5px 4px; border-bottom:1px solid #eee; }
-    td:first-child { color:#555; width:55%; }
-    td:last-child { font-weight:700; color:#111; }
-    .header { text-align:center; margin-bottom:28px; padding-bottom:18px; border-bottom:2px solid #111; }
-    .logo { font-size:22pt; font-weight:800; letter-spacing:-1px; color:#111; }
-    .sub { font-size:9pt; color:#666; margin-top:3px; }
-    .num { text-align:center; font-size:9pt; color:#888; margin-bottom:20px; }
-    .firmas { display:grid; grid-template-columns:1fr 1fr; gap:60px; margin-top:50px; }
-    .firma { text-align:center; }
-    .linea { border-top:1px solid #333; padding-top:6px; margin-top:60px; font-size:9pt; color:#333; }
-    .pie { margin-top:24px; padding:10px 14px; border:1px solid #e0e0e0; border-radius:6px; font-size:8.5pt; color:#888; text-align:center; }
-    .alerta { background:#fff8e1; border:1px solid #f0c040; border-radius:5px; padding:10px 13px; font-size:9.5pt; color:#555; margin:16px 0; }
-    @media print {
-      body { font-size: 10.5pt; }
-      .doc { padding: 20px 30px; }
-      h3 { page-break-after: avoid; }
-      p, table { orphans: 3; widows: 3; }
-    }
-  </style>
-</head>
-<body>
-  <div class="doc">
-    ${htmlContent}
-  </div>
-  <script>
-    window.onload = function() {
-      setTimeout(function(){ window.print(); }, 400);
-    };
-  <\/script>
-</body>
-</html>`);
-  win.document.close();
-  toast('Abriendo documento para imprimir / guardar como PDF', 'success');
-}
-
-function _buildContratoHTML(cred, cli, ciudad, hoy, cuotasRestantes) {
-  var logoSrc = (document.querySelector('.sb-logo img')||{}).src || '';
-  return `
-    <div class="header">
-      ${logoSrc ? `<img src="${logoSrc}" style="height:50px;object-fit:contain;margin-bottom:8px"><br>` : ''}
-      <div class="logo">PAGASI</div>
-      <div class="sub">VENTA DE MOTOCICLETAS EN CUOTAS · RIF: J-00000000-0 · ${ciudad}, Venezuela</div>
-    </div>
-    <h2>Contrato de Compraventa en Cuotas</h2>
-    <div class="num">N° ${cred.id} · ${ciudad}, ${hoy}</div>
-
-    <h3>Primera: De las Partes</h3>
-    <p><strong>EL VENDEDOR:</strong> PAGASI VENTA DE MOTOS EN CUOTAS, C.A., debidamente constituida conforme a las leyes de la República Bolivariana de Venezuela, representada por su Representante Legal.</p>
-    <p style="margin-top:7px"><strong>EL COMPRADOR:</strong> ${cred.cli}, titular de la cédula de identidad N° ${cli.cedula||'—'}, domiciliado en ${cli.ciudad||ciudad}, teléfono ${cli.tel||'—'}.</p>
-
-    <h3>Segunda: Objeto del Contrato</h3>
-    <p>EL VENDEDOR da en venta a EL COMPRADOR la siguiente motocicleta:</p>
-    <table>
-      <tr><td>Modelo / Marca</td><td>${cred.modelo}</td></tr>
-      <tr><td>VIN / Serial</td><td>${cred.vin||('VIN-'+String(cred.motoId).padStart(4,'0'))}</td></tr>
-      <tr><td>Color</td><td>${cred.color||'—'}</td></tr>
-      <tr><td>Año</td><td>${cred.anio||'—'}</td></tr>
-      ${cred.placa && cred.placa!=='—' ? `<tr><td>Placa</td><td>${cred.placa}</td></tr>` : ''}
-    </table>
-
-    <h3>Tercera: Plan de Cuotas</h3>
-    <p>Las partes acuerdan el siguiente plan de cuotas quincenales para la cancelación de la motocicleta:</p>
-    <table>
-      <tr><td>Número de cuotas</td><td>${cred.totalCuotas||cred.plazo*2} cuotas quincenales</td></tr>
-      <tr><td>Monto de cada cuota</td><td><strong>$${parseFloat(cred.cuotaQ||cred.cuota).toFixed(2)}</strong></td></tr>
-      <tr><td>Frecuencia</td><td>Cada 15 días</td></tr>
-      <tr><td>Cuotas canceladas</td><td>${cred.pagado} de ${cred.totalCuotas||cred.plazo*2}</td></tr>
-      <tr><td>Cuotas pendientes</td><td>${cuotasRestantes} restantes</td></tr>
-      <tr><td>Fecha de inicio</td><td>${cred.fecha}</td></tr>
-    </table>
-    <p style="margin-top:8px;font-size:9.5pt;color:#666">EL COMPRADOR declara conocer y aceptar el monto de cada cuota. Las cuotas deberán cancelarse puntualmente sin necesidad de cobro previo por parte de EL VENDEDOR.</p>
-
-    <h3>Cuarta: Forma de Pago</h3>
-    <p>EL COMPRADOR se obliga a cancelar cada cuota mediante: transferencia bancaria, pago móvil, Zelle, PayPal o efectivo en USD. El pago se considera efectuado únicamente cuando EL VENDEDOR confirme la recepción del monto completo. Pagos parciales no interrumpen el cómputo de mora.</p>
-
-    <h3>Quinta: Reserva de Dominio</h3>
-    <p>EL VENDEDOR se reserva el dominio y la propiedad de la motocicleta hasta tanto EL COMPRADOR cancele la <strong>totalidad del precio pactado</strong>. El incumplimiento de <strong>tres (3) cuotas consecutivas</strong> o <strong>cinco (5) cuotas alternadas</strong> faculta a EL VENDEDOR a recuperar la unidad de forma inmediata y sin intervención judicial.</p>
-
-    <h3>Sexta: Mora e Incumplimiento</h3>
-    <p>Transcurridos <strong>cinco (5) días calendario</strong> del vencimiento sin pago, EL COMPRADOR incurrirá en mora con un recargo del <strong>5% mensual</strong> sobre el saldo vencido. El incumplimiento reiterado faculta a EL VENDEDOR a declarar vencida la totalidad de la deuda.</p>
-
-    <h3>Séptima: Prohibición de Enajenación</h3>
-    <p>Mientras subsista saldo pendiente, EL COMPRADOR queda prohibido de vender, ceder, pignorar o de cualquier forma transferir la motocicleta sin autorización previa y escrita de EL VENDEDOR. Cualquier acto contrario será nulo de pleno derecho.</p>
-
-    <h3>Octava: Mantenimiento y Uso</h3>
-    <p>EL COMPRADOR se obliga a mantener la motocicleta en buen estado, no modificarla, no utilizarla para actividades ilegales ni trasladarla fuera del país sin autorización. Notificará a EL VENDEDOR ante cualquier accidente o deterioro significativo.</p>
-
-    <h3>Novena: Dispositivo de Rastreo GPS</h3>
-    <p>EL COMPRADOR autoriza la instalación y activación de un dispositivo GPS en la motocicleta durante toda la vigencia del plan. La desactivación o manipulación del dispositivo facultará a EL VENDEDOR a recuperar la unidad de inmediato.</p>
-
-    <h3>Décima: Responsabilidad y Garantía</h3>
-    <p>EL COMPRADOR responde con la totalidad de sus bienes ante el incumplimiento. De existir fiador, este responde solidaria e ilimitadamente por todas las obligaciones derivadas del presente contrato.</p>
-
-    <h3>Décima Primera: Declaración de Veracidad</h3>
-    <p>EL COMPRADOR declara bajo juramento que toda información suministrada es veraz. Cualquier falsedad dará derecho a EL VENDEDOR a resolver el contrato y ejercer las acciones penales correspondientes. EL COMPRADOR autoriza a EL VENDEDOR a verificar y conservar sus datos personales con fines de gestión del crédito.</p>
-
-    <h3>Décima Segunda: Jurisdicción</h3>
-    <p>Las partes se someten a la jurisdicción de los Tribunales de ${ciudad}, renunciando a cualquier otro fuero. Los gastos del proceso serán a cargo de la parte vencida.</p>
-
-    <div class="alerta">
-      <strong>DECLARACIÓN FINAL:</strong> Las partes manifiestan haber leído, entendido y aceptado en su totalidad el presente contrato, firmado en dos (2) ejemplares de igual valor, en ${ciudad}, a los ${hoy}.
-    </div>
-
-    <div class="firmas">
-      <div class="firma">
-        <div class="linea">
-          <strong>EL VENDEDOR</strong><br>
-          PAGASI — Venta de Motos en Cuotas<br>
-          Representante Legal
-        </div>
-      </div>
-      <div class="firma">
-        <div class="linea">
-          <strong>EL COMPRADOR</strong><br>
-          ${cred.cli}<br>
-          C.I.: ${cli.cedula||'—'}
-        </div>
-      </div>
-    </div>
-
-    <div class="pie">Documento N° ${cred.id} · ${hoy} · Pagasi Venezuela</div>
-  `;
-}
-
-function descargarContratoPDF(){
-  renderContrato();
-  var cred = S.creds.find(function(x){ return x.id===(($('sel-cred')&&$('sel-cred').value)); }) || S.creds[0];
-  if(!cred){ toast('Selecciona un crédito primero','warn'); return; }
-  _abrirContratoPrint(cred);
-}
-
-function descargarContratoPDFById(credId){
-  var sel = $('sel-cred');
-  if(sel) sel.value = credId;
-  renderContrato();
-  var cred = S.creds.find(function(x){ return x.id===credId; }) || S.creds[0];
-  if(!cred){ toast('Crédito no encontrado','error'); return; }
-  if(S.page !== 'contratos'){
-    nav('contratos');
-    setTimeout(function(){ _abrirContratoPrint(cred); }, 300);
-    return;
-  }
-  _abrirContratoPrint(cred);
-}
-
-function _abrirContratoPrint(cred){
-  var cli    = S.clientes.find(function(x){ return x.nombre===cred.cli; }) || {cedula:'—',tel:'—',ciudad:'Venezuela'};
-  var ciudad = ($('sel-ciudad')&&$('sel-ciudad').value) || 'Caracas';
-  var hoy    = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
-  var cuotasRestantes = (cred.totalCuotas||cred.plazo*2) - (cred.pagado||0);
-  var html = _buildContratoHTML(cred, cli, ciudad, hoy, cuotasRestantes);
-  _imprimirHTML(html, 'Contrato-'+cred.id+'-'+cred.cli);
-}
-
-function descargarAmortPDF(){
-  var c = S.creds.find(function(x){ return x.id===(($('sel-cred')&&$('sel-cred').value)); }) || S.creds[0];
-  if(!c){ toast('Selecciona un crédito primero','warn'); return; }
-  var tQ = PLAN.tasaMensual/100/2;
-  var cuota = c.cuotaQ||c.cuota;
-  var n = c.totalCuotas||(c.plazo*2);
-  var startDate = new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
-  var sal = c.fin, rows = '';
-  for(var i=1;i<=n;i++){
-    var int=sal*tQ, cap=cuota-int; sal-=cap;
-    var fd=new Date(startDate.getTime()+(i*15*24*60*60*1000));
-    var fecha=fd.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
-    var pd=i<=(c.pagado||0);
-    rows+=`<tr style="${pd?'color:#aaa;':''}">
-      <td style="text-align:center">${i}</td>
-      <td>${fecha}</td>
-      <td style="${pd?'':'color:#333;font-weight:600'}">${pd?'Pagada':i===(c.pagado||0)+1?'<b>Próxima</b>':'Pendiente'}</td>
-      <td style="text-align:right">$${cuota.toFixed(2)}</td>
-      <td style="text-align:right;color:#a07000">$${Math.max(0,int).toFixed(2)}</td>
-      <td style="text-align:right">$${Math.max(0,cap).toFixed(2)}</td>
-      <td style="text-align:right;color:#555">$${Math.max(0,sal).toFixed(2)}</td>
-    </tr>`;
-  }
-  var hoy = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
-  var html = `
-    <div class="header">
-      <div class="logo">PAGASI</div>
-      <div class="sub">Tabla de Amortización</div>
-    </div>
-    <h2>Plan de Pagos — ${c.id}</h2>
-    <div class="num">${c.cli} · ${c.modelo} · ${hoy}</div>
-    <table style="font-size:9.5pt">
-      <tr style="background:#f5f5f5;font-weight:700;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.5px">
-        <td style="text-align:center">#</td><td>Fecha</td><td>Estado</td>
-        <td style="text-align:right">Cuota</td><td style="text-align:right">Interés</td>
-        <td style="text-align:right">Capital</td><td style="text-align:right">Saldo</td>
-      </tr>
-      ${rows}
-    </table>
-    <div class="pie">Pagadas: ${c.pagado||0} · Pendientes: ${n-(c.pagado||0)} · Cuota: $${cuota.toFixed(2)} · Inicio: ${c.fecha}</div>
-  `;
-  _imprimirHTML(html, 'Amortizacion-'+c.id);
-}
-
-
-// ══════════════════════════════════════════
-// LOGIN — Firebase Auth + fallback local
-// ══════════════════════════════════════════
-// En Firebase Console → Authentication → Sign-in method → Email/Password → Habilitar
-// Luego agrega usuarios en Authentication → Users → Agregar usuario
-
-function doLogin(){
-  var u = (($('l_user')&&$('l_user').value) || '').trim();
-  var p = (($('l_pass')&&$('l_pass').value) || '').trim();
-
-  if(!u || !p){
-    _loginError('Completa usuario y contraseña');
-    return;
-  }
-
-  var btn = document.querySelector('.login-btn');
-  if(btn){ btn.textContent = 'Ingresando...'; btn.disabled = true; }
-
-  // ── Si Firebase Auth está activo ────────────────────────
-  if(FIREBASE_READY && auth){
-    auth.signInWithEmailAndPassword(u, p)
-      .then(function(cred){
-        var user = cred.user;
-        // Busca perfil del usuario en Firestore (colección 'usuarios')
-        return db.collection('usuarios').doc(user.uid).get().then(function(doc){
-          var perfil = doc.exists ? doc.data() : {nombre: user.email.split('@')[0], rol: 'Administrador', permisos: MODULOS.map(function(m){return m.id;})};
-          // Si no existe el perfil, crear el de admin
-          if(!doc.exists){
-            DB.saveUsuario(user.uid, {nombre:perfil.nombre, email:user.email, rol:'Administrador', permisos:perfil.permisos, fechaCreacion:new Date().toISOString()});
-          }
-          _loginSuccess(perfil.nombre, perfil.rol, user.uid, perfil.permisos);
-        });
-      })
-      .catch(function(err){
-        var msgs = {
-          'auth/user-not-found':    'Usuario no encontrado',
-          'auth/wrong-password':    'Contraseña incorrecta',
-          'auth/invalid-email':     'Email inválido',
-          'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde',
-          'auth/invalid-credential':'Credenciales incorrectas',
-          'auth/network-request-failed': '⚠️ Error de red — Abre el archivo con el script iniciar_pagasi.py (doble click) para que funcione correctamente.'
-        };
-        _loginError(msgs[err.code] || err.message);
-      });
-  }
-  // ── Fallback local (sin Firebase configurado) ────────────
-  else {
-    var USERS_LOCAL = [{user:'admin',pass:'admin',nombre:'Juan Admin',rol:'Administrador'}];
-    var found = USERS_LOCAL.find(function(x){ return x.user === u && x.pass === p; });
-    if(found){
-      _loginSuccess(found.nombre, found.rol);
-    } else {
-      _loginError('Usuario o contraseña incorrectos');
-    }
-  }
-}
-
-function _loginSuccess(nombre, rol, uid, permisos) {
-  // Construir perfil de usuario actual
-  S.currentUser = {
-    uid: uid || null,
-    nombre: nombre,
-    rol: rol || 'Administrador',
-    permisos: permisos || MODULOS.map(function(m){ return m.id; }) // admin = todos
-  };
-  $('login-screen').style.display = 'none';
-  $('invite-screen').style.display = 'none';
-  $('app-root').style.display = 'flex';
-  // Restaurar botón
-  var btn = document.querySelector('.login-btn');
-  if(btn){ btn.textContent = 'Ingresar →'; btn.disabled = false; }
-  updateSidebar();
-  updateMobileTopbar();
-  DB.load().then(function(){
-    // Cargar catálogo y planes personalizados post-auth
-    if(db){
-      db.collection('config').doc('catalogo').get().then(function(doc){
-        if(doc.exists && (doc.data().items||[]).length){
-          CATALOGO.splice(0, CATALOGO.length);
-          doc.data().items.forEach(function(item){ CATALOGO.push(item); });
-        }
-      }).catch(function(){});
-      db.collection('config').doc('planes').get().then(function(doc){
-        if(doc.exists && doc.data().items) window._planesExtra = doc.data().items;
-      }).catch(function(){});
-      db.collection('config').doc('cuentasBanc').get().then(function(doc){
-        if(doc.exists && doc.data().lista && doc.data().lista.length){
-          _cuentasBanc = doc.data().lista;
-          _cuentas = _cuentasBanc.map(function(c){ return c.nombre+(c.numero?' (···'+c.numero.slice(-4)+')':''); });
-        }
-      }).catch(function(){});
-    }
-    // _cuentas se sincroniza desde _cuentasBanc en renderCuentasBanc
-    nav('dash');
-  });
-}
-
-function updateSidebar() {
-  if(!S.currentUser) return;
-  var isAdmin = S.currentUser.rol === 'Administrador';
-  var perms = S.currentUser.permisos || [];
-  document.querySelectorAll('.si[data-nav]').forEach(function(el){
-    var page = el.dataset.nav;
-    el.style.display = (isAdmin || perms.includes(page)) ? '' : 'none';
-    // Fix iOS touch events - add touchend listener once
-    if(!el._iosTouch){
-      el._iosTouch = true;
-      el.addEventListener('touchend', function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        var p = el.getAttribute('data-nav');
-        if(p && el.style.display !== 'none') nav(p);
-      }, {passive: false});
-    }
-  });
-  var av = document.querySelector('.sb-av');
-  var un = document.querySelector('.sb-un');
-  var ur = document.querySelector('.sb-ur');
-  if(av) av.textContent = S.currentUser.nombre.split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
-  if(un) un.textContent = S.currentUser.nombre;
-  if(ur) ur.textContent = S.currentUser.rol;
-}
-
-function _loginError(msg){
-  var err = $('login-err');
-  if(err){
-    err.textContent = '⛔ ' + msg;
-    err.style.display = 'block';
-    $('l_pass').value = '';
-    $('l_pass').focus();
-    setTimeout(function(){ err.style.display = 'none'; }, 4000);
-  }
-  var btn = document.querySelector('.login-btn');
-  if(btn){ btn.textContent = 'Ingresar →'; btn.disabled = false; }
-  // Animación shake
-  var card = document.querySelector('.login-card');
-  if(card){
-    card.style.transition = 'transform .08s';
-    var steps = [8, -8, 5, 0];
-    steps.forEach(function(v, i){
-      setTimeout(function(){ card.style.transform = 'translateX('+v+'px)'; }, i*80);
-    });
-  }
-}
-
-// ══════════════════════════════════════════
-// SISTEMA DE INVITACIONES
-// ══════════════════════════════════════════
-function _genToken(){
-  var chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  var t='';for(var i=0;i<24;i++)t+=chars[Math.floor(Math.random()*chars.length)];
-  return t;
-}
-
-function openInviteUser(){
-  $('mic').textContent='👤';$('mtt').textContent='Invitar Nuevo Usuario';$('msb').textContent='Se enviará un link de acceso';
-  $('modal-box').className='modal modal-lg';
-  // Agrupar módulos por grupo
-  var grupos = {};
-  MODULOS.forEach(function(m){ if(!grupos[m.grupo]) grupos[m.grupo]=[]; grupos[m.grupo].push(m); });
-  var modulosHTML = Object.keys(grupos).map(function(g){
-    return '<div style="margin-bottom:10px">'
-      +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px">'+g+'</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:5px">'
-      +grupos[g].map(function(m){
-        return '<label style="display:flex;align-items:center;gap:5px;background:var(--surf2);border:1px solid var(--rim);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:11.5px;user-select:none">'
-          +'<input type="checkbox" class="mod-chk" value="'+m.id+'" checked style="accent-color:var(--p1)"> '+m.label+'</label>';
-      }).join('')
-      +'</div></div>';
-  }).join('');
-  $('mbd').innerHTML=`
-    <div class="fsec">Datos del usuario</div>
-    <div class="fgr">
-      <div class="fg"><label>Nombre completo *</label><input class="fi" id="inv_nombre_a" placeholder="Nombre Apellido"></div>
-      <div class="fg"><label>Email *</label><input class="fi" id="inv_email_a" type="email" placeholder="correo@ejemplo.com"></div>
-    </div>
-    <div class="fgr c1" style="margin-top:2px">
-      <div class="fg"><label>Rol</label><select class="fs" id="inv_rol_a" onchange="setRolPermisos(this.value)">
-        <option value="Administrador">Administrador — Acceso total</option>
-        <option value="Gerente">Gerente — Sin configuración ni usuarios</option>
-        <option value="Cobrador">Cobrador — Cobranza y pagos</option>
-        <option value="Vendedor">Vendedor — Motos, créditos y clientes</option>
-        <option value="Contador">Contador — Contabilidad y reportes</option>
-      </select></div>
-    </div>
-    <div class="fsec" style="margin-top:14px">Módulos a los que tendrá acceso</div>
-    <div id="modulos-grid">${modulosHTML}</div>
-    <div id="inv-link-box" style="display:none;margin-top:14px;background:var(--gs);border:1px solid var(--rim2);border-radius:var(--r8);padding:12px">
-      <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--p1);margin-bottom:6px">Link de invitación generado</div>
-      <div style="display:flex;gap:7px;align-items:center">
-        <input class="fi" id="inv-link-input" readonly style="font-size:11px;font-family:monospace">
-        <button class="btn btn-g btn-sm" onclick="copiarLinkInput()">Copiar</button>
-      </div>
-      <div style="font-size:10.5px;color:var(--ink3);margin-top:7px">Comparte este link con el usuario. Solo puede usarse una vez.</div>
-    </div>`;
-  S.saveFn = saveInvite;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Generar Invitación</button>`;
-  $('ov').style.display='flex';
-}
-
-function setRolPermisos(rol){
-  var presets = {
-    'Administrador': MODULOS.map(function(m){return m.id;}),
-    'Gerente':       ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','conta','plan'],
-    'Cobrador':      ['dash','clientes','cobranza','pagos','notif'],
-    'Vendedor':      ['dash','clientes','motos','creditos','contratos','pagos'],
-    'Contador':      ['dash','conta','reportes','pagos'],
-  };
-  var allowed = presets[rol] || [];
-  document.querySelectorAll('.mod-chk').forEach(function(chk){
-    chk.checked = allowed.includes(chk.value);
-  });
-}
-
-function saveInvite(){
-  var nombre = (($('inv_nombre_a')&&$('inv_nombre_a').value)||'').trim();
-  var email  = (($('inv_email_a')&&$('inv_email_a').value)||'').trim().toLowerCase();
-  var rol    = ($('inv_rol_a')&&$('inv_rol_a').value) || 'Cobrador';
-  if(!nombre || !email){ toast('Nombre y email son obligatorios','error'); return false; }
-  var permisos = Array.from(document.querySelectorAll('.mod-chk:checked')).map(function(c){return c.value;});
-  if(!permisos.length){ toast('Selecciona al menos un módulo','error'); return false; }
-  var token = _genToken();
-  var invData = {
-    nombre: nombre,
-    email: email,
-    rol: rol,
-    permisos: permisos,
-    invitadoPor: S.currentUser ? S.currentUser.nombre : 'Administrador',
-    fechaCreacion: new Date().toISOString(),
-    usado: false
-  };
-  // Guardar en Firestore o local
-  if(db){
-    DB.saveInvitacion(token, invData).then(function(){
-      mostrarLink(token, nombre);
-    }).catch(function(e){ toast('Error: '+e.message,'error'); });
-  } else {
-    // Modo local: guardar en sessionStorage como demo
-    sessionStorage.setItem('inv_'+token, JSON.stringify(invData));
-    mostrarLink(token, nombre);
-  }
-  return false; // no cerrar modal
-}
-
-function mostrarLink(token, nombre){
-  var base = window.location.href.split('?')[0];
-  var link = base + '?invite=' + token;
-  var box = $('inv-link-box');
-  var inp = $('inv-link-input');
-  if(box) box.style.display='';
-  if(inp) inp.value = link;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM();nav('users')">Cerrar</button><button class="btn btn-p" onclick="copiarLinkInput()">Copiar link</button>`;
-  toast('Invitación lista para '+nombre,'success');
-}
-
-function copiarLinkInput(){
-  var inp = $('inv-link-input');
-  if(!inp) return;
-  inp.select();
-  navigator.clipboard.writeText(inp.value).then(function(){ toast('Link copiado al portapapeles','success'); });
-}
-
-function copiarLink(token){
-  var base = window.location.href.split('?')[0];
-  var link = base + '?invite=' + token;
-  navigator.clipboard.writeText(link).then(function(){ toast('Link copiado','success'); });
-}
-
-
-function confirmarEliminarUsuario(uid, nombre){
-  if(!S.currentUser || S.currentUser.rol !== 'Administrador'){
-    toast('Solo los Administradores pueden eliminar usuarios','error'); return;
-  }
-  if(S.currentUser.uid === uid){
-    toast('No puedes eliminarte a ti mismo','error'); return;
-  }
-  window._delUserId   = uid;
-  window._delUserName = nombre;
-  $('mic').textContent='🗑️';
-  $('mtt').textContent='Eliminar Usuario';
-  $('msb').textContent='Esta acción no se puede deshacer';
-  $('modal-box').className='modal';
-  $('mbd').innerHTML='<div style="text-align:center;padding:18px 0">'
-    +'<div style="font-size:46px;margin-bottom:12px">👤</div>'
-    +'<div style="font-size:16px;font-weight:800;margin-bottom:6px">¿Eliminar a '+nombre+'?</div>'
-    +'<div style="color:var(--ink3);font-size:13px;line-height:1.5">'
-    +'Se eliminará el registro en Firestore.<br>'
-    +'<strong>Nota:</strong> para revocar el acceso completamente,<br>'
-    +'desactiva la cuenta en Firebase Console → Authentication.'
-    +'</div></div>';
-  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="ejecutarEliminarUsuario()">🗑️ Eliminar</button>';
-  $('ov').style.display='flex';
-}
-
-function ejecutarEliminarUsuario(){
-  var uid    = window._delUserId;
-  var nombre = window._delUserName;
-  if(!uid) return;
-  DB.deleteUsuario(uid);
-  window._delUserId = null; window._delUserName = null;
-  closeM();
-  toast('Usuario ' + nombre + ' eliminado','success');
-  setTimeout(function(){ nav('users'); }, 300);
-}
-
-function editarUsuario(uid){
-  var user = null;
-  DB.getUsuarios().then(function(lista){
-    user = lista.find(function(u){return u.uid===uid;});
-    if(!user){ toast('Usuario no encontrado','error'); return; }
-    $('mic').textContent='👤';$('mtt').textContent='Editar permisos';$('msb').textContent=user.nombre||user.email;
-    $('modal-box').className='modal modal-lg';
-    var rolBadge={Administrador:'b-p',Gerente:'b-b',Cobrador:'b-r',Vendedor:'b-g',Contador:'b-a'};
-    var grupos={};
-    MODULOS.forEach(function(m){ if(!grupos[m.grupo]) grupos[m.grupo]=[]; grupos[m.grupo].push(m); });
-    var modulosHTML = Object.keys(grupos).map(function(g){
-      return '<div style="margin-bottom:10px">'
-        +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px">'+g+'</div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:5px">'
-        +grupos[g].map(function(m){
-          var chk = (user.permisos||[]).includes(m.id);
-          return '<label style="display:flex;align-items:center;gap:5px;background:var(--surf2);border:1px solid var(--rim);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:11.5px;user-select:none">'
-            +'<input type="checkbox" class="mod-chk" value="'+m.id+'"'+(chk?' checked':'')+' style="accent-color:var(--p1)"> '+m.label+'</label>';
-        }).join('')
-        +'</div></div>';
-    }).join('');
-    $('mbd').innerHTML=`
-      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--surf2);border-radius:var(--r8);border:1px solid var(--rim);margin-bottom:14px">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">${ini(user.nombre||user.email)}</div>
-        <div><div style="font-weight:800">${user.nombre||user.email}</div><div class="tds">${user.email}</div></div>
-        <span class="bdg ${rolBadge[user.rol]||'b-x'}" style="margin-left:auto">${user.rol}</span>
-      </div>
-      <div class="fg" style="margin-bottom:12px"><label>Rol</label><select class="fs" id="edit_rol" onchange="setRolPermisos(this.value)">
-        <option ${user.rol==='Administrador'?'selected':''}>Administrador</option>
-        <option ${user.rol==='Gerente'?'selected':''}>Gerente</option>
-        <option ${user.rol==='Cobrador'?'selected':''}>Cobrador</option>
-        <option ${user.rol==='Vendedor'?'selected':''}>Vendedor</option>
-        <option ${user.rol==='Contador'?'selected':''}>Contador</option>
-      </select></div>
-      <div class="fsec">Módulos con acceso</div>
-      <div id="modulos-grid">${modulosHTML}</div>`;
-    S.saveFn = function(){
-      var newPerms = Array.from(document.querySelectorAll('.mod-chk:checked')).map(function(c){return c.value;});
-      var newRol = ($('edit_rol')&&$('edit_rol').value) || user.rol;
-      DB.updateUsuario(uid, {rol:newRol, permisos:newPerms});
-      // Si es el usuario actual, actualizar sus permisos locales
-      if(S.currentUser && S.currentUser.uid === uid){
-        S.currentUser.rol = newRol;
-        S.currentUser.permisos = newPerms;
-        updateSidebar();
-      }
-      toast('Permisos actualizados','success');
-      closeM(); nav('users'); return true;
-    };
-    var canDelete = !esMio && S.currentUser && S.currentUser.rol==='Administrador';
-    $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button>`+(canDelete?`<button class="btn btn-d" onclick="closeM();setTimeout(function(){confirmarEliminarUsuario('${uid}','${user.nombre||user.email}');},100)">🗑️ Eliminar</button>`:'')+`<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>`;
-    $('ov').style.display='flex';
-  });
-}
-
-// ══════════════════════════════════════════
-// ACEPTAR INVITACIÓN
-// ══════════════════════════════════════════
-var _invToken = null;
-var _invData  = null;
-
-function checkInviteParam(){
-  var params = new URLSearchParams(window.location.search);
-  var token  = params.get('invite');
-  if(!token) return;
-  _invToken = token;
-  // Intentar recuperar de Firestore
-  function processInv(data){
-    if(!data || data.usado){
-      alert('Este link de invitación ya fue usado o no es válido.');
-      return;
-    }
-    _invData = data;
-    $('login-screen').style.display = 'none';
-    $('invite-screen').style.display = 'flex';
-    // Copiar logo
-    var lgSrc = (document.querySelector('.sb-logo img')||{}).src || (document.querySelector('.login-logo img')||{}).src || '';
-    var invLogo = $('inv-logo');
-    if(invLogo && lgSrc) invLogo.src = lgSrc;
-    // Mostrar info
-    var box = $('inv-info');
-    if(box) box.innerHTML = '<strong>'+data.invitadoPor+'</strong> te invitó a unirte como <strong>'+data.rol+'</strong>'
-      +'<br><span style="font-size:10.5px;opacity:0.7">Acceso a: '+data.permisos.slice(0,5).join(', ')+(data.permisos.length>5?' y más...':'')+'</span>';
-    var nombre = $('inv_nombre');
-    if(nombre && data.nombre) nombre.value = data.nombre;
-    var footer = $('inv-footer');
-    if(footer) footer.textContent = data.email + ' · Pagasi';
-  }
-  if(FIREBASE_READY && db){
-    DB.getInvitacion(token).then(function(doc){
-      if(!doc || !doc.exists){ alert('Invitación no válida.'); return; }
-      processInv(doc.data());
-    }).catch(function(){ alert('Error al cargar la invitación.'); });
-  } else {
-    // Modo local: buscar en sessionStorage
-    var local = sessionStorage.getItem('inv_'+token);
-    if(local){ processInv(JSON.parse(local)); }
-    else { alert('Invitación no encontrada. Asegúrate de abrir el link en el mismo navegador o configura Firebase.'); }
-  }
-}
-
-function aceptarInvitacion(){
-  if(!_invData || !_invToken){ toast('Invitación no cargada','error'); return; }
-  var nombre = (($('inv_nombre')&&$('inv_nombre').value)||'').trim();
-  var pass   = ($('inv_pass')&&$('inv_pass').value)||'';
-  var pass2  = ($('inv_pass2')&&$('inv_pass2').value)||'';
-  if(!nombre){ _invError('Escribe tu nombre'); return; }
-  if(pass.length < 6){ _invError('La contraseña debe tener al menos 6 caracteres'); return; }
-  if(pass !== pass2){ _invError('Las contraseñas no coinciden'); return; }
-  var btn = $('inv-btn');
-  if(btn){ btn.textContent='Creando cuenta...'; btn.disabled=true; }
-  if(FIREBASE_READY && auth){
-    auth.createUserWithEmailAndPassword(_invData.email, pass)
-      .then(function(cred){
-        var uid = cred.user.uid;
-        var perfil = { nombre:nombre, email:_invData.email, rol:_invData.rol, permisos:_invData.permisos,
-          invitadoPor:_invData.invitadoPor, fechaCreacion:new Date().toISOString() };
-        return DB.saveUsuario(uid, perfil).then(function(){
-          DB.usarInvitacion(_invToken, uid);
-          // Limpiar URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-          _loginSuccess(nombre, _invData.rol, uid, _invData.permisos);
-        });
-      })
-      .catch(function(err){
-        var msgs={'auth/email-already-in-use':'Este email ya tiene una cuenta registrada','auth/weak-password':'Contraseña muy débil'};
-        _invError(msgs[err.code]||err.message);
-      });
-  } else {
-    _invError('Firebase no está configurado. Contacta al administrador.');
-  }
-}
-
-function _invError(msg){
-  var e = $('invite-err');
-  if(e){ e.textContent='⛔ '+msg; e.style.display='block'; setTimeout(function(){e.style.display='none';},4000); }
-  var btn = $('inv-btn');
-  if(btn){ btn.textContent='Crear mi cuenta →'; btn.disabled=false; }
-}
-
-function doLogout(){
-  if(FIREBASE_READY && auth){
-    auth.signOut().then(function(){
-      $('app-root').style.display = 'none';
-      $('login-screen').style.display = 'flex';
-      $('l_user').value = '';
-      $('l_pass').value = '';
-    });
-  } else {
-    $('app-root').style.display = 'none';
-    $('login-screen').style.display = 'flex';
-  }
-}
-
-// nav('dash') called after login
-
-// Mostrar modo en pantalla de login
-window.addEventListener('load', function(){
-  var m = document.getElementById('login-mode');
-  if(m) m.textContent = FIREBASE_READY ? '🔥 Firebase Auth activo' : '⚠️ modo local (configura Firebase)';
-  // Copiar logo al invite screen
-  var lgSrc = (document.querySelector('.login-logo img')||{}).src||'';
-  var il = document.getElementById('inv-logo');
-  if(il && lgSrc) il.src = lgSrc;
-  // Verificar si hay token de invitación en la URL
-  checkInviteParam();
-});
-
-// ══════════════════════════════════════════
-// MOBILE MENU FUNCTIONS  
-// ══════════════════════════════════════════
-function openMobileMenu(){
-  var sb = document.getElementById('main-sidebar');
-  var ov = document.getElementById('sb-overlay');
-  if(sb) sb.classList.add('open');
-  if(ov) ov.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeMobileMenu(){
-  var sb = document.getElementById('main-sidebar');
-  var ov = document.getElementById('sb-overlay');
-  if(sb) sb.classList.remove('open');
-  if(ov) ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
-// Show/hide mobile topbar based on screen width
-function updateMobileTopbar(){
-  var mob = document.getElementById('mobile-topbar');
-  var desk = document.getElementById('desktop-topbar');
-  if(!mob || !desk) return;
-  if(window.innerWidth <= 820){
-    mob.style.display = 'flex';
-    desk.style.display = 'none';
-  } else {
-    mob.style.display = 'none';
-    desk.style.display = 'flex';
-    closeMobileMenu();
-  }
-}
-window.addEventListener('resize', updateMobileTopbar);
-
-// Patch nav() to sync mobile title and close menu
-var _origNavMob = null;
-document.addEventListener('DOMContentLoaded', function(){
-  updateMobileTopbar();
-});
-
-</script>
-</body>
-</html>
