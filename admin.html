@@ -1381,9 +1381,11 @@ creditos(){
   <div class="tw"><table>
     <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN / Serial</th><th>Cuota Quincenal</th><th>Progreso</th><th>Saldo por pagar</th><th>Estado</th><th></th></tr></thead>
     <tbody>${(()=>{const _ca=S.creds.filter(c=>!c.eliminado);const _cp=pgGet('creditos');return _ca.slice((_cp-1)*50,_cp*50).map(c=>{
+      // Calcular saldo real pendiente considerando pagos parciales
       var totalCuotas=c.totalCuotas||c.plazo*2;
       var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0);
       var totalFinanciado=cuotaVal*totalCuotas;
+      // Restar lo ya pagado del historial detallado si existe
       var totalAbonado=0;
       if(Array.isArray(c.pagosRegistrados)&&c.pagosRegistrados.length){
         totalAbonado=c.pagosRegistrados.reduce(function(a,h){return a+h.montoPagado;},0);
@@ -1403,7 +1405,7 @@ creditos(){
       <td style="font-weight:900;font-family:var(--fd);color:${saldoColor}">${saldoPendiente===0?'✓ Saldo $0':fmt(saldoPendiente)}</td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       <td style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">📊</button><button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">✏️</button>${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}</td>
-    </tr>`;}).join('')})()${S.creds.filter(c=>c.estado==='cancelado').length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px'>Cancelados (${S.creds.filter(c=>c.estado==='cancelado').length})</div>${S.creds.filter(c=>c.estado==='cancelado').map(c=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px"><span style="font-family:var(--fd);font-weight:700;min-width:90px;opacity:0.6">'+c.id+'</span><span style="flex:1;opacity:0.6;text-decoration:line-through">'+c.cli+' — '+c.modelo+'</span><span style="color:var(--red)">✕ '+(c.canceladoPor||'Admin')+'</span><span style="color:var(--ink3)">'+(c.canceladoRazon?'· '+c.canceladoRazon:'')+'</span><span style="color:var(--ink3)">'+(c.canceladoEn?'· '+c.canceladoEn.split('T')[0]:'')+'</span></div>').join('')}</div></td></tr>`:''}}</tbody>
+    </tr>`;}).join('')})()}${S.creds.filter(c=>c.estado==='cancelado').length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px'>Cancelados (${S.creds.filter(c=>c.estado==='cancelado').length})</div>${S.creds.filter(c=>c.estado==='cancelado').map(c=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px"><span style="font-family:var(--fd);font-weight:700;min-width:90px;opacity:0.6">'+c.id+'</span><span style="flex:1;opacity:0.6;text-decoration:line-through">'+c.cli+' — '+c.modelo+'</span><span style="color:var(--red)">✕ '+(c.canceladoPor||'Admin')+'</span><span style="color:var(--ink3)">'+(c.canceladoRazon?'· '+c.canceladoRazon:'')+'</span><span style="color:var(--ink3)">'+(c.canceladoEn?'· '+c.canceladoEn.split('T')[0]:'')+'</span></div>').join('')}</div></td></tr>`:''}}</tbody>
   </table></div></div></div>`+pgControls('creditos',S.creds.filter(c=>!c.eliminado).length,50,'pgNav');
 },
 
