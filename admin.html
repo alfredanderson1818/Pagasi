@@ -682,17 +682,12 @@ var DB = {
     ]).then(function(snaps){
       function read(snap){return snap.docs.map(function(d){return d.data();});}
       var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]);
-      var totalDocs = m.length + cl.length + cr.length + p.length + e.length + mv.length;
-      if(totalDocs > 0){
-        S.motos       = m.map(mapMoto);
-        S.clientes    = cl;
-        S.creds       = cr.map(mapCred);
-        S.pagos       = p.map(mapPago);
-        S.egresos     = e;
-        S.movimientos = mv;
-      } else {
-        toast('Base de datos vacía — mostrando datos de ejemplo','info');
-      }
+      S.motos       = m.map(mapMoto);
+      S.clientes    = cl;
+      S.creds       = cr.map(mapCred);
+      S.pagos       = p.map(mapPago);
+      S.egresos     = e;
+      S.movimientos = mv;
       calcularMoraAuto();
       cargarCuentasBanc();
       hideLoader();
@@ -789,48 +784,12 @@ function calcMoto(precio){
 // STATE
 // ══════════════════════════════════════════
 const S = {
-  motos: CATALOGO.map((c,i) => {
-    const calc = calcMoto(c.precio);
-    return {
-      id:c.id, modelo:c.modelo, precio:c.precio,
-      estado: i===3?'recuperada':i===5?'inventario':'disponible',
-      gps: i%3===0, cliente: i===0?'María González':i===1?'Carlos Rodríguez':null,
-      vin:'VIN-'+String(c.id).padStart(4,'0'), km:0, notas:'', color:'',
-      ...calc
-    };
-  }),
-  clientes:[
-    {id:1,nombre:'María González',cedula:'V-12345678',tel:'0412-555-0101',email:'maria@email.com',ciudad:'Caracas',trabajo:'Comerciante',ingreso:850,estado:'activo',emergencia:'Luis González 0412-555-0200',notas:'Buena pagadora. Primera moto.'},
-    {id:2,nombre:'Carlos Rodríguez',cedula:'V-18765432',tel:'0424-555-0202',email:'carlos@email.com',ciudad:'Valencia',trabajo:'Empleado',ingreso:600,estado:'mora',emergencia:'Ana Pérez 0424-555-0300',notas:'Atraso de 2 meses.'},
-    {id:3,nombre:'Ana Martínez',cedula:'V-15432198',tel:'0416-555-0303',email:'ana@email.com',ciudad:'Maracaibo',trabajo:'Taxista',ingreso:750,estado:'activo',emergencia:'Pedro Martínez 0416-555-0400',notas:''},
-    {id:4,nombre:'Pedro Jiménez',cedula:'V-20123456',tel:'0426-555-0404',email:'pedro@email.com',ciudad:'Barquisimeto',trabajo:'Mototaxista',ingreso:500,estado:'mora',emergencia:'Rosa Jiménez 0426-555-0500',notas:'Moto recuperada.'},
-    {id:5,nombre:'Luisa Pérez',cedula:'V-16789012',tel:'0412-555-0505',email:'luisa@email.com',ciudad:'Caracas',trabajo:'Vendedora',ingreso:700,estado:'activo',emergencia:'',notas:''},
-    {id:6,nombre:'Roberto Silva',cedula:'V-14567890',tel:'0424-555-0606',email:'roberto@email.com',ciudad:'Maracay',trabajo:'Mecánico',ingreso:680,estado:'activo',emergencia:'',notas:''},
-  ],
-  creds:[
-    {id:'CRED-001',cli:'María González',motoId:1,modelo:'NEW HORSE 150',precio:1320,ini:528,fin:792,total:1504.80,cuota:150.48,cuotaQ:75.24,plazo:10,fecha:'2024-02-01',estado:'activo',pagado:5,mora:0},
-    {id:'CRED-002',cli:'Carlos Rodríguez',motoId:2,modelo:'EK XPRESS 150',precio:1090,ini:436,fin:654,total:1242.60,cuota:124.26,cuotaQ:62.13,plazo:10,fecha:'2024-04-01',estado:'mora',pagado:3,mora:62},
-    {id:'CRED-003',cli:'Ana Martínez',motoId:3,modelo:'EK XPRESS II 150',precio:1126,ini:450.40,fin:675.60,total:1283.64,cuota:128.36,cuotaQ:64.18,plazo:10,fecha:'2024-03-15',estado:'activo',pagado:6,mora:0},
-    {id:'CRED-004',cli:'Pedro Jiménez',motoId:4,modelo:'EK XPRESS 200S',precio:1360,ini:544,fin:816,total:1550.40,cuota:155.04,cuotaQ:77.52,plazo:10,fecha:'2024-01-10',estado:'recuperado',pagado:2,mora:90},
-    {id:'CRED-005',cli:'Luisa Pérez',motoId:6,modelo:'NEW OWEN II 150',precio:1255,ini:502,fin:753,total:1430.70,cuota:143.07,cuotaQ:71.54,plazo:10,fecha:'2024-05-01',estado:'activo',pagado:4,mora:0},
-  ],
-  pagos:[
-    {id:'PAG-001',cli:'María González',cred:'CRED-001',fecha:'2025-01-05',monto:150.48,metodo:'Transferencia',cobrador:'Ana C.',estado:'confirmado'},
-    {id:'PAG-002',cli:'Ana Martínez',cred:'CRED-003',fecha:'2025-01-08',monto:128.36,metodo:'Pago Móvil',cobrador:'Juan A.',estado:'confirmado'},
-    {id:'PAG-003',cli:'Luisa Pérez',cred:'CRED-005',fecha:'2025-01-10',monto:143.07,metodo:'Zelle',cobrador:'Ana C.',estado:'confirmado'},
-    {id:'PAG-004',cli:'Carlos Rodríguez',cred:'CRED-002',fecha:'2025-01-12',monto:100.00,metodo:'Efectivo',cobrador:'Pedro C.',estado:'pendiente'},
-  ],
-  egresos:[
-    {id:1,concepto:'Compra de motocicletas',monto:8400,fecha:'2025-01-02',categoria:'inventario'},
-    {id:2,concepto:'GPS instalados',monto:150,fecha:'2025-01-03',categoria:'equipos'},
-    {id:3,concepto:'Oficina y servicios',monto:200,fecha:'2025-01-04',categoria:'operativo'},
-    {id:4,concepto:'Salarios',monto:600,fecha:'2025-01-05',categoria:'nomina'},
-    {id:5,concepto:'Otros gastos',monto:200,fecha:'2025-01-08',categoria:'otros'},
-  ],
-  cuentas:[
-    {id:1,nombre:'Efectivo USD',tipo:'efectivo',moneda:'USD',saldo:0,banco:'',numero:'',descripcion:'Caja principal'},
-    {id:2,nombre:'Efectivo BS',tipo:'efectivo',moneda:'BS',saldo:0,banco:'',numero:'',descripcion:'Caja bolívares'},
-  ],
+  motos:      [],
+  clientes:   [],
+  creds:      [],
+  pagos:      [],
+  egresos:    [],
+  cuentas:    [],
   movimientos:[],
   page:'dash', mTab:'disponible', saveFn:null, clienteFiltro:'',
   currentUser: null
@@ -3678,7 +3637,87 @@ function imprimirFiniquito(){
 // GENERACIÓN DE REPORTES (imprime como PDF)
 // ══════════════════════════════════════════
 
-// ══════════════════════════════════════════════════════════════
+function _abrirVentanaImpresion(titulo, htmlContenido){
+  var estilos = `
+    body{font-family:Georgia,serif;padding:32px;color:#111;font-size:12px;line-height:1.7}
+    h2{text-align:center;font-size:16px;letter-spacing:1px;margin-bottom:4px}
+    h3{font-size:13px;margin-top:18px;margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:4px}
+    table{width:100%;border-collapse:collapse;font-size:11.5px}
+    td,th{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:top}
+    th{background:#f5f5f5;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px}
+    .ar{display:grid;padding:5px 0;border-bottom:1px solid #eee;font-size:11px}
+    .ah{display:grid;padding:5px 0;border-bottom:2px solid #111;font-weight:800;font-size:10.5px;text-transform:uppercase}
+    .pd{opacity:0.45;text-decoration:line-through}
+    @media print{body{padding:12px}button{display:none!important}}
+  `;
+  var w = window.open('','_blank','width=860,height=700');
+  w.document.write('<html><head><title>'+titulo+'</title><style>'+estilos+'</style></head><body>'+htmlContenido+'<br><button onclick="window.print()" style="background:#6C5CE7;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px">🖨️ Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},400);<\/script></body></html>');
+  w.document.close();
+}
+
+function descargarAmortPDF(){
+  // Reutiliza el contenido ya renderizado en el modal de amortización
+  var mbd = $('mbd');
+  if(!mbd){ toast('Abre primero la tabla de amortización','error'); return; }
+  var credId = ($('mtt')&&$('mtt').textContent)||'Crédito';
+  _abrirVentanaImpresion('Amortización — '+credId, '<h2>Tabla de Amortización</h2>'+mbd.innerHTML);
+}
+
+function descargarContratoPDF(){
+  // Renderiza el contrato del crédito seleccionado en el módulo contratos
+  renderContrato();
+  setTimeout(function(){
+    var cz = $('cz');
+    if(!cz){ toast('Selecciona un crédito primero','error'); return; }
+    var credId = ($('sel-cred')&&$('sel-cred').value)||'contrato';
+    _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML);
+  }, 200);
+}
+
+function descargarContratoPDFById(credId){
+  var c = S.creds.find(function(x){return x.id===credId;});
+  if(!c){ toast('Crédito no encontrado','error'); return; }
+  var cl = S.clientes.find(function(x){return x.nombre===c.cli;})||{cedula:'—',tel:'—',ciudad:'Venezuela'};
+  var hoy = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
+  var cuotasRestantes = (c.totalCuotas||c.plazo*2) - (c.pagado||0);
+  var html = `
+    <div style="text-align:center;margin-bottom:4px;font-size:10px;color:#777;font-weight:600;letter-spacing:0.5px">PAGASI — VENTA DE MOTOCICLETAS EN CUOTAS</div>
+    <h2>CONTRATO DE COMPRAVENTA EN CUOTAS</h2>
+    <div style="text-align:center;font-size:11px;color:#888;margin-bottom:20px">N° ${c.id} · ${hoy}</div>
+    <h3>PRIMERA: DE LAS PARTES</h3>
+    <p><strong>EL VENDEDOR:</strong> PAGASI VENTA DE MOTOS EN CUOTAS, C.A.</p>
+    <p><strong>EL COMPRADOR:</strong> ${c.cli}, C.I. N° ${cl.cedula}, domiciliado en ${cl.ciudad||'Venezuela'}, teléfono ${cl.tel||'—'}.</p>
+    <h3>SEGUNDA: OBJETO DEL CONTRATO</h3>
+    <table><tr><th>Descripción</th><th>Detalle</th></tr>
+      <tr><td>Modelo</td><td><strong>${c.modelo}</strong></td></tr>
+      <tr><td>VIN / Serial</td><td>${c.vin||'—'}</td></tr>
+      <tr><td>Color</td><td>${c.color||'—'}</td></tr>
+      <tr><td>Año</td><td>${c.anio||'—'}</td></tr>
+      ${c.placa&&c.placa!=='—'?`<tr><td>Placa</td><td>${c.placa}</td></tr>`:''}
+    </table>
+    <h3>TERCERA: PLAN DE CUOTAS</h3>
+    <table>
+      <tr><td>Precio de venta</td><td><strong>${fmt(c.precio)}</strong></td></tr>
+      <tr><td>Inicial (40%)</td><td>${fmt(c.ini)}</td></tr>
+      <tr><td>Monto financiado</td><td>${fmt(c.fin)}</td></tr>
+      <tr><td>Total a pagar</td><td><strong>${fmt(c.total)}</strong></td></tr>
+      <tr><td>Cuota quincenal</td><td><strong>${fmt(c.cuotaQ||c.cuota)}</strong></td></tr>
+      <tr><td>Total de cuotas</td><td>${c.totalCuotas||c.plazo*2} quincenales</td></tr>
+      <tr><td>Cuotas pagadas</td><td>${c.pagado||0} de ${c.totalCuotas||c.plazo*2}</td></tr>
+      <tr><td>Cuotas pendientes</td><td>${cuotasRestantes}</td></tr>
+      <tr><td>Fecha de inicio</td><td>${c.fecha}</td></tr>
+    </table>
+    <h3>CUARTA: RESERVA DE DOMINIO</h3>
+    <p>EL VENDEDOR se reserva el dominio y la propiedad de la motocicleta hasta tanto EL COMPRADOR cancele la totalidad del precio pactado. El incumplimiento de tres (3) cuotas consecutivas o cinco (5) cuotas alternadas faculta a EL VENDEDOR a recuperar la unidad de forma inmediata.</p>
+    <h3>QUINTA: MORA E INCUMPLIMIENTO</h3>
+    <p>Transcurridos cinco (5) días calendario desde la fecha de vencimiento, EL COMPRADOR incurrirá en mora con un recargo del cinco por ciento (5%) mensual sobre el saldo vencido.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:60px;padding-top:20px;border-top:1px solid #ccc">
+      <div style="text-align:center"><div style="border-top:1px solid #111;margin-top:60px;padding-top:8px;font-size:11px">Representante Pagasi</div></div>
+      <div style="text-align:center"><div style="border-top:1px solid #111;margin-top:60px;padding-top:8px;font-size:11px">${c.cli} — C.I. ${cl.cedula}</div></div>
+    </div>
+    <div style="text-align:center;margin-top:18px;font-size:10px;color:#888">Documento generado el ${hoy} · ${c.id}</div>`;
+  _abrirVentanaImpresion('Contrato '+credId, html);
+}
 // EXPORTAR CSV
 // ══════════════════════════════════════════════════════════════
 function exportarCSV(tipo){
