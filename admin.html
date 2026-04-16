@@ -839,7 +839,7 @@ const S = {
 const $=id=>document.getElementById(id);
 const fmt=n=>'$'+parseFloat(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a'}[s]||'b-x');
+const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
 const PGL={dash:'Dashboard',clientes:'Clientes',motos:'Motocicletas',creditos:'Financiamientos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Reportes',cuentas:'Cuentas',conta:'Contabilidad',plan:'Plan & Precios',config:'Configuración',users:'Usuarios'};
 
 // Variables globales de configuración
@@ -1091,7 +1091,7 @@ function renderClienteList(q=''){
     <tbody>${page.map(c=>`<tr>
       <td><div style="display:flex;align-items:center;gap:9px">
         <div style="width:31px;height:31px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${ini(c.nombre)}</div>
-        <div><div class="tdm">${c.nombre}</div><div class="tds">${c.trabajo}</div></div>
+        <div><div class="tdm">${c.nombre}${c.premium?` <span style="color:var(--amber);font-size:11px" title="Cliente Premium">⭐</span>`:''}</div><div class="tds">${c.trabajo}</div></div>
       </div></td>
       <td class="tds">${c.cedula}</td><td class="tds">${c.tel}</td><td class="tds">${c.ciudad}</td>
       <td class="tdm" style="font-family:var(--fd)">${fmt(c.ingreso)}/mes</td>
@@ -1109,16 +1109,27 @@ function verCliente(id){
   const c = S.clientes.find(x=>x.id===id);if(!c)return;
   const creditos = S.creds.filter(x=>x.cli===c.nombre);
   const pagos = S.pagos.filter(x=>x.cli===c.nombre&&!x.eliminado);
-  $('mic').textContent='👤';
-  $('mtt').textContent=c.nombre;
+  const creditosCompletados=creditos.filter(function(cr){return cr.estado==='completado';});
+  const creditosActivos=creditos.filter(function(cr){return cr.estado==='activo'||cr.estado==='mora';});
+  const totalPagadoReal=pagos.reduce(function(a,p){return a+p.monto;},0);
+  const tuvomora=creditos.some(function(cr){return cr.mora>0||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});});
+  const esPremium=c.premium===true;
+
+  $('mic').textContent=esPremium?'⭐':'👤';
+  $('mtt').textContent=c.nombre+(esPremium?' ⭐ Premium':'');
   $('msb').textContent=c.cedula+' · '+c.ciudad;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
+    ${esPremium?`<div style="background:linear-gradient(135deg,rgba(245,166,35,0.15),rgba(253,203,110,0.1));border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">⭐</span>
+      <div><div style="font-weight:800;font-size:13px;color:var(--amber)">Cliente Premium</div>
+      <div style="font-size:11px;color:var(--ink3)">Pagó su financiamiento sin mora — elegible para condiciones preferenciales en el próximo crédito</div></div>
+    </div>`:''}
     <div class="sg" style="margin-bottom:12px">
-      <div class="stat"><div class="st-v" style="font-size:16px">${creditos.length}</div><div class="st-l">Créditos</div></div>
-      <div class="stat"><div class="st-v" style="font-size:16px;color:var(--green)">${fmt(pagos.reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Total pagado</div></div>
-      <div class="stat"><div class="st-v" style="font-size:16px">${pagos.length}</div><div class="st-l">Pagos realizados</div></div>
-      <div class="stat"><div class="st-v" style="font-size:16px;color:var(--red)">${creditos.filter(cr=>cr.mora>0).length}</div><div class="st-l">En mora</div></div>
+      <div class="stat"><div class="st-v" style="font-size:16px">${creditos.length}</div><div class="st-l">Créditos totales</div></div>
+      <div class="stat"><div class="st-v" style="font-size:16px;color:var(--green)">${fmt(totalPagadoReal)}</div><div class="st-l">Total pagado</div></div>
+      <div class="stat"><div class="st-v" style="font-size:16px;color:var(--p1)">${creditosCompletados.length}</div><div class="st-l">Completados</div></div>
+      <div class="stat"><div class="st-v" style="font-size:16px;color:${tuvomora?'var(--red)':'var(--green)'}">${tuvomora?'⚠️ Sí':'✓ No'}</div><div class="st-l">Tuvo mora</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="detail-item"><div class="detail-lbl">Teléfono</div><div class="detail-val">${c.tel}</div></div>
@@ -1130,23 +1141,40 @@ function verCliente(id){
     </div>
     ${c.emergencia?`<div class="detail-item" style="margin-bottom:12px"><div class="detail-lbl">Contacto de emergencia</div><div class="detail-val" style="font-size:12.5px;margin-top:4px">${c.emergencia}</div></div>`:''}
     ${c.notas?`<div class="detail-item" style="margin-bottom:14px"><div class="detail-lbl">Notas</div><div style="font-size:12.5px;color:var(--ink2);margin-top:4px">${c.notas}</div></div>`:''}
-    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:9px">Financiamientos (${creditos.length})</div>
-    ${creditos.length?`<div class="lst" style="max-height:none">${creditos.map(cr=>`
-      <div class="li" onclick="openAmort('${cr.id}')">
-        <div class="li-ic" style="background:var(--gs)">📋</div>
-        <div style="flex:1">
-          <div style="font-weight:700;color:var(--ink);font-size:12.5px">${cr.id} · ${cr.modelo}</div>
-          <div style="font-size:10.5px;color:var(--ink3)">${cr.pagado}/${cr.plazo} cuotas pagadas · inicio ${cr.fecha}</div>
+
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:9px">Historial de Financiamientos (${creditos.length})</div>
+    ${creditos.length?`<div class="lst" style="max-height:none">${creditos.map(function(cr){
+      var totalCr=cr.totalCuotas||cr.plazo*2;
+      var cuotaV=parseFloat(cr.cuotaQ||cr.cuota||0);
+      var abonado=Array.isArray(cr.pagosRegistrados)?cr.pagosRegistrados.reduce(function(a,h){return a+h.montoPagado;},0):(cr.pagado||0)*cuotaV;
+      var saldo=Math.max(0,parseFloat((cuotaV*totalCr-abonado).toFixed(2)));
+      var pct=cuotaV*totalCr>0?Math.round(abonado/(cuotaV*totalCr)*100):0;
+      var tuvoMoraCr=S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});
+      return `<div class="li" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer" onclick="openAmort('${cr.id}')">
+        <div style="display:flex;width:100%;align-items:center;gap:8px">
+          <div class="li-ic" style="background:var(--gs)">${cr.estado==='completado'?'✅':'📋'}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;color:var(--ink);font-size:12.5px">${cr.id} · ${cr.modelo}</div>
+            <div style="font-size:10.5px;color:var(--ink3)">Inicio: ${cr.fecha}${cr.fechaCompletado?' · Completado: '+cr.fechaCompletado:''}</div>
+          </div>
+          <div style="text-align:right">
+            <span class="bdg ${sbg(cr.estado)}">${cr.estado}</span>
+            ${tuvoMoraCr?'<span class="bdg b-r" style="margin-left:3px;font-size:9px">mora</span>':''}
+          </div>
         </div>
-        <div style="text-align:right">
-          <div style="font-weight:800;font-family:var(--fd);background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmt(cr.cuotaQ||cr.cuota)}/15d</div>
-          <span class="bdg ${sbg(cr.estado)}">${cr.estado}</span>
+        <div style="width:100%;padding-left:44px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span style="color:var(--ink3)">${cr.pagado}/${totalCr} cuotas · Abonado: <strong style="color:var(--green)">${fmt(abonado)}</strong></span>
+            <span style="color:${saldo>0?'var(--p1)':'var(--green)'};font-weight:800">${saldo>0?'Saldo: '+fmt(saldo):'✓ Saldado'}</span>
+          </div>
+          <div class="prog"><div class="pf ${cr.mora>0?'p-r':'p-p'}" style="width:${pct}%"></div></div>
         </div>
-        ${cr.mora>0?`<div style="font-size:10px;color:var(--red);font-weight:700;margin-left:8px">${cr.mora}d mora</div>`:''}
-      </div>`).join('')}</div>`:`<div style="color:var(--ink3);font-size:12.5px;padding:10px 0">Sin financiamientos registrados</div>`}
+      </div>`;
+    }).join('')}</div>`:`<div style="color:var(--ink3);font-size:12.5px;padding:10px 0">Sin financiamientos registrados</div>`}
+
     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin:14px 0 9px">Últimos pagos (${pagos.length})</div>
-    ${pagos.length?`<div class="lst">${pagos.map(p=>`<div class="li"><div class="li-ic" style="background:var(--greens);font-size:9px;font-weight:900;color:var(--green)">PAG</div><div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">${p.fecha} · ${p.metodo}</div><div class="tds">${p.cred}</div></div><div style="font-weight:800;color:var(--green);font-family:var(--fd)">${fmt(p.monto)}</div></div>`).join('')}</div>`:`<div style="color:var(--ink3);font-size:12.5px;padding:10px 0">Sin pagos registrados</div>`}`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente(${id})">✏️ Editar</button>`;
+    ${pagos.length?`<div class="lst">${pagos.slice(0,20).map(p=>`<div class="li"><div class="li-ic" style="background:var(--greens);font-size:9px;font-weight:900;color:var(--green)">PAG</div><div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">${p.fecha} · ${p.metodo}</div><div class="tds">${p.cred}</div></div><div style="font-weight:800;color:var(--green);font-family:var(--fd)">${fmt(p.monto)}</div></div>`).join('')}</div>`:`<div style="color:var(--ink3);font-size:12.5px;padding:10px 0">Sin pagos registrados</div>`}`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente(${id})">✏️ Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">📄 Ver Finiquito</button>`:''}`;
   $('ov').style.display='flex';
 }
 
@@ -2052,7 +2080,7 @@ function openAddMoto(id=null){
     <div class="fgr">
       <div class="fg"><label>VIN</label><input class="fi" id="m_vin" value="${(m&&m.vin)||''}" placeholder="VIN-0000"></div>
       <div class="fg"><label>Color</label><input class="fi" id="m_color" value="${(m&&m.color)||''}" placeholder="Negro, Rojo..."></div>
-      <div class="fg"><label>Estado</label><select class="fs" id="m_est">${['disponible','financiada','recuperada','inventario'].map(s=>`<option ${(m&&m.estado)===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="fg"><label>Estado</label><select class="fs" id="m_est">${['disponible','financiada','recuperada','inventario','propia'].map(s=>`<option ${(m&&m.estado)===s?'selected':''}>${s}</option>`).join('')}</select></div>
       <div class="fg"><label>Cliente asignado</label><input class="fi" id="m_cli" value="${(m&&m.cliente)||''}" placeholder="Opcional"></div>
     </div>
     <div class="tgl-w" style="margin-top:8px">
@@ -2282,6 +2310,21 @@ function openAddCred(motoId=null){
       <div class="fg"><label>GPS incluido</label><select class="fs" id="k_gps"><option value="si">Sí — GPS instalado</option><option value="no">No</option></select></div>
       <div class="fg"><label>Cobrador asignado</label><select class="fs" id="k_cobrador">${(_cobradores||[]).map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>
+
+    <div class="fsec" style="margin-top:14px">Pago Inicial</div>
+    <div style="background:rgba(124,92,246,0.07);border:1px solid rgba(124,92,246,0.2);border-radius:10px;padding:12px;margin-bottom:4px">
+      <div class="fgr">
+        <div class="fg"><label>Método de pago inicial *</label>
+          <select class="fs" id="k_ini_metodo">
+            ${(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}
+            ${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="Efectivo USD">Efectivo USD</option>':''}
+          </select>
+        </div>
+        <div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="k_ini_ref" placeholder="N° de referencia (opcional)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:6px">💡 El monto de la inicial se calculará automáticamente (40% del precio) y se acreditará a la cuenta seleccionada.</div>
+    </div>
+
     <div class="fgr c1" style="margin-top:8px">
       <div class="fg"><label>Notas del crédito</label><textarea class="fta" id="k_notas" placeholder="Observaciones, condiciones especiales..."></textarea></div>
     </div>`;
@@ -2325,7 +2368,27 @@ function openAddCred(motoId=null){
     DB.saveCred(newCred);
     const mi=S.motos.findIndex(x=>x.id===mId);
     if(mi>=0){S.motos[mi].estado='financiada';S.motos[mi].cliente=newCred.cli;S.motos[mi].vin=vin;DB.saveMoto(S.motos[mi]);}
-    closeM();nav('creditos');toast('Financiamiento creado · '+newCred.id,'success');return true;
+
+    // ── Registrar pago de la inicial como movimiento en cuentas ──
+    var iniMetodo=($('k_ini_metodo')&&$('k_ini_metodo').value)||(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD');
+    var iniRef=($('k_ini_ref')&&$('k_ini_ref').value)||'';
+    var movIni={
+      id:'MOV-'+Date.now(),
+      tipo:'deposito',
+      concepto:'Inicial · '+newCred.cli+' · '+newCred.id+' ('+newCred.modelo+')',
+      monto:r.ini,
+      cuentaOrigen:null,
+      cuentaDestino:iniMetodo,
+      fecha:newCred.fecha,
+      referencia:iniRef,
+      realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
+      tasaBs:window._tasaBsGlobal||1,
+      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
+    };
+    S.movimientos.push(movIni);
+    DB.saveMovimiento(movIni);
+
+    closeM();nav('creditos');toast('Financiamiento creado · '+newCred.id+' · Inicial '+fmt(r.ini)+' → '+iniMetodo,'success');return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear Financiamiento</button>`;
   $('ov').style.display='flex';
@@ -2587,7 +2650,37 @@ function openAddPago(){
       S.creds[ci].pagosRegistrados=historial;
       S.creds[ci].saldoProxCuota=saldoProxCuota;
       if(S.creds[ci].mora>0){S.creds[ci].mora=0;S.creds[ci].estado='activo';}
-      if(S.creds[ci].pagado>=totalCuotas) S.creds[ci].estado='completado';
+
+      var recienCompletado = !S.creds[ci].estado==='completado' && cuotasPagadas>=totalCuotas;
+      if(cuotasPagadas>=totalCuotas && S.creds[ci].estado!=='completado'){
+        recienCompletado = true;
+        S.creds[ci].estado='completado';
+        S.creds[ci].fechaCompletado=new Date().toISOString().split('T')[0];
+
+        // ── Punto 2: Cambiar estado de la moto a 'propia' ──
+        var mIdx=S.motos.findIndex(function(m){return m.id===S.creds[ci].motoId;});
+        if(mIdx>=0){
+          S.motos[mIdx].estado='propia';
+          S.motos[mIdx].propietario=S.creds[ci].cli;
+          DB.saveMoto(S.motos[mIdx]);
+        }
+
+        // ── Punto 5: Marcar cliente como premium si pagó sin mora ──
+        var cliIdx=S.clientes.findIndex(function(cl){return cl.nombre===S.creds[ci].cli;});
+        if(cliIdx>=0){
+          var tuvomora=S.pagos.some(function(p){return p.cred===credId&&p.mora>0;});
+          if(!tuvomora && !(S.creds[ci].mora>0)){
+            S.clientes[cliIdx].premium=true;
+            S.clientes[cliIdx].premioPor=credId;
+            DB.saveCliente(S.clientes[cliIdx]);
+          }
+          // Incrementar contador de créditos completados
+          S.clientes[cliIdx].creditosCompletados=(S.clientes[cliIdx].creditosCompletados||0)+1;
+          DB.saveCliente(S.clientes[cliIdx]);
+        }
+      } else if(cuotasPagadas<totalCuotas){
+        recienCompletado=false;
+      }
 
       // Luego persistir en Firestore
       DB.updateCred(credId,{
@@ -2603,6 +2696,11 @@ function openAddPago(){
       if(saldoProxCuota>0&&saldoProxCuota<cuotaVal) msg+=' · Próxima cuota: solo '+fmt(saldoProxCuota)+' pendiente';
       pgSet('pagos',1);
       toast(msg,'success');
+
+      // ── Punto 1: Mostrar finiquito si se acaba de completar ──
+      if(recienCompletado){
+        setTimeout(function(){ abrirFiniquito(credId); }, 600);
+      }
     } else {
       pgSet('pagos',1);
       toast('✅ Pago registrado · '+fmt(monto),'success');
@@ -3511,6 +3609,70 @@ function openAddPlan(){
   $('ov').style.display='flex';
 }
 
+
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// PUNTO 1 — FINIQUITO DE CONTRATO
+// ══════════════════════════════════════════
+function abrirFiniquito(credId){
+  var c=S.creds.find(function(x){return x.id===credId;}); if(!c) return;
+  var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
+  var totalPagado=Array.isArray(c.pagosRegistrados)
+    ? c.pagosRegistrados.reduce(function(a,h){return a+h.montoPagado;},0)
+    : (c.pagado||0)*(c.cuotaQ||c.cuota||0);
+  var fechaFin=c.fechaCompletado||new Date().toISOString().split('T')[0];
+
+  $('mic').textContent='🎉';
+  $('mtt').textContent='¡Contrato Finalizado!';
+  $('msb').textContent=c.cli+' completó su financiamiento';
+  $('modal-box').className='modal modal-lg';
+  $('mbd').innerHTML=`
+    <div style="text-align:center;padding:16px 0 20px">
+      <div style="font-size:52px;margin-bottom:8px">🎉</div>
+      <div style="font-size:18px;font-weight:900;color:var(--p1);margin-bottom:4px">${c.cli}</div>
+      <div style="font-size:13px;color:var(--ink3)">ha completado el financiamiento de su motocicleta</div>
+    </div>
+    <div id="finiquito-doc" style="background:#fff;border:2px solid var(--rim2);border-radius:12px;padding:28px;font-family:Georgia,serif;color:#111;margin-bottom:16px">
+      <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:14px;margin-bottom:18px">
+        <div style="font-size:20px;font-weight:900;letter-spacing:1px">CARTA DE LIBERACIÓN DE CONTRATO</div>
+        <div style="font-size:12px;margin-top:4px;color:#555">Finiquito de Obligación Financiera</div>
+      </div>
+      <div style="font-size:12.5px;line-height:1.9">
+        <p>Por medio de la presente, <strong>Pagasi</strong> hace constar que el ciudadano(a) <strong>${c.cli}</strong>, titular de la cédula de identidad <strong>${cl.cedula||'—'}</strong>, ha cumplido satisfactoriamente con la totalidad de las obligaciones de pago derivadas del contrato de financiamiento <strong>${c.id}</strong>, correspondiente a la adquisición de la motocicleta:</p>
+        <div style="background:#f8f8f8;border-left:4px solid #6C5CE7;padding:10px 16px;margin:14px 0;border-radius:4px">
+          <div><strong>Modelo:</strong> ${c.modelo}</div>
+          <div><strong>VIN / Serial:</strong> ${c.vin||'—'}</div>
+          <div><strong>Color:</strong> ${c.color||'—'}</div>
+          <div><strong>Año:</strong> ${c.anio||'—'}</div>
+          ${c.placa&&c.placa!=='—'?`<div><strong>Placa:</strong> ${c.placa}</div>`:''}
+        </div>
+        <p>El monto total financiado fue de <strong>${fmt(c.total)}</strong>, con una inicial de <strong>${fmt(c.ini)}</strong>, abonado en <strong>${c.totalCuotas||c.plazo*2} cuotas quincenales</strong>. El total cancelado asciende a <strong>${fmt(c.ini+totalPagado)}</strong>.</p>
+        <p>La fecha de inicio del contrato fue el <strong>${c.fecha}</strong> y la fecha de cancelación total es el <strong>${fechaFin}</strong>.</p>
+        <p>En virtud de lo anterior, se declara que el beneficiario queda <strong>libre de toda obligación</strong> con respecto al presente contrato, siendo pleno propietario de la unidad descrita.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px;padding-top:20px;border-top:1px solid #ccc">
+        <div style="text-align:center">
+          <div style="border-top:1px solid #111;margin-top:50px;padding-top:8px;font-size:11px">Representante Pagasi</div>
+        </div>
+        <div style="text-align:center">
+          <div style="border-top:1px solid #111;margin-top:50px;padding-top:8px;font-size:11px">${c.cli} — C.I. ${cl.cedula||'—'}</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:18px;font-size:10px;color:#888">Documento generado el ${new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'})} · ${c.id}</div>
+    </div>`;
+  $('mft').innerHTML=`
+    <button class="btn btn-g" onclick="closeM()">Cerrar</button>
+    <button class="btn btn-p" onclick="imprimirFiniquito()">🖨️ Imprimir / Guardar PDF</button>`;
+  $('ov').style.display='flex';
+}
+
+function imprimirFiniquito(){
+  var doc=$('finiquito-doc');
+  if(!doc){window.print();return;}
+  var w=window.open('','_blank','width=800,height=600');
+  w.document.write('<html><head><title>Finiquito</title><style>body{font-family:Georgia,serif;padding:40px;color:#111}@media print{body{padding:20px}}</style></head><body>'+doc.outerHTML+'<script>window.onload=function(){window.print();}<\/script></body></html>');
+  w.document.close();
+}
 
 // ══════════════════════════════════════════
 // GENERACIÓN DE REPORTES (imprime como PDF)
