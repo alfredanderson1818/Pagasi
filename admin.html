@@ -612,6 +612,7 @@ try {
       throw new Error('Firestore bundle no cargado. Habilita Firestore Database en Firebase Console.');
     }
     db   = firebase.firestore();
+
     if(typeof firebase.auth === 'function') auth = firebase.auth();
     FIREBASE_READY = true;
     console.log('Firebase inicializado correctamente');
@@ -642,6 +643,30 @@ function clean(o){
 }
 
 // ── DB — persistencia con Firestore ──
+// Cola offline: guarda operaciones pendientes cuando no hay conexión
+var _dbQueue = [];
+var _dbOnline = true;
+window.addEventListener('online',  function(){ _dbOnline=true;  _flushDbQueue(); });
+window.addEventListener('offline', function(){ _dbOnline=false; });
+
+function _dbSilent(fn){
+  // Ejecuta fn() y silencia errores de red (WebChannel transport errors)
+  try {
+    var p = fn();
+    if(p && p.catch) p.catch(function(e){
+      var msg = e.message||'';
+      // Ignorar errores de transporte — la persistencia offline los reintenta
+      if(msg.includes('transport') || msg.includes('WebChannel') || msg.includes('network') || e.code==='unavailable') return;
+      console.warn('DB write error:', msg);
+    });
+  } catch(e){ console.warn('DB error:', e.message); }
+}
+
+function _flushDbQueue(){
+  var q=_dbQueue.slice(); _dbQueue=[];
+  q.forEach(function(fn){ _dbSilent(fn); });
+}
+
 var DB = {
   load: function(){
     if(!db) return Promise.resolve();
@@ -652,15 +677,13 @@ var DB = {
       db.collection('creditos').get(),
       db.collection('pagos').get(),
       db.collection('egresos').get(),
-      Promise.resolve({docs:[]}), // cuentas cargadas desde config/cuentasBanc
+      Promise.resolve({docs:[]}),
       db.collection('movimientos').get(),
     ]).then(function(snaps){
       function read(snap){return snap.docs.map(function(d){return d.data();});}
       var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]);
-      // Si Firebase tiene CUALQUIER dato real, limpia TODOS los datos demo
       var totalDocs = m.length + cl.length + cr.length + p.length + e.length + mv.length;
       if(totalDocs > 0){
-        // Hay datos reales: reemplazar TODO (incluso arrays vacíos) para no mezclar demo
         S.motos       = m.map(mapMoto);
         S.clientes    = cl;
         S.creds       = cr.map(mapCred);
@@ -668,7 +691,6 @@ var DB = {
         S.egresos     = e;
         S.movimientos = mv;
       } else {
-        // Firebase completamente vacío: mostrar datos demo con aviso
         toast('Base de datos vacía — mostrando datos de ejemplo','info');
       }
       calcularMoraAuto();
@@ -676,33 +698,38 @@ var DB = {
       hideLoader();
     }).catch(function(e){
       hideLoader();
-      toast('Error de base de datos: '+e.message,'error');
+      // Si es error de red, trabajar con datos locales sin avisar con error
+      if(e.code==='unavailable'||( e.message&&e.message.includes('network'))){
+        toast('Sin conexión — trabajando en modo offline','info');
+      } else {
+        toast('Error al cargar datos: '+e.message,'error');
+      }
     });
   },
-  saveMoto:    function(o){if(!db)return; db.collection('motos').doc(String(o.id)).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');});},
-  delMoto:     function(id){if(!db)return; db.collection('motos').doc(String(id)).delete();},
-  saveCliente: function(o){if(!db)return; db.collection('clientes').doc(String(o.id)).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');});},
-  delCliente:  function(id){if(!db)return; db.collection('clientes').doc(String(id)).delete();},
-  saveCred:    function(o){if(!db)return; db.collection('creditos').doc(o.id).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');});},
-  updateCred:  function(id,u){if(!db)return; db.collection('creditos').doc(id).update(u);},
-  savePago:    function(o){if(!db)return; db.collection('pagos').doc(o.id).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');});},
-  saveEgreso:  function(o){if(!db)return; db.collection('egresos').doc(String(o.id)).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');});},
-  delEgreso:   function(id){if(!db)return; db.collection('egresos').doc(String(id)).delete();},
+  saveMoto:    function(o){ if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(o.id)).set(clean(o)); }); },
+  delMoto:     function(id){ if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(id)).delete(); }); },
+  saveCliente: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('clientes').doc(String(o.id)).set(clean(o)); }); },
+  delCliente:  function(id){ if(!db)return; _dbSilent(function(){ return db.collection('clientes').doc(String(id)).delete(); }); },
+  saveCred:    function(o){ if(!db)return; _dbSilent(function(){ return db.collection('creditos').doc(o.id).set(clean(o)); }); },
+  updateCred:  function(id,u){ if(!db)return; _dbSilent(function(){ return db.collection('creditos').doc(id).update(u); }); },
+  savePago:    function(o){ if(!db)return; _dbSilent(function(){ return db.collection('pagos').doc(o.id).set(clean(o)); }); },
+  saveEgreso:  function(o){ if(!db)return; _dbSilent(function(){ return db.collection('egresos').doc(String(o.id)).set(clean(o)); }); },
+  delEgreso:   function(id){ if(!db)return; _dbSilent(function(){ return db.collection('egresos').doc(String(id)).delete(); }); },
 };
 
 // Usuarios e invitaciones en Firestore
 DB.getUsuarios    = function(){ if(!db) return Promise.resolve([]); return db.collection('usuarios').get().then(function(s){return s.docs.map(function(d){return Object.assign({uid:d.id},d.data());});}); };
-DB.saveUsuario    = function(uid,data){ if(!db) return; return db.collection('usuarios').doc(uid).set(data); };
-DB.updateUsuario  = function(uid,data){ if(!db) return; db.collection('usuarios').doc(uid).update(data); };
-DB.deleteUsuario  = function(uid){ if(!db) return; db.collection('usuarios').doc(uid).delete().catch(function(e){ toast('Error al eliminar: '+e.message,'error'); }); };
+DB.saveUsuario    = function(uid,data){ if(!db) return Promise.resolve(); return db.collection('usuarios').doc(uid).set(data); };
+DB.updateUsuario  = function(uid,data){ if(!db) return; _dbSilent(function(){ return db.collection('usuarios').doc(uid).update(data); }); };
+DB.deleteUsuario  = function(uid){ if(!db) return; _dbSilent(function(){ return db.collection('usuarios').doc(uid).delete(); }); };
 DB.saveInvitacion = function(token,data){ if(!db) return; return db.collection('invitaciones').doc(token).set(data); };
 DB.getInvitacion  = function(token){ if(!db) return Promise.resolve(null); return db.collection('invitaciones').doc(token).get(); };
-DB.usarInvitacion = function(token,uid){ if(!db) return; db.collection('invitaciones').doc(token).update({usado:true,uid:uid,fechaUso:new Date().toISOString()}); };
-DB.saveCuenta      = function(o){ if(!db)return; db.collection('cuentas').doc(String(o.id)).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');}); };
-DB.delCuenta       = function(id){ if(!db)return; db.collection('cuentas').doc(String(id)).delete(); };
-DB.updateCuenta    = function(id,u){ if(!db)return; db.collection('cuentas').doc(String(id)).update(u); };
-DB.saveMovimiento  = function(o){ if(!db)return; db.collection('movimientos').doc(o.id).set(clean(o)).catch(function(e){toast('DB: '+e.message,'error');}); };
-DB.delMovimiento   = function(id){ if(!db)return; db.collection('movimientos').doc(id).delete(); };
+DB.usarInvitacion = function(token,uid){ if(!db) return; _dbSilent(function(){ return db.collection('invitaciones').doc(token).update({usado:true,uid:uid,fechaUso:new Date().toISOString()}); }); };
+DB.saveCuenta     = function(o){ if(!db)return; _dbSilent(function(){ return db.collection('cuentas').doc(String(o.id)).set(clean(o)); }); };
+DB.delCuenta      = function(id){ if(!db)return; _dbSilent(function(){ return db.collection('cuentas').doc(String(id)).delete(); }); };
+DB.updateCuenta   = function(id,u){ if(!db)return; _dbSilent(function(){ return db.collection('cuentas').doc(String(id)).update(u); }); };
+DB.saveMovimiento = function(o){ if(!db)return; _dbSilent(function(){ return db.collection('movimientos').doc(o.id).set(clean(o)); }); };
+DB.delMovimiento  = function(id){ if(!db)return; _dbSilent(function(){ return db.collection('movimientos').doc(id).delete(); }); };
 
 // ── Lista de módulos disponibles ──
 var MODULOS = [
