@@ -4267,13 +4267,7 @@ function importarBackup(){
         }
         var total = (data.clientes||[]).length + (data.creditos||[]).length +
                     (data.pagos||[]).length + (data.movimientos||[]).length;
-        if(!confirm('¿Restaurar backup del '+data.fecha.split('T')[0]+'?
-
-'+
-          'Esto NO borrará datos actuales — solo agregará registros faltantes.
-
-'+
-          'Registros en el backup: '+total)){return;}
+        if(!confirm('¿Restaurar backup del '+data.fecha.split('T')[0]+'? Registros: '+total+'\n\nEsto NO borrará datos actuales, solo agregará registros faltantes.')){return;}
         showLoader('Restaurando backup...','Subiendo datos a Firebase');
         var ops = [];
         (data.clientes||[]).forEach(function(o){if(o&&o.id) ops.push(db.collection('clientes').doc(String(o.id)).set(o));});
