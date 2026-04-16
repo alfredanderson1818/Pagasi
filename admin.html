@@ -593,6 +593,9 @@ var db   = null;
 var auth = null;
 var FIREBASE_READY = false;
 
+// Credenciales locales (modo sin Firebase)
+var USERS_LOCAL = [{ user: 'admin', pass: 'admin', nombre: 'Juan Admin', rol: 'Administrador' }];
+
 try {
   if(typeof firebase === 'undefined'){
     console.warn('SDK de Firebase no cargado — modo local activo');
@@ -2875,44 +2878,7 @@ function toast(msg,type='info'){
 
 // GUARDAR CONFIGURACIÓN
 
-function guardarCredencialesLocales(){
-  var user   = ($('cfg_local_user')&&$('cfg_local_user').value.trim())||'';
-  var pass   = ($('cfg_local_pass')&&$('cfg_local_pass').value)||'';
-  var nombre = ($('cfg_local_nombre')&&$('cfg_local_nombre').value.trim())||'Admin';
-  if(!user){ toast('El usuario no puede estar vacío','error'); return; }
-  if(pass && pass.length < 6){ toast('La contraseña debe tener al menos 6 caracteres','error'); return; }
-  // Update in memory
-  if(!USERS_LOCAL.length) USERS_LOCAL.push({});
-  USERS_LOCAL[0].user   = user;
-  USERS_LOCAL[0].nombre = nombre;
-  if(pass) USERS_LOCAL[0].pass = pass;
-  // Persist in localStorage for next session
-  try {
-    localStorage.setItem('pagasi_local_creds', JSON.stringify({
-      user: user,
-      pass: pass ? pass : USERS_LOCAL[0].pass,
-      nombre: nombre,
-      rol: 'Administrador'
-    }));
-    toast('✅ Credenciales locales actualizadas', 'success');
-    if($('cfg_local_pass')) $('cfg_local_pass').value = '';
-  } catch(e) {
-    toast('Error al guardar: '+e.message, 'error');
-  }
-}
-
-// Load local creds from localStorage on startup
-(function(){
-  try {
-    var saved = localStorage.getItem('pagasi_local_creds');
-    if(saved){
-      var creds = JSON.parse(saved);
-      if(creds.user && creds.pass){
-        USERS_LOCAL[0] = creds;
-      }
-    }
-  } catch(e) {}
-})();
+// (guardarCredencialesLocales defined below)
 
 
 function guardarCredencialesLocales(){
@@ -3675,3 +3641,181 @@ function enviarNotificaciones(){
 }
 
 
+
+// ── INIT — arranca la app después del login ─────────────────
+function init() {
+  // Mostrar el contenedor principal
+  var appRoot = $('app-root');
+  if (appRoot) appRoot.style.display = 'flex';
+
+  // Cargar datos desde Firebase o usar datos locales de demostración
+  DB.load().then(function() {
+    nav('dash');
+    updateBadge();
+    // Responsive: detectar si es móvil y mostrar topbar correspondiente
+    var isMob = window.innerWidth <= 820;
+    var mobBar = $('mobile-topbar');
+    var deskBar = $('desktop-topbar');
+    if (mobBar) mobBar.style.display = isMob ? 'flex' : 'none';
+    if (deskBar) deskBar.style.display = isMob ? 'none' : 'flex';
+  }).catch(function(e) {
+    console.warn('Error cargando datos:', e);
+    nav('dash');
+    updateBadge();
+  });
+}
+
+// ── AUTENTICACIÓN ──────────────────────────────────────────
+function doLogin() {
+  var email = ($('l_user') || {}).value || '';
+  var pass  = ($('l_pass') || {}).value || '';
+  var errEl = $('login-err');
+  if (errEl) errEl.style.display = 'none';
+
+  // Modo local (sin Firebase)
+  if (!auth) {
+    // Intentar con USERS_LOCAL primero, luego fallback a admin/admin
+    var localUser = (typeof USERS_LOCAL !== 'undefined' && USERS_LOCAL.length)
+      ? USERS_LOCAL[0]
+      : { user: 'admin', pass: 'admin', nombre: 'Administrador', rol: 'Administrador' };
+
+    if (email === localUser.user && pass === localUser.pass) {
+      $('login-screen').style.display = 'none';
+      S.currentUser = { nombre: localUser.nombre || 'Administrador', rol: localUser.rol || 'Administrador', email: email, permisos: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users'] };
+      // Update sidebar display name
+      var sbUn = document.querySelector('.sb-un');
+      if (sbUn) sbUn.textContent = S.currentUser.nombre;
+      var sbAv = document.querySelector('.sb-av');
+      if (sbAv) sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+      init();
+    } else {
+      if (errEl) { errEl.textContent = '⛔ Usuario o contraseña incorrectos'; errEl.style.display = 'block'; }
+    }
+    return;
+  }
+
+  // Modo Firebase
+  showLoader('Iniciando sesión...', '');
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(function() { hideLoader(); })
+    .catch(function(e) {
+      hideLoader();
+      if (errEl) { errEl.textContent = '⛔ Credenciales incorrectas'; errEl.style.display = 'block'; }
+      console.warn('Login error:', e.message);
+    });
+}
+
+function doLogout() {
+  if (auth) {
+    auth.signOut();
+  } else {
+    location.reload();
+  }
+}
+
+function aceptarInvitacion() {
+  var nombre = ($('inv_nombre') || {}).value || '';
+  var pass   = ($('inv_pass')   || {}).value || '';
+  var pass2  = ($('inv_pass2')  || {}).value || '';
+  var errEl  = $('invite-err');
+  if (errEl) errEl.style.display = 'none';
+
+  if (!nombre.trim()) {
+    if (errEl) { errEl.textContent = '⛔ Ingresa tu nombre'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (pass.length < 6) {
+    if (errEl) { errEl.textContent = '⛔ La contraseña debe tener al menos 6 caracteres'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (pass !== pass2) {
+    if (errEl) { errEl.textContent = '⛔ Las contraseñas no coinciden'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  var btn = $('inv-btn');
+  if (btn) btn.disabled = true;
+  showLoader('Creando cuenta...', '');
+
+  auth.currentUser.updatePassword(pass)
+    .then(function() {
+      return db.collection('usuarios').doc(auth.currentUser.uid).set({
+        nombre: nombre,
+        email: auth.currentUser.email,
+        rol: 'admin'
+      }, { merge: true });
+    })
+    .then(function() {
+      hideLoader();
+      $('invite-screen').style.display = 'none';
+      init();
+    })
+    .catch(function(e) {
+      hideLoader();
+      if (btn) btn.disabled = false;
+      if (errEl) { errEl.textContent = '⛔ ' + e.message; errEl.style.display = 'block'; }
+    });
+}
+
+// ── Arranque con Firebase Auth ──────────────────────────────
+if (auth) {
+  auth.onAuthStateChanged(function(user) {
+    if (user) {
+      $('login-screen').style.display = 'none';
+      var invSc = $('invite-screen');
+      if (invSc) invSc.style.display = 'none';
+      // Cargar datos del usuario desde Firestore
+      if (db) {
+        db.collection('usuarios').doc(user.uid).get().then(function(doc) {
+          var data = doc.exists ? doc.data() : {};
+          S.currentUser = {
+            uid: user.uid,
+            email: user.email,
+            nombre: data.nombre || user.displayName || user.email,
+            rol: data.rol || 'Administrador',
+            permisos: data.permisos || ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users']
+          };
+          var sbUn = document.querySelector('.sb-un');
+          if (sbUn) sbUn.textContent = S.currentUser.nombre;
+          var sbAv = document.querySelector('.sb-av');
+          if (sbAv) sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+        }).catch(function(){
+          S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: [] };
+        }).finally(function(){
+          if (!window._appInited) { window._appInited = true; init(); }
+        });
+      } else {
+        S.currentUser = { uid: user.uid, email: user.email, nombre: user.displayName || user.email, rol: 'Administrador', permisos: [] };
+        if (!window._appInited) { window._appInited = true; init(); }
+      }
+    } else {
+      window._appInited = false;
+      $('login-screen').style.display = 'flex';
+      var appRoot = $('app-root');
+      if (appRoot) appRoot.style.display = 'none';
+      var mEl = $('login-mode');
+      if (mEl) mEl.textContent = 'Firebase Auth activo';
+    }
+  });
+} else {
+  // Sin Firebase: mostrar pantalla de login local
+  var mEl = $('login-mode');
+  var localCreds = (typeof USERS_LOCAL !== 'undefined' && USERS_LOCAL.length && USERS_LOCAL[0].user)
+    ? USERS_LOCAL[0].user + '/' + USERS_LOCAL[0].pass
+    : 'admin/admin';
+  if (mEl) mEl.textContent = 'modo local (' + localCreds + ')';
+}
+
+// Responsive: ajustar topbars en resize
+window.addEventListener('resize', function(){
+  if (!$('app-root') || $('app-root').style.display === 'none') return;
+  var isMob = window.innerWidth <= 820;
+  var mobBar = $('mobile-topbar');
+  var deskBar = $('desktop-topbar');
+  if (mobBar) mobBar.style.display = isMob ? 'flex' : 'none';
+  if (deskBar) deskBar.style.display = isMob ? 'none' : 'flex';
+});
+
+</script>
+</body>
+</html>
