@@ -2440,6 +2440,16 @@ function openAddPago(){
       <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${(_cobradores||[]).map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
   setTimeout(()=>updPagoMonto($('p_cred')),50);
+  // Insertar aviso de saldo a favor
+  setTimeout(function(){
+    var mbd=$('mbd');
+    if(mbd&&!$('p_saldo_favor')){
+      var div=document.createElement('div');
+      div.id='p_saldo_favor';
+      div.style.cssText='display:none;margin-top:8px;padding:9px 12px;background:rgba(0,184,118,0.12);border:1px solid rgba(0,184,118,0.3);border-radius:8px;font-size:12.5px;color:var(--green)';
+      mbd.insertBefore(div,mbd.firstChild);
+    }
+  },60);
   S.saveFn=()=>{
     const credId=($('p_cred')&&$('p_cred').value);
     const cred=S.creds.find(function(x){return x.id===credId;});
@@ -2473,15 +2483,39 @@ function openAddPago(){
         hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})};
       S.movimientos.push(mov); DB.saveMovimiento(mov);
     }
+    // ── Lógica de cuotas con sobrante ──────────────────────────
     const ci=S.creds.findIndex(function(x){return x.id===credId;});
     if(ci>=0){
-      S.creds[ci].pagado=Math.min(S.creds[ci].pagado+1,S.creds[ci].totalCuotas||S.creds[ci].plazo*2);
-      if(S.creds[ci].mora>0){S.creds[ci].mora=0;S.creds[ci].estado='activo';}
-      if(S.creds[ci].pagado>=(S.creds[ci].totalCuotas||S.creds[ci].plazo*2)) S.creds[ci].estado='completado';
-      DB.updateCred(credId,{pagado:S.creds[ci].pagado,mora:S.creds[ci].mora,estado:S.creds[ci].estado});
+      var c2=S.creds[ci];
+      var cuotaVal=c2.cuotaQ||c2.cuota||0;
+      var saldoAnterior=c2.saldoAFavor||0;  // sobrante de pagos anteriores
+      var totalDisponible=monto+saldoAnterior;
+
+      // Cuántas cuotas completas cubre el pago
+      var cuotasQueCubre = cuotaVal>0 ? Math.floor(totalDisponible/cuotaVal) : 1;
+      var sobrante = cuotaVal>0 ? parseFloat((totalDisponible - cuotasQueCubre*cuotaVal).toFixed(2)) : 0;
+
+      // No pasar del total de cuotas del crédito
+      var totalCuotas=c2.totalCuotas||c2.plazo*2;
+      var cuotasPagadasNuevas=Math.min(c2.pagado+cuotasQueCubre, totalCuotas);
+
+      c2.pagado=cuotasPagadasNuevas;
+      c2.saldoAFavor=sobrante;  // guardar sobrante para próximo pago
+      if(c2.mora>0){c2.mora=0;c2.estado='activo';}
+      if(c2.pagado>=totalCuotas) c2.estado='completado';
+
+      DB.updateCred(credId,{pagado:c2.pagado,mora:c2.mora,estado:c2.estado,saldoAFavor:c2.saldoAFavor});
+
+      // Mensaje con detalle del sobrante
+      var msg='✅ Pago registrado · '+fmt(monto);
+      if(cuotasQueCubre>1) msg+=' · '+cuotasQueCubre+' cuotas cubiertas';
+      if(sobrante>0) msg+=' · '+fmt(sobrante)+' acreditado a próxima cuota';
+      pgSet('pagos',1);
+      toast(msg,'success');
+    } else {
+      pgSet('pagos',1);
+      toast('✅ Pago registrado · '+fmt(monto),'success');
     }
-    pgSet('pagos',1);
-    toast('✅ Pago registrado · '+fmt(monto),'success');
     closeM();nav('pagos');return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Registrar Pago</button>`;
@@ -2496,6 +2530,25 @@ function updPagoMonto(sel){
   const opt=(sel&&sel.options)&&sel.options[sel.selectedIndex];if(!opt)return;
   const monto=opt.dataset.cuotaq||opt.dataset.cuota;
   if($('p_monto')&&monto)$('p_monto').value=parseFloat(monto).toFixed(2);
+  // Mostrar saldo a favor si existe
+  var credId=sel&&sel.value;
+  var cred=credId&&S.creds.find(function(x){return x.id===credId;});
+  var saldoEl=$('p_saldo_favor');
+  if(saldoEl){
+    if(cred&&cred.saldoAFavor>0){
+      saldoEl.style.display='block';
+      saldoEl.innerHTML='💰 Saldo a favor de pago anterior: <strong>'+fmt(cred.saldoAFavor)+'</strong> — se descontará automáticamente de esta cuota.';
+      // Pre-restar el saldo del monto sugerido
+      if($('p_monto')&&monto){
+        var cuota=parseFloat(monto)||0;
+        var saldo=cred.saldoAFavor||0;
+        var montoPendiente=Math.max(0,parseFloat((cuota-saldo).toFixed(2)));
+        $('p_monto').value=montoPendiente;
+      }
+    } else {
+      saldoEl.style.display='none';
+    }
+  }
 }
 
 // AMORTIZACIÓN
