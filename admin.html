@@ -3155,6 +3155,27 @@ function openAddEgreso(){
     S.egresos.push(newEg);
     DB.saveEgreso(newEg);
 
+    // Crear movimiento de SALIDA en la cuenta seleccionada
+    var cuentaSalida=($('eg_forma')&&$('eg_forma').value)||'';
+    if(!cuentaSalida && _cuentasBanc && _cuentasBanc.length>0) cuentaSalida=_cuentasBanc[0].nombre;
+    if(cuentaSalida){
+      var mov={
+        id:'MOV-'+Date.now(),
+        tipo:'retiro',
+        concepto:'Egreso · '+conc,
+        monto:monto,
+        cuentaOrigen:cuentaSalida,
+        cuentaDestino:null,
+        fecha:newEg.fecha,
+        referencia:newEg.notas||'',
+        realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
+        tasaBs:window._tasaBsGlobal||1,
+        hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
+      };
+      S.movimientos.push(mov);
+      DB.saveMovimiento(mov);
+    }
+
     toast('Egreso registrado · '+fmt(monto),'success');closeM();nav('conta');return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar Egreso</button>`;
