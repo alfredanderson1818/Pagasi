@@ -5631,77 +5631,118 @@ function imprimirRecibo(pago, cred){
   w.document.close();
 }
 
-async function doLogin() {
-  var email = ($('l_user') || {}).value || '';
-  var pass  = ($('l_pass') || {}).value || '';
-  var errEl = $('login-err');
-  if (errEl) errEl.style.display = 'none';
-
-  // Modo local (sin Firebase)
-  if (!auth) {
-    var localUser = (typeof USERS_LOCAL !== 'undefined' && USERS_LOCAL.length)
-      ? USERS_LOCAL[0]
-      : null;
-    if(!localUser){ if(errEl){errEl.textContent='⚠ Configura tus credenciales en Configuración → Acceso Local';errEl.style.display='block';} return; }
-
-    var ok = false;
-    if (email === localUser.user) {
-      if (localUser.passwordHash) {
-        try {
-          ok = (await sha256Hex(pass)) === localUser.passwordHash;
-        } catch(e) {
-          ok = false;
-        }
-      } else {
-        ok = pass === localUser.pass;
-      }
-    }
-
-    if (ok) {
-      $('login-screen').style.display = 'none';
-      S.currentUser = { nombre: localUser.nombre || 'Administrador', rol: localUser.rol || 'Administrador', email: email, permisos: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users','perm_delete'] };
-      var sbUn = document.querySelector('.sb-un');
-      if (sbUn) sbUn.textContent = S.currentUser.nombre;
-      var sbAv = document.querySelector('.sb-av');
-      if (sbAv) sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
-      init();
-    } else {
-      if (errEl) { errEl.textContent = 'Usuario o contraseña incorrectos'; errEl.style.display = 'block'; }
-    }
-    return;
-  }
-
-  // Modo Firebase
-  showLoader('Iniciando sesión...', '');
-  auth.signInWithEmailAndPassword(email, pass)
-    .then(function() { hideLoader(); })
-    .catch(function(e) {
-      hideLoader();
-      if (errEl) {
-        if (e.code === 'auth/network-request-failed') {
-          errEl.textContent = 'Sin conexión a internet. Verifica tu red e intenta de nuevo.';
-          errEl.style.background = 'rgba(232,152,10,0.08)';
-          errEl.style.borderColor = 'rgba(232,152,10,0.3)';
-          errEl.style.color = 'var(--amber)';
-        } else if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-          errEl.textContent = 'Usuario o contraseña incorrectos.';
-          errEl.style.background = '';
-          errEl.style.borderColor = '';
-          errEl.style.color = '';
-        } else {
-          errEl.textContent = 'Error: ' + (e.message || e.code);
-          errEl.style.background = '';
-          errEl.style.borderColor = '';
-          errEl.style.color = '';
-        }
-        errEl.style.display = 'block';
-      }
-      console.warn('Login error:', e.code, e.message);
-    });
+// ══════════════════════════════════════════
+// LOGIN — función principal de autenticación
+// ══════════════════════════════════════════
+function _loginSuccess(userObj){
+  S.currentUser = userObj;
+  var ls = document.getElementById('login-screen');
+  var ar = document.getElementById('app-root');
+  if(ls) ls.style.display = 'none';
+  if(ar) ar.style.display = '';
+  showLoader('Cargando datos...', 'Conectando...');
+  DB.load().then(function(){
+    hideLoader();
+    nav('dash');
+    syncTodosEstadosClientes && syncTodosEstadosClientes();
+  }).catch(function(e){
+    hideLoader();
+    nav('dash');
+    console.warn('DB.load error:', e);
+  });
 }
 
+async function doLogin(){
+  var userEl = document.getElementById('l_user');
+  var passEl = document.getElementById('l_pass');
+  var errEl  = document.getElementById('login-err');
+  if(!userEl || !passEl) return;
+  var user = (userEl.value || '').trim();
+  var pass = passEl.value || '';
+  if(!user || !pass){
+    if(errEl){ errEl.textContent = 'Completa usuario y contraseña'; errEl.style.display = 'block'; }
+    return;
+  }
+  if(errEl) errEl.style.display = 'none';
+  var btn = document.querySelector('.login-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Verificando...'; }
+  try {
+    // ── Modo Firebase ──────────────────────────────────
+    if(FIREBASE_READY && auth){
+      auth.signInWithEmailAndPassword(user, pass).then(function(cred){
+        var fbUser = cred.user;
+        // Intentar cargar perfil extendido desde Firestore
+        var userObj = { uid: fbUser.uid, email: fbUser.email, nombre: fbUser.displayName || fbUser.email, rol: 'Administrador' };
+        if(db){
+          db.collection('usuarios').doc(fbUser.uid).get().then(function(doc){
+            if(doc.exists) userObj = Object.assign(userObj, doc.data());
+            _loginSuccess(userObj);
+          }).catch(function(){ _loginSuccess(userObj); });
+        } else {
+          _loginSuccess(userObj);
+        }
+      }).catch(function(e){
+        if(btn){ btn.disabled = false; btn.textContent = 'Ingresar →'; }
+        if(errEl){ errEl.textContent = 'Usuario o contraseña incorrectos'; errEl.style.display = 'block'; }
+      });
+      return;
+    }
+    // ── Modo local ─────────────────────────────────────
+    // Cargar credenciales guardadas en localStorage
+    var storedRaw = null;
+    try { storedRaw = localStorage.getItem(LOCAL_CREDS_KEY); } catch(e){}
+    var creds = [];
+    if(storedRaw){
+      try { creds = JSON.parse(storedRaw); } catch(e){}
+    }
+    // Combinar con USERS_LOCAL (credenciales hardcoded por si no hay nada guardado)
+    if(!creds.length) creds = USERS_LOCAL;
+    // Comparar con hash o texto plano
+    var inputHash = '';
+    try { inputHash = await sha256Hex(pass); } catch(e){}
+    var matched = null;
+    for(var i=0; i<creds.length; i++){
+      var c = creds[i];
+      if(!c || !c.user) continue;
+      if(c.user.toLowerCase() !== user.toLowerCase()) continue;
+      // Contraseña puede estar hasheada o en texto plano (retrocompatibilidad)
+      var passOk = (c.passHash && c.passHash === inputHash) || (c.pass && c.pass === pass);
+      if(passOk){ matched = c; break; }
+    }
+    if(!matched){
+      if(btn){ btn.disabled = false; btn.textContent = 'Ingresar →'; }
+      if(errEl){ errEl.textContent = 'Usuario o contraseña incorrectos'; errEl.style.display = 'block'; }
+      return;
+    }
+    _loginSuccess({ uid: 'local_'+matched.user, email: matched.user, nombre: matched.nombre||matched.user, rol: matched.rol||'Administrador' });
+  } catch(e){
+    if(btn){ btn.disabled = false; btn.textContent = 'Ingresar →'; }
+    if(errEl){ errEl.textContent = 'Error al iniciar sesión: '+e.message; errEl.style.display = 'block'; }
+  }
+}
 
-
+async function guardarCredencialesLocales(){
+  var userEl   = document.getElementById('cfg_local_user');
+  var passEl   = document.getElementById('cfg_local_pass');
+  var nombreEl = document.getElementById('cfg_local_nombre');
+  if(!userEl || !passEl){ toast('No se encontraron los campos','error'); return; }
+  var u = (userEl.value||'').trim();
+  var p = (passEl.value||'').trim();
+  var n = nombreEl ? (nombreEl.value||'').trim() : u;
+  if(!u){ toast('El usuario no puede estar vacío','error'); return; }
+  if(p && p.length < 6){ toast('La contraseña debe tener al menos 6 caracteres','error'); return; }
+  var entry = { user: u, nombre: n||u, rol: 'Administrador' };
+  if(p){
+    try { entry.passHash = await sha256Hex(p); } catch(e){ entry.pass = p; }
+  } else if(USERS_LOCAL[0] && (USERS_LOCAL[0].passHash || USERS_LOCAL[0].pass)){
+    entry.passHash = USERS_LOCAL[0].passHash;
+    entry.pass     = USERS_LOCAL[0].pass;
+  }
+  USERS_LOCAL[0] = entry;
+  try { localStorage.setItem(LOCAL_CREDS_KEY, JSON.stringify([entry])); } catch(e){}
+  toast('Credenciales locales guardadas');
+  if(passEl) passEl.value = '';
+}
 
 // Bindings globales seguros
 try{
