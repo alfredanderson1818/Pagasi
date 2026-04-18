@@ -5631,6 +5631,78 @@ function imprimirRecibo(pago, cred){
   w.document.close();
 }
 
+async function doLogin() {
+  var email = ($('l_user') || {}).value || '';
+  var pass  = ($('l_pass') || {}).value || '';
+  var errEl = $('login-err');
+  if (errEl) errEl.style.display = 'none';
+
+  // Modo local (sin Firebase)
+  if (!auth) {
+    var localUser = (typeof USERS_LOCAL !== 'undefined' && USERS_LOCAL.length)
+      ? USERS_LOCAL[0]
+      : null;
+    if(!localUser){ if(errEl){errEl.textContent='⚠ Configura tus credenciales en Configuración → Acceso Local';errEl.style.display='block';} return; }
+
+    var ok = false;
+    if (email === localUser.user) {
+      if (localUser.passwordHash) {
+        try {
+          ok = (await sha256Hex(pass)) === localUser.passwordHash;
+        } catch(e) {
+          ok = false;
+        }
+      } else {
+        ok = pass === localUser.pass;
+      }
+    }
+
+    if (ok) {
+      $('login-screen').style.display = 'none';
+      S.currentUser = { nombre: localUser.nombre || 'Administrador', rol: localUser.rol || 'Administrador', email: email, permisos: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users','perm_delete'] };
+      var sbUn = document.querySelector('.sb-un');
+      if (sbUn) sbUn.textContent = S.currentUser.nombre;
+      var sbAv = document.querySelector('.sb-av');
+      if (sbAv) sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+      init();
+    } else {
+      if (errEl) { errEl.textContent = 'Usuario o contraseña incorrectos'; errEl.style.display = 'block'; }
+    }
+    return;
+  }
+
+  // Modo Firebase
+  showLoader('Iniciando sesión...', '');
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(function() { hideLoader(); })
+    .catch(function(e) {
+      hideLoader();
+      if (errEl) {
+        if (e.code === 'auth/network-request-failed') {
+          errEl.textContent = 'Sin conexión a internet. Verifica tu red e intenta de nuevo.';
+          errEl.style.background = 'rgba(232,152,10,0.08)';
+          errEl.style.borderColor = 'rgba(232,152,10,0.3)';
+          errEl.style.color = 'var(--amber)';
+        } else if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+          errEl.textContent = 'Usuario o contraseña incorrectos.';
+          errEl.style.background = '';
+          errEl.style.borderColor = '';
+          errEl.style.color = '';
+        } else {
+          errEl.textContent = 'Error: ' + (e.message || e.code);
+          errEl.style.background = '';
+          errEl.style.borderColor = '';
+          errEl.style.color = '';
+        }
+        errEl.style.display = 'block';
+      }
+      console.warn('Login error:', e.code, e.message);
+    });
+}
+
+
+
+
 // Bindings globales seguros
 try{
   window.openLiquidarAnticipado = openLiquidarAnticipado;
