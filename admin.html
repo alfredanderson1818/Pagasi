@@ -3959,9 +3959,9 @@ function delCliente(id){
 function openAddCred(motoId=null){
   $('mic').textContent='≡';$('mtt').textContent='Nuevo Financiamiento';$('msb').textContent='Plan 10 meses · Pagos Quincenales · Factor 1.90x';
   $('modal-box').className='modal modal-lg';
-  // Motos disponibles (o todas si ninguna disponible)
-  const motosDisp=S.motos.filter(m=>!m.eliminado&&(m.estado==='disponible'||m.estado==='recuperada'));
-  const motosList=motosDisp.length?motosDisp:S.motos;
+  // Solo motos realmente disponibles para nuevo financiamiento
+  const motosDisp=S.motos.filter(m=>!m.eliminado&&m.estado==='disponible');
+  const motosList=motosDisp;
   $('mbd').innerHTML=`
     <div class="fsec">Datos del Cliente</div>
     <div class="fgr">
@@ -3971,7 +3971,7 @@ function openAddCred(motoId=null){
 
     <div class="fsec" style="margin-top:14px">Motocicleta a Financiar</div>
     <div class="fgr">
-      <div class="fg"><label>Modelo *</label><select class="fs" id="k_moto" onchange="updCredFill(this)">${motosList.map(m=>`<option value="${m.id}" data-precio="${m.precio}" data-vin="${m.vin||''}" data-color="${m.color||''}" ${motoId===m.id?'selected':''}>${m.modelo} — ${fmt(m.precio)}</option>`).join('')}</select></div>
+      <div class="fg"><label>Modelo *</label><select class="fs" id="k_moto" onchange="updCredFill(this)">${motosList.length?motosList.map(m=>`<option value="${m.id}" data-precio="${m.precio}" data-vin="${m.vin||''}" data-color="${m.color||''}" ${motoId===m.id?'selected':''}>${m.modelo} — ${fmt(m.precio)}</option>`).join(''):'<option value="">— No hay motos disponibles —</option>'}</select></div>
       <div class="fg"><label>VIN / Serial *</label><input class="fi" id="k_vin" placeholder="Ej: 8LBCF11B3HY123456"></div>
     </div>
     <div class="fgr c3">
@@ -4008,12 +4008,14 @@ function openAddCred(motoId=null){
     <div class="fgr c1" style="margin-top:8px">
       <div class="fg"><label>Notas del crédito</label><textarea class="fta" id="k_notas" placeholder="Observaciones, condiciones especiales..."></textarea></div>
     </div>`;
-  updCredFill($('k_moto'));
+  if(motosList.length){ updCredFill($('k_moto')); }
   S.saveFn=()=>{
     const sel=$('k_moto');
+    if(!sel || !sel.value){toast('No hay motos disponibles para financiar','error');return false;}
     const mId=parseInt(sel.value);
     const moto=S.motos.find(x=>x.id===mId);
     if(!moto){toast('Selecciona una moto','error');return false;}
+    if(moto.eliminado || moto.estado!=='disponible'){toast('Solo puedes financiar motos disponibles','error');return false;}
     const vin=(($('k_vin')&&$('k_vin').value)||'').trim();
     if(!vin){toast('El VIN / Serial es obligatorio','error');return false;}
     const r=calcMoto(moto.precio);
@@ -4052,6 +4054,12 @@ function openAddCred(motoId=null){
     // ── Registrar pago de la inicial como movimiento en cuentas ──
     var iniMetodo=($('k_ini_metodo')&&$('k_ini_metodo').value)||(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD');
     var iniRef=($('k_ini_ref')&&$('k_ini_ref').value)||'';
+    var cliIdx=S.clientes.findIndex(function(cl){return String(cl.id)===String(newCred.clienteId) || cl.nombre===newCred.cli;});
+    if(cliIdx>=0){
+      S.clientes[cliIdx].estado='activo';
+      DB.saveCliente(S.clientes[cliIdx]);
+    }
+
     var movIni={
       id:'MOV-'+Date.now(),
       tipo:'deposito',
@@ -4068,6 +4076,7 @@ function openAddCred(motoId=null){
     S.movimientos.push(movIni);
     DB.saveMovimiento(movIni);
 
+    syncTodosEstadosClientes();
     closeM();nav('creditos');toast('Financiamiento creado · '+newCred.id+' · Inicial '+fmt(r.ini)+' → '+iniMetodo,'success');return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear Financiamiento</button>`;
@@ -4125,6 +4134,7 @@ function cancelarCred(credId){
         DB.saveMoto(S.motos[mi]);
       }
     }
+    syncTodosEstadosClientes();
     closeM(); nav('creditos');
     toast('Crédito '+credId+' cancelado — moto liberada','info');
     return true;
@@ -4361,6 +4371,7 @@ function openAddPago(){
           DB.saveCliente(S.clientes[cliIdx]);
         }
         syncEstadoClientePorCredito(credId);
+        syncTodosEstadosClientes();
       } else if(cuotasPagadas<totalCuotas){
         recienCompletado=false;
       }
@@ -4674,6 +4685,21 @@ function syncEstadoClientePorCredito(credId){
   }
 }
 
+
+function syncTodosEstadosClientes(){
+  S.clientes.forEach(function(cl){
+    if(!cl || cl.eliminado) return;
+    var nombre=cl.nombre;
+    var tieneActivos=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && (cr.estado==='activo' || cr.estado==='mora');});
+    var tieneCompletados=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && cr.estado==='completado';});
+    var nuevoEstado=tieneActivos ? 'activo' : (tieneCompletados ? 'solvente' : (cl.estado||'activo'));
+    if(cl.estado!==nuevoEstado){
+      cl.estado=nuevoEstado;
+      DB.saveCliente(cl);
+    }
+  });
+}
+
 function recalcularCreditoDesdePagos(credId){
   var ci=S.creds.findIndex(function(x){return x.id===credId;});
   if(ci<0) return null;
@@ -4735,6 +4761,7 @@ function recalcularCreditoDesdePagos(credId){
     estado:nuevoEstado
   });
   syncEstadoClientePorCredito(credId);
+  syncTodosEstadosClientes();
 
   return {
     pagado:cuotasPagadas,
@@ -7832,3 +7859,5 @@ window.addEventListener('resize', function(){
 </script>
 </body>
 </html>
+
+setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.isArray(S.creds)) syncTodosEstadosClientes(); }catch(e){} }, 1200);
