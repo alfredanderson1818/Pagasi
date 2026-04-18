@@ -4795,7 +4795,7 @@ function renderContrato(){
     <h3>SEGUNDA: OBJETO DEL CONTRATO</h3>
     <p>EL VENDEDOR da en venta a EL COMPRADOR, y este declara adquirir, la siguiente motocicleta:</p>
     <table style="width:100%;font-size:11.5px;border-collapse:collapse;margin-top:8px">
-      ${[['Modelo / Marca',c.modelo],['VIN / Serie','VIN-'+String(c.motoId).padStart(4,'0')],['Color','—'],['Año','—']].map(([k,v])=>`<tr><td style="padding:4px 0;border-bottom:1px solid #f0f0f0;color:#555;width:45%">${k}</td><td style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-weight:700">${v}</td></tr>`).join('')}
+      ${[['Modelo / Marca',c.modelo],['VIN / Serie',c.vin||'—'],['Color','—'],['Año','—']].map(([k,v])=>`<tr><td style="padding:4px 0;border-bottom:1px solid #f0f0f0;color:#555;width:45%">${k}</td><td style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-weight:700">${v}</td></tr>`).join('')}
     </table>
 
     <h3>TERCERA: PLAN DE CUOTAS</h3>
