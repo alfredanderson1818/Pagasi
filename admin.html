@@ -37,7 +37,8 @@
   --gs:rgba(108,92,231,0.10);--gb:rgba(108,92,231,0.06);
   --green:#00B876;--greens:rgba(0,184,118,0.12);
   --red:#E8335A;--reds:rgba(232,51,90,0.12);
-  --amber:#F5A623;--ambers:rgba(245,166,35,0.12);
+  --amber:#F5A623;--ambers:rgba(232,152,10,0.10);
+  --blues:rgba(58,143,232,0.10);
   --blue:#4A9AF5;--blues:rgba(74,154,245,0.12);
   --f:'Nunito Sans',sans-serif;--fd:'Nunito',sans-serif;
   --r8:8px;--r12:12px;--r16:16px;--r20:20px;
@@ -419,6 +420,663 @@ button.si {
 @media(max-width:820px){
   button.si { padding: 12px 14px; min-height: 44px; }
 }
+
+/* ═══════════════════════════════════════════════
+   PROFESSIONAL REDESIGN — OVERRIDES & ENHANCEMENTS
+   ═══════════════════════════════════════════════ */
+
+/* Import refined typeface */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;800&display=swap');
+
+:root {
+  --f: 'DM Sans', 'Nunito Sans', sans-serif;
+  --fd: 'DM Sans', 'Nunito', sans-serif;
+  --fm: 'DM Mono', monospace;
+  /* Refined palette — deeper navy ink, sharper accents */
+  --ink: #0E0E1F;
+  --ink2: #3D3B5A;
+  --ink3: #8C8AAC;
+  --p1: #5B4ED4;
+  --p2: #3A8FE8;
+  --grad: linear-gradient(135deg, #5B4ED4 0%, #3A8FE8 100%);
+  --gs: rgba(91,78,212,0.09);
+  --rim: rgba(91,78,212,0.10);
+  --rim2: rgba(91,78,212,0.20);
+  --rim3: rgba(91,78,212,0.32);
+  --surf: #FFFFFF;
+  --surf2: #F7F7FC;
+  --lift: #EEEEF8;
+  --bg: #F0F0F8;
+  --shadow: 0 1px 3px rgba(14,14,31,0.06), 0 4px 16px rgba(91,78,212,0.05);
+  --shadow-md: 0 4px 24px rgba(91,78,212,0.10), 0 1px 4px rgba(0,0,0,0.04);
+  --green: #06B06A;
+  --greens: rgba(6,176,106,0.10);
+  --red: #D93B5A;
+  --reds: rgba(217,59,90,0.10);
+  --amber: #E8980A;
+  --ambers: rgba(232,152,10,0.10);
+}
+
+body {
+  font-family: var(--f);
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── SIDEBAR — cleaner, more structured ─── */
+.sb {
+  width: 240px;
+  min-width: 240px;
+  background: #FAFAFA;
+  border-right: 1px solid rgba(91,78,212,0.08);
+  box-shadow: none;
+}
+
+.sb::after {
+  height: 3px;
+  background: var(--grad);
+}
+
+.sb-logo {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(91,78,212,0.08);
+}
+
+.sb-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  padding: 12px 12px 5px;
+}
+
+/* ─── NAV ICON — pill style abbreviation ─── */
+.sic.nav-ic {
+  font-family: var(--fm);
+  font-size: 8px !important;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: var(--lift);
+  border: 1px solid var(--rim);
+  border-radius: 5px;
+  width: 28px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink3);
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.si.on .sic.nav-ic {
+  background: var(--gs);
+  border-color: var(--rim2);
+  color: var(--p1);
+}
+
+.si:hover .sic.nav-ic {
+  background: rgba(91,78,212,0.08);
+  border-color: var(--rim);
+  color: var(--ink2);
+}
+
+button.si span:not(.sic):not(.si-bx) {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink3);
+}
+.si.on span:not(.sic):not(.si-bx) { color: var(--p1); font-weight: 600; }
+.si:hover span:not(.sic):not(.si-bx) { color: var(--ink2); }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 1px 0 rgba(91,78,212,0.08);
+  height: 56px;
+  padding: 0 24px;
+}
+
+.tb-ttl {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.3px;
+}
+
+/* ─── SEARCH ─── */
+.srch-i { font-style: normal; font-size: 11px; opacity: 0.5; }
+.srch input { font-size: 12.5px; border-radius: 8px; }
+
+/* ─── STAT CARDS — better proportions ─── */
+.sg { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+
+.stat {
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: #fff;
+}
+
+.st-ic {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-family: var(--fm);
+  font-size: 8px !important;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--rim);
+}
+
+.st-v {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 26px !important;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+.st-l {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink3);
+  margin-top: 6px;
+  letter-spacing: -0.1px;
+}
+
+.st-c {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* ─── CARDS ─── */
+.card {
+  border-radius: 14px;
+  padding: 18px 20px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(91,78,212,0.08);
+}
+
+.ct {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: -0.2px;
+}
+
+/* ─── TABLES — cleaner ─── */
+th {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  background: var(--surf2);
+  padding: 9px 14px;
+}
+
+td {
+  padding: 11px 14px;
+  font-size: 12.5px;
+}
+
+.tdm { font-weight: 600; color: var(--ink); }
+.tds { font-size: 11px; color: var(--ink3); }
+
+/* ─── BUTTONS ─── */
+.btn {
+  font-family: var(--f);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: -0.1px;
+  border-radius: 8px;
+  padding: 7px 14px;
+}
+
+.btn-p {
+  background: var(--grad);
+  box-shadow: 0 2px 12px rgba(91,78,212,0.28);
+}
+
+.btn-p:hover {
+  box-shadow: 0 4px 20px rgba(91,78,212,0.42);
+  transform: translateY(-1px);
+}
+
+.btn-sm { padding: 5px 10px; font-size: 11.5px; }
+.btn-xs { padding: 3px 8px; font-size: 10.5px; }
+
+/* ─── BADGES ─── */
+.bdg {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  letter-spacing: 0.2px;
+}
+
+/* ─── HERO BANNER ─── */
+.hero {
+  background: linear-gradient(135deg, #F7F7FC 0%, #EEEEF8 100%);
+  border: 1px solid rgba(91,78,212,0.10);
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+
+.hero-tt {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+}
+
+.hero-sb {
+  font-size: 11.5px;
+  color: var(--ink3);
+  margin-top: 3px;
+  font-weight: 400;
+}
+
+/* ─── MODAL ─── */
+.modal {
+  border-radius: 18px;
+  border-color: rgba(91,78,212,0.14);
+  box-shadow: 0 24px 60px rgba(91,78,212,0.14);
+}
+
+.m-hd { 
+  background: var(--surf2);
+  padding: 16px 20px;
+}
+
+.m-tt {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 15.5px;
+  letter-spacing: -0.3px;
+}
+
+/* ─── USER FOOTER ─── */
+.sb-av {
+  width: 30px;
+  height: 30px;
+  font-size: 10px;
+  font-family: var(--fm);
+}
+
+.sb-un { font-size: 12.5px; font-weight: 600; }
+.sb-ur { font-size: 9.5px; font-weight: 700; }
+
+/* ─── DETAIL ITEMS ─── */
+.detail-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+
+.detail-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 3px;
+}
+
+/* ─── LIST ITEMS ─── */
+.li {
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surf2);
+  border: 1px solid rgba(91,78,212,0.07);
+}
+
+.li-ic {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  font-family: var(--fm);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+/* ─── CONTENT AREA ─── */
+#cnt {
+  padding: 20px 24px 80px;
+  background: var(--bg);
+}
+
+/* ─── PROGRESS BARS ─── */
+.prog { height: 3px; border-radius: 2px; }
+
+/* ─── PLAN BOX ─── */
+.plan-title {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+}
+
+/* ─── LOGIN CARD ─── */
+.login-title {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+
+.login-btn {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+/* ─── FORM ELEMENTS ─── */
+.fg label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.fi, .fs, .fta {
+  font-size: 13px;
+  border-radius: 9px;
+  padding: 9px 12px;
+}
+
+/* ─── EMPTY STATES ─── */
+.e-ic { font-size: 32px; opacity: 0.3; }
+.e-tt { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
+
+/* ─── QUICK LINKS GRID (dashboard bottom) ─── */
+.card[onclick] {
+  transition: all 0.18s;
+}
+.card[onclick]:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(91,78,212,0.18);
+}
+
+/* ─── BAR CHART ─── */
+.bc { height: 130px; }
+.bar { border-radius: 5px 5px 0 0; }
+.bv { font-family: var(--fm); font-size: 8.5px; font-weight: 600; }
+.bl { font-family: var(--fm); font-size: 8.5px; }
+
+/* ─── SCROLLBAR refinement ─── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(91,78,212,0.15); border-radius: 3px; }
+
+/* ─── Dashboard top KPI strip ─── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+/* ─── Section headers in dashboard ─── */
+.section-header {
+  font-family: var(--fm);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+/* ─── NOTIFICATION DOT ─── */
+.nd { 
+  width: 5px; height: 5px; 
+  top: 6px; right: 6px;
+  background: var(--red);
+  border: 1.5px solid #fff;
+}
+
+/* ─── IMPROVED TOPBAR ─── */
+.tb-acts .btn-ic {
+  width: 34px; height: 34px; border-radius: 8px;
+}
+
+/* ─── MOTO STATUS SELECT ─── */
+.status-select { background: transparent; border: none; }
+
+/* ─── SIDEBAR HOVER STATE ─── */
+.si:active { transform: scale(0.98); }
+
+/* ─── FORM SECTION LABEL ─── */
+.fsec {
+  font-family: var(--fm);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+
+/* ─── IMPROVED AMORT TABLE ─── */
+.ah {
+  font-family: var(--fm);
+  font-size: 8.5px;
+  letter-spacing: 1px;
+  background: var(--surf2);
+  border-radius: 8px;
+}
+
+.ar {
+  font-size: 12px;
+}
+
+/* ─── PLAN BOX REFINEMENT ─── */
+.plan-stats {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.plan-stat-v {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+}
+
+/* ─── IMPROVED TOAST ─── */
+.toast {
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(14,14,31,0.10);
+}
+
+/* ─── CONTENT PAGE ANIMATION ─── */
+.page {
+  animation: pi 0.15s ease;
+}
+
+/* ─── DETAIL GRID ─── */
+.detail-grid {
+  gap: 10px;
+}
+
+/* ─── MINI BADGE in sidebar ─── */
+.si-bx {
+  font-family: var(--fm);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: var(--red);
+  color: #fff;
+}
+
+/* ─── IMPROVED MOBILE MENU BUTTON ─── */
+.mob-menu-btn {
+  font-size: 16px;
+  background: var(--surf2);
+  border: 1px solid var(--rim);
+  border-radius: 8px;
+  color: var(--ink2);
+}
+
+/* ─── IMPROVED SEARCH PANEL ─── */
+#gs-panel {
+  border-radius: 12px !important;
+  border-color: var(--rim2) !important;
+}
+
+/* ─── REMOVE LEFTOVER BUTTON ICON SIZING ─── */
+.btn-ic {
+  width: 32px;
+  height: 32px;
+}
+
+}
+
+/* ─── SIDEBAR BADGE ─── */
+.si-bx {
+  background: var(--red);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 10px;
+  margin-left: auto;
+  font-family: var(--fm);
+  min-width: 16px;
+  text-align: center;
+}
+
+/* ─── TOPBAR NOTIFICATION BUTTON ─── */
+.nb { position: relative; }
+.nd {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  background: var(--red);
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+}
+
+/* ─── MOTO INFO BAR ─── */
+.info-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  background: var(--surf2);
+  border-radius: 9px;
+  border: 1px solid var(--rim);
+  font-size: 11.5px;
+  color: var(--ink3);
+  margin-bottom: 10px;
+}
+
+/* ─── TABLE ACTIONS ─── */
+.tbl-acts { display: flex; gap: 4px; }
+.tbl-acts .btn { min-height: 28px; }
+
+/* ─── PAGE ANIMATION ─── */
+.page {
+  animation: pageIn 0.18s ease both;
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── MOBILE TOPBAR TITLE ─── */
+#pgT-mob {
+  font-family: var(--fd);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* ─── MOBILE TOPBAR ─── */
+#pgT-mob {
+  font-family: var(--fd);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* ─── BADGE MORA in sidebar ─── */
+.si-bx {
+  background: var(--red);
+  color: #fff;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 20px;
+  margin-left: auto;
+  font-family: var(--fm);
+}
+
+/* ─── STAT card click animation ─── */
+.stat[onclick]:active {
+  transform: scale(0.98);
+}
+
+/* ─── Clean search icon ─── */
+.srch-i {
+  color: var(--ink3);
+  font-size: 10px;
+  font-family: var(--fm);
+  font-style: normal;
+}
+
+/* ─── Plan page box override ─── */
+.plan-box {
+  background: var(--grad);
+}
+
+/* ─── Table row hover ─── */
+tbody tr:hover td {
+  background: rgba(91,78,212,0.03);
+}
+
+/* ─── Modal icon clean ─── */
+.m-ic {
+  font-family: var(--fm);
+  font-size: 10px !important;
+  font-weight: 700;
+  color: var(--p1);
+  background: var(--gs);
+  border: 1px solid var(--rim2);
+}
+
+/* ─── Login error box ─── */
+.login-err {
+  background: var(--reds);
+  border: 1px solid rgba(217,59,90,0.2);
+  color: var(--red);
+  font-weight: 600;
+  font-size: 12px;
+  border-radius: 9px;
+}
+
+/* ─── Topbar search input ─── */
+.srch input:focus {
+  width: 260px;
+}
+
+/* ─── Quick access cards hover ─── */
+.card[onclick]:hover .sb-av,
+.card[onclick]:hover {
+  border-color: rgba(91,78,212,0.20);
+}
+
 </style>
 </head>
 <body>
@@ -443,7 +1101,7 @@ button.si {
       <input class="login-inp" id="l_pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar →</button>
-    <div class="login-err" id="login-err">⛔ Usuario o contraseña incorrectos</div>
+    <div class="login-err" id="login-err">Usuario o contraseña incorrectos</div>
     <div class="login-footer">Pagasi · Sistema interno · v7.0<br><span id="login-mode" style="font-size:9px;opacity:0.5">modo local</span></div>
   </div>
 </div>
@@ -494,33 +1152,33 @@ button.si {
   <div class="sb-nav">
     <div class="sb-grp">
       <div class="sb-lbl">Principal</div>
-      <button type="button" class="si" data-nav="dash" onclick="nav('dash')"><span class="sic">⬛</span><span>Dashboard</span></button>
+      <button type="button" class="si" data-nav="dash" onclick="nav('dash')"><span class="sic nav-ic">DB</span><span>Dashboard</span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Gestión</div>
-      <button type="button" class="si" data-nav="clientes" onclick="nav('clientes')"><span class="sic">👤</span><span>Clientes</span></button>
-      <button type="button" class="si" data-nav="motos" onclick="nav('motos')"><span class="sic">🏍️</span><span>Motocicletas</span></button>
-      <button type="button" class="si" data-nav="creditos" onclick="nav('creditos')"><span class="sic">📋</span><span>Financiamientos</span></button>
-      <button type="button" class="si" data-nav="pagos" onclick="nav('pagos')"><span class="sic">💳</span><span>Pagos</span></button>
+      <button type="button" class="si" data-nav="clientes" onclick="nav('clientes')"><span class="sic nav-ic">CLI</span><span>Clientes</span></button>
+      <button type="button" class="si" data-nav="motos" onclick="nav('motos')"><span class="sic nav-ic">MOT</span><span>Motocicletas</span></button>
+      <button type="button" class="si" data-nav="creditos" onclick="nav('creditos')"><span class="sic nav-ic">FIN</span><span>Financiamientos</span></button>
+      <button type="button" class="si" data-nav="pagos" onclick="nav('pagos')"><span class="sic nav-ic">PAG</span><span>Pagos</span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Operaciones</div>
-      <button type="button" class="si" data-nav="cobranza" onclick="nav('cobranza')"><span class="sic">🔔</span><span>Cobranza</span><span class="si-bx" id="sb-badge-cob"></span></button>
-      <button type="button" class="si" data-nav="contratos" onclick="nav('contratos')"><span class="sic">📄</span><span>Contratos</span></button>
-      <button type="button" class="si" data-nav="gps" onclick="nav('gps')"><span class="sic">📍</span><span>GPS Motos</span></button>
-      <button type="button" class="si" data-nav="notif" onclick="nav('notif')"><span class="sic">💬</span><span>Notificaciones</span></button>
+      <button type="button" class="si" data-nav="cobranza" onclick="nav('cobranza')"><span class="sic nav-ic">COB</span><span>Cobranza</span><span class="si-bx" id="sb-badge-cob"></span></button>
+      <button type="button" class="si" data-nav="contratos" onclick="nav('contratos')"><span class="sic nav-ic">CTR</span><span>Contratos</span></button>
+      <button type="button" class="si" data-nav="gps" onclick="nav('gps')"><span class="sic nav-ic">GPS</span><span>GPS Motos</span></button>
+      <button type="button" class="si" data-nav="notif" onclick="nav('notif')"><span class="sic nav-ic">NOT</span><span>Notificaciones</span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Análisis</div>
-      <button type="button" class="si" data-nav="reportes" onclick="nav('reportes')"><span class="sic">📊</span><span>Reportes</span></button>
-      <button type="button" class="si" data-nav="cuentas" onclick="nav('cuentas')"><span class="sic">🏦</span><span>Cuentas</span></button>
-      <button type="button" class="si" data-nav="conta" onclick="nav('conta')"><span class="sic">📒</span><span>Contabilidad</span></button>
+      <button type="button" class="si" data-nav="reportes" onclick="nav('reportes')"><span class="sic nav-ic">RPT</span><span>Reportes</span></button>
+      <button type="button" class="si" data-nav="cuentas" onclick="nav('cuentas')"><span class="sic nav-ic">CTA</span><span>Cuentas</span></button>
+      <button type="button" class="si" data-nav="conta" onclick="nav('conta')"><span class="sic nav-ic">CNT</span><span>Contabilidad</span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Sistema</div>
-      <button type="button" class="si" data-nav="plan" onclick="nav('plan')"><span class="sic">💎</span><span>Plan & Precios</span></button>
-      <button type="button" class="si" data-nav="config" onclick="nav('config')"><span class="sic">⚙️</span><span>Configuración</span></button>
-      <button type="button" class="si" data-nav="users" onclick="nav('users')"><span class="sic">👥</span><span>Usuarios</span></button>
+      <button type="button" class="si" data-nav="plan" onclick="nav('plan')"><span class="sic nav-ic">PLN</span><span>Plan &amp; Precios</span></button>
+      <button type="button" class="si" data-nav="config" onclick="nav('config')"><span class="sic nav-ic">CFG</span><span>Configuración</span></button>
+      <button type="button" class="si" data-nav="users" onclick="nav('users')"><span class="sic nav-ic">USR</span><span>Usuarios</span></button>
     </div>
   </div>
   <div class="sb-foot">
@@ -543,8 +1201,8 @@ button.si {
   <div class="topbar" id="desktop-topbar">
     <div class="tb-ttl" id="pgT">Dashboard</div>
     <div class="tb-acts">
-      <div style="position:relative"><div class="srch"><span class="srch-i">🔍</span><input type="text" id="globalSearch" placeholder="Buscar en todo..." oninput="globalSearch(this.value)" onblur="setTimeout(closeGlobalSearch,200)" style="width:200px"></div><div id="gs-panel" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:360px;max-height:400px;overflow-y:auto;background:var(--surf);border:1px solid var(--rim2);border-radius:var(--r12);box-shadow:var(--shadow-md);z-index:9999"></div></div>
-      <button class="btn btn-g btn-ic nb" onclick="nav('notif')">🔔<span class="nd"></span></button>
+      <div style="position:relative"><div class="srch"><span class="srch-i">◆</span><input type="text" id="globalSearch" placeholder="Buscar en todo..." oninput="globalSearch(this.value)" onblur="setTimeout(closeGlobalSearch,200)" style="width:200px"></div><div id="gs-panel" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:360px;max-height:400px;overflow-y:auto;background:var(--surf);border:1px solid var(--rim2);border-radius:var(--r12);box-shadow:var(--shadow-md);z-index:9999"></div></div>
+      <button class="btn btn-g btn-ic nb" onclick="nav('notif')" title="Notificaciones" style="font-family:var(--fm);font-size:9px;font-weight:700">Not<span class="nd"></span></button>
       <button class="btn btn-p" onclick="topAct()">＋ Nuevo</button>
     </div>
   </div>
@@ -554,7 +1212,7 @@ button.si {
 <div class="ov" id="ov" style="display:none" onclick="if(event.target===this)closeM()">
   <div class="modal" id="modal-box">
     <div class="m-hd">
-      <div class="m-ic" id="mic">🏍️</div>
+      <div class="m-ic" id="mic" style="font-family:var(--fm);font-size:10px;font-weight:700;color:var(--p1)">···</div>
       <div><div class="m-tt" id="mtt">Modal</div><div class="m-sb" id="msb"></div></div>
       <button class="m-x" onclick="closeM()">✕</button>
     </div>
@@ -617,7 +1275,7 @@ try {
     FIREBASE_READY = true;
     console.log('Firebase inicializado correctamente');
   } else {
-    console.warn('⚠️ Firebase no configurado — usando modo local (admin/admin)');
+    console.warn('⚠ Firebase no configurado — usando modo local (admin/admin)');
   }
 } catch(e){ console.warn('Firebase init:', e.message); }
 
@@ -695,7 +1353,7 @@ var DB = {
       hideLoader();
       // Si es error de red, trabajar con datos locales sin avisar con error
       if(e.code==='unavailable'||( e.message&&e.message.includes('network'))){
-        toast('Sin conexión — trabajando en modo offline','info');
+        toast('Sin conexión — modo offline activo','info');
       } else {
         toast('Error al cargar datos: '+e.message,'error');
       }
@@ -826,7 +1484,7 @@ function renderCuentasBanc(lista){
     el.innerHTML = _cuentasBanc.length
       ? _cuentasBanc.map(function(c,i){
           return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surf2);border-radius:8px;border:1px solid var(--rim)">'
-            +'<span style="font-size:18px">🏦</span>'
+            +'<span style="font-size:12px;font-weight:800;color:var(--ink3)">BNK</span>'
             +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.nombre+'</div>'
             +'<div style="font-size:11px;color:var(--ink3)">'+c.tipo+' · '+c.moneda+'</div></div>'
             +'<button class="btn btn-d btn-xs" onclick="_cuentasBanc.splice('+i+',1);guardarCuentasBanc()">✕</button>'
@@ -865,7 +1523,7 @@ function nav(p){
     if(!perms.includes(p)){
       document.querySelectorAll('.si').forEach(function(e){e.classList.remove('on');});
       $('pgT').textContent = 'Sin acceso'; if($('pgT-mob')) $('pgT-mob').textContent='Sin acceso';
-      $('cnt').innerHTML = '<div class="empty"><div style="font-size:36px;margin-bottom:14px;opacity:0.3">🔒</div><div class="e-tt">Acceso restringido</div><div style="font-size:12px;margin-top:5px">No tienes permiso para ver este módulo.<br>Contacta al administrador.</div></div>';
+      $('cnt').innerHTML = '<div class="empty"><div style="font-size:36px;margin-bottom:14px;opacity:0.3;font-family:monospace">style="font-size:36px;margin-bottom:14px;opacity:0.3"></div>#128274;</div><div class="e-tt">Acceso restringido</div><div style="font-size:12px;margin-top:5px">No tienes permiso para ver este módulo.<br>Contacta al administrador.</div></div>';
       return;
     }
   }
@@ -876,7 +1534,7 @@ function nav(p){
   document.querySelectorAll('.si[data-nav]').forEach(e=>{if(e.dataset.nav===p)e.classList.add('on');});
   $('pgT').textContent=PGL[p]||p; if($('pgT-mob')) $('pgT-mob').textContent=PGL[p]||p;
   const fn=PG[p];
-  $('cnt').innerHTML=fn?fn():`<div class="empty"><span class="e-ic">🚧</span><div class="e-tt">En desarrollo</div></div>`;
+  $('cnt').innerHTML=fn?fn():`<div class="empty"><span class="e-ic" style="font-size:28px;opacity:0.3;display:block;margin-bottom:10px">···</span><div class="e-tt">En desarrollo</div></div>`;
   updateBadge();
 }
 
@@ -905,7 +1563,7 @@ function globalSearch(q){
   // Clientes
   S.clientes.filter(c=>!c.eliminado).forEach(function(c){
     if((c.nombre+' '+c.cedula+' '+c.tel+' '+(c.email||'')).toLowerCase().includes(val)){
-      results.push({tipo:'cliente',icon:'👤',titulo:c.nombre,sub:c.cedula+' · '+c.tel+' · '+c.ciudad,
+      results.push({tipo:'cliente',icon:'CLI',titulo:c.nombre,sub:c.cedula+' · '+c.tel+' · '+c.ciudad,
         accion:function(){ nav('clientes'); setTimeout(function(){verCliente(c.id);},100); }});
     }
   });
@@ -913,7 +1571,7 @@ function globalSearch(q){
   // Créditos
   S.creds.filter(c=>!c.eliminado).forEach(function(c){
     if((c.id+' '+c.cli+' '+c.modelo+' '+(c.vin||'')).toLowerCase().includes(val)){
-      results.push({tipo:'credito',icon:'📋',titulo:c.id+' — '+c.cli,
+      results.push({tipo:'credito',icon:'≡',titulo:c.id+' — '+c.cli,
         sub:c.modelo+' · '+c.estado+' · '+(c.pagado||0)+' cuotas pagadas',
         accion:function(){ nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
     }
@@ -922,7 +1580,7 @@ function globalSearch(q){
   // Motos
   S.motos.filter(m=>!m.eliminado).forEach(function(m){
     if((m.modelo+' '+(m.vin||'')+' '+(m.cliente||'')+' '+(m.color||'')).toLowerCase().includes(val)){
-      results.push({tipo:'moto',icon:'🏍️',titulo:m.modelo,
+      results.push({tipo:'moto',icon:'MOT',titulo:m.modelo,
         sub:(m.vin||'Sin VIN')+' · '+m.estado+(m.cliente?' · '+m.cliente:''),
         accion:function(){ nav('motos'); }});
     }
@@ -931,7 +1589,7 @@ function globalSearch(q){
   // Pagos
   S.pagos.filter(p=>!p.eliminado).forEach(function(p){
     if((p.id+' '+p.cli+' '+(p.referencia||'')+(p.metodo||'')).toLowerCase().includes(val)){
-      results.push({tipo:'pago',icon:'💳',titulo:p.id+' — '+p.cli,
+      results.push({tipo:'pago',icon:'PAG',titulo:p.id+' — '+p.cli,
         sub:fmt(p.monto)+' · '+p.fecha+' · '+(p.metodo||''),
         accion:function(){ nav('pagos'); }});
     }
@@ -940,7 +1598,7 @@ function globalSearch(q){
   // Egresos
   S.egresos.filter(function(e){return !e.eliminado;}).forEach(function(e){
     if((e.concepto+' '+(e.categoria||'')+(e.forma||'')).toLowerCase().includes(val)){
-      results.push({tipo:'egreso',icon:'💸',titulo:e.concepto,
+      results.push({tipo:'egreso',icon:'$$',titulo:e.concepto,
         sub:fmt(e.monto)+' · '+(e.fecha||'')+(e.forma?' · '+e.forma:''),
         accion:function(){ nav('conta'); }});
     }
@@ -988,7 +1646,7 @@ function motoCard(m){
   const estadoOpts=['disponible','financiada','recuperada','inventario'];
   return`<div class="moto-plan-card" id="mc-${m.id}">
     <div style="background:${estadoColors[m.estado]||estadoColors.disponible};border-radius:8px;padding:12px 13px;margin:-14px -14px 12px;display:flex;justify-content:space-between;align-items:flex-start;position:relative;overflow:hidden">
-      <div style="position:absolute;right:8px;bottom:-10px;font-size:52px;opacity:0.07">🏍️</div>
+      <div style="position:absolute;right:8px;bottom:-10px;font-size:52px;opacity:0.07">MOT</div>
       <div>
         <div class="mpn" style="margin-bottom:0">${m.modelo}</div>
         <div style="font-size:10.5px;color:var(--ink3);margin-top:2px">VIN · ${m.vin}</div>
@@ -1002,11 +1660,11 @@ function motoCard(m){
     <div class="mp-row"><span class="mp-l">Cuota mensual</span><span class="mp-v accent">${fmt(m.cuotaM)}</span></div>
     <div class="mp-row"><span class="mp-l">Cuota quincenal</span><span class="mp-v">${fmt(m.cuotaQ)}</span></div>
     <div class="mp-row"><span class="mp-l">Total a pagar</span><span class="mp-v">${fmt(m.totalPagado)}</span></div>
-    ${m.cliente?`<div style="margin-top:9px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2);background:var(--surf);padding:5px 8px;border-radius:6px;border:1px solid var(--rim)"><span>👤</span>${m.cliente}</div>`:''}
-    ${m.gps?`<div style="margin-top:5px;font-size:10px;color:var(--blue);font-weight:700">📍 GPS Activo</div>`:''}
+    ${m.cliente?`<div style="margin-top:9px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2);background:var(--surf);padding:5px 8px;border-radius:6px;border:1px solid var(--rim)"><span>CLI</span>${m.cliente}</div>`:''}
+    ${m.gps?`<div style="margin-top:5px;font-size:10px;color:var(--blue);font-weight:700">GPS Activo</div>`:''}
     <div style="display:flex;gap:4px;margin-top:10px;padding-top:9px;border-top:1px solid var(--rim)">
-      <button class="btn btn-g btn-xs" style="flex:1" onclick="editMoto(${m.id})">✏️ Editar</button>
-      <button class="btn btn-d btn-xs btn-ic" onclick="delMoto(${m.id})">🗑️</button>
+      <button class="btn btn-g btn-xs" style="flex:1" onclick="editMoto(${m.id})">Editar</button>
+      <button class="btn btn-d btn-xs" onclick="delMoto(${m.id})">Eliminar</button>
     </div>
   </div>`;
 }
@@ -1026,15 +1684,15 @@ function renderMotoGrid(){
   const f=S.mTab;
   const fil = f==='todas'?S.motos:S.motos.filter(m=>m.estado===f);
   return fil.length?`<div class="moto-plan-grid">${fil.map(motoCard).join('')}</div>`:
-    `<div class="empty"><span class="e-ic">🏍️</span><div class="e-tt">Sin motos en esta categoría</div></div>`;
+    `<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin motos en esta categoría</div></div>`;
 }
 
 function filterMotos(q){
   const f = q?S.motos.filter(m=>`${m.modelo} ${m.vin} ${m.cliente||''}`.toLowerCase().includes(q.toLowerCase())):S.motos.filter(m=>!m.eliminado&&(S.mTab==='todas'?true:m.estado===S.mTab));
   const g=$('mgr');
   var elimHTML=S.motos.filter(m=>m.eliminado).length
-  ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+S.motos.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+m.modelo+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+m.vin+'</span></div>'+'<span style="font-size:10px;color:var(--red)">🗑 '+(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?'· '+m.eliminadoRazon:'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?'· '+m.eliminadoEn.split('T')[0]:'')+'</span>'+'</div>';}).join('')+'</div>':'';
-if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join('')}</div>`:`<div class="empty"><span class="e-ic">🔍</span><div class="e-tt">Sin resultados para "${q}"</div></div>`)+elimHTML;
+  ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+S.motos.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+m.modelo+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+m.vin+'</span></div>'+'<span style="font-size:10px;color:var(--red)">Del '+(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?'· '+m.eliminadoRazon:'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?'· '+m.eliminadoEn.split('T')[0]:'')+'</span>'+'</div>';}).join('')+'</div>':'';
+if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join('')}</div>`:`<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q}"</div></div>`)+elimHTML;
 }
 
 // ══════════════════════════════════════════
@@ -1042,7 +1700,7 @@ if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join(
 // ══════════════════════════════════════════
 function renderClienteList(q=''){
   const filtered = q?S.clientes.filter(c=>!c.eliminado&&`${c.nombre} ${c.cedula} ${c.tel} ${c.ciudad} ${c.trabajo}`.toLowerCase().includes(q.toLowerCase())):S.clientes.filter(c=>!c.eliminado);
-  if(!filtered.length) return `<div class="empty"><span class="e-ic">🔍</span><div class="e-tt">Sin resultados para "${q}"</div></div>`;
+  if(!filtered.length) return `<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q}"</div></div>`;
   const PER=50; const pg=pgGet('clientes'); const start=(pg-1)*PER;
   const page=filtered.slice(start,start+PER);
   return `<div class="card"><div class="tw"><table>
@@ -1050,18 +1708,18 @@ function renderClienteList(q=''){
     <tbody>${page.map(c=>`<tr>
       <td><div style="display:flex;align-items:center;gap:9px">
         <div style="width:31px;height:31px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${ini(c.nombre)}</div>
-        <div><div class="tdm">${c.nombre}${c.premium?` <span style="color:var(--amber);font-size:11px" title="Cliente Premium">⭐</span>`:''}</div><div class="tds">${c.trabajo}</div></div>
+        <div><div class="tdm">${c.nombre}${c.premium?` <span style="color:var(--amber);font-size:11px" title="Cliente Premium">★</span>`:''}</div><div class="tds">${c.trabajo}</div></div>
       </div></td>
       <td class="tds">${c.cedula}</td><td class="tds">${c.tel}</td><td class="tds">${c.ciudad}</td>
       <td class="tdm" style="font-family:var(--fd)">${fmt(c.ingreso)}/mes</td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       <td><div style="display:flex;gap:4px">
-        <button class="btn btn-p btn-xs" onclick="verCliente(${c.id})">👁 Ver</button>
-        <button class="btn btn-g btn-xs btn-ic" onclick="editCliente(${c.id})">✏️</button>
-        <button class="btn btn-d btn-xs btn-ic" onclick="delCliente(${c.id})">🗑️</button>
+        <button class="btn btn-p btn-xs" onclick="verCliente(${c.id})">Ver</button>
+        <button class="btn btn-g btn-xs" onclick="editCliente(${c.id})">Editar</button>
+        <button class="btn btn-d btn-xs" onclick="delCliente(${c.id})">Eliminar</button>
       </div></td>
     </tr>`).join('')}</tbody>
-  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>🗑 Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><span style='color:var(--ink3)'>${c.eliminadoRazon?'· '+c.eliminadoRazon:''}</span><span style='color:var(--ink3)'>${c.eliminadoEn?c.eliminadoEn.split('T')[0]:''}</span></div>`).join('')}</div>`:''}</div>`+pgControls('clientes',filtered.length,50,'pgNav');
+  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>Del Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><span style='color:var(--ink3)'>${c.eliminadoRazon?'· '+c.eliminadoRazon:''}</span><span style='color:var(--ink3)'>${c.eliminadoEn?c.eliminadoEn.split('T')[0]:''}</span></div>`).join('')}</div>`:''}</div>`+pgControls('clientes',filtered.length,50,'pgNav');
 }
 
 function verCliente(id){
@@ -1074,13 +1732,13 @@ function verCliente(id){
   const tuvomora=creditos.some(function(cr){return cr.mora>0||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});});
   const esPremium=c.premium===true;
 
-  $('mic').textContent=esPremium?'⭐':'👤';
-  $('mtt').textContent=c.nombre+(esPremium?' ⭐ Premium':'');
+  $('mic').textContent=esPremium?'★':'CLI';
+  $('mtt').textContent=c.nombre+(esPremium?' ★ Premium':'');
   $('msb').textContent=c.cedula+' · '+c.ciudad;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
     ${esPremium?`<div style="background:linear-gradient(135deg,rgba(245,166,35,0.15),rgba(253,203,110,0.1));border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:22px">⭐</span>
+      <span style="font-size:18px;font-weight:800;color:var(--amber)">★</span>
       <div><div style="font-weight:800;font-size:13px;color:var(--amber)">Cliente Premium</div>
       <div style="font-size:11px;color:var(--ink3)">Pagó su financiamiento sin mora — elegible para condiciones preferenciales en el próximo crédito</div></div>
     </div>`:''}
@@ -1088,7 +1746,7 @@ function verCliente(id){
       <div class="stat"><div class="st-v" style="font-size:16px">${creditos.length}</div><div class="st-l">Créditos totales</div></div>
       <div class="stat"><div class="st-v" style="font-size:16px;color:var(--green)">${fmt(totalPagadoReal)}</div><div class="st-l">Total pagado</div></div>
       <div class="stat"><div class="st-v" style="font-size:16px;color:var(--p1)">${creditosCompletados.length}</div><div class="st-l">Completados</div></div>
-      <div class="stat"><div class="st-v" style="font-size:16px;color:${tuvomora?'var(--red)':'var(--green)'}">${tuvomora?'⚠️ Sí':'✓ No'}</div><div class="st-l">Tuvo mora</div></div>
+      <div class="stat"><div class="st-v" style="font-size:16px;color:${tuvomora?'var(--red)':'var(--green)'}">${tuvomora?'⚠ Sí':'✓ No'}</div><div class="st-l">Tuvo mora</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="detail-item"><div class="detail-lbl">Teléfono</div><div class="detail-val">${c.tel}</div></div>
@@ -1111,7 +1769,7 @@ function verCliente(id){
       var tuvoMoraCr=S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});
       return `<div class="li" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer" onclick="openAmort('${cr.id}')">
         <div style="display:flex;width:100%;align-items:center;gap:8px">
-          <div class="li-ic" style="background:var(--gs)">${cr.estado==='completado'?'✅':'📋'}</div>
+          <div class="li-ic" style="background:var(--gs)">${cr.estado==='completado'?'✓':'≡'}</div>
           <div style="flex:1">
             <div style="font-weight:700;color:var(--ink);font-size:12.5px">${cr.id} · ${cr.modelo}</div>
             <div style="font-size:10.5px;color:var(--ink3)">Inicio: ${cr.fecha}${cr.fechaCompletado?' · Completado: '+cr.fechaCompletado:''}</div>
@@ -1133,7 +1791,7 @@ function verCliente(id){
 
     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin:14px 0 9px">Últimos pagos (${pagos.length})</div>
     ${pagos.length?`<div class="lst">${pagos.slice(0,20).map(p=>`<div class="li"><div class="li-ic" style="background:var(--greens);font-size:9px;font-weight:900;color:var(--green)">PAG</div><div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">${p.fecha} · ${p.metodo}</div><div class="tds">${p.cred}</div></div><div style="font-weight:800;color:var(--green);font-family:var(--fd)">${fmt(p.monto)}</div></div>`).join('')}</div>`:`<div style="color:var(--ink3);font-size:12.5px;padding:10px 0">Sin pagos registrados</div>`}`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente(${id})">✏️ Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">📄 Ver Finiquito</button>`:''}`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente(${id})">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
   $('ov').style.display='flex';
 }
 
@@ -1192,152 +1850,171 @@ dash(){
 
   // stat cards: [icon, label, value, change, changeClass, bg, color, navTarget, navHint]
   const stats=[
-    ['MOTO','Motos en Sistema',S.motos.length,'↑ '+dispMotos+' disponibles','up','rgba(124,92,246,0.12)','var(--p1)','motos','Ver motocicletas'],
-    ['ACT','Créditos Activos',activos,'de '+S.creds.length+' total','up','rgba(14,203,129,0.12)','var(--green)','creditos','Ver financiamientos'],
-    ['COB','Cobrado este mes',fmt(ingMes),'pagos confirmados','up','rgba(124,92,246,0.12)','var(--p1)','pagos','Ver pagos'],
-    ['MORA','Clientes en Mora',mora,mora>0?'requiere gestión urgente':'todos al día',mora>0?'dn':'up','rgba(240,75,106,0.12)','var(--red)','cobranza','Ir a cobranza'],
-    ['CAR','Cartera Activa',fmt(cartera),'saldo pendiente total','neu','rgba(91,141,239,0.12)','var(--p2)','reportes','Ver reportes'],
-    ['PLN','Plan 10 Meses','1.90x','Factor · 40% inicial','neu','rgba(124,92,246,0.12)','var(--p1)','plan','Ver plan y precios'],
+    ['MOTO','Motos en Sistema',S.motos.length,'↑ '+dispMotos+' disponibles','up','var(--gs)','var(--p1)','motos','Ver motocicletas'],
+    ['ACT','Créditos Activos',activos,'de '+S.creds.length+' total','up','var(--greens)','var(--green)','creditos','Ver financiamientos'],
+    ['COB','Cobrado este mes',fmt(ingMes),'pagos confirmados','up','var(--gs)','var(--p1)','pagos','Ver pagos'],
+    ['MORA','Clientes en Mora',mora,mora>0?'requiere atención':'todos al día',mora>0?'dn':'up','var(--reds)','var(--red)','cobranza','Ir a cobranza'],
+    ['CAR','Cartera Activa',fmt(cartera),'saldo pendiente total','neu','var(--blues)','var(--p2)','reportes','Ver reportes'],
+    ['PLN','Plan 10 Meses','1.90x','Factor · 40% inicial','neu','var(--gs)','var(--p1)','plan','Ver plan y precios'],
   ];
 
   return`<div class="page">
-  <div class="hero">
-    <div><div class="hero-tt">Bienvenido, ${(S.currentUser&&S.currentUser.nombre?S.currentUser.nombre.split(' ')[0]:'')}</div><div class="hero-sb">${new Date().toLocaleDateString('es-VE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div></div>
-    <div style="display:flex;gap:7px;z-index:1">
+
+  <!-- HERO STRIP -->
+  <div class="hero" style="margin-bottom:18px">
+    <div>
+      <div class="hero-tt">Bienvenido, ${(S.currentUser&&S.currentUser.nombre?S.currentUser.nombre.split(' ')[0]:'')}</div>
+      <div class="hero-sb">${new Date().toLocaleDateString('es-VE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+    </div>
+    <div style="display:flex;gap:8px;z-index:1">
       <button class="btn btn-g btn-sm" onclick="nav('reportes')">Reportes</button>
       <button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nuevo crédito</button>
     </div>
   </div>
 
-  <div class="sg">
+  <!-- KPI CARDS -->
+  <div class="sg" style="margin-bottom:18px">
     ${stats.map(([ic,lb,vl,ch,ct,bg,cl,target,hint])=>`
     <div class="stat" onclick="nav('${target}')" style="cursor:pointer" title="${hint}">
       <div class="st-glow" style="background:linear-gradient(90deg,${cl},transparent)"></div>
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
-        <div class="st-ic" style="background:${bg};margin-bottom:0;font-size:9px;font-weight:900;letter-spacing:0.5px;color:${cl}">${ic}</div>
-        <span style="font-size:9px;font-weight:700;color:var(--ink3);opacity:0;transition:opacity .2s" class="stat-hint">→ ${hint}</span>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+        <div class="st-ic" style="background:${bg};font-size:8px;font-weight:700;letter-spacing:0.5px;color:${cl};font-family:var(--fm)">${ic}</div>
+        <span style="font-size:9px;color:var(--ink3);font-weight:600;opacity:0.7">→</span>
       </div>
       <div class="st-v">${vl}</div>
       <div class="st-l">${lb}</div>
-      <div class="st-c ${ct}">${ch}</div>
+      <div class="st-c ${ct}" style="margin-top:8px">${ch}</div>
     </div>`).join('')}
   </div>
 
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px">
-    <div class="card" onclick="nav('reportes')" style="cursor:pointer" title="Ver reporte de ingresos">
-      <div class="ch">
-        <div><div class="ct">Ingresos por Mes</div><div class="cs">Últimos 7 meses · clic para ver reporte completo</div></div>
-        <button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('reportes')">Detalle</button>
+  <!-- MAIN CONTENT GRID -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
+
+    <!-- INGRESOS CHART -->
+    <div class="card" onclick="nav('reportes')" style="cursor:pointer" title="Ver reporte completo">
+      <div class="ch" style="margin-bottom:12px">
+        <div>
+          <div class="ct">Ingresos por Mes</div>
+          <div class="cs">Últimos 7 meses</div>
+        </div>
+        <button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('reportes')">Ver detalle</button>
       </div>
       <div class="bc">${iv.map((v,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center"><div class="bar" style="width:100%;height:${Math.round(v/mx*100)}%;background:${i===iv.length-1?'linear-gradient(0deg,var(--p1),var(--p2))':'var(--lift)'}"><span class="bv">${v?'$'+Math.round(v/1000)+'k':''}</span></div></div>`).join('')}</div>
       <div style="display:flex;margin-top:4px">${ms.map(m=>`<div class="bl" style="flex:1">${m}</div>`).join('')}</div>
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:11px;color:var(--ink3)">Total acumulado</span>
-        <span style="font-family:var(--fd);font-weight:900;font-size:16px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">$${iv.reduce(function(a,b){return a+b;},0).toLocaleString()}</span>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:var(--ink3);font-weight:500">Total acumulado</span>
+        <span style="font-family:var(--fd);font-weight:700;font-size:15px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">$${iv.reduce(function(a,b){return a+b;},0).toLocaleString()}</span>
       </div>
     </div>
 
+    <!-- CUOTAS DEL DIA -->
     <div class="card" style="display:flex;flex-direction:column;gap:8px">
-      <div class="ch" style="margin-bottom:6px">
-        <div class="ct">Cuotas del Día</div>
-        <span class="bdg b-a" style="cursor:pointer" onclick="nav('pagos')">${hoy.length} pendientes</span>
+      <div class="ch" style="margin-bottom:4px">
+        <div class="ct">Vencimientos Próximos</div>
+        <span class="bdg b-a" style="cursor:pointer" onclick="nav('pagos')">${hoy.length}</span>
       </div>
+      ${hoy.length===0?`<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin cuotas próximas</div>`:''}
       ${hoy.map(c=>`
-      <div onclick="openAddPago()" style="background:var(--surf2);border:1px solid var(--rim);border-radius:var(--r8);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .14s" onmouseover="this.style.borderColor='var(--rim2)';this.style.background='var(--lift)'" onmouseout="this.style.borderColor='var(--rim)';this.style.background='var(--surf2)'">
+      <div onclick="openAddPago()" style="background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .14s" onmouseover="this.style.borderColor='var(--rim2)';this.style.background='var(--lift)'" onmouseout="this.style.borderColor='var(--rim)';this.style.background='var(--surf2)'">
         <div>
-          <div style="font-weight:700;color:var(--ink);font-size:12px">${c.cli}</div>
-          <div style="font-size:10.5px;color:var(--ink3)">${c.id} · ${c.modelo}</div>
+          <div style="font-weight:600;color:var(--ink);font-size:12px">${c.cli}</div>
+          <div style="font-size:10.5px;color:var(--ink3);font-family:var(--fm)">${c.id}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-weight:900;font-family:var(--fd);background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmt(c.cuotaQ||c.cuota)}</div>
-          <div style="font-size:9.5px;color:var(--p1);font-weight:700;margin-top:2px">Toca para cobrar →</div>
+          <div style="font-weight:700;font-family:var(--fd);font-size:13px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmt(c.cuotaQ||c.cuota)}</div>
+          <div style="font-size:9.5px;color:var(--p1);font-weight:600;margin-top:2px">Registrar →</div>
         </div>
       </div>`).join('')}
-      <button class="btn btn-g btn-sm" style="width:100%;margin-top:2px" onclick="nav('pagos')">Ver todos los pagos →</button>
+      <button class="btn btn-g btn-sm" style="width:100%;margin-top:4px" onclick="nav('pagos')">Ver todos los pagos</button>
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <!-- SECOND ROW -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+    <!-- ULTIMOS PAGOS -->
     <div class="card">
-      <div class="ch">
+      <div class="ch" style="margin-bottom:12px">
         <div class="ct">Últimos Pagos</div>
-        <a style="font-size:11px;font-weight:700;cursor:pointer;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text" onclick="nav('pagos')">Ver todos →</a>
+        <span style="font-size:11px;font-weight:600;cursor:pointer;color:var(--p1)" onclick="nav('pagos')">Ver todos</span>
       </div>
       <div class="lst">
-        ${S.pagos.map(p=>`
+        ${S.pagos.slice(0,6).map(p=>`
         <div class="li" onclick="nav('pagos')" title="Ir a pagos">
-          <div class="li-ic" style="background:var(--greens);font-size:9px;font-weight:900;color:var(--green)">PAG</div>
+          <div class="li-ic" style="background:var(--greens);font-size:8px;font-weight:700;color:var(--green);font-family:var(--fm)">PAG</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12.5px;font-weight:700;color:var(--ink)">${p.cli}</div>
-            <div style="font-size:10.5px;color:var(--ink3)">${p.fecha} · ${p.metodo}</div>
+            <div style="font-size:12px;font-weight:600;color:var(--ink)">${p.cli}</div>
+            <div style="font-size:10.5px;color:var(--ink3);font-family:var(--fm)">${p.fecha} · ${p.metodo}</div>
           </div>
-          <div style="text-align:right">
-            <div style="font-weight:800;color:var(--green);font-family:var(--fd)">${fmt(p.monto)}</div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-weight:700;color:var(--green);font-family:var(--fd);font-size:12.5px">${fmt(p.monto)}</div>
             <span class="bdg ${sbg(p.estado)}" style="font-size:9px">${p.estado}</span>
           </div>
         </div>`).join('')}
       </div>
-      ${pendPagos>0?`<div onclick="nav('pagos')" style="margin-top:10px;padding:8px 11px;background:var(--ambers);border-radius:var(--r8);border:1px solid rgba(245,166,35,0.2);cursor:pointer;display:flex;justify-content:space-between;align-items:center" title="Ir a confirmar pagos pendientes"><span style="font-size:12px;font-weight:700;color:var(--amber)">${pendPagos} pago${pendPagos>1?'s':''} pendiente${pendPagos>1?'s':''} de confirmar</span><span style="font-size:11px;color:var(--amber);font-weight:700">Confirmar →</span></div>`:''}
+      ${pendPagos>0?`<div onclick="nav('pagos')" style="margin-top:10px;padding:9px 12px;background:var(--ambers);border-radius:9px;border:1px solid rgba(232,152,10,0.2);cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11.5px;font-weight:600;color:var(--amber)">${pendPagos} pago${pendPagos>1?'s':''} por confirmar</span><span style="font-size:11px;color:var(--amber);font-weight:700">Confirmar →</span></div>`:''}
     </div>
 
+    <!-- ALERTAS COBRANZA -->
     <div class="card">
-      <div class="ch">
+      <div class="ch" style="margin-bottom:12px">
         <div class="ct">Alertas de Cobranza</div>
         ${mora>0
           ?`<span class="bdg b-r" style="cursor:pointer" onclick="nav('cobranza')">${mora} en mora</span>`
-          :`<span class="bdg b-g">✅ Al día</span>`}
+          :`<span class="bdg b-g">Al día</span>`}
       </div>
       ${mora>0
         ?`<div class="lst">
-          ${S.creds.filter(c=>c.mora>0).map(c=>`
-          <div class="li" onclick="nav('cobranza')" title="Ir a gestionar cobranza" style="border-color:rgba(240,75,106,0.15)">
-            <div class="li-ic" style="background:var(--reds);font-size:9px;font-weight:900;color:var(--red)">ALR</div>
+          ${S.creds.filter(c=>c.mora>0).slice(0,4).map(c=>`
+          <div class="li" onclick="nav('cobranza')" title="Gestionar cobranza" style="border-color:rgba(217,59,90,0.12)">
+            <div class="li-ic" style="background:var(--reds);font-size:8px;font-weight:700;color:var(--red);font-family:var(--fm)">ALR</div>
             <div style="flex:1">
-              <div style="font-size:12.5px;font-weight:700;color:var(--ink)">${c.cli}</div>
-              <div style="font-size:10.5px;color:var(--ink3)">${c.id} · ${c.mora} días de atraso · ${c.modelo}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--ink)">${c.cli}</div>
+              <div style="font-size:10.5px;color:var(--ink3)">${c.mora} días · ${c.modelo}</div>
             </div>
             <div style="text-align:right;flex-shrink:0">
-              <div style="font-weight:800;color:var(--red);font-family:var(--fd)">${fmt(c.cuotaQ||c.cuota)}</div>
-              <div style="font-size:9.5px;color:var(--red);font-weight:700;margin-top:2px">Gestionar →</div>
+              <div style="font-weight:700;color:var(--red);font-family:var(--fd);font-size:12.5px">${fmt(c.cuotaQ||c.cuota)}</div>
+              <div style="font-size:9.5px;color:var(--red);font-weight:600;margin-top:2px">Gestionar →</div>
             </div>
           </div>`).join('')}
         </div>
         <button class="btn btn-d btn-sm" style="width:100%;margin-top:10px" onclick="nav('cobranza')">Ir a Cobranza</button>`
-        :`<div style="text-align:center;padding:28px 20px;color:var(--green)">
-          <div style="font-size:14px;font-weight:900;margin-bottom:10px;color:var(--green)">Al día</div>
-          <div style="font-weight:800;font-size:15px">Todos los clientes al día</div>
-          <div style="font-size:11.5px;color:var(--ink3);margin-top:5px">No hay clientes en mora actualmente</div>
-          <button class="btn btn-g btn-sm" style="margin-top:14px" onclick="nav('cobranza')">Ver módulo de cobranza</button>
+        :`<div style="text-align:center;padding:30px 20px">
+          <div style="width:44px;height:44px;border-radius:50%;background:var(--greens);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:18px;color:var(--green);font-weight:700">✓</div>
+          <div style="font-weight:700;font-size:13.5px;color:var(--green);margin-bottom:4px">Todo al día</div>
+          <div style="font-size:11.5px;color:var(--ink3)">Sin clientes en mora</div>
+          <button class="btn btn-g btn-sm" style="margin-top:14px" onclick="nav('cobranza')">Ver cobranza</button>
         </div>`}
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
-    <div class="card" onclick="nav('clientes')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:16px 18px" title="Ver clientes" onmouseover="this.style.borderColor='var(--rim2)'" onmouseout="this.style.borderColor='var(--rim)'">
-      <div style="width:40px;height:40px;border-radius:12px;background:rgba(124,92,246,0.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:var(--p1);flex-shrink:0">CLI</div>
+  <!-- QUICK ACCESS STRIP -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+    <div class="card" onclick="nav('clientes')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 18px" title="Ver clientes">
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--gs);border:1px solid var(--rim2);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:var(--p1);font-family:var(--fm);flex-shrink:0">CLI</div>
       <div style="flex:1">
-        <div style="font-family:var(--fd);font-weight:900;font-size:22px;color:var(--ink);letter-spacing:-1px">${S.clientes.length}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">Clientes registrados</div>
+        <div style="font-family:var(--fd);font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-1px">${S.clientes.length}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:1px;font-weight:500">Clientes registrados</div>
       </div>
-      <div style="font-size:18px;color:var(--ink3)">→</div>
+      <div style="font-size:14px;color:var(--ink3);font-weight:300">→</div>
     </div>
 
-    <div class="card" onclick="nav('motos');setTimeout(()=>setMTab('disponible'),100)" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:16px 18px" title="Ver motos disponibles" onmouseover="this.style.borderColor='var(--rim2)'" onmouseout="this.style.borderColor='var(--rim)'">
-      <div style="width:40px;height:40px;border-radius:12px;background:rgba(14,203,129,0.12);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:var(--green);flex-shrink:0">MOTO</div>
+    <div class="card" onclick="nav('motos');setTimeout(()=>setMTab('disponible'),100)" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 18px" title="Ver motos disponibles">
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--greens);border:1px solid rgba(6,176,106,0.2);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:var(--green);font-family:var(--fm);flex-shrink:0">MOT</div>
       <div style="flex:1">
-        <div style="font-family:var(--fd);font-weight:900;font-size:22px;color:var(--ink);letter-spacing:-1px">${dispMotos}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">Motos disponibles</div>
+        <div style="font-family:var(--fd);font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-1px">${dispMotos}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:1px;font-weight:500">Motos disponibles</div>
       </div>
-      <div style="font-size:18px;color:var(--ink3)">→</div>
+      <div style="font-size:14px;color:var(--ink3);font-weight:300">→</div>
     </div>
 
-    <div class="card" onclick="nav('plan')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:16px 18px;background:linear-gradient(135deg,var(--surf),var(--surf2));border-color:var(--rim2)" title="Ver plan y precios" onmouseover="this.style.borderColor='var(--rim3)'" onmouseout="this.style.borderColor='var(--rim2)'">
-      <div style="width:40px;height:40px;border-radius:12px;background:var(--gs);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:var(--p1);flex-shrink:0">PLN</div>
+    <div class="card" onclick="nav('plan')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 18px;background:linear-gradient(135deg,var(--surf),var(--surf2));border-color:var(--rim2)" title="Ver plan y precios">
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--gs);border:1px solid var(--rim2);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:var(--p1);font-family:var(--fm);flex-shrink:0">PLN</div>
       <div style="flex:1">
-        <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${CATALOGO.length} motos</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">Plan 10M disponibles</div>
+        <div style="font-family:var(--fd);font-weight:700;font-size:22px;letter-spacing:-1px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${CATALOGO.length}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:1px;font-weight:500">Modelos en catálogo</div>
       </div>
-      <div style="font-size:18px;color:var(--ink3)">→</div>
+      <div style="font-size:14px;color:var(--ink3);font-weight:300">→</div>
     </div>
   </div>
   </div>`;
@@ -1345,13 +2022,13 @@ dash(){
 
 motos(){
   return`<div class="page">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:9px 13px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim);font-size:11.5px;color:var(--ink3)">🏍️ <strong style="color:var(--ink)">Inventario</strong> = unidades físicas (VIN, color, estado) &nbsp;·&nbsp; 💎 <strong style="color:var(--ink)">Catálogo</strong> = modelos y precios → <button class="btn btn-g btn-xs" onclick="nav('plan')">Ver catálogo</button></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:9px 13px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim);font-size:11.5px;color:var(--ink3)"><span style="font-weight:700;color:var(--ink)">Inventario</span> = unidades físicas (VIN, color, estado) &nbsp;·&nbsp; <span style="font-weight:700;color:var(--ink)">Catálogo</span> = modelos y precios → <button class="btn btn-g btn-xs" onclick="nav('plan')">Ver catálogo</button></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap">
     <div style="display:flex;gap:5px;flex-wrap:wrap">
       ${[['todas','Todas ('+S.motos.length+')'],['disponible','Disponibles ('+S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length+')'],['financiada','Financiadas'],['inventario','Inventario'],['recuperada','Recuperadas']].map(([k,l])=>`<button class="btn ${S.mTab===k?'btn-p':'btn-g'} btn-sm" onclick="setMTab('${k}')">${l}</button>`).join('')}
     </div>
     <div style="display:flex;gap:7px">
-      <div class="srch"><span class="srch-i">🔍</span><input type="text" placeholder="Buscar moto..." id="mQ" oninput="filterMotos(this.value)" style="width:180px"></div>
+      <div class="srch"><span class="srch-i">◆</span><input type="text" placeholder="Buscar moto..." id="mQ" oninput="filterMotos(this.value)" style="width:180px"></div>
       <button class="btn btn-p btn-sm" onclick="openAddMoto()">＋ Nueva Unidad</button>
     </div>
   </div>
@@ -1362,8 +2039,8 @@ motos(){
 clientes(){
   return`<div class="page">
   <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap">
-    <div class="srch" style="flex:1"><span class="srch-i">🔍</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
-    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">📥 CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
+    <div class="srch" style="flex:1"><span class="srch-i">◆</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
+    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
   </div>
   <div id="clienteList">${renderClienteList()}</div>
   </div>`;
@@ -1377,7 +2054,7 @@ creditos(){
     <div class="stat"><div class="st-v" style="font-size:20px">1.90x</div><div class="st-l">Factor</div></div>
     <div class="stat"><div class="st-v" style="font-size:20px">40%</div><div class="st-l">Inicial</div></div>
   </div>
-  <div class="card"><div class="ch"><div class="ct">Financiamientos Activos</div><div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">📥 CSV</button><button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nuevo Financiamiento</button></div></div>
+  <div class="card"><div class="ch"><div class="ct">Financiamientos Activos</div><div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nuevo Financiamiento</button></div></div>
   <div class="tw"><table>
     <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN / Serial</th><th>Cuota Quincenal</th><th>Progreso</th><th>Saldo por pagar</th><th>Estado</th><th></th></tr></thead>
     <tbody>${(()=>{const _ca=S.creds.filter(c=>!c.eliminado);const _cp=pgGet('creditos');return _ca.slice((_cp-1)*50,_cp*50).map(c=>{
@@ -1404,17 +2081,17 @@ creditos(){
       <td style="min-width:100px"><div class="tds" style="margin-bottom:3px">${c.pagado}/${totalCuotas} cuotas quinc.</div><div class="prog"><div class="pf ${c.mora>0?'p-r':'p-p'}" style="width:${pct}%"></div></div></td>
       <td style="font-weight:900;font-family:var(--fd);color:${saldoColor}">${saldoPendiente===0?'✓ Saldo $0':fmt(saldoPendiente)}</td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
-      <td style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">📊</button><button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">✏️</button>${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}</td>
+      <td style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button><button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">Editar</button>${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}</td>
     </tr>`;}).join('')})()}${S.creds.filter(c=>c.estado==='cancelado').length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px'>Cancelados (${S.creds.filter(c=>c.estado==='cancelado').length})</div>${S.creds.filter(c=>c.estado==='cancelado').map(c=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px"><span style="font-family:var(--fd);font-weight:700;min-width:90px;opacity:0.6">'+c.id+'</span><span style="flex:1;opacity:0.6;text-decoration:line-through">'+c.cli+' — '+c.modelo+'</span><span style="color:var(--red)">✕ '+(c.canceladoPor||'Admin')+'</span><span style="color:var(--ink3)">'+(c.canceladoRazon?'· '+c.canceladoRazon:'')+'</span><span style="color:var(--ink3)">'+(c.canceladoEn?'· '+c.canceladoEn.split('T')[0]:'')+'</span></div>').join('')}</div></td></tr>`:''}}</tbody>
   </table></div></div></div>`+pgControls('creditos',S.creds.filter(c=>!c.eliminado).length,50,'pgNav');
 },
 
 pagos(){return`<div class="page">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    <div class="stat"><div class="st-ic" style="background:var(--greens)">✅</div><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Cobrado (confirmado)</div></div>
-    <div class="stat"><div class="st-ic" style="background:var(--ambers)">⏳</div><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='pendiente').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Pendiente por confirmar</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--greens)">✓</div><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Cobrado (confirmado)</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--ambers)">PND</div><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='pendiente').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Pendiente por confirmar</div></div>
   </div>
-  <div class="card"><div class="ch"><div class="ct">Registro de Pagos</div><div style="display:flex;gap:6px"><div style="display:flex;gap:5px"><button class="btn btn-g btn-sm" onclick="exportarCSV('pagos')">📥 CSV Pagos</button><button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">📥 CSV Créditos</button><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">📥 CSV Clientes</button></div><button class="btn btn-p btn-sm" onclick="openAddPago()">＋ Registrar Pago</button></div></div>
+  <div class="card"><div class="ch"><div class="ct">Registro de Pagos</div><div style="display:flex;gap:6px"><div style="display:flex;gap:5px"><button class="btn btn-g btn-sm" onclick="exportarCSV('pagos')">↓ CSV Pagos</button><button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ CSV Créditos</button><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV Clientes</button></div><button class="btn btn-p btn-sm" onclick="openAddPago()">＋ Registrar Pago</button></div></div>
   <div class="tw"><table>
     <thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha</th><th>Monto</th><th>Método</th><th>Cobrador</th><th>Estado</th><th></th></tr></thead>
     <tbody>${(()=>{const _pa=S.pagos.filter(p=>!p.eliminado);const _pp=pgGet('pagos');return _pa.slice((_pp-1)*50,_pp*50).map(p=>`<tr>
@@ -1423,8 +2100,8 @@ pagos(){return`<div class="page">
       <td style="color:var(--green);font-weight:800;font-family:var(--fd)">${fmt(p.monto)}</td>
       <td class="tds">${p.metodo}</td><td class="tds">${p.cobrador}</td>
       <td><span class="bdg ${sbg(p.estado)}">${p.estado}</span></td>
-      <td><div style="display:flex;gap:4px">${p.estado==='pendiente'?`<button class="btn btn-s btn-xs" onclick="confirmarPago('${p.id}')">✅</button>`:''}<button class="btn btn-p btn-xs" onclick="openEditPago('${p.id}')" title="Editar">✏️</button><button class="btn btn-d btn-xs" onclick="confirmarDelPago('${p.id}')" title="Eliminar">🗑</button></div></td>
-    </tr>`).join('')})()}${S.pagos.filter(p=>p.eliminado).length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:6px'>Eliminados (${S.pagos.filter(p=>p.eliminado).length})</div>${S.pagos.filter(p=>p.eliminado).map(p=>'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim);opacity:0.7"><span style="font-size:11px;font-family:var(--fd);font-weight:700;min-width:70px">'+p.id+'</span><span style="font-size:11px;flex:1">'+p.cli+' · '+fmt(p.monto)+'</span><span style="font-size:10px;color:var(--red)">🗑 '+(p.eliminadoPor||'Admin')+' · '+(p.eliminadoEn?p.eliminadoEn.split('T')[0]:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( p.eliminadoRazon||'')+'</span></div>').join('')}</div></td></tr>`:''}</tbody>
+      <td><div style="display:flex;gap:4px">${p.estado==='pendiente'?`<button class="btn btn-s btn-xs" onclick="confirmarPago('${p.id}')">✓</button>`:''}<button class="btn btn-p btn-xs" onclick="openEditPago('${p.id}')" title="Editar">Editar</button><button class="btn btn-d btn-xs" onclick="confirmarDelPago('${p.id}')" title="Eliminar">Eliminar</button></div></td>
+    </tr>`).join('')})()}${S.pagos.filter(p=>p.eliminado).length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:6px'>Eliminados (${S.pagos.filter(p=>p.eliminado).length})</div>${S.pagos.filter(p=>p.eliminado).map(p=>'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim);opacity:0.7"><span style="font-size:11px;font-family:var(--fd);font-weight:700;min-width:70px">'+p.id+'</span><span style="font-size:11px;flex:1">'+p.cli+' · '+fmt(p.monto)+'</span><span style="font-size:10px;color:var(--red)">Del '+(p.eliminadoPor||'Admin')+' · '+(p.eliminadoEn?p.eliminadoEn.split('T')[0]:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( p.eliminadoRazon||'')+'</span></div>').join('')}</div></td></tr>`:''}</tbody>
   </table></div></div></div>`+pgControls('pagos',S.pagos.filter(p=>!p.eliminado).length,50,'pgNav');
 },
 
@@ -1440,7 +2117,7 @@ cobranza(){
         if(snap.empty){$('cobranza-notas-list').innerHTML='<div style="color:var(--ink3);font-size:12px;padding:8px 0">Sin gestiones registradas aún</div>';return;}
         $('cobranza-notas-list').innerHTML=snap.docs.map(function(d){
           var n=d.data();
-          return '<div class="li"><div class="li-ic" style="background:var(--gs)">📝</div>'
+          return '<div class="li"><div class="li-ic" style="background:var(--gs)">Nota</div>'
             +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+n.tipo+' — '+n.credId+'</div>'
             +'<div class="tds">'+n.resultado+'</div>'
             +(n.fechaCompromiso?'<div class="tds" style="color:var(--p1)">Compromiso: '+n.fechaCompromiso+'</div>':'')
@@ -1463,16 +2140,16 @@ cobranza(){
       <td><span style="color:var(--red);font-weight:900;font-size:15px;font-family:var(--fd)">${c.mora}d</span></td>
       <td style="color:var(--red);font-weight:800;font-family:var(--fd)">${fmt(c.cuota)}</td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap">
-        <button class="btn btn-p btn-xs" onclick="openPagoRapido('${c.id}')" title="Registrar pago">💳 Cobrar</button>
-        <button class="btn btn-s btn-xs" onclick="llamarCliente('${c.id}')" title="Llamar">📞</button>
-        <button class="btn btn-g btn-xs" onclick="whatsappCliente('${c.id}')" title="WhatsApp">💬</button>
-        <button class="btn btn-g btn-xs" onclick="openNota('${c.id}')">📝</button>
-        <button class="btn btn-d btn-xs" onclick="confirmarRecuperacion('${c.id}')">🔑 Recuperar</button>
+        <button class="btn btn-p btn-xs" onclick="openPagoRapido('${c.id}')" title="Registrar pago">Cobrar</button>
+        <button class="btn btn-s btn-xs" onclick="llamarCliente('${c.id}')" title="Llamar">Tel</button>
+        <button class="btn btn-g btn-xs" onclick="whatsappCliente('${c.id}')" title="WhatsApp">MSG</button>
+        <button class="btn btn-g btn-xs" onclick="openNota('${c.id}')">Nota</button>
+        <button class="btn btn-d btn-xs" onclick="confirmarRecuperacion('${c.id}')">Recuperar</button>
       </div></td>
     </tr>`;}).join('')}</tbody>
-  </table></div>`:`<div style="text-align:center;padding:32px;color:var(--green)"><div style="font-size:40px;margin-bottom:10px">✅</div><div style="font-weight:800;font-size:16px">Todos los clientes al día</div><div style="font-size:12px;color:var(--ink3);margin-top:6px">No hay clientes en mora actualmente</div></div>`}
+  </table></div>`:`<div style="text-align:center;padding:32px;color:var(--green)"><div style="font-size:40px;margin-bottom:10px">✓</div><div style="font-weight:800;font-size:16px">Todos los clientes al día</div><div style="font-size:12px;color:var(--ink3);margin-top:6px">No hay clientes en mora actualmente</div></div>`}
   <div class="card" style="margin-top:12px">
-    <div class="ch"><div class="ct">📝 Historial de Gestiones de Cobro</div></div>
+    <div class="ch"><div class="ct">Historial de Gestiones de Cobro</div></div>
     <div id="cobranza-notas-list" class="lst" style="margin-top:6px;max-height:300px">
       <div style="color:var(--ink3);font-size:12px">Cargando...</div>
     </div>
@@ -1505,8 +2182,8 @@ plan(){
       +'<div style="font-weight:900;font-size:18px">'+(p.tasaMensual||'—')+'%</div><div style="font-size:10px;opacity:0.8">tasa mensual</div></div>'
       +'</div>'
       +(esPrincipal
-        ? '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;width:100%;border:1px solid rgba(255,255,255,0.3)" onclick="nav(\'config\')">⚙️ Editar plan principal</button>'
-        : '<div style="display:flex;gap:6px"><button class="btn btn-d btn-xs" style="flex:1" onclick="delPlanExtra('+(i-1)+')">🗑 Eliminar</button></div>'
+        ? '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;width:100%;border:1px solid rgba(255,255,255,0.3)" onclick="nav(\'config\')">CFG Editar plan principal</button>'
+        : '<div style="display:flex;gap:6px"><button class="btn btn-d btn-xs" style="flex:1" onclick="delPlanExtra('+(i-1)+')">Del Eliminar</button></div>'
       )
       +'</div>';
   }).join('');
@@ -1516,7 +2193,7 @@ plan(){
   <!-- PLANES -->
   <div class="card" style="margin-bottom:14px">
     <div class="ch">
-      <div><div class="ct">💎 Planes Financieros</div><div class="cs">${todosPlanes.length} plan${todosPlanes.length!==1?'es':''} activo${todosPlanes.length!==1?'s':''}</div></div>
+      <div><div class="ct">Planes Financieros</div><div class="cs">${todosPlanes.length} plan${todosPlanes.length!==1?'es':''} activo${todosPlanes.length!==1?'s':''}</div></div>
       <button class="btn btn-p btn-sm" onclick="openAddPlan()">＋ Nuevo Plan</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px">
@@ -1527,7 +2204,7 @@ plan(){
   <!-- CATÁLOGO -->
   <div class="card">
     <div class="ch">
-      <div><div class="ct">🏍️ Catálogo de Motocicletas</div><div class="cs">${CATALOGO.length} modelos · Factor ${PLAN.factor}x</div></div>
+      <div><div class="ct">Catálogo de Motocicletas</div><div class="cs">${CATALOGO.length} modelos · Factor ${PLAN.factor}x</div></div>
       <button class="btn btn-p btn-sm" onclick="openAddCatalogo()">＋ Agregar Modelo</button>
     </div>
     <div class="moto-plan-grid" style="margin-top:12px">
@@ -1546,9 +2223,9 @@ plan(){
         </div>
         <div class="mp-row" style="margin-top:7px"><span class="mp-l">Total pagado</span><span class="mp-v">${fmt(r.totalPagado)}</span></div>
         <div style="display:flex;gap:6px;margin-top:10px">
-          <button class="btn btn-p btn-xs" style="flex:1" onclick="openAddCredConMoto(${c.id})">📋 Financiar</button>
-          <button class="btn btn-g btn-xs" onclick="openEditCatalogo(${c.id})" title="Editar">✏️</button>
-          <button class="btn btn-d btn-xs" onclick="delCatalogo(${c.id})" title="Eliminar">🗑</button>
+          <button class="btn btn-p btn-xs" style="flex:1" onclick="openAddCredConMoto(${c.id})">≡ Financiar</button>
+          <button class="btn btn-g btn-xs" onclick="openEditCatalogo(${c.id})" title="Editar">Editar</button>
+          <button class="btn btn-d btn-xs" onclick="delCatalogo(${c.id})" title="Eliminar">Eliminar</button>
         </div>
       </div>`}).join('')}
     </div>
@@ -1557,22 +2234,22 @@ plan(){
   </div>`;},
 
 contratos(){return`<div class="page"><div style="display:grid;grid-template-columns:1fr 1.4fr;gap:12px">
-  <div class="card"><div class="ch"><div class="ct">📄 Generador de Contrato</div></div>
+  <div class="card"><div class="ch"><div class="ct">Generador de Contrato</div></div>
     <div class="fgr c1" style="gap:9px">
       <div class="fg"><label>Cliente / Crédito</label><select class="fs" id="sel-cred">${S.creds.map(c=>`<option value="${c.id}">${c.id} — ${c.cli} · ${c.modelo}</option>`).join('')}</select></div>
       <div class="fg"><label>Tipo de documento</label><select class="fs"><option>Contrato de Compraventa en Cuotas</option><option>Pagaré</option><option>Carta de Instrucciones</option><option>Cláusula de Reserva de Dominio</option></select></div>
       <div class="fg"><label>Ciudad</label><input class="fi" id="sel-ciudad" value="Caracas"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px">
-      <button class="btn btn-p btn-sm" onclick="renderContrato()">👁 Vista Previa</button>
-      <button class="btn btn-g btn-sm" onclick="descargarContratoPDF()">📥 Descargar PDF</button>
+      <button class="btn btn-p btn-sm" onclick="renderContrato()">Ver Vista Previa</button>
+      <button class="btn btn-g btn-sm" onclick="descargarContratoPDF()">↓ Descargar PDF</button>
     </div>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--rim)">
       <div class="ct" style="margin-bottom:9px">Contratos generados</div>
-      <div class="lst" style="max-height:220px">${S.creds.map(c=>`<div class="li"><div class="li-ic" style="background:var(--gs)">📄</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${c.id} — ${c.cli}</div><div style="font-size:10.5px;color:var(--ink3)">${c.modelo} · ${c.fecha}</div></div><button class="btn btn-g btn-xs" onclick="descargarContratoPDFById('${c.id}')">📥</button></div>`).join('')}</div>
+      <div class="lst" style="max-height:220px">${S.creds.map(c=>`<div class="li"><div class="li-ic" style="background:var(--gs)">CTR</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${c.id} — ${c.cli}</div><div style="font-size:10.5px;color:var(--ink3)">${c.modelo} · ${c.fecha}</div></div><button class="btn btn-g btn-xs" onclick="descargarContratoPDFById('${c.id}')">↓</button></div>`).join('')}</div>
     </div>
   </div>
-  <div id="cz"><div class="empty" style="margin-top:60px"><span class="e-ic">📄</span><div class="e-tt">Vista previa del contrato</div><div style="font-size:11.5px">Selecciona un crédito y haz clic en Vista Previa</div></div></div>
+  <div id="cz"><div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">Vista previa del contrato</div><div style="font-size:11.5px">Selecciona un crédito y haz clic en Vista Previa</div></div></div>
 </div></div>`;},
 
 gps(){
@@ -1585,16 +2262,16 @@ gps(){
   });
   return`<div class="page">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px">
-    <div class="stat"><div class="st-ic" style="background:var(--greens)">📍</div><div class="st-v">${gpsMotos.length}</div><div class="st-l">GPS activos</div></div>
-    <div class="stat"><div class="st-ic" style="background:var(--reds)">❌</div><div class="st-v">${S.motos.filter(m=>!m.eliminado&&!m.gps).length}</div><div class="st-l">Sin GPS</div></div>
-    <div class="stat"><div class="st-ic" style="background:var(--ambers)">⚠️</div><div class="st-v">${S.motos.filter(m=>!m.eliminado&&m.gps&&m.estado==='recuperada').length}</div><div class="st-l">GPS en recuperación</div></div>
-    <div class="stat"><div class="st-ic" style="background:var(--surf2)">🏍️</div><div class="st-v">${S.motos.filter(m=>!m.eliminado).length}</div><div class="st-l">Total unidades</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--greens)">GPS</div><div class="st-v">${gpsMotos.length}</div><div class="st-l">GPS activos</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--reds)">OFF</div><div class="st-v">${S.motos.filter(m=>!m.eliminado&&!m.gps).length}</div><div class="st-l">Sin GPS</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--ambers)">⚠</div><div class="st-v">${S.motos.filter(m=>!m.eliminado&&m.gps&&m.estado==='recuperada').length}</div><div class="st-l">GPS en recuperación</div></div>
+    <div class="stat"><div class="st-ic" style="background:var(--surf2)">MOT</div><div class="st-v">${S.motos.filter(m=>!m.eliminado).length}</div><div class="st-l">Total unidades</div></div>
   </div>
   <div class="card" style="margin-bottom:12px">
     <div class="ch"><div class="ct">Mapa de Rastreo</div><div style="display:flex;gap:6px"><span class="bdg b-g"><span class="dot"></span>Activa</span><span class="bdg b-a"><span class="dot"></span>Sin señal</span><span class="bdg b-r"><span class="dot"></span>Alerta</span></div></div>
     <div class="mapbox"><div class="map-gr"></div>
       ${dots.map(d=>`<div class="mdot ${d.c}" style="left:${d.x}%;top:${d.y}%"><div class="mtt">${d.n}</div></div>`).join('')}
-      <div style="position:absolute;bottom:10px;left:10px;background:rgba(7,8,15,0.9);border:1px solid var(--rim2);border-radius:7px;padding:6px 10px;font-size:10px;color:var(--ink3)">📍 Venezuela · Actualizado hace 23 seg</div>
+      <div style="position:absolute;bottom:10px;left:10px;background:rgba(7,8,15,0.9);border:1px solid var(--rim2);border-radius:7px;padding:6px 10px;font-size:10px;color:var(--ink3)">GPS Venezuela · Actualizado hace 23 seg</div>
     </div>
   </div>
   <div class="card"><div class="ct" style="margin-bottom:11px">Unidades con GPS</div>
@@ -1603,7 +2280,7 @@ gps(){
       <td class="tdm">${m.modelo}</td><td>${m.cliente||'—'}</td>
       <td><span class="bdg ${sbg(m.estado)}">${m.estado}</span></td>
       <td class="tds">${m.vin||'—'}</td>
-      <td><span class="bdg b-g"><span class="dot"></span>GPS activo</span>${m.estado==="recuperada"?'<span class="bdg b-r" style="margin-left:4px">⚠️ Recuperada</span>':''}</td>
+      <td><span class="bdg b-g"><span class="dot"></span>GPS activo</span>${m.estado==="recuperada"?'<span class="bdg b-r" style="margin-left:4px">Recuperada</span>':''}</td>
     </tr>`).join('')}</tbody></table></div>
   </div></div>`;},
 
@@ -1638,21 +2315,21 @@ notif(){
 
   return`<div class="page"><div style="display:grid;grid-template-columns:1fr 1.2fr;gap:12px">
   <div class="card">
-    <div class="ch"><div class="ct">💬 Enviar Notificación</div></div>
+    <div class="ch"><div class="ct">Enviar Notificación</div></div>
     <div class="fgr c1" style="gap:9px">
       <div class="fg"><label>Tipo de notificación</label>
         <select class="fs" id="notif-tipo">
-          <option value="mora">⚠️ Recordatorio de mora</option>
-          <option value="cuota">📅 Cuota próxima (7 días)</option>
-          <option value="confirmado">✅ Pago confirmado</option>
-          <option value="custom">✏️ Mensaje personalizado</option>
+          <option value="mora">Recordatorio de mora</option>
+          <option value="cuota">Cuota próxima (7 días)</option>
+          <option value="confirmado">Pago confirmado</option>
+          <option value="custom">Mensaje personalizado</option>
         </select>
       </div>
       <div class="fg"><label>Canal</label>
         <select class="fs" id="notif-canal">
-          <option value="whatsapp">💬 WhatsApp (abre app)</option>
-          <option value="sms">📱 Copiar para SMS</option>
-          <option value="clipboard">📋 Copiar al portapapeles</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="sms">Copiar para SMS</option>
+          <option value="clipboard">Copiar al portapapeles</option>
         </select>
       </div>
       <div class="fg"><label>Destinatarios</label>
@@ -1675,14 +2352,14 @@ notif(){
       </div>
     </div>
     <div id="notif-preview" style="margin:10px 0;padding:10px 12px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim);font-size:12px;color:var(--ink3);min-height:40px"></div>
-    <button class="btn btn-p" style="width:100%;margin-top:8px" id="notif-send-btn">📤 Enviar / Copiar mensajes</button>
+    <button class="btn btn-p" style="width:100%;margin-top:8px" id="notif-send-btn">↑ Enviar / Copiar mensajes</button>
   </div>
   <div class="card">
     <div class="ch"><div class="ct">Historial de envíos</div></div>
     <div class="lst" id="notif-historial" style="max-height:420px">
       ${(window._notifHistorial||[]).length
         ? (window._notifHistorial||[]).map(n=>`<div class="li">
-            <div class="li-ic" style="background:var(--gs)">${n.canal==='whatsapp'?'💬':'📋'}</div>
+            <div class="li-ic" style="background:var(--gs)">${n.canal==='whatsapp'?'WA':'≡'}</div>
             <div style="flex:1">
               <div style="font-size:12px;font-weight:700">${n.tipo} → ${n.dest}</div>
               <div class="tds">${n.fecha} · ${n.cantidad} mensaje${n.cantidad!==1?'s':''}</div>
@@ -1704,7 +2381,7 @@ reportes(){return`<div class="page">
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div class="card"><div class="ch"><div class="ct">Reportes Disponibles</div></div>
-      <div class="lst" style="max-height:none">${[['📊','Ingresos Mensuales','Cobros por mes','ingresos'],['💎','Reporte del Plan 10M','Cuotas y factor 1.90x','plan'],['💳','Créditos Activos','Cartera vigente','creditos'],['⚠️','Reporte de Mora','Clientes vencidos','mora'],['💰','Flujo de Caja','Entradas y salidas','flujo'],['🏍️','Inventario Motos','Estado del catálogo','inventario'],['🧾','P&L del Período','Estado de resultados','pyl']].map(([i,n,d,fn])=>`<div class="li"><div class="li-ic" style="background:var(--gs)">${i}</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${n}</div><div style="font-size:10.5px;color:var(--ink3)">${d}</div></div><button class="btn btn-p btn-xs" onclick="generarReporte('${fn}')">📄 Generar</button></div>`).join('')}</div>
+      <div class="lst" style="max-height:none">${[['RPT','Ingresos Mensuales','Cobros por mes','ingresos'],['PLN','Reporte del Plan 10M','Cuotas y factor 1.90x','plan'],['PAG','Créditos Activos','Cartera vigente','creditos'],['⚠','Reporte de Mora','Clientes vencidos','mora'],['$','Flujo de Caja','Entradas y salidas','flujo'],['MOT','Inventario Motos','Estado del catálogo','inventario'],['Rcp','P&L del Período','Estado de resultados','pyl']].map(([i,n,d,fn])=>`<div class="li"><div class="li-ic" style="background:var(--gs)">${i}</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${n}</div><div style="font-size:10.5px;color:var(--ink3)">${d}</div></div><button class="btn btn-p btn-xs" onclick="generarReporte('${fn}')">Generar</button></div>`).join('')}</div>
     </div>
     <div class="card"><div class="ch"><div class="ct">Resumen Financiero</div></div>
       ${[['Iniciales cobradas',fmt(S.creds.reduce((a,c)=>a+c.ini,0)),'green'],['Pagos mensuales',fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0)),'green'],['Pendiente cartera',fmt(S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+(c.fin*(1-(c.pagado/c.plazo))),0)),'amber'],['Créditos recuperados',fmt(S.creds.filter(c=>c.estado==='recuperado').reduce((a,c)=>a+c.cuota,0)),'red']].map(([l,v,c])=>`<div class="kpi"><span class="kpi-l">${l}</span><span style="color:var(--${c});font-weight:800;font-family:var(--fd)">${v}</span></div>`).join('')}
@@ -1727,14 +2404,14 @@ conta(){
     <div class="stat"><div class="st-v">${fmt(cuotaEsperada)}</div><div class="st-l">Cuota esperada/mes</div></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    <div class="card"><div class="ch"><div class="ct">💚 Ingresos</div></div>
+    <div class="card"><div class="ch"><div class="ct">✓ Ingresos</div></div>
       ${[['Cuotas iniciales recibidas',fmt(totalIni)],['Pagos de cuotas cobrados',fmt(totalPagos)],['Intereses por mora',fmt(0)],['Otros ingresos',fmt(0)]].map(([l,v])=>`<div class="kpi"><span class="kpi-l">${l}</span><span style="color:var(--green);font-weight:800;font-family:var(--fd)">${v}</span></div>`).join('')}
       <div style="margin-top:10px;padding:11px;background:var(--greens);border-radius:var(--r8);border:1px solid rgba(14,203,129,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total ingresos</span><span style="color:var(--green);font-weight:900;font-family:var(--fd)">${fmt(totalIngresos)}</span></div>
     </div>
-    <div class="card"><div class="ch"><div class="ct">❤️ Egresos</div><div style="display:flex;gap:5px"><button class="btn btn-g btn-xs" onclick="exportarCSV('egresos')">📥 CSV</button><button class="btn btn-d btn-xs" onclick="openAddEgreso()">＋ Agregar</button></div></div>
+    <div class="card"><div class="ch"><div class="ct">Egresos</div><div style="display:flex;gap:5px"><button class="btn btn-g btn-xs" onclick="exportarCSV('egresos')">↓ CSV</button><button class="btn btn-d btn-xs" onclick="openAddEgreso()">＋ Agregar</button></div></div>
       ${S.egresos.filter(function(e){return !e.eliminado;}).map(e=>`<div class="kpi"><span class="kpi-l">${e.concepto}${e.forma?'<div style="font-size:9.5px;color:var(--ink3);margin-top:1px">'+e.forma+'</div>':''}</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--red);font-weight:800;font-family:var(--fd)">-${fmt(e.monto)}</span><button class="btn btn-d btn-xs btn-ic" onclick="delEgreso(${e.id})" title="Eliminar">✕</button></div></div>`).join('')}
       <div style="margin-top:10px;padding:11px;background:var(--reds);border-radius:var(--r8);border:1px solid rgba(240,75,106,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total egresos</span><span style="color:var(--red);font-weight:900;font-family:var(--fd)">-${fmt(totalEgresos)}</span>
-      ${S.egresos.filter(function(e){return e.eliminado;}).length?'<div style="margin-top:8px;padding:9px 11px;background:var(--surf2);border-radius:8px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px">Registros eliminados</div>'+S.egresos.filter(function(e){return e.eliminado;}).map(function(e){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--rim)"><span style="flex:1;font-size:11px;font-weight:600;opacity:0.7;text-decoration:line-through">'+e.concepto+'</span><span style="font-size:11px;color:var(--red)">-'+fmt(e.monto)+'</span><span style="font-size:10px;color:var(--ink3)">🗑 '+(e.eliminadoPor||'Admin')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoRazon?'· '+e.eliminadoRazon:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoEn?'· '+e.eliminadoEn.split('T')[0]:'')+'</span></div>';}).join('')+'</div>':''}</div>
+      ${S.egresos.filter(function(e){return e.eliminado;}).length?'<div style="margin-top:8px;padding:9px 11px;background:var(--surf2);border-radius:8px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px">Registros eliminados</div>'+S.egresos.filter(function(e){return e.eliminado;}).map(function(e){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--rim)"><span style="flex:1;font-size:11px;font-weight:600;opacity:0.7;text-decoration:line-through">'+e.concepto+'</span><span style="font-size:11px;color:var(--red)">-'+fmt(e.monto)+'</span><span style="font-size:10px;color:var(--ink3)">Del '+(e.eliminadoPor||'Admin')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoRazon?'· '+e.eliminadoRazon:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoEn?'· '+e.eliminadoEn.split('T')[0]:'')+'</span></div>';}).join('')+'</div>':''}</div>
     </div>
   </div></div>`;},
 
@@ -1790,7 +2467,7 @@ config(){
   <!-- Tasa de cambio Bs/$ -->
   <div class="card" style="margin-bottom:12px">
     <div class="ch">
-      <div><div class="ct">💱 Tasa de Cambio Bs./$</div><div class="cs">Se usa en movimientos de cuentas y en el historial</div></div>
+      <div><div class="ct">Tasa de Cambio Bs./$</div><div class="cs">Se usa en movimientos de cuentas y en el historial</div></div>
     </div>
     <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
       <div class="fg" style="flex:0 0 180px">
@@ -1806,11 +2483,11 @@ config(){
   <!-- Reglas de Firestore -->
   <div class="card" style="margin-bottom:12px;border:2px solid rgba(245,166,35,0.4)">
     <div class="ch">
-      <div><div class="ct" style="color:var(--amber)">🔐 Reglas de Seguridad Firebase</div><div class="cs">Las reglas de Firestore protegen quién puede leer/escribir tus datos</div></div>
-      <span id="rules-badge" class="bdg b-a">⚠️ Verificar</span>
+      <div><div class="ct" style="color:var(--amber)">Reglas de Seguridad Firebase</div><div class="cs">Las reglas de Firestore protegen quién puede leer/escribir tus datos</div></div>
+      <span id="rules-badge" class="bdg b-a">Verificar</span>
     </div>
     <div style="background:var(--ambers);border:1px solid rgba(245,166,35,0.3);border-radius:var(--r8);padding:12px 14px;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:6px">⚠️ Acción requerida — Copia estas reglas en Firebase Console → Firestore → Reglas:</div>
+      <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:6px">Acción requerida — Copia estas reglas en Firebase Console → Firestore → Reglas:</div>
       <pre style="font-family:monospace;font-size:11px;background:var(--base);padding:10px;border-radius:6px;overflow-x:auto;color:var(--ink);margin:0;line-height:1.6">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -1820,7 +2497,7 @@ service cloud.firestore {
   }
 }</pre>
     </div>
-    <a href="https://console.firebase.google.com" target="_blank" rel="noopener" class="btn btn-p btn-sm" style="display:inline-flex">🔗 Abrir Firebase Console</a>
+    <a href="https://console.firebase.google.com" target="_blank" rel="noopener" class="btn btn-p btn-sm" style="display:inline-flex">→ Abrir Firebase Console</a>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -1867,7 +2544,7 @@ service cloud.firestore {
     ${window._planesExtra.map(function(p,i){ return '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:12px;margin-top:8px;display:flex;justify-content:space-between;align-items:center">'
       + '<div><div style="font-weight:800;font-size:13px">'+p.nombre+'</div>'
       + '<div style="font-size:11px;color:var(--ink3)">'+p.plazo+' meses · Factor '+p.factor+'x · Inicial '+(p.inicial*100)+'%</div></div>'
-      + '<button class="btn btn-d btn-xs" onclick="delPlanExtra('+i+')">🗑</button></div>'; }).join('')}
+      + '<button class="btn btn-d btn-xs" onclick="delPlanExtra('+i+')">Eliminar</button></div>'; }).join('')}
   </div>` : ''}
 
   <!-- Cuentas bancarias -->
@@ -1898,9 +2575,9 @@ service cloud.firestore {
   <div class="card">
     <div class="ch"><div><div class="ct">Acceso Local</div><div class="cs">Credenciales de emergencia cuando Firebase no está disponible</div></div></div>
     <div style="background:var(--ambers);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:12px">
-      ⚠️ Este acceso solo funciona cuando Firebase no está configurado o sin conexión.
+      ⚠ Este acceso solo funciona cuando Firebase no está configurado o sin conexión.
     </div>
-    <div style="background:var(--ambers);border-radius:8px;padding:9px 12px;font-size:11.5px;margin-bottom:10px">⚠️ Solo activo cuando Firebase Auth no está configurado.</div>
+    <div style="background:var(--ambers);border-radius:8px;padding:9px 12px;font-size:11.5px;margin-bottom:10px">Solo activo cuando Firebase Auth no está configurado.</div>
     <div class="fgr" style="gap:8px">
       <div class="fg"><label>Usuario *</label><input class="fi" id="cfg_local_user" value="${USERS_LOCAL[0]&&USERS_LOCAL[0].user||'admin'}" placeholder="usuario"></div>
       <div class="fg"><label>Contraseña nueva *</label><input class="fi" id="cfg_local_pass" type="password" placeholder="Mín. 6 caracteres"></div>
@@ -1915,24 +2592,24 @@ service cloud.firestore {
   <!-- Backup y Restauración -->
   <div class="card" style="margin-top:12px">
     <div class="ch">
-      <div><div class="ct">💾 Backup y Restauración</div><div class="cs">Exporta o importa todos los datos del sistema</div></div>
+      <div><div class="ct">Backup y Restauración</div><div class="cs">Exporta o importa todos los datos del sistema</div></div>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">
       <div style="flex:1;min-width:200px">
         <div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:8px">Exportar datos</div>
         <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn btn-p btn-sm" onclick="exportarBackupJSON()">📦 Exportar todo (JSON)</button>
-          <button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">📥 CSV Clientes</button>
-          <button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">📥 CSV Créditos</button>
-          <button class="btn btn-g btn-sm" onclick="exportarCSV('pagos')">📥 CSV Pagos</button>
-          <button class="btn btn-g btn-sm" onclick="exportarCSV('egresos')">📥 CSV Egresos</button>
+          <button class="btn btn-p btn-sm" onclick="exportarBackupJSON()">Exportar todo (JSON)</button>
+          <button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV Clientes</button>
+          <button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ CSV Créditos</button>
+          <button class="btn btn-g btn-sm" onclick="exportarCSV('pagos')">↓ CSV Pagos</button>
+          <button class="btn btn-g btn-sm" onclick="exportarCSV('egresos')">↓ CSV Egresos</button>
         </div>
       </div>
       <div style="flex:1;min-width:200px">
         <div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:8px">Importar backup</div>
-        <div style="background:var(--ambers);border:1px solid rgba(245,166,35,0.3);border-radius:var(--r8);padding:10px 12px;font-size:11.5px;color:var(--amber);margin-bottom:8px">⚠️ La importación reemplaza todos los datos actuales.</div>
+        <div style="background:var(--ambers);border:1px solid rgba(245,166,35,0.3);border-radius:var(--r8);padding:10px 12px;font-size:11.5px;color:var(--amber);margin-bottom:8px">La importación reemplaza todos los datos actuales.</div>
         <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:var(--surf2);border:1px solid var(--rim);border-radius:var(--r8);padding:8px 14px;font-size:12px;font-weight:700;color:var(--ink2)">
-          📂 Cargar archivo JSON
+          Arch Cargar archivo JSON
           <input type="file" accept=".json" onchange="importarBackupJSON(this)" style="display:none">
         </label>
       </div>
@@ -1962,7 +2639,7 @@ users(){
           +'<td class="tds">'+u.email+'</td>'
           +'<td><span class="bdg '+rc+'">'+u.rol+'</span></td>'
           +'<td class="tds">'+mods+' módulos</td>'
-          +'<td style="display:flex;gap:5px;align-items:center">'+'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'+((!esMio&&(S.currentUser&&(S.currentUser.rol==='Administrador'||S.currentUser.rol==='Gerente')))?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email)+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">🗑</button>':'')+'</td>'
+          +'<td style="display:flex;gap:5px;align-items:center">'+'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'+((!esMio&&(S.currentUser&&(S.currentUser.rol==='Administrador'||S.currentUser.rol==='Gerente')))?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email)+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">Eliminar</button>':'')+'</td>'
 +'</tr>';
       }).join('');
     }).catch(function(){ /* sin Firebase, no hay lista */ });
@@ -2015,7 +2692,7 @@ function liveSearchCliente(q){
 // ══════════════════════════════════════════
 function openAddMoto(id=null){
   const m=id?S.motos.find(x=>x.id===id):null,ed=!!m;
-  $('mic').textContent='🏍️';
+  $('mic').textContent='MOT';
   $('mtt').textContent=ed?'Editar Moto':'Nueva Unidad al Inventario';
   $('msb').textContent=ed?m.modelo:'Unidad física — VIN, color, estado';
   $('modal-box').className='modal';
@@ -2026,7 +2703,7 @@ function openAddMoto(id=null){
         <select class="fs" id="m_mod_sel" onchange="onCatalogoSelect(this)">
           <option value="">— Seleccionar del catálogo —</option>
           ${CATALOGO.map(c=>`<option value="${c.modelo}" data-precio="${c.precio}" ${(m&&m.modelo)===c.modelo?'selected':''}>${c.modelo} — $${c.precio.toLocaleString('es')}</option>`).join('')}
-          <option value="__custom__" ${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?'selected':''}>✏️ Precio personalizado...</option>
+          <option value="__custom__" ${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?'selected':''}>Editar Precio personalizado...</option>
         </select>
       </div>
       <div class="fg"><label>Precio USD *</label><input class="fi" id="m_pr" type="number" value="${(m&&m.precio)||''}" placeholder="0.00" oninput="previewCalc()" ${(m&&CATALOGO.find(c=>c.modelo===m.modelo))?'readonly':''}></div>
@@ -2062,7 +2739,7 @@ function openAddMoto(id=null){
     const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,color:g('m_color')||'',vin:g('m_vin')||'VIN-'+Date.now().toString().slice(-4),estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',...calc};
     if(ed){const i=S.motos.findIndex(x=>x.id===m.id);S.motos[i]=obj;}else S.motos.push(obj);
     DB.saveMoto(obj);
-    closeM();nav('motos');toast(ed?'Moto actualizada':'✅ Moto agregada','success');return true;
+    closeM();nav('motos');toast(ed?'Moto actualizada':'✓ Moto agregada','success');return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar</button>`;
   $('ov').style.display='flex';
@@ -2098,10 +2775,10 @@ function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
 function delMoto(id){
   const m=S.motos.find(x=>x.id===id);if(!m)return;
-  $('mic').textContent='🗑️';$('mtt').textContent='Eliminar Moto';$('msb').textContent='No se puede deshacer';
+  $('mic').textContent='Del';$('mtt').textContent='Eliminar Moto';$('msb').textContent='No se puede deshacer';
   $('modal-box').className='modal';
-  $('mbd').innerHTML=`<div style="text-align:center;padding:14px 0"><div style="font-size:46px;margin-bottom:12px">🏍️</div><div style="font-size:16px;font-weight:800;margin-bottom:5px">${m.modelo}</div><div style="color:var(--ink3);margin-bottom:18px;font-size:12px">Precio: ${fmt(m.precio)}</div><div style="background:var(--reds);border:1px solid rgba(240,75,106,0.2);border-radius:var(--r8);padding:11px;color:var(--red);font-size:13px;font-weight:700">⚠️ ¿Confirmas eliminar esta moto del catálogo?</div></div>`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="cDel(${id})">🗑️ Eliminar</button>`;
+  $('mbd').innerHTML=`<div style="text-align:center;padding:14px 0"><div style="font-size:46px;margin-bottom:12px">MOT</div><div style="font-size:16px;font-weight:800;margin-bottom:5px">${m.modelo}</div><div style="color:var(--ink3);margin-bottom:18px;font-size:12px">Precio: ${fmt(m.precio)}</div><div style="background:var(--reds);border:1px solid rgba(240,75,106,0.2);border-radius:var(--r8);padding:11px;color:var(--red);font-size:13px;font-weight:700">¿Confirmas eliminar esta moto del catálogo?</div></div>`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="cDel(${id})">Del Eliminar</button>`;
   $('ov').style.display='flex';
 }
 // ══════════════════════════════════════════════════════════════
@@ -2110,12 +2787,12 @@ function delMoto(id){
 function confirmarEliminacion(opts){
   // opts: { titulo, descripcion, onConfirm }
   window._delAuditCallback = opts.onConfirm;
-  $('mic').textContent='🗑️';
+  $('mic').textContent='Del';
   $('mtt').textContent = opts.titulo || 'Eliminar registro';
   $('msb').textContent = 'Esta acción quedará registrada con tu nombre';
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div style="text-align:center;padding:8px 0 14px">'
-    +'<div style="font-size:40px;margin-bottom:10px">⚠️</div>'
+    +'<div style="font-size:40px;margin-bottom:10px">⚠</div>'
     +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+(opts.descripcion||'¿Confirmar eliminación?')+'</div>'
     +'<div style="color:var(--ink3);font-size:12px;margin-bottom:14px">Quedará registrado como eliminado por <strong>'+((S.currentUser&&S.currentUser.nombre)||'Administrador')+'</strong></div>'
     +'</div>'
@@ -2142,7 +2819,7 @@ function confirmarEliminacion(opts){
     };
   }, 50);
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="ejecutarEliminacionAuditada()">🗑️ Eliminar</button>';
+    +'<button class="btn btn-d" onclick="ejecutarEliminacionAuditada()">Del Eliminar</button>';
   $('ov').style.display='flex';
 }
 
@@ -2168,7 +2845,7 @@ function auditBadge(item){
   var razon = item.eliminadoRazon || '';
   var fecha = item.eliminadoEn ? item.eliminadoEn.split('T')[0] : '';
   return '<div style="background:var(--reds);border:1px solid rgba(240,75,106,0.3);border-radius:6px;padding:4px 9px;font-size:10px;display:flex;align-items:center;gap:6px;margin-top:4px">'
-    +'<span style="font-weight:900;color:var(--red)">🗑 ELIMINADO</span>'
+    +'<span style="font-weight:900;color:var(--red)">Del ELIMINADO</span>'
     +'<span style="color:var(--ink3)">por <strong>'+por+'</strong>'+(fecha?' · '+fecha:'')+(razon?' · '+razon:'')+'</span>'
     +'</div>';
 }
@@ -2193,7 +2870,7 @@ function cDel(id){
 // ══════════════════════════════════════════
 function openAddCliente(id=null){
   const c=id?S.clientes.find(x=>x.id===id):null,ed=!!c;
-  $('mic').textContent='👤';$('mtt').textContent=ed?'Editar Cliente':'Nuevo Cliente';$('msb').textContent=ed?c.nombre:'Registra un cliente';
+  $('mic').textContent='CLI';$('mtt').textContent=ed?'Editar Cliente':'Nuevo Cliente';$('msb').textContent=ed?c.nombre:'Registra un cliente';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`<div class="fgr">
     <div class="fg"><label>Nombre completo *</label><input class="fi" id="c_n" value="${(c&&c.nombre)||''}" placeholder="Nombre completo"></div>
@@ -2215,7 +2892,7 @@ function openAddCliente(id=null){
     if(!ed){
       var cedNorm=g('c_ced').replace(/\s/g,'').toLowerCase();
       var dup=S.clientes.find(function(x){return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm;});
-      if(dup){toast('⚠️ Ya existe un cliente con esa cédula: '+dup.nombre,'error');return false;}
+      if(dup){toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error');return false;}
     }
     const obj={id:(c&&c.id)||(S.clientes.length?Math.max(...S.clientes.map(x=>x.id))+1:1),nombre:g('c_n'),cedula:g('c_ced'),tel:g('c_tel')||'N/A',email:g('c_email')||'',ciudad:g('c_ciudad')||'',trabajo:g('c_trab')||'',ingreso:parseFloat(($('c_ing')&&$('c_ing').value))||0,emergencia:g('c_emg')||'',notas:g('c_notas')||'',estado:(c&&c.estado)||'activo'};
     if(ed){const i=S.clientes.findIndex(x=>x.id===c.id);S.clientes[i]=obj;}else S.clientes.push(obj);
@@ -2236,7 +2913,7 @@ function delCliente(id){
 // CRÉDITO MODAL — plan 10M automático
 // ══════════════════════════════════════════
 function openAddCred(motoId=null){
-  $('mic').textContent='📋';$('mtt').textContent='Nuevo Financiamiento';$('msb').textContent='Plan 10 meses · Pagos Quincenales · Factor 1.90x';
+  $('mic').textContent='≡';$('mtt').textContent='Nuevo Financiamiento';$('msb').textContent='Plan 10 meses · Pagos Quincenales · Factor 1.90x';
   $('modal-box').className='modal modal-lg';
   // Motos disponibles (o todas si ninguna disponible)
   const motosDisp=S.motos.filter(m=>!m.eliminado&&(m.estado==='disponible'||m.estado==='recuperada'));
@@ -2281,7 +2958,7 @@ function openAddCred(motoId=null){
         </div>
         <div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="k_ini_ref" placeholder="N° de referencia (opcional)"></div>
       </div>
-      <div style="font-size:11px;color:var(--ink3);margin-top:6px">💡 El monto de la inicial se calculará automáticamente (40% del precio) y se acreditará a la cuenta seleccionada.</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:6px">i El monto de la inicial se calculará automáticamente (40% del precio) y se acreditará a la cuenta seleccionada.</div>
     </div>
 
     <div class="fgr c1" style="margin-top:8px">
@@ -2360,7 +3037,7 @@ function cancelarCred(credId){
   $('mic').textContent='✕'; $('mtt').textContent='Cancelar Financiamiento'; $('msb').textContent=c.id+' · '+c.cli;
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div style="text-align:center;padding:12px 0">'
-    +'<div style="font-size:38px;margin-bottom:10px">📋</div>'
+    +'<div style="font-size:38px;margin-bottom:10px">≡</div>'
     +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+c.cli+' — '+c.modelo+'</div>'
     +'<div style="color:var(--ink3);font-size:12px;margin-bottom:16px">'
     +c.pagado+' cuotas pagadas de '+(c.totalCuotas||c.plazo*2)+' · Pagado: '+fmt((c.pagado||0)*(c.cuotaQ||c.cuota||0))
@@ -2378,7 +3055,7 @@ function cancelarCred(credId){
     +'<div class="fg" style="margin-top:8px"><label>Notas adicionales</label>'
     +'<textarea class="fta" id="cc_notas" placeholder="Detalles de la cancelación..."></textarea></div>'
     +'<div style="margin-top:12px;padding:9px 11px;background:var(--ambers);border-radius:8px;font-size:12px">'
-    +'⚠️ El crédito quedará como <strong>cancelado</strong>. La moto volverá al inventario como disponible.</div>';
+    +'⚠ El crédito quedará como <strong>cancelado</strong>. La moto volverá al inventario como disponible.</div>';
   S.saveFn = function(){
     var razon = ($('cc_razon')&&$('cc_razon').value)||'';
     if(!razon){ toast('Selecciona una razón de cancelación','error'); return false; }
@@ -2414,7 +3091,7 @@ function cancelarCred(credId){
 
 function openEditCred(credId){
   var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
-  $('mic').textContent='📋'; $('mtt').textContent='Editar Financiamiento'; $('msb').textContent=c.id+' · '+c.cli;
+  $('mic').textContent='≡'; $('mtt').textContent='Editar Financiamiento'; $('msb').textContent=c.id+' · '+c.cli;
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
     // Info only (read-only)
@@ -2492,7 +3169,7 @@ function updCredCalc(sel){
 }
 
 function openAddPago(){
-  $('mic').textContent='💳';$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan 10 meses';
+  $('mic').textContent='PAG';$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan 10 meses';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`
     <div class="fgr c1" style="gap:9px"><div class="fg"><label>Crédito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}">${c.id} — ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
@@ -2650,7 +3327,7 @@ function openAddPago(){
         saldoProxCuota:saldoProxCuota
       });
 
-      var msg='✅ Pago de '+fmt(monto)+' registrado';
+      var msg='✓ Pago de '+fmt(monto)+' registrado';
       if(cuotasAfectadas.length>1) msg+=' · Cuotas '+cuotasAfectadas[0]+' a '+cuotasAfectadas[cuotasAfectadas.length-1]+' cubiertas';
       if(saldoProxCuota>0&&saldoProxCuota<cuotaVal) msg+=' · Próxima cuota: solo '+fmt(saldoProxCuota)+' pendiente';
       pgSet('pagos',1);
@@ -2662,7 +3339,7 @@ function openAddPago(){
       }
     } else {
       pgSet('pagos',1);
-      toast('✅ Pago registrado · '+fmt(monto),'success');
+      toast('✓ Pago registrado · '+fmt(monto),'success');
     }
     closeM();nav('pagos');return true;
   };
@@ -2691,7 +3368,7 @@ function updPagoMonto(sel){
     if(cred&&cred.saldoProxCuota>0&&cred.saldoProxCuota<cuotaBase){
       var yaAbono=parseFloat((cuotaBase-cred.saldoProxCuota).toFixed(2));
       saldoEl.style.display='block';
-      saldoEl.innerHTML='💰 Cuota parcialmente pagada: ya abonó <strong>'+fmt(yaAbono)+'</strong> — solo faltan <strong>'+fmt(cred.saldoProxCuota)+'</strong> para completarla.';
+      saldoEl.innerHTML='$ Cuota parcialmente pagada: ya abonó <strong>'+fmt(yaAbono)+'</strong> — solo faltan <strong>'+fmt(cred.saldoProxCuota)+'</strong> para completarla.';
     } else {
       saldoEl.style.display='none';
     }
@@ -2771,7 +3448,7 @@ function openAmort(id){
   const proxFecha=proxFd.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
   var proxMonto=saldoProxCuota>0&&saldoProxCuota<cuota ? saldoProxCuota : cuota;
 
-  $('mic').textContent='📊';$('mtt').textContent='Tabla de Amortización';$('msb').textContent=`${c.id} — ${c.cli}`;
+  $('mic').textContent='RPT';$('mtt').textContent='Tabla de Amortización';$('msb').textContent=`${c.id} — ${c.cli}`;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px">
@@ -2782,7 +3459,7 @@ function openAmort(id){
         ['Fecha próx. pago',proxFecha,'p2'],
       ].map(([l,v,cl])=>`<div style="background:var(--surf2);border-radius:var(--r8);padding:10px;border:1px solid var(--rim)"><div style="font-size:9.5px;color:var(--ink3);font-weight:800;text-transform:uppercase;margin-bottom:3px">${l}</div><div style="font-weight:800;${cl==='p1'||cl==='p2'?'background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text':'color:var(--'+cl+')'};font-family:var(--fd);font-size:13px">${v}</div></div>`).join('')}
     </div>
-    ${saldoProxCuota>0&&saldoProxCuota<cuota?`<div style="background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:10px">💰 La cuota ${pagado+1} tiene un abono de <strong>${fmt(cuota-saldoProxCuota)}</strong> — solo quedan <strong>${fmt(saldoProxCuota)}</strong> por pagar.</div>`:''}
+    ${saldoProxCuota>0&&saldoProxCuota<cuota?`<div style="background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:10px">$ La cuota ${pagado+1} tiene un abono de <strong>${fmt(cuota-saldoProxCuota)}</strong> — solo quedan <strong>${fmt(saldoProxCuota)}</strong> por pagar.</div>`:''}
     <div style="display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap">
       <span class="bdg b-b">Quincenal · cada 15 días</span>
       <span class="bdg b-g">✓ Pagadas: ${pagado} de ${n}</span>
@@ -2793,7 +3470,7 @@ function openAmort(id){
       <div>#</div><div>Fecha</div><div>Estado</div><div>Abonos</div><div>Monto</div><div>Interés</div><div>Capital</div><div>Saldo</div>
     </div>
     <div style="max-height:310px;overflow-y:auto;margin-top:3px">${rows}</div>`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="descargarAmortPDF()">📥 PDF</button>`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="descargarAmortPDF()">↓ PDF</button>`;
   $('ov').style.display='flex';
 }
 
@@ -2823,16 +3500,16 @@ function whatsappCliente(credId){
 function confirmarRecuperacion(credId){
   var c=S.creds.find(function(x){return x.id===credId;});
   if(!c) return;
-  $('mic').textContent='🔑';
+  $('mic').textContent='Key';
   $('mtt').textContent='Recuperar Unidad';
   $('msb').textContent=c.cli+' · '+c.modelo;
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div style="text-align:center;padding:14px 0">'
-    +'<div style="font-size:40px;margin-bottom:12px">🏍️</div>'
+    +'<div style="font-size:40px;margin-bottom:12px">MOT</div>'
     +'<div style="font-size:15px;font-weight:800;margin-bottom:6px">'+c.modelo+'</div>'
     +'<div style="color:var(--ink3);font-size:12px;margin-bottom:18px">Crédito '+credId+' · Cliente: '+c.cli+'</div>'
     +'<div style="background:var(--reds);border:1px solid rgba(240,75,106,0.2);border-radius:var(--r8);padding:12px;color:var(--red);font-size:13px;font-weight:700">'
-    +'⚠️ ¿Confirmas la recuperación de esta unidad? El crédito pasará a estado "recuperado" y la moto quedará disponible.</div></div>';
+    +'⚠ ¿Confirmas la recuperación de esta unidad? El crédito pasará a estado "recuperado" y la moto quedará disponible.</div></div>';
   S.saveFn=function(){
     var ci=S.creds.findIndex(function(x){return x.id===credId;});
     if(ci>=0){
@@ -2844,7 +3521,7 @@ function confirmarRecuperacion(credId){
     toast('Unidad recuperada — crédito cerrado','info');
     closeM();nav('cobranza');return true;
   };
-  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">🔑 Confirmar Recuperación</button>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">Key Confirmar Recuperación</button>';
   $('ov').style.display='flex';
 }
 
@@ -2854,16 +3531,16 @@ function confirmarDelPago(id){
   var p=S.pagos.find(function(x){return x.id===id;});if(!p)return;
   window._delPagoId=id;
   window._delPagoRazon='';
-  $('mic').textContent='🗑️';$('mtt').textContent='Eliminar Pago';$('msb').textContent='El crédito se revertirá';
+  $('mic').textContent='Del';$('mtt').textContent='Eliminar Pago';$('msb').textContent='El crédito se revertirá';
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div style="text-align:center;padding:16px 0">'
-    +'<div style="font-size:42px;margin-bottom:10px">💳</div>'
+    +'<div style="font-size:42px;margin-bottom:10px">PAG</div>'
     +'<div style="font-size:15px;font-weight:800">¿Eliminar pago '+p.id+'?</div>'
     +'<div style="color:var(--ink3);font-size:13px;margin-top:6px">'+p.cli+' · '+fmt(p.monto)+' · '+p.fecha+'</div>'
     +'<div style="margin-top:10px;padding:9px;background:var(--ambers);border-radius:8px;font-size:12px;color:var(--ink)">'
-    +'⚠️ La cuota pagada se restará del crédito y el movimiento en Cuentas se eliminará.</div></div>';
+    +'⚠ La cuota pagada se restará del crédito y el movimiento en Cuentas se eliminará.</div></div>';
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="auditarYEliminarPago()">🗑️ Eliminar</button>';
+    +'<button class="btn btn-d" onclick="auditarYEliminarPago()">Del Eliminar</button>';
   $('ov').style.display='flex';
 }
 
@@ -2922,7 +3599,7 @@ function openPagoRapido(credId){
 
 function openEditPago(pagoId){
   var p = S.pagos.find(function(x){return x.id===pagoId;}); if(!p) return;
-  $('mic').textContent='✏️'; $('mtt').textContent='Editar Pago'; $('msb').textContent=pagoId+' · '+p.cli;
+  $('mic').textContent='Editar'; $('mtt').textContent='Editar Pago'; $('msb').textContent=pagoId+' · '+p.cli;
   $('modal-box').className='modal';
   var metOpts = (_cuentasBanc||[]).map(function(c){
     return '<option value="'+c.nombre+'" '+(p.metodo===c.nombre?'selected':'')+'>'+c.nombre+'</option>';
@@ -2958,7 +3635,7 @@ function openEditPago(pagoId){
     +'<select class="fs" id="ep_cobrador">'+(cobrOpts||'<option>'+p.cobrador+'</option>')+'</select></div>'
     +'</div>'
     +'<div style="margin-top:10px;padding:8px 11px;background:var(--ambers);border-radius:8px;font-size:11.5px">'
-    +'⚠️ Editar el monto NO recalcula el crédito automáticamente. Si cambias el monto por un error, verifica el progreso del crédito.</div>';
+    +'⚠ Editar el monto NO recalcula el crédito automáticamente. Si cambias el monto por un error, verifica el progreso del crédito.</div>';
   S.saveFn = function(){
     var nuevoMonto = parseFloat(($('ep_monto')&&$('ep_monto').value))||0;
     if(nuevoMonto<=0){ toast('El monto debe ser mayor a 0','error'); return false; }
@@ -2974,7 +3651,7 @@ function openEditPago(pagoId){
     S.pagos[pi].editadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
     S.pagos[pi].editadoEn  = new Date().toISOString();
     DB.savePago(S.pagos[pi]);
-    closeM(); nav('pagos'); toast('Pago actualizado ✅','success'); return true;
+    closeM(); nav('pagos'); toast('Pago actualizado ✓','success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     +'<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
@@ -2994,7 +3671,7 @@ function confirmarPago(pagoId){
     DB.updateCred(S.creds[ci].id,{pagado:S.creds[ci].pagado,mora:S.creds[ci].mora,estado:S.creds[ci].estado});
   }
   calcularMoraAuto();
-  toast('✅ Pago confirmado · '+pagoId,'success');
+  toast('✓ Pago confirmado · '+pagoId,'success');
   nav('pagos');
 }
 
@@ -3021,7 +3698,7 @@ function calcularMoraAuto(){
 
 // NOTA COBRANZA
 function openNota(id){
-  $('mic').textContent='📝';$('mtt').textContent='Nota de Cobranza';$('msb').textContent=id;
+  $('mic').textContent='Nota';$('mtt').textContent='Nota de Cobranza';$('msb').textContent=id;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
     +'<div>'
@@ -3064,7 +3741,7 @@ function openNota(id){
             +'<span style="font-size:11px;font-weight:700;color:var(--p1)">'+n.tipo+'</span>'
             +'<span style="font-size:10px;color:var(--ink3)">'+n.fecha+'</span></div>'
             +'<div style="font-size:11.5px;color:var(--ink)">'+n.resultado+'</div>'
-            +(n.fechaCompromiso?'<div style="font-size:10px;color:var(--green);margin-top:2px">💰 Compromiso: '+n.fechaCompromiso+'</div>':'')
+            +(n.fechaCompromiso?'<div style="font-size:10px;color:var(--green);margin-top:2px">$ Compromiso: '+n.fechaCompromiso+'</div>':'')
             +(n.montoAcordado?'<div style="font-size:10px;color:var(--ink3)">Monto: $'+n.montoAcordado+'</div>':'')
             +'<div style="font-size:10px;color:var(--ink3)">'+n.cobrador+'</div>'
             +'</div>';
@@ -3092,7 +3769,7 @@ function openNota(id){
     };
     if(db){
       db.collection('notas_cobranza').add(nota)
-        .then(function(){ toast('Nota guardada ✅','success'); })
+        .then(function(){ toast('Nota guardada ✓','success'); })
         .catch(function(e){ toast('Error al guardar: '+e.message,'error'); });
     } else {
       toast('Nota guardada (sin conexión)','info');
@@ -3196,7 +3873,7 @@ function renderContrato(){
 
 // EGRESOS
 function openAddEgreso(){
-  $('mic').textContent='💸';$('mtt').textContent='Registrar Egreso';$('msb').textContent='Contabilidad';
+  $('mic').textContent='$$';$('mtt').textContent='Registrar Egreso';$('msb').textContent='Contabilidad';
   $('modal-box').className='modal';
   var _metodosOpts = (_cuentasBanc||[]).map(function(c){return '<option>'+c.nombre+'</option>';}).join('');
   $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
@@ -3280,7 +3957,7 @@ function saveM(){if(S.saveFn)S.saveFn();}
 function topAct(){const p=S.page;if(p==='motos')openAddMoto();else if(p==='clientes')openAddCliente();else if(p==='creditos')openAddCred();else if(p==='pagos')openAddPago();else if(p==='conta')openAddEgreso();else if(p==='cuentas')openDeposito(null);else if(p==='plan')openAddCatalogo();else toast('Usa el botón dentro del módulo','info');}
 function toast(msg,type='info'){
   const c=$('toasts'),t=document.createElement('div');t.className=`toast ${type}`;
-  const ic={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
+  const ic={success:'✓',error:'OFF',info:'ℹ️',warn:'⚠'};
   t.innerHTML=`<span>${ic[type]||'ℹ️'}</span><span>${msg}</span>`;c.appendChild(t);
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(12px)';t.style.transition='all .26s';},3000);
   setTimeout(()=>t.remove(),3300);
@@ -3303,7 +3980,7 @@ function guardarCredencialesLocales(){
   // Persist in localStorage so it survives reloads
   try {
     localStorage.setItem('pagasi_local_creds', JSON.stringify(USERS_LOCAL[0]));
-    toast('✅ Credenciales locales actualizadas', 'success');
+    toast('✓ Credenciales locales actualizadas', 'success');
     // Clear password field for security
     if($('cfg_local_pass')) $('cfg_local_pass').value = '';
   } catch(e) {
@@ -3335,9 +4012,9 @@ function guardarTasaBs(){
   if(!t||t<1){ toast('Ingresa una tasa válida (mayor a 1)','error'); return; }
   window._tasaBsGlobal = t;
   if(db) db.collection('config').doc('tasa').set({tasaBs:t,fecha:new Date().toISOString()})
-    .then(function(){ toast('✅ Tasa actualizada: '+t+' Bs./$','success'); })
+    .then(function(){ toast('✓ Tasa actualizada: '+t+' Bs./$','success'); })
     .catch(function(e){ toast('Error guardando tasa: '+e.message,'error'); });
-  else { toast('✅ Tasa actualizada: '+t+' Bs./$','success'); }
+  else { toast('✓ Tasa actualizada: '+t+' Bs./$','success'); }
 }
 
 function guardarEmpresa(){
@@ -3377,7 +4054,7 @@ function guardarPlan(){
 }
 
 function agregarCuentaBanc(){
-  $('mic').textContent='🏦'; $('mtt').textContent='Agregar Cuenta / Método de Pago'; $('msb').textContent='Se usará como método de cobro y en el módulo Cuentas';
+  $('mic').textContent='BNK'; $('mtt').textContent='Agregar Cuenta / Método de Pago'; $('msb').textContent='Se usará como método de cobro y en el módulo Cuentas';
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div class="fgr c1" style="gap:10px">'
     +'<div class="fg"><label>Nombre *</label><input class="fi" id="cb_nombre" placeholder="Ej: Bancamiga Bs, Zelle USD, Efectivo..."></div>'
@@ -3414,7 +4091,7 @@ function guardarCuentasBanc(){
 }
 
 function agregarCobrador(){
-  $('mic').textContent='👤'; $('mtt').textContent='Agregar Cobrador'; $('msb').textContent='Se mostrará en los formularios de pago y cobranza';
+  $('mic').textContent='CLI'; $('mtt').textContent='Agregar Cobrador'; $('msb').textContent='Se mostrará en los formularios de pago y cobranza';
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div class="fg"><label>Nombre del cobrador *</label><input class="fi" id="cob_nombre" placeholder="Ej: Juan Pérez"></div>';
   S.saveFn = function(){
@@ -3442,7 +4119,7 @@ function openAddCatalogo(){ openEditCatalogo(null); }
 function openEditCatalogo(id){
   var item = id ? CATALOGO.find(function(c){return c.id===id;}) : null;
   var ed = !!item;
-  $('mic').textContent = ed ? '✏️' : '🏍️';
+  $('mic').textContent = ed ? 'Editar' : 'MOT';
   $('mtt').textContent = ed ? 'Editar Modelo' : 'Agregar Modelo al Catálogo';
   $('msb').textContent = ed ? item.modelo : 'El precio se usará para calcular cuotas automáticamente';
   $('modal-box').className = 'modal';
@@ -3494,14 +4171,14 @@ function openEditCatalogo(id){
 function delCatalogo(id){
   var item = CATALOGO.find(function(c){return c.id===id;});
   if(!item) return;
-  $('mic').textContent='🗑️'; $('mtt').textContent='Eliminar Modelo'; $('msb').textContent='No se puede deshacer';
+  $('mic').textContent='Del'; $('mtt').textContent='Eliminar Modelo'; $('msb').textContent='No se puede deshacer';
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div style="text-align:center;padding:16px 0">'
-    + '<div style="font-size:42px;margin-bottom:10px">🏍️</div>'
+    + '<div style="font-size:42px;margin-bottom:10px">MOT</div>'
     + '<div style="font-size:15px;font-weight:700">¿Eliminar ' + item.modelo + '?</div>'
     + '<div style="color:var(--ink3);font-size:13px;margin-top:6px">$' + item.precio.toLocaleString('es') + ' · Se eliminará del catálogo permanentemente</div></div>';
   $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    + '<button class="btn btn-d" onclick="cDelCatalogo('+id+')">🗑️ Eliminar</button>';
+    + '<button class="btn btn-d" onclick="cDelCatalogo('+id+')">Del Eliminar</button>';
   $('ov').style.display = 'flex';
 }
 function cDelCatalogo(id){
@@ -3528,7 +4205,7 @@ function delPlanExtra(idx){
   nav('plan'); toast('Plan eliminado','success');
 }
 function openAddPlan(){
-  $('mic').textContent='💎'; $('mtt').textContent='Nuevo Plan Financiero'; $('msb').textContent='Se agrega como opción adicional';
+  $('mic').textContent='PLN'; $('mtt').textContent='Nuevo Plan Financiero'; $('msb').textContent='Se agrega como opción adicional';
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div class="fgr" style="gap:8px">'
     + '<div class="fg"><label>Nombre del plan *</label><input class="fi" id="np_nombre" placeholder="Ej: Plan 12 Meses"></div>'
@@ -3581,13 +4258,13 @@ function abrirFiniquito(credId){
     : (c.pagado||0)*(c.cuotaQ||c.cuota||0);
   var fechaFin=c.fechaCompletado||new Date().toISOString().split('T')[0];
 
-  $('mic').textContent='🎉';
+  $('mic').textContent='';
   $('mtt').textContent='¡Contrato Finalizado!';
   $('msb').textContent=c.cli+' completó su financiamiento';
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
     <div style="text-align:center;padding:16px 0 20px">
-      <div style="font-size:52px;margin-bottom:8px">🎉</div>
+      <div style="font-size:52px;margin-bottom:8px"></div>
       <div style="font-size:18px;font-weight:900;color:var(--p1);margin-bottom:4px">${c.cli}</div>
       <div style="font-size:13px;color:var(--ink3)">ha completado el financiamiento de su motocicleta</div>
     </div>
@@ -3621,7 +4298,7 @@ function abrirFiniquito(credId){
     </div>`;
   $('mft').innerHTML=`
     <button class="btn btn-g" onclick="closeM()">Cerrar</button>
-    <button class="btn btn-p" onclick="imprimirFiniquito()">🖨️ Imprimir / Guardar PDF</button>`;
+    <button class="btn btn-p" onclick="imprimirFiniquito()">Imprimir / Guardar PDF</button>`;
   $('ov').style.display='flex';
 }
 
@@ -3651,7 +4328,7 @@ function _abrirVentanaImpresion(titulo, htmlContenido){
     @media print{body{padding:12px}button{display:none!important}}
   `;
   var w = window.open('','_blank','width=860,height=700');
-  w.document.write('<html><head><title>'+titulo+'</title><style>'+estilos+'</style></head><body>'+htmlContenido+'<br><button onclick="window.print()" style="background:#6C5CE7;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px">🖨️ Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},400);<\/script></body></html>');
+  w.document.write('<html><head><title>'+titulo+'</title><style>'+estilos+'</style></head><body>'+htmlContenido+'<br><button onclick="window.print()" style="background:#6C5CE7;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px">Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},400);<\/script></body></html>');
   w.document.close();
 }
 
@@ -3795,7 +4472,7 @@ function importarBackupJSON(input){
       if(!data.version||!data.clientes){
         toast('Archivo inválido — no parece un backup de Pagasi','error');return;
       }
-      if(!confirm('⚠️ Esto reemplazará TODOS los datos actuales con el backup.\n\nClientes: '+data.clientes.length+
+      if(!confirm('⚠ Esto reemplazará TODOS los datos actuales con el backup.\n\nClientes: '+data.clientes.length+
         '\nCréditos: '+data.creds.length+'\nPagos: '+data.pagos.length+
         '\n\n¿Continuar?')){input.value='';return;}
 
@@ -3818,10 +4495,10 @@ function importarBackupJSON(input){
         S.movimientos.forEach(function(o){ops.push(DB.saveMovimiento(o)||Promise.resolve());});
         S.motos.forEach(function(o){ops.push(DB.saveMoto(o)||Promise.resolve());});
         Promise.all(ops.filter(Boolean)).then(function(){
-          hideLoader();nav(S.page);toast('✅ Backup restaurado ('+S.clientes.length+' clientes, '+S.creds.length+' créditos)','success');
+          hideLoader();nav(S.page);toast('✓ Backup restaurado ('+S.clientes.length+' clientes, '+S.creds.length+' créditos)','success');
         }).catch(function(err){hideLoader();toast('Error parcial al guardar: '+err.message,'error');});
       } else {
-        nav(S.page);toast('✅ Backup cargado en memoria (sin Firebase)','success');
+        nav(S.page);toast('✓ Backup cargado en memoria (sin Firebase)','success');
       }
     } catch(err){
       toast('Error leyendo archivo: '+err.message,'error');
@@ -3946,7 +4623,7 @@ function generarReporte(tipo){
       +'<table><thead><tr><th>ID</th><th>Modelo</th><th>VIN</th><th>Color</th><th>Precio</th><th>Estado</th><th>Cliente</th><th>GPS</th></tr></thead><tbody>'
       +S.motos.map(function(m){
         var est={'disponible':'<span class="badge green">Disponible</span>','financiada':'<span class="badge blue">Financiada</span>','recuperada':'<span class="badge red">Recuperada</span>','inventario':'<span class="badge gray">Inventario</span>'}[m.estado]||m.estado;
-        return '<tr><td>'+m.id+'</td><td>'+m.modelo+'</td><td>'+(m.vin||'—')+'</td><td>'+(m.color||'—')+'</td><td>$'+m.precio.toFixed(2)+'</td><td>'+est+'</td><td>'+(m.cliente||'—')+'</td><td>'+(m.gps?'✅':'—')+'</td></tr>';
+        return '<tr><td>'+m.id+'</td><td>'+m.modelo+'</td><td>'+(m.vin||'—')+'</td><td>'+(m.color||'—')+'</td><td>$'+m.precio.toFixed(2)+'</td><td>'+est+'</td><td>'+(m.cliente||'—')+'</td><td>'+(m.gps?'✓':'—')+'</td></tr>';
       }).join('')
       +'</tbody></table>';
 
@@ -4003,7 +4680,7 @@ function generarReporte(tipo){
   var doc = window.open('','_blank','width=900,height=700');
   doc.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+' — '+empresa+'</title>'+estilos+'</head><body>'
     +'<div class="header"><div class="logo-area"><h1>'+empresa+'</h1><h2>'+titulo+'</h2></div>'
-    +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#6C5CE7;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px">🖨️ Imprimir / Guardar PDF</button></div>'
+    +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#6C5CE7;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px">Imprimir / Guardar PDF</button></div>'
     +'</div>'+html_content+'</body></html>');
   doc.document.close();
 }
@@ -4059,7 +4736,7 @@ function renderCuentas(){
   var tab=window._cuentasTab||'cuentas';
   var tabBar='<div style="display:flex;gap:0;border-bottom:2px solid var(--rim);margin-bottom:20px">'
     +['cuentas','historial','pendientes'].map(function(t){
-      var labels={cuentas:'🏦 Cuentas Bancarias',historial:'📋 Historial',pendientes:'⏳ Cuentas Pendientes'};
+      var labels={cuentas:'BNK Cuentas Bancarias',historial:'≡ Historial',pendientes:'PND Cuentas Pendientes'};
       var active=tab===t;
       return '<button onclick="switchCuentasTab(\''+t+'\')" style="'
         +'background:none;border:none;padding:10px 18px;font-size:13px;font-weight:'+(active?'800':'600')
@@ -4088,7 +4765,7 @@ function renderTabCuentasBanc(){
     var iconBg='background:var(--grad)';
     return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">'
       +'<div style="display:flex;align-items:center;gap:10px">'
-      +'<div style="width:40px;height:40px;border-radius:50%;'+iconBg+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px">🏦</div>'
+      +'<div style="width:40px;height:40px;border-radius:50%;'+iconBg+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px">BNK</div>'
       +'<div style="font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink)">'+c.nombre+'</div></div>'
       +'<div>'
       +'<div style="font-family:var(--fd);font-weight:900;font-size:26px;color:var(--ink)">'+fmt(saldo)+'</div>'
@@ -4096,7 +4773,7 @@ function renderTabCuentasBanc(){
       +'</div>'
       +'<div><div style="font-size:10px;color:var(--ink3);margin-bottom:6px">Métodos de pago:</div>'
       +(c.metodos&&c.metodos.length
-        ?c.metodos.map(function(m){return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(108,92,231,0.10);color:var(--p1);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;margin:2px 2px 2px 0">'+m+' ✏️</span>';}).join('')
+        ?c.metodos.map(function(m){return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(108,92,231,0.10);color:var(--p1);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;margin:2px 2px 2px 0">'+m+' Editar</span>';}).join('')
         :'<span style="font-size:11px;color:var(--ink3)">Sin métodos de pago</span>')
       +'</div>'
       +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'
@@ -4104,7 +4781,7 @@ function renderTabCuentasBanc(){
       +'<button class="btn btn-d btn-xs" onclick="openRetiro(\''+c.nombre+'\')">− Retirar</button>'
       +'<button class="btn btn-g btn-xs" onclick="openTransferencia(\''+c.nombre+'\')">⇄ Transferir</button>'
       +'</div></div>';
-  }).join(''):'<div class="empty"><span class="e-ic">🏦</span><div class="e-tt">Sin cuentas configuradas</div><div style="font-size:12px;color:var(--ink3);margin-top:6px">Ve a <strong>Configuración → Cuentas Bancarias</strong> para agregar tus cuentas.</div></div>';
+  }).join(''):'<div class="empty"><span class="e-ic">BNK</span><div class="e-tt">Sin cuentas configuradas</div><div style="font-size:12px;color:var(--ink3);margin-top:6px">Ve a <strong>Configuración → Cuentas Bancarias</strong> para agregar tus cuentas.</div></div>';
 
   return '<div>'
     +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">'
@@ -4162,17 +4839,17 @@ function renderTabHistorial(){
       +'<td style="text-align:right">BS '+parseFloat(comision).toFixed(2)+'</td>'
       +'<td style="text-align:right;font-weight:700;color:var(--p1);white-space:nowrap">'
       +(m.monedaMov==='BS'?'BS ':'$')+parseFloat(monto).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'
-      +'<td><button class="btn btn-d btn-xs" onclick="delMovimiento(\''+m.id+'\')">🗑</button></td>'
+      +'<td><button class="btn btn-d btn-xs" onclick="delMovimiento(\''+m.id+'\')">Eliminar</button></td>'
       +'</tr>';
   }).join(''):'<tr><td colspan="8" class="empty" style="padding:32px 0">Sin movimientos en '+nombreMesEsp(mes)+'</td></tr>';
 
   return '<div>'
     +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">'
     +'<div style="display:flex;align-items:center;gap:8px">'
-    +'<span style="font-size:14px">📅</span>'
+    +'<span style="font-size:14px">Fecha</span>'
     +'<select class="fs" onchange="setCuentasMes(this.value)" style="min-width:180px;font-weight:700;color:var(--p1);border-color:var(--p1)">'+mesOpts+'</select>'
     +'</div>'
-    +'<button class="btn btn-p btn-sm" onclick="exportHistorialXLS()" title="Descargar Excel" style="width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;font-size:18px">📊</button>'
+    +'<button class="btn btn-p btn-sm" onclick="exportHistorialXLS()" title="Descargar Excel" style="width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;font-size:18px">Ver</button>'
     +'</div>'
     +'<div class="card" style="overflow-x:auto">'
     +'<div class="ch"><div><div class="ct">Historial de Cuentas Bancarias</div><div class="cs">Registros de entrada y salida de todas las cuentas bancarias</div></div>'
@@ -4262,7 +4939,7 @@ function renderCobrar(ocultarCero){
 
   var totalCobrar=grupos.reduce(function(a,g){return a+g.total;},0);
 
-  if(!grupos.length) return '<div class="empty"><span class="e-ic">✅</span><div class="e-tt">Sin cuentas pendientes por cobrar</div></div>';
+  if(!grupos.length) return '<div class="empty"><span class="e-ic">✓</span><div class="e-tt">Sin cuentas pendientes por cobrar</div></div>';
 
   var rows=grupos.map(function(g,idx){
     var expired=g.creds.some(function(c){return c.estado==='mora';});
@@ -4318,7 +4995,7 @@ function renderPagar(ocultarCero){
     .sort(function(a,b){return b.total-a.total;});
   var totalPagar=grupos.reduce(function(a,g){return a+g.total;},0);
 
-  if(!grupos.length) return '<div class="empty"><span class="e-ic">✅</span><div class="e-tt">Sin cuentas pendientes por pagar</div></div>';
+  if(!grupos.length) return '<div class="empty"><span class="e-ic">✓</span><div class="e-tt">Sin cuentas pendientes por pagar</div></div>';
 
   var rows=grupos.map(function(g,idx){
     var catLabel={inventario:'Inventario',equipos:'Equipos',operativo:'Operativo',nomina:'Nómina',otros:'Otros'}[g.cat]||g.cat;
@@ -4383,7 +5060,7 @@ function filtrarCobrar(q){
 
 // ── DEPÓSITO ──
 function openDeposito(cuentaNombre){
-  $('mic').textContent='💚';$('mtt').textContent='Registrar Depósito';
+  $('mic').textContent='✓';$('mtt').textContent='Registrar Depósito';
   $('msb').textContent=cuentaNombre||'Selecciona la cuenta';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
@@ -4426,7 +5103,7 @@ function openDeposito(cuentaNombre){
 
 // ── RETIRO ──
 function openRetiro(cuentaNombre){
-  $('mic').textContent='🔴';$('mtt').textContent='Registrar Retiro';
+  $('mic').textContent='●';$('mtt').textContent='Registrar Retiro';
   $('msb').textContent=cuentaNombre||'Selecciona la cuenta';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
@@ -4469,7 +5146,7 @@ function openRetiro(cuentaNombre){
 
 // ── TRANSFERENCIA ──
 function openTransferencia(cuentaNombre){
-  $('mic').textContent='🔄';$('mtt').textContent='Transferencia entre Cuentas';$('msb').textContent='Mueve dinero entre cuentas';
+  $('mic').textContent='↻';$('mtt').textContent='Transferencia entre Cuentas';$('msb').textContent='Mueve dinero entre cuentas';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
     return '<option value="'+cu.nombre+'">'+cu.nombre+'</option>';
@@ -4543,7 +5220,7 @@ function actualizarPreviewNotif(){
   var preview = $('notif-preview');
   if(preview){
     if(!destinatarios.length){
-      preview.innerHTML = '<span style="color:var(--red)">⚠️ Sin destinatarios con este filtro — al enviar podrás escribir un número manualmente.</span>';
+      preview.innerHTML = '<span style="color:var(--red)">Sin destinatarios con este filtro — al enviar podrás escribir un número manualmente.</span>';
     } else {
       preview.innerHTML = '<strong style="color:var(--p1)">Vista previa (' + destinatarios.length + ' destinatario'+(destinatarios.length!==1?'s':'')
         +(destinatarios.filter(function(d){return !d.tel||d.tel.replace(/[^0-9]/g,'').length<7;}).length?' · <span style="color:var(--amber)">'+destinatarios.filter(function(d){return !d.tel||d.tel.replace(/[^0-9]/g,'').length<7;}).length+' sin teléfono</span>':'')
@@ -4614,7 +5291,7 @@ function enviarNotificaciones(){
   // ── Si no hay destinatarios con el filtro, abrir de todos modos ──
   if(!destinatarios.length){
     // Fallback: ofrece abrir WhatsApp con número manual
-    $('mic').textContent='💬'; $('mtt').textContent='Enviar mensaje'; $('msb').textContent='Sin destinatarios automáticos';
+    $('mic').textContent='MSG'; $('mtt').textContent='Enviar mensaje'; $('msb').textContent='Sin destinatarios automáticos';
     $('modal-box').className='modal';
     $('mbd').innerHTML='<div class="fg"><label>No se encontraron destinatarios con el filtro seleccionado.<br>Puedes enviar manualmente:</label></div>'
       +'<div class="fgr" style="gap:8px;margin-top:10px">'
@@ -4631,7 +5308,7 @@ function enviarNotificaciones(){
       closeM(); return true;
     };
     $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-      +'<button class="btn btn-p" onclick="saveM()">💬 Abrir WhatsApp</button>';
+      +'<button class="btn btn-p" onclick="saveM()">MSG Abrir WhatsApp</button>';
     $('ov').style.display='flex';
     return;
   }
@@ -4657,8 +5334,8 @@ function enviarNotificaciones(){
     });
 
     var msgs=[];
-    if(opened>0) msgs.push('✅ Abriendo WhatsApp para '+opened+' contacto'+(opened!==1?'s':''));
-    if(conTel.length>5) msgs.push('⚠️ Solo se abren 5 a la vez. Quedan '+(conTel.length-5)+' más — usa "Copiar" para el resto');
+    if(opened>0) msgs.push('✓ Abriendo WhatsApp para '+opened+' contacto'+(opened!==1?'s':''));
+    if(conTel.length>5) msgs.push('⚠ Solo se abren 5 a la vez. Quedan '+(conTel.length-5)+' más — usa "Copiar" para el resto');
     if(sinTel.length>0) msgs.push('ℹ️ '+sinTel.length+' cliente'+(sinTel.length!==1?'s':'')+' sin teléfono: '+sinTel.map(function(d){return d.nombre.split(' ')[0];}).join(', '));
     toast(msgs.join('\n'), opened>0?'success':'info');
 
@@ -4669,7 +5346,7 @@ function enviarNotificaciones(){
     }).join('\n\n─────────────────\n\n');
     if(navigator.clipboard){
       navigator.clipboard.writeText(allMsgs).then(function(){
-        toast(destinatarios.length+' mensaje'+(destinatarios.length!==1?'s':'')+' copiados al portapapeles ✅','success');
+        toast(destinatarios.length+' mensaje'+(destinatarios.length!==1?'s':'')+' copiados al portapapeles ✓','success');
       });
     } else {
       var ta=document.createElement('textarea');
@@ -4689,7 +5366,7 @@ function enviarNotificaciones(){
   });
   var h=$('notif-historial');
   if(h) h.innerHTML=window._notifHistorial.map(function(n){
-    return '<div class="li"><div class="li-ic" style="background:var(--gs)">'+(n.canal==='whatsapp'?'💬':'📋')+'</div>'
+    return '<div class="li"><div class="li-ic" style="background:var(--gs)">'+(n.canal==='whatsapp'?'WA':'≡')+'</div>'
       +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+n.tipo+' → '+n.dest+'</div>'
       +'<div class="tds">'+n.fecha+' · '+n.cantidad+' mensaje'+(n.cantidad!==1?'s':'')+'</div></div>'
       +'<span class="bdg b-g">enviado</span></div>';
@@ -4734,7 +5411,7 @@ function doLogin() {
     var localUser = (typeof USERS_LOCAL !== 'undefined' && USERS_LOCAL.length)
       ? USERS_LOCAL[0]
       : null;
-    if(!localUser){ if(errEl){errEl.textContent='⚠️ Configura tus credenciales en Configuración → Acceso Local';errEl.style.display='block';} return; }
+    if(!localUser){ if(errEl){errEl.textContent='⚠ Configura tus credenciales en Configuración → Acceso Local';errEl.style.display='block';} return; }
 
     if (email === localUser.user && pass === localUser.pass) {
       $('login-screen').style.display = 'none';
@@ -4746,7 +5423,7 @@ function doLogin() {
       if (sbAv) sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
       init();
     } else {
-      if (errEl) { errEl.textContent = '⛔ Usuario o contraseña incorrectos'; errEl.style.display = 'block'; }
+      if (errEl) { errEl.textContent = 'Usuario o contraseña incorrectos'; errEl.style.display = 'block'; }
     }
     return;
   }
@@ -4785,7 +5462,7 @@ function exportarBackup(){
   var fecha = new Date().toISOString().split('T')[0];
   a.href = url; a.download = 'backup-pagasi-'+fecha+'.json'; a.click();
   URL.revokeObjectURL(url);
-  toast('✅ Backup exportado · '+
+  toast('✓ Backup exportado · '+
     data.clientes.length+' clientes, '+
     data.creditos.length+' créditos, '+
     data.pagos.length+' pagos','success');
@@ -4818,7 +5495,7 @@ function importarBackup(){
         (data.movimientos||[]).forEach(function(o){if(o&&o.id) ops.push(db.collection('movimientos').doc(String(o.id)).set(o));});
         Promise.all(ops).then(function(){
           hideLoader();
-          toast('✅ Backup restaurado · '+ops.length+' registros subidos','success');
+          toast('✓ Backup restaurado · '+ops.length+' registros subidos','success');
           setTimeout(function(){DB.load().then(function(){nav(S.page);});},1000);
         }).catch(function(err){
           hideLoader();
@@ -4837,7 +5514,7 @@ function showAdminProfile() {
   var user = auth && auth.currentUser;
   var email = user ? user.email : '—';
 
-  $('mic').textContent = '👤';
+  $('mic').textContent = 'CLI';
   $('mtt').textContent = 'Mi Perfil';
   $('msb').textContent = email;
   $('modal-box').className = 'modal';
@@ -4861,11 +5538,11 @@ function showAdminProfile() {
         '<div><label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Confirmar contraseña</label>' +
         '<input id="prof-pass2" type="password" class="inp" placeholder="Repetir contraseña" style="width:100%"></div>' +
         '<div id="prof-msg" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px"></div>' +
-        '<button class="btn btn-p" onclick="cambiarPasswordPerfil()" style="align-self:flex-start">🔑 Actualizar contraseña</button>' +
+        '<button class="btn btn-p" onclick="cambiarPasswordPerfil()" style="align-self:flex-start">Key Actualizar contraseña</button>' +
       '</div>' +
     '</div>' +
     '<div style="border-top:1px solid var(--rim);padding-top:16px">' +
-      '<button class="btn btn-g" onclick="doLogout()" style="width:100%;justify-content:center;color:#e74c3c">🚪 Cerrar sesión</button>' +
+      '<button class="btn btn-g" onclick="doLogout()" style="width:100%;justify-content:center;color:#e74c3c">Salir Cerrar sesión</button>' +
     '</div>' +
     '</div>';
 
@@ -4885,18 +5562,18 @@ function cambiarPasswordPerfil() {
     msg.textContent = txt;
   }
   if (p1.length < 6) return showMsg('⛔ La contraseña debe tener al menos 6 caracteres', false);
-  if (p1 !== p2) return showMsg('⛔ Las contraseñas no coinciden', false);
+  if (p1 !== p2) return showMsg('Las contraseñas no coinciden', false);
   var user = auth && auth.currentUser;
   if (!user) return showMsg('⛔ No hay sesión activa', false);
   user.updatePassword(p1)
     .then(function() {
-      showMsg('✅ Contraseña actualizada correctamente', true);
+      showMsg('✓ Contraseña actualizada correctamente', true);
       if ($('prof-pass1')) $('prof-pass1').value = '';
       if ($('prof-pass2')) $('prof-pass2').value = '';
     })
     .catch(function(e) {
       if (e.code === 'auth/requires-recent-login') {
-        showMsg('⚠️ Por seguridad, cerrá sesión y volvé a ingresar antes de cambiar la contraseña.', false);
+        showMsg('⚠ Por seguridad, cerrá sesión y volvé a ingresar antes de cambiar la contraseña.', false);
       } else {
         showMsg('⛔ ' + (e.message || 'Error al actualizar'), false);
       }
@@ -4916,7 +5593,7 @@ function doLogout() {
 // ══════════════════════════════════════════
 function openInviteUser(){
   if(!db||!auth){ toast('Requiere Firebase activo para invitar usuarios','error'); return; }
-  $('mic').textContent='📧'; $('mtt').textContent='Invitar Nuevo Usuario'; $('msb').textContent='Se enviará un link de registro por email';
+  $('mic').textContent='Email'; $('mtt').textContent='Invitar Nuevo Usuario'; $('msb').textContent='Se enviará un link de registro por email';
   $('modal-box').className='modal';
   var modCheckboxes = Object.keys(PGL).map(function(key){
     return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;cursor:pointer">'
@@ -4959,7 +5636,7 @@ function openInviteUser(){
         hideLoader();
         closeM();
         nav('users');
-        toast('✅ Usuario '+email+' creado. Contraseña temporal: Pagasi2024!Temp','success');
+        toast('✓ Usuario '+email+' creado. Contraseña temporal: Pagasi2024!Temp','success');
       })
       .catch(function(e){
         hideLoader();
@@ -4990,7 +5667,7 @@ function editarUsuario(uid){
   db.collection('usuarios').doc(uid).get().then(function(doc){
     if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
     var u=doc.data();
-    $('mic').textContent='✏️'; $('mtt').textContent='Editar Permisos'; $('msb').textContent=u.nombre||u.email;
+    $('mic').textContent='Editar'; $('mtt').textContent='Editar Permisos'; $('msb').textContent=u.nombre||u.email;
     $('modal-box').className='modal';
     var modCheckboxes=Object.keys(PGL).map(function(key){
       var checked=(u.permisos||[]).includes(key);
@@ -5021,10 +5698,10 @@ function editarUsuario(uid){
 }
 
 function confirmarEliminarUsuario(uid,nombre){
-  $('mic').textContent='🗑'; $('mtt').textContent='Eliminar Usuario'; $('msb').textContent=nombre;
+  $('mic').textContent='Del'; $('mtt').textContent='Eliminar Usuario'; $('msb').textContent=nombre;
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div style="text-align:center;padding:12px 0">'
-    +'<div style="font-size:38px;margin-bottom:10px">⚠️</div>'
+    +'<div style="font-size:38px;margin-bottom:10px">⚠</div>'
     +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">¿Eliminar a <em>'+nombre+'</em>?</div>'
     +'<div style="font-size:12px;color:var(--ink3)">Esta acción eliminará el perfil del usuario del sistema. No se puede deshacer.</div>'
     +'</div>';
@@ -5061,7 +5738,7 @@ function aceptarInvitacion() {
     return;
   }
   if (pass !== pass2) {
-    if (errEl) { errEl.textContent = '⛔ Las contraseñas no coinciden'; errEl.style.display = 'block'; }
+    if (errEl) { errEl.textContent = 'Las contraseñas no coinciden'; errEl.style.display = 'block'; }
     return;
   }
 
@@ -5085,7 +5762,7 @@ function aceptarInvitacion() {
     .catch(function(e) {
       hideLoader();
       if (btn) btn.disabled = false;
-      if (errEl) { errEl.textContent = '⛔ ' + e.message; errEl.style.display = 'block'; }
+      if (errEl) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     });
 }
 
