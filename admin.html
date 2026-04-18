@@ -2529,7 +2529,7 @@ function renderClienteList(q=''){
         <button class="btn btn-d btn-xs" onclick="delCliente(${c.id})">Eliminar</button>
       </div></td>
     </tr>`).join('')}</tbody>
-  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>Del Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><span style='color:var(--ink3)'>${c.eliminadoRazon?'· '+c.eliminadoRazon:''}</span><span style='color:var(--ink3)'>${c.eliminadoEn?c.eliminadoEn.split('T')[0]:''}</span></div>`).join('')}</div>`:''}</div>`+pgControls('clientes',filtered.length,50,'pgNav');
+  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>Del Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><span style='color:var(--ink3)'>${c.eliminadoRazon?'· '+c.eliminadoRazon:''}</span><span style='color:var(--ink3)'>${c.eliminadoEn?c.eliminadoEn.split('T')[0]:''}</span><button class='btn btn-g btn-xs' onclick='restaurarCliente(${c.id})' title='Restaurar cliente'>↩ Restaurar</button></div>`).join('')}</div>`:''}</div>`+pgControls('clientes',filtered.length,50,'pgNav');
 }
 
 function verCliente(id){
@@ -3106,7 +3106,7 @@ creditos(){
       } else {
         totalAbonado=(c.pagado||0)*cuotaVal;
       }
-      var saldoPendiente=Math.max(0,parseFloat((totalFinanciado-totalAbonado).toFixed(2)));
+      var saldoPendiente=parseFloat((totalFinanciado-totalAbonado).toFixed(2));if(saldoPendiente<0.05)saldoPendiente=0;saldoPendiente=Math.max(0,saldoPendiente);
       var pct=totalFinanciado>0?Math.round((totalAbonado/totalFinanciado)*100):0;
       var saldoColor=saldoPendiente===0?'var(--green)':c.mora>0?'var(--red)':'var(--ink)';
       return`<tr>
@@ -3967,6 +3967,21 @@ function delCliente(id){
   confirmarEliminacion({titulo:'Eliminar Cliente',descripcion:'¿Eliminar a '+c.nombre+'?',onConfirm:function(audit){Object.assign(c,audit);DB.saveCliente(c);nav('clientes');toast('Cliente eliminado','info');}});
 }
 
+function restaurarCliente(id){
+  const c=S.clientes.find(x=>x.id===id);
+  if(!c||!c.eliminado){toast('Cliente no encontrado o no está eliminado','error');return;}
+  if(!confirm('¿Restaurar al cliente '+c.nombre+' al sistema?')) return;
+  delete c.eliminado;
+  delete c.eliminadoPor;
+  delete c.eliminadoPorUid;
+  delete c.eliminadoEn;
+  delete c.eliminadoRazon;
+  DB.saveCliente(c);
+  nav('clientes');
+  toast('Cliente '+c.nombre+' restaurado al sistema','success');
+}
+window.restaurarCliente=restaurarCliente;
+
 // ══════════════════════════════════════════
 // CRÉDITO MODAL — plan 10M automático
 // ══════════════════════════════════════════
@@ -4733,7 +4748,7 @@ function getSaldoPendienteCredito(credId){
   } else {
     totalAbonado=(parseFloat(c.pagado)||0)*cuotaVal;
   }
-  return Math.max(0, parseFloat((totalFinanciado-totalAbonado).toFixed(2)));
+  var resultado=parseFloat((totalFinanciado-totalAbonado).toFixed(2));if(resultado<0.05)resultado=0;return Math.max(0,resultado);
 }
 
 function openLiquidarAnticipado(credId){
@@ -4748,7 +4763,7 @@ function openLiquidarAnticipado(credId){
     toast('Este financiamiento ya no tiene saldo pendiente','info');
     return;
   }
-  $('mbh').innerHTML='Liquidación anticipada';
+  $('mtt').innerHTML='Liquidación anticipada';
   $('mbd').innerHTML=''
     +'<div class="grid2">'
     +  '<div><label>Crédito</label><input class="inp" value="'+c.id+'" disabled></div>'
