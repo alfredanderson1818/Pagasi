@@ -2529,7 +2529,7 @@ function renderClienteList(q=''){
         <button class="btn btn-d btn-xs" onclick="delCliente(${c.id})">Eliminar</button>
       </div></td>
     </tr>`).join('')}</tbody>
-  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>Del Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><span style='color:var(--ink3)'>${c.eliminadoRazon?'· '+c.eliminadoRazon:''}</span><span style='color:var(--ink3)'>${c.eliminadoEn?c.eliminadoEn.split('T')[0]:''}</span><button class='btn btn-g btn-xs' onclick='restaurarCliente(${c.id})' title='Devolver al sistema' style='flex-shrink:0;margin-left:4px'>↩ Restaurar</button></div>`).join('')}</div>`:''}</div>`+pgControls('clientes',filtered.length,50,'pgNav');
+  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>Del Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><span style='color:var(--ink3)'>${c.eliminadoRazon?'· '+c.eliminadoRazon:''}</span><span style='color:var(--ink3)'>${c.eliminadoEn?c.eliminadoEn.split('T')[0]:''}</span></div>`).join('')}</div>`:''}</div>`+pgControls('clientes',filtered.length,50,'pgNav');
 }
 
 function verCliente(id){
@@ -3106,7 +3106,7 @@ creditos(){
       } else {
         totalAbonado=(c.pagado||0)*cuotaVal;
       }
-      var saldoPendiente=c.estado==='completado'?0:Math.max(0,parseFloat((totalFinanciado-totalAbonado).toFixed(2)));
+      var saldoPendiente=Math.max(0,parseFloat((totalFinanciado-totalAbonado).toFixed(2)));
       var pct=totalFinanciado>0?Math.round((totalAbonado/totalFinanciado)*100):0;
       var saldoColor=saldoPendiente===0?'var(--green)':c.mora>0?'var(--red)':'var(--ink)';
       return`<tr>
@@ -3966,19 +3966,6 @@ function delCliente(id){
   if(S.creds.some(cr=>cr.cli===c.nombre&&cr.estado==='activo')){toast('No puedes eliminar un cliente con crédito activo','error');return;}
   confirmarEliminacion({titulo:'Eliminar Cliente',descripcion:'¿Eliminar a '+c.nombre+'?',onConfirm:function(audit){Object.assign(c,audit);DB.saveCliente(c);nav('clientes');toast('Cliente eliminado','info');}});
 }
-function restaurarCliente(id){
-  const c=S.clientes.find(x=>x.id===id);
-  if(!c||!c.eliminado) return;
-  if(!confirm('¿Restaurar a '+c.nombre+' y devolverlo al sistema?')) return;
-  delete c.eliminado;
-  delete c.eliminadoPor;
-  delete c.eliminadoPorUid;
-  delete c.eliminadoEn;
-  delete c.eliminadoRazon;
-  DB.saveCliente(c);
-  nav('clientes');
-  toast('Cliente '+c.nombre+' restaurado correctamente','success');
-}
 
 // ══════════════════════════════════════════
 // CRÉDITO MODAL — plan 10M automático
@@ -4761,7 +4748,7 @@ function openLiquidarAnticipado(credId){
     toast('Este financiamiento ya no tiene saldo pendiente','info');
     return;
   }
-  $('mtt').innerHTML='Liquidación anticipada';
+  $('mbh').innerHTML='Liquidación anticipada';
   $('mbd').innerHTML=''
     +'<div class="grid2">'
     +  '<div><label>Crédito</label><input class="inp" value="'+c.id+'" disabled></div>'
@@ -7584,36 +7571,27 @@ function enviarNotificaciones(){
 
 // ── INIT — arranca la app después del login ─────────────────
 function init() {
+  // Mostrar el contenedor principal
   var appRoot = $('app-root');
   if (appRoot) appRoot.style.display = 'flex';
   cargarHistorialNotificaciones();
 
-  var _navDone = false;
-  function _doNav() {
-    if (_navDone) return;
-    _navDone = true;
-    hideLoader();
+  // Cargar datos desde Firebase o usar datos locales de demostración
+  DB.load().then(function() {
     nav('dash');
     updateBadge();
+    // Responsive: detectar si es móvil y mostrar topbar correspondiente
     var isMob = window.innerWidth <= 820;
     var mobBar = $('mobile-topbar');
     var deskBar = $('desktop-topbar');
     if (mobBar) mobBar.style.display = isMob ? 'flex' : 'none';
     if (deskBar) deskBar.style.display = isMob ? 'none' : 'flex';
-  }
-
-  var _timeout = setTimeout(function() {
-    console.warn('DB.load timeout -- mostrando app con datos disponibles');
-    _doNav();
-  }, 6000);
-
-  DB.load().then(function() {
-    clearTimeout(_timeout);
-    _doNav();
+    // Hide desktop search bar on mobile (handled by mobile overlay)
+    if (deskBar) deskBar.style.display = isMob ? 'none' : 'flex';
   }).catch(function(e) {
-    clearTimeout(_timeout);
     console.warn('Error cargando datos:', e);
-    _doNav();
+    nav('dash');
+    updateBadge();
   });
 }
 
