@@ -1940,6 +1940,7 @@ var DB = {
       calcularMoraAuto();
       cargarCuentasBanc();
       hideLoader();
+      setTimeout(mostrarAlertaMora, 800); // pequeño delay para que el dashboard cargue
     }).catch(function(e){
       hideLoader();
       // Si es error de red, trabajar con datos locales sin avisar con error
@@ -3141,6 +3142,7 @@ cobranza(){
       <div style="color:var(--ink3);font-size:12px">Cargando...</div>
     </div>
   </div>
+  ${renderDashboardCobradores()}
   </div></div>`;
 },
 
@@ -4327,6 +4329,8 @@ function openAddPago(){
     } else {
       pgSet('pagos',1);
       toast('✓ Pago registrado · '+fmt(monto),'success');
+      // Ofrecer recibo
+      setTimeout(function(){ ofrecerRecibo(newPago, cred); }, 400);
     }
     closeM();nav('pagos');return true;
   };
@@ -4934,6 +4938,234 @@ function delEgreso(id){
 }
 
 // UTILS
+// ══════════════════════════════════════════════════════════════
+// FEATURE 1: ALERTAS DE MORA AUTOMÁTICAS
+// ══════════════════════════════════════════════════════════════
+function mostrarAlertaMora(){
+  var hoy = new Date().toDateString();
+  if(sessionStorage.getItem('mora_alert_dismissed') === hoy) return;
+
+  var enMora = S.creds.filter(function(c){ return c.mora > 0 && !c.eliminado && c.estado !== 'completado'; });
+  if(!enMora.length) return;
+
+  var critico  = enMora.filter(function(c){ return c.mora > 30; });
+  var alto     = enMora.filter(function(c){ return c.mora > 15 && c.mora <= 30; });
+  var moderado = enMora.filter(function(c){ return c.mora > 0 && c.mora <= 15; });
+
+  function grupoHTML(lista, color, icon, label){
+    if(!lista.length) return '';
+    return '<div style="margin-bottom:14px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:'+color+';margin-bottom:8px">'+icon+' '+label+' ('+lista.length+')</div>'
+      +'<div style="display:flex;flex-direction:column;gap:6px">'
+      +lista.map(function(c){
+        var cl = S.clientes.find(function(x){ return x.nombre===c.cli; })||{};
+        return '<div style="display:flex;align-items:center;gap:10px;background:var(--surf2);border-radius:10px;padding:9px 12px;border-left:3px solid '+color+'">'
+          +'<div style="flex:1;min-width:0">'
+            +'<div style="font-size:12.5px;font-weight:700;color:var(--ink)">'+c.cli+'</div>'
+            +'<div style="font-size:10.5px;color:var(--ink3);margin-top:1px">'+c.id+' · '+c.modelo+(cl.tel?' · '+cl.tel:'')+'</div>'
+          +'</div>'
+          +'<div style="text-align:right;flex-shrink:0;margin-right:10px">'
+            +'<div style="font-family:var(--fd);font-weight:900;font-size:16px;color:'+color+'">'+c.mora+'d</div>'
+            +'<div style="font-size:10px;color:var(--ink3)">mora</div>'
+          +'</div>'
+          +'<button class="btn btn-p btn-sm" onclick="closeM();openPagoRapido(\''+c.id+'\')">Cobrar</button>'
+          +(cl.tel?'<button class="btn btn-g btn-sm" onclick="window.open(\'https://wa.me/'+cl.tel.replace(/\D/g,'')+'\',\'_blank\')" title="WhatsApp">WA</button>':'')
+        +'</div>';
+      }).join('')
+      +'</div></div>';
+  }
+
+  $('mic').textContent = '⚠';
+  $('mtt').textContent = 'Alertas de Mora — '+enMora.length+' cliente'+(enMora.length!==1?'s':'');
+  $('msb').textContent = 'Revisión al ' + new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
+  $('modal-box').className = 'modal modal-lg';
+  $('mbd').innerHTML =
+    '<div style="max-height:65vh;overflow-y:auto;padding:4px 2px">'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">'
+      +'<div style="background:rgba(231,76,60,0.08);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(231,76,60,0.2)">'
+        +'<div style="font-size:22px;font-weight:900;color:var(--red)">'+critico.length+'</div>'
+        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">🔴 Crítico +30d</div>'
+      +'</div>'
+      +'<div style="background:rgba(245,166,35,0.08);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(245,166,35,0.2)">'
+        +'<div style="font-size:22px;font-weight:900;color:var(--amber)">'+alto.length+'</div>'
+        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">🟠 Alto 16–30d</div>'
+      +'</div>'
+      +'<div style="background:rgba(245,166,35,0.05);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(245,166,35,0.15)">'
+        +'<div style="font-size:22px;font-weight:900;color:var(--amber)">'+moderado.length+'</div>'
+        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">🟡 Moderado 1–15d</div>'
+      +'</div>'
+    +'</div>'
+    +grupoHTML(critico,  'var(--red)',   '🔴', 'CRÍTICO — Más de 30 días')
+    +grupoHTML(alto,     'var(--amber)', '🟠', 'ALTO — 16 a 30 días')
+    +grupoHTML(moderado, '#c9a227',      '🟡', 'MODERADO — 1 a 15 días')
+    +'</div>';
+  $('mft').innerHTML =
+    '<button class="btn btn-g" onclick="sessionStorage.setItem(\'mora_alert_dismissed\',\''+hoy+'\');closeM()">Ignorar por hoy</button>'
+    +'<button class="btn btn-p" onclick="closeM();nav(\'cobranza\')">Ver gestión de cobranza</button>';
+  $('ov').style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════════════════════
+// FEATURE 2: RECIBO / COMPROBANTE DE PAGO
+// ══════════════════════════════════════════════════════════════
+function ofrecerRecibo(pago, cred){
+  $('mic').textContent = '✓';
+  $('mtt').textContent = 'Pago Registrado';
+  $('msb').textContent = 'El pago fue guardado exitosamente';
+  $('modal-box').className = 'modal';
+  $('mbd').innerHTML =
+    '<div style="text-align:center;padding:10px 0 16px">'
+    +'<div style="width:56px;height:56px;border-radius:50%;background:var(--greens);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">'
+    +'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    +'</div>'
+    +'<div style="font-family:var(--fd);font-weight:900;font-size:26px;color:var(--green)">'+fmt(pago.monto)+'</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">'+cred.cli+' · '+pago.id+'</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+pago.fecha+(pago.referencia?' · Ref: #'+pago.referencia:'')+'</div>'
+    +'<div style="display:flex;gap:8px;justify-content:center;margin-top:18px">'
+    +'<button class="btn btn-g btn-sm" onclick="closeM()">Cerrar</button>'
+    +'<button class="btn btn-g btn-sm" onclick="closeM();abrirWhatsAppRecibo('+JSON.stringify(pago).replace(/"/g,\'&quot;\')+')" style="background:#25D366;color:#fff;border:none">📱 WhatsApp</button>'
+    +'<button class="btn btn-p btn-sm" onclick="imprimirRecibo('+JSON.stringify(pago).replace(/"/g,\'&quot;\')+','+JSON.stringify(cred).replace(/"/g,\'&quot;\')+')">🖨 Recibo PDF</button>'
+    +'</div>'
+    +'</div>';
+  $('mft').innerHTML = '';
+  $('ov').style.display = 'flex';
+}
+
+function imprimirRecibo(pago, cred){
+  var empresa = ($('cfg_empresa')&&$('cfg_empresa').value) || 'Pagasi';
+  var fecha = new Date(pago.fecha+'T12:00:00').toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Recibo '+pago.id+'</title>'
+    +'<style>'
+    +'*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}'
+    +'body{background:#fff;color:#111;padding:40px}'
+    +'.recibo{max-width:420px;margin:auto;border:1px solid #ddd;border-radius:12px;overflow:hidden}'
+    +'.header{background:#6C5CE7;color:#fff;padding:24px;text-align:center}'
+    +'.header h1{font-size:22px;font-weight:900;letter-spacing:-0.5px}'
+    +'.header p{font-size:12px;opacity:0.85;margin-top:4px}'
+    +'.badge{background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;display:inline-block;margin-top:8px}'
+    +'.body{padding:24px}'
+    +'.monto{text-align:center;background:#f0fdf4;border:2px solid #22c55e;border-radius:12px;padding:20px;margin-bottom:20px}'
+    +'.monto .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#666}'
+    +'.monto .valor{font-size:34px;font-weight:900;color:#16a34a;margin-top:4px}'
+    +'.row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px}'
+    +'.row .k{color:#888;font-weight:600}'
+    +'.row .v{font-weight:700;text-align:right;max-width:55%}'
+    +'.footer{background:#f9f9f9;padding:14px;text-align:center;font-size:10px;color:#888;border-top:1px solid #eee}'
+    +'@media print{body{padding:0}.recibo{border:none;border-radius:0}}'
+    +'</style></head><body>'
+    +'<div class="recibo">'
+    +'<div class="header">'
+    +'<h1>'+empresa+'</h1>'
+    +'<p>Comprobante de Pago</p>'
+    +'<div class="badge">'+pago.id+'</div>'
+    +'</div>'
+    +'<div class="body">'
+    +'<div class="monto"><div class="label">Monto recibido</div><div class="valor">'+fmt(pago.monto)+'</div></div>'
+    +'<div class="row"><span class="k">Cliente</span><span class="v">'+pago.cli+'</span></div>'
+    +'<div class="row"><span class="k">Crédito</span><span class="v">'+pago.cred+'</span></div>'
+    +'<div class="row"><span class="k">Vehículo</span><span class="v">'+(cred.modelo||'—')+'</span></div>'
+    +'<div class="row"><span class="k">Fecha</span><span class="v">'+fecha+'</span></div>'
+    +'<div class="row"><span class="k">Método de pago</span><span class="v">'+(pago.metodo||'—')+'</span></div>'
+    +(pago.referencia?'<div class="row"><span class="k">Referencia</span><span class="v">#'+pago.referencia+'</span></div>':'')
+    +'<div class="row"><span class="k">Cobrador</span><span class="v">'+(pago.cobrador||pago.realizadoPor||'—')+'</span></div>'
+    +'<div class="row" style="border:none"><span class="k">Cuotas pagadas</span><span class="v">'+(cred.pagado||'—')+' / '+(cred.totalCuotas||cred.plazo*2||'—')+'</span></div>'
+    +'</div>'
+    +'<div class="footer">'+empresa+' · Documento generado el '+new Date().toLocaleDateString('es-VE')+' · Conserve este comprobante</div>'
+    +'</div>'
+    +'<script>window.onload=function(){window.print();}<\/script>'
+    +'</body></html>';
+  var w = window.open('','_blank','width=520,height=700');
+  if(w){ w.document.write(html); w.document.close(); }
+}
+
+function abrirWhatsAppRecibo(pago){
+  var empresa = ($('cfg_empresa')&&$('cfg_empresa').value) || 'Pagasi';
+  var cl = S.clientes.find(function(c){ return c.nombre===pago.cli; })||{};
+  var tel = (cl.tel||'').replace(/\D/g,'');
+  var texto = '✅ *Comprobante de Pago — '+empresa+'*\n\n'
+    +'📋 *Recibo:* '+pago.id+'\n'
+    +'👤 *Cliente:* '+pago.cli+'\n'
+    +'💵 *Monto:* '+fmt(pago.monto)+'\n'
+    +'📅 *Fecha:* '+pago.fecha+'\n'
+    +'💳 *Método:* '+(pago.metodo||'—')+'\n'
+    +(pago.referencia?'🔖 *Referencia:* #'+pago.referencia+'\n':'')
+    +'\n_Gracias por su pago puntual_';
+  var url = 'https://wa.me/'+(tel||'')+( tel?'':'')+'?text='+encodeURIComponent(texto);
+  window.open(url,'_blank');
+}
+
+// ══════════════════════════════════════════════════════════════
+// FEATURE 3: DASHBOARD DE COBRANZA POR COBRADOR
+// ══════════════════════════════════════════════════════════════
+function renderDashboardCobradores(){
+  var hoy = new Date().toISOString().split('T')[0];
+  var inicioSemana = (function(){
+    var d = new Date(); d.setDate(d.getDate()-d.getDay()); return d.toISOString().split('T')[0];
+  })();
+  var inicioMes = hoy.slice(0,7)+'-01';
+
+  var pagosConf = S.pagos.filter(function(p){ return !p.eliminado && p.estado==='confirmado'; });
+
+  // Agrupar por cobrador
+  var porCobrador = {};
+  pagosConf.forEach(function(p){
+    var cob = p.cobrador || p.realizadoPor || 'Sin asignar';
+    if(!porCobrador[cob]) porCobrador[cob]={nombre:cob,hoy:0,semana:0,mes:0,total:0,count:0};
+    var g = porCobrador[cob];
+    g.total  += p.monto||0; g.count++;
+    if(p.fecha >= inicioMes)    g.mes    += p.monto||0;
+    if(p.fecha >= inicioSemana) g.semana += p.monto||0;
+    if(p.fecha === hoy)         g.hoy    += p.monto||0;
+  });
+
+  var lista = Object.values(porCobrador).sort(function(a,b){ return b.mes-a.mes; });
+  if(!lista.length) return '';
+
+  var rows = lista.map(function(c, i){
+    var medallaColor = i===0?'#F59E0B': i===1?'#94A3B8': i===2?'#CD7F32':'var(--surf2)';
+    var medallaText  = i===0?'🥇': i===1?'🥈': i===2?'🥉': '#'+(i+1);
+    return '<tr>'
+      +'<td style="text-align:center;font-size:16px">'+medallaText+'</td>'
+      +'<td>'
+        +'<div style="font-weight:700;font-size:13px;color:var(--ink)">'+c.nombre+'</div>'
+        +'<div style="font-size:10.5px;color:var(--ink3)">'+c.count+' cobro(s) en total</div>'
+      +'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--green)">'+(c.hoy>0?'+'+fmt(c.hoy):'—')+'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--p1)">'+(c.semana>0?fmt(c.semana):'—')+'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);font-weight:800">'+(c.mes>0?fmt(c.mes):'—')+'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--ink3)">'+fmt(c.total)+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var totalHoy    = lista.reduce(function(a,c){return a+c.hoy;},0);
+  var totalSemana = lista.reduce(function(a,c){return a+c.semana;},0);
+  var totalMes    = lista.reduce(function(a,c){return a+c.mes;},0);
+
+  return '<div class="card" style="margin-top:12px">'
+    +'<div class="ch">'
+      +'<div><div class="ct">Rendimiento de Cobradores</div>'
+      +'<div class="cs">Hoy · Esta semana · Este mes</div></div>'
+      +'<div style="display:flex;gap:14px">'
+        +'<div style="text-align:center"><div style="font-size:10px;color:var(--ink3)">Hoy</div><div style="font-weight:800;color:var(--green);font-family:var(--fd)">'+fmt(totalHoy)+'</div></div>'
+        +'<div style="text-align:center"><div style="font-size:10px;color:var(--ink3)">Semana</div><div style="font-weight:800;color:var(--p1);font-family:var(--fd)">'+fmt(totalSemana)+'</div></div>'
+        +'<div style="text-align:center"><div style="font-size:10px;color:var(--ink3)">Mes</div><div style="font-weight:800;font-family:var(--fd)">'+fmt(totalMes)+'</div></div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="overflow-x:auto"><table class="tbl" style="margin-top:12px">'
+      +'<thead><tr>'
+        +'<th style="width:40px;text-align:center">#</th>'
+        +'<th>Cobrador</th>'
+        +'<th style="text-align:right">Hoy</th>'
+        +'<th style="text-align:right">Esta semana</th>'
+        +'<th style="text-align:right">Este mes</th>'
+        +'<th style="text-align:right">Total histórico</th>'
+      +'</tr></thead>'
+      +'<tbody>'+rows+'</tbody>'
+    +'</table></div>'
+  +'</div>';
+}
+
 function closeM(){
   $('ov').style.display='none';
   $('modal-box').className='modal';
