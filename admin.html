@@ -4479,7 +4479,7 @@ function openAmort(id){
   const pagado=c.pagado||0;
   const startDate=new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
   const historial=c.pagosRegistrados||[];
-  const saldoProxCuota=c.saldoProxCuota||0;
+  const saldoProxCuota=(c.saldoProxCuota||0)<0.10?0:(c.saldoProxCuota||0);
   const infoLiquidacion=(c.tipoCierre==='liquidacion_anticipada') ? ('<div class="note" style="margin:8px 0 12px 0"><strong>Liquidación anticipada:</strong> saldo '+fmt(c.saldoOriginalLiquidacion||0)+' · descuento '+fmt(c.descuentoLiquidacion||0)+' · pago final '+fmt(c.montoLiquidado||0)+'</div>') : '';
 
   // Construir mapa cuota→pagos realizados
@@ -4493,7 +4493,8 @@ function openAmort(id){
   var saldoPorCuota=[];
   for(var qi=0;qi<n;qi++){
     var pagadoEnCuota=(pagosPorCuota[qi+1]||[]).reduce(function(a,h){return a+h.montoPagado;},0);
-    saldoPorCuota[qi]=Math.max(0,parseFloat((cuota-pagadoEnCuota).toFixed(2)));
+    var sp=Math.max(0,parseFloat((cuota-pagadoEnCuota).toFixed(2)));
+    saldoPorCuota[qi]=sp<0.10?0:sp;
   }
 
   let sal=c.fin,rows='';
