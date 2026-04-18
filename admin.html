@@ -5028,15 +5028,21 @@ function recalcularCreditoDesdePagos(credId){
   });
 
   if(c.tipoCierre==='liquidacion_anticipada' && (parseFloat(c.descuentoLiquidacion)||0)>0){
-    var descRestante=parseFloat(c.descuentoLiquidacion)||0;
-    var fechaDesc=c.fechaCompletado||new Date().toISOString().split('T')[0];
-    for(var qd=0;qd<totalCuotas && descRestante>0.001;qd++){
-      if(saldoPorCuota[qd]>0.001){
-        var aplicarDesc=Math.min(descRestante,saldoPorCuota[qd]);
-        aplicarDesc=parseFloat(aplicarDesc.toFixed(2));
-        historial.push({cuota:qd+1,montoPagado:aplicarDesc,fecha:fechaDesc,pagoId:'DESC-LIQ-'+credId,tipo:'descuento_liquidacion'});
-        saldoPorCuota[qd]=parseFloat((saldoPorCuota[qd]-aplicarDesc).toFixed(2));
-        descRestante=parseFloat((descRestante-aplicarDesc).toFixed(2));
+    // Solo aplicar el descuento si aún existe el pago de liquidación activo (no eliminado)
+    var liquidacionActiva=S.pagos.some(function(p){
+      return p.cred===credId && (p.tipo==='liquidacion'||p.referencia==='LIQ-ANT') && !p.eliminado;
+    });
+    if(liquidacionActiva){
+      var descRestante=parseFloat(c.descuentoLiquidacion)||0;
+      var fechaDesc=c.fechaCompletado||new Date().toISOString().split('T')[0];
+      for(var qd=0;qd<totalCuotas && descRestante>0.001;qd++){
+        if(saldoPorCuota[qd]>0.001){
+          var aplicarDesc=Math.min(descRestante,saldoPorCuota[qd]);
+          aplicarDesc=parseFloat(aplicarDesc.toFixed(2));
+          historial.push({cuota:qd+1,montoPagado:aplicarDesc,fecha:fechaDesc,pagoId:'DESC-LIQ-'+credId,tipo:'descuento_liquidacion'});
+          saldoPorCuota[qd]=parseFloat((saldoPorCuota[qd]-aplicarDesc).toFixed(2));
+          descRestante=parseFloat((descRestante-aplicarDesc).toFixed(2));
+        }
       }
     }
   }
@@ -5057,12 +5063,29 @@ function recalcularCreditoDesdePagos(credId){
   S.creds[ci].saldoProxCuota=saldoProxCuota;
   S.creds[ci].estado=nuevoEstado;
 
-  DB.updateCred(credId,{
+  // Si el crédito era liquidación anticipada pero ya no hay pago de liquidación activo,
+  // limpiar los metadatos de liquidación para que el saldo vuelva al real original
+  var extraClear={};
+  if(c.tipoCierre==='liquidacion_anticipada'){
+    var liquidacionSigueActiva=S.pagos.some(function(p){
+      return p.cred===credId && (p.tipo==='liquidacion'||p.referencia==='LIQ-ANT') && !p.eliminado;
+    });
+    if(!liquidacionSigueActiva){
+      S.creds[ci].tipoCierre=null;
+      S.creds[ci].descuentoLiquidacion=0;
+      S.creds[ci].montoLiquidado=0;
+      S.creds[ci].saldoOriginalLiquidacion=0;
+      S.creds[ci].fechaCompletado=null;
+      extraClear={tipoCierre:null,descuentoLiquidacion:0,montoLiquidado:0,saldoOriginalLiquidacion:0,fechaCompletado:null};
+    }
+  }
+
+  DB.updateCred(credId,Object.assign({
     pagado:cuotasPagadas,
     pagosRegistrados:historial,
     saldoProxCuota:saldoProxCuota,
     estado:nuevoEstado
-  });
+  },extraClear));
   syncEstadoClientePorCredito(credId);
   syncTodosEstadosClientes();
 
