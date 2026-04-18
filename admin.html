@@ -3106,7 +3106,7 @@ creditos(){
       } else {
         totalAbonado=(c.pagado||0)*cuotaVal;
       }
-      var saldoPendiente=Math.max(0,parseFloat((totalFinanciado-totalAbonado).toFixed(2)));
+      var saldoPendiente=c.estado==='completado'?0:Math.max(0,parseFloat((totalFinanciado-totalAbonado).toFixed(2)));
       var pct=totalFinanciado>0?Math.round((totalAbonado/totalFinanciado)*100):0;
       var saldoColor=saldoPendiente===0?'var(--green)':c.mora>0?'var(--red)':'var(--ink)';
       return`<tr>
@@ -4748,23 +4748,34 @@ function openLiquidarAnticipado(credId){
     toast('Este financiamiento ya no tiene saldo pendiente','info');
     return;
   }
-  $('mtt').innerHTML='Liquidación anticipada';
+  $('mic').textContent='LIQ';
+  $('mtt').textContent='Liquidación anticipada';
+  $('msb').textContent=c.cli+' — '+c.id;
+  $('modal-box').className='modal';
   $('mbd').innerHTML=''
-    +'<div class="grid2">'
-    +  '<div><label>Crédito</label><input class="inp" value="'+c.id+'" disabled></div>'
-    +  '<div><label>Cliente</label><input class="inp" value="'+(c.cli||'')+'" disabled></div>'
-    +  '<div><label>Saldo actual</label><input id="liq_saldo" class="inp" value="'+saldo.toFixed(2)+'" disabled></div>'
-    +  '<div><label>Descuento</label><input id="liq_descuento" class="inp" type="number" min="0" step="0.01" value="0" oninput="updLiquidacionFinal()"></div>'
-    +  '<div><label>Monto final a pagar</label><input id="liq_monto_final" class="inp" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'" oninput="updLiquidacionDescuento()"></div>'
-    +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+((((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]).map(function(ct){return '<option value="'+ct.nombre+'">'+ct.nombre+'</option>';}).join('')))+'</select></div>'
-    +  '<div><label>Fecha</label><input id="liq_fecha" class="inp" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
-    +  '<div><label>Motivo del descuento</label><input id="liq_motivo" class="inp" placeholder="Negociación por pago anticipado"></div>'
-    +  '<div><label>Observación</label><input id="liq_obs" class="inp" placeholder="Detalle interno del acuerdo"></div>'
-    +  '<div><label><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato al registrar</label></div>'
-    +  '<div><label><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label></div>'
-    +  '<div><label><input id="liq_moto_propia" type="checkbox" checked> Marcar moto como propia</label></div>'
+    +'<div class="fsec">Resumen del crédito</div>'
+    +'<div class="fgr">'
+    +  '<div class="fg"><label>Crédito</label><input class="fi" value="'+c.id+'" disabled></div>'
+    +  '<div class="fg"><label>Cliente</label><input class="fi" value="'+(c.cli||'')+'" disabled></div>'
     +'</div>'
-    +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+    +'<div class="fsec">Condiciones de liquidación</div>'
+    +'<div class="fgr">'
+    +  '<div class="fg"><label>Saldo actual</label><input id="liq_saldo" class="fi" value="'+saldo.toFixed(2)+'" disabled></div>'
+    +  '<div class="fg"><label>Descuento aplicado</label><input id="liq_descuento" class="fi" type="number" min="0" step="0.01" value="0" oninput="updLiquidacionFinal()"></div>'
+    +  '<div class="fg"><label>Monto final a pagar</label><input id="liq_monto_final" class="fi" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'" oninput="updLiquidacionDescuento()"></div>'
+    +  '<div class="fg"><label>Cuenta destino</label><select id="liq_cuenta" class="fs">'+((((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]).map(function(ct){return '<option value="'+ct.nombre+'">'+ct.nombre+'</option>';}).join('')))+'</select></div>'
+    +  '<div class="fg"><label>Fecha</label><input id="liq_fecha" class="fi" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+    +  '<div class="fg"><label>Motivo del descuento</label><input id="liq_motivo" class="fi" placeholder="Negociación por pago anticipado"></div>'
+    +'</div>'
+    +'<div class="fgr c1" style="margin-top:4px">'
+    +  '<div class="fg"><label>Observación interna</label><input id="liq_obs" class="fi" placeholder="Detalle del acuerdo"></div>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">'
+    +  '<div class="tgl-w"><button class="tgl on" id="liq_cerrar" onclick="this.classList.toggle(\'on\')"></button><span style="font-size:13px;font-weight:700">Cerrar contrato al registrar</span></div>'
+    +  '<div class="tgl-w"><button class="tgl on" id="liq_finiquito" onclick="this.classList.toggle(\'on\')"></button><span style="font-size:13px;font-weight:700">Generar finiquito</span></div>'
+    +  '<div class="tgl-w"><button class="tgl on" id="liq_moto_propia" onclick="this.classList.toggle(\'on\')"></button><span style="font-size:13px;font-weight:700">Marcar moto como propia del cliente</span></div>'
+    +'</div>'
+    +'<div style="background:var(--ambers);border-radius:var(--r8);padding:9px 12px;font-size:11.5px;color:var(--amber);margin-top:12px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
   window._liqCredId=credId;
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" onclick="ejecutarLiquidacionAnticipada()">Liquidar ahora</button>';
   $('ov').style.display='flex';
@@ -4939,7 +4950,7 @@ function ejecutarLiquidacionAnticipada(){
     liquidaciones:liquidaciones
   });
 
-  if($('liq_moto_propia') && $('liq_moto_propia').checked){
+  if($('liq_moto_propia') && $('liq_moto_propia').classList.contains('on')){
     var mIdx=S.motos.findIndex(function(m){return m.id===c.motoId;});
     if(mIdx>=0){
       S.motos[mIdx].estado='propia';
@@ -4957,7 +4968,7 @@ function ejecutarLiquidacionAnticipada(){
   closeM();
   nav('creditos');
   toast('Liquidación anticipada registrada por '+fmt(montoFinal)+(descuento>0?' con descuento de '+fmt(descuento):''),'success');
-  if($('liq_finiquito') && $('liq_finiquito').checked){
+  if($('liq_finiquito') && $('liq_finiquito').classList.contains('on')){
     setTimeout(function(){ abrirFiniquito(credId); }, 500);
   }
   }catch(err){
@@ -7571,27 +7582,37 @@ function enviarNotificaciones(){
 
 // ── INIT — arranca la app después del login ─────────────────
 function init() {
-  // Mostrar el contenedor principal
   var appRoot = $('app-root');
   if (appRoot) appRoot.style.display = 'flex';
   cargarHistorialNotificaciones();
 
-  // Cargar datos desde Firebase o usar datos locales de demostración
-  DB.load().then(function() {
+  var _navDone = false;
+  function _doNav() {
+    if (_navDone) return;
+    _navDone = true;
+    hideLoader();
     nav('dash');
     updateBadge();
-    // Responsive: detectar si es móvil y mostrar topbar correspondiente
     var isMob = window.innerWidth <= 820;
     var mobBar = $('mobile-topbar');
     var deskBar = $('desktop-topbar');
     if (mobBar) mobBar.style.display = isMob ? 'flex' : 'none';
     if (deskBar) deskBar.style.display = isMob ? 'none' : 'flex';
-    // Hide desktop search bar on mobile (handled by mobile overlay)
-    if (deskBar) deskBar.style.display = isMob ? 'none' : 'flex';
+  }
+
+  // Fallback: si DB.load tarda mas de 6s (Firestore cuelga), mostrar app de todas formas
+  var _timeout = setTimeout(function() {
+    console.warn('DB.load timeout -- mostrando app con datos disponibles');
+    _doNav();
+  }, 6000);
+
+  DB.load().then(function() {
+    clearTimeout(_timeout);
+    _doNav();
   }).catch(function(e) {
+    clearTimeout(_timeout);
     console.warn('Error cargando datos:', e);
-    nav('dash');
-    updateBadge();
+    _doNav();
   });
 }
 
