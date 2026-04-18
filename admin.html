@@ -3443,12 +3443,12 @@ reportes(){
   </div></div>`;},
 
 conta(){
-  const totalIni=S.creds.reduce(function(a,c){return a+c.ini;},0);
-  const totalPagos=S.pagos.filter(function(p){return p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0);
+  const totalIni=S.creds.filter(function(c){return !c.eliminado;}).reduce(function(a,c){return a+(c.ini||0);},0);
+  const totalPagos=S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0);
   const totalIngresos=totalIni+totalPagos;
   const totalEgresos=S.egresos.filter(function(e){return !e.eliminado;}).reduce(function(a,e){return a+e.monto;},0);
   const utilidad=totalIngresos-totalEgresos;
-  const cuotaEsperada=S.creds.filter(function(c){return c.estado==='activo';}).reduce(function(a,c){return a+c.cuota;},0);
+  const cuotaEsperada=S.creds.filter(function(c){return !c.eliminado&&c.estado==='activo';}).reduce(function(a,c){return a+(parseFloat(c.cuotaQ||c.cuota)||0);},0);
   return`<div class="page">
   <div class="sg" style="margin-bottom:14px">
     <div class="stat"><div class="st-v" style="color:var(--green)">${fmt(totalIngresos)}</div><div class="st-l">Ingresos totales</div></div>
@@ -3463,8 +3463,8 @@ conta(){
     </div>
     <div class="card"><div class="ch"><div class="ct">Egresos</div><div style="display:flex;gap:5px"><button class="btn btn-g btn-xs" onclick="exportarCSV('egresos')">↓ CSV</button><button class="btn btn-d btn-xs" onclick="openAddEgreso()">＋ Agregar</button></div></div>
       ${S.egresos.filter(function(e){return !e.eliminado;}).map(e=>`<div class="kpi"><span class="kpi-l">${e.concepto}${e.forma?'<div style="font-size:9.5px;color:var(--ink3);margin-top:1px">'+e.forma+'</div>':''}</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--red);font-weight:800;font-family:var(--fd)">-${fmt(e.monto)}</span><button class="btn btn-d btn-xs btn-ic" onclick="delEgreso(${e.id})" title="Eliminar">✕</button></div></div>`).join('')}
-      <div style="margin-top:10px;padding:11px;background:var(--reds);border-radius:var(--r8);border:1px solid rgba(240,75,106,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total egresos</span><span style="color:var(--red);font-weight:900;font-family:var(--fd)">-${fmt(totalEgresos)}</span>
-      ${S.egresos.filter(function(e){return e.eliminado;}).length?'<div style="margin-top:8px;padding:9px 11px;background:var(--surf2);border-radius:8px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px">Registros eliminados</div>'+S.egresos.filter(function(e){return e.eliminado;}).map(function(e){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--rim)"><span style="flex:1;font-size:11px;font-weight:600;opacity:0.7;text-decoration:line-through">'+e.concepto+'</span><span style="font-size:11px;color:var(--red)">-'+fmt(e.monto)+'</span><span style="font-size:10px;color:var(--ink3)">Del '+(e.eliminadoPor||'Admin')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoRazon?'· '+e.eliminadoRazon:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoEn?'· '+e.eliminadoEn.split('T')[0]:'')+'</span></div>';}).join('')+'</div>':''}</div>
+      <div style="margin-top:10px;padding:11px;background:var(--reds);border-radius:var(--r8);border:1px solid rgba(240,75,106,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">Total egresos</span><span style="color:var(--red);font-weight:900;font-family:var(--fd)">-${fmt(totalEgresos)}</span></div>
+      ${S.egresos.filter(function(e){return e.eliminado;}).length?'<div style="margin-top:8px;padding:9px 11px;background:var(--surf2);border-radius:8px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px">Registros eliminados</div>'+S.egresos.filter(function(e){return e.eliminado;}).map(function(e){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--rim)"><span style="flex:1;font-size:11px;font-weight:600;opacity:0.7;text-decoration:line-through">'+e.concepto+'</span><span style="font-size:11px;color:var(--red)">-'+fmt(e.monto)+'</span><span style="font-size:10px;color:var(--ink3)">Del '+(e.eliminadoPor||'Admin')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoRazon?'· '+e.eliminadoRazon:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( e.eliminadoEn?'· '+e.eliminadoEn.split('T')[0]:'')+'</span></div>';}).join('')+'</div>':''}
     </div>
   </div></div>`;},
 
