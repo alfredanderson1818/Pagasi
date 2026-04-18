@@ -3118,7 +3118,7 @@ creditos(){
       <td style="min-width:100px"><div class="tds" style="margin-bottom:3px">${c.pagado}/${totalCuotas} cuotas quinc.</div><div class="prog"><div class="pf ${c.mora>0?'p-r':'p-p'}" style="width:${pct}%"></div></div></td>
       <td style="font-weight:900;font-family:var(--fd);color:${saldoColor}">${saldoPendiente===0?'✓ Saldo $0':fmt(saldoPendiente)}</td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
-      <td style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button><button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">Editar</button>${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}</td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button><button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">Editar</button>${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar anticipadamente">Liquidar</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}</td>
     </tr>`;}).join('')})()}${S.creds.filter(c=>c.estado==='cancelado').length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px'>Cancelados (${S.creds.filter(c=>c.estado==='cancelado').length})</div>${S.creds.filter(c=>c.estado==='cancelado').map(c=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px"><span style="font-family:var(--fd);font-weight:700;min-width:90px;opacity:0.6">'+c.id+'</span><span style="flex:1;opacity:0.6;text-decoration:line-through">'+c.cli+' — '+c.modelo+'</span><span style="color:var(--red)">✕ '+(c.canceladoPor||'Admin')+'</span><span style="color:var(--ink3)">'+(c.canceladoRazon?'· '+c.canceladoRazon:'')+'</span><span style="color:var(--ink3)">'+(c.canceladoEn?'· '+c.canceladoEn.split('T')[0]:'')+'</span></div>').join('')}</div></td></tr>`:''}}</tbody>
   </table></div></div></div>`+pgControls('creditos',S.creds.filter(c=>!c.eliminado).length,50,'pgNav');
 },
@@ -3411,10 +3411,24 @@ notif(){
   </div></div>`;},
 
 
-reportes(){return`<div class="page">
+reportes(){
+  const totalCobradoConfirmado=S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
+  const totalIniciales=S.creds.reduce((a,c)=>a+(c.ini||0),0);
+  const totalEgresosActivos=S.egresos.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
+  const flujoCajaActual=(totalCobradoConfirmado+totalIniciales)-totalEgresosActivos;
+  const dineroCalle=S.creds.filter(c=>!c.eliminado&&['activo','mora','solvente'].indexOf(c.estado)===-1?false:true).reduce((a,c)=>{
+    if(c.estado==='cancelado' || c.estado==='recuperado') return a;
+    const cuotaBase=(c.cuotaQ||c.cuota||0);
+    const totalCuotas=(c.totalCuotas||((c.plazo||0)*2));
+    const cuotasPagadas=Math.max(0,Math.min(c.pagado||0,totalCuotas));
+    return a+Math.max(0,cuotaBase*(totalCuotas-cuotasPagadas));
+  },0);
+  return`<div class="page">
   <div class="sg" style="margin-bottom:14px">
-    <div class="stat"><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Cobrado confirmado</div></div>
-    <div class="stat"><div class="st-v">${fmt(S.creds.reduce((a,c)=>a+c.ini,0))}</div><div class="st-l">Iniciales recibidas</div></div>
+    <div class="stat"><div class="st-v">${fmt(totalCobradoConfirmado)}</div><div class="st-l">Cobrado confirmado</div></div>
+    <div class="stat"><div class="st-v">${fmt(totalIniciales)}</div><div class="st-l">Iniciales recibidas</div></div>
+    <div class="stat"><div class="st-v" style="color:${flujoCajaActual>=0?'var(--green)':'var(--red)'}">${fmt(flujoCajaActual)}</div><div class="st-l">Flujo de caja</div></div>
+    <div class="stat"><div class="st-v" style="color:var(--amber)">${fmt(dineroCalle)}</div><div class="st-l">Dinero en la calle</div></div>
     <div class="stat"><div class="st-v">${S.creds.filter(c=>c.mora>0).length}</div><div class="st-l">Créditos en mora</div></div>
     <div class="stat"><div class="st-v">${S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length}</div><div class="st-l">Motos disponibles</div></div>
   </div>
@@ -3423,7 +3437,7 @@ reportes(){return`<div class="page">
       <div class="lst" style="max-height:none">${[['RPT','Ingresos Mensuales','Cobros por mes','ingresos'],['PLN','Reporte del Plan 10M','Cuotas y factor 1.90x','plan'],['PAG','Créditos Activos','Cartera vigente','creditos'],['⚠','Reporte de Mora','Clientes vencidos','mora'],['$','Flujo de Caja','Entradas y salidas','flujo'],['MOT','Inventario Motos','Estado del catálogo','inventario'],['Rcp','P&L del Período','Estado de resultados','pyl']].map(([i,n,d,fn])=>`<div class="li"><div class="li-ic" style="background:var(--gs)">${i}</div><div style="flex:1"><div style="font-size:12px;font-weight:700">${n}</div><div style="font-size:10.5px;color:var(--ink3)">${d}</div></div><button class="btn btn-p btn-xs" onclick="generarReporte('${fn}')">Generar</button></div>`).join('')}</div>
     </div>
     <div class="card"><div class="ch"><div class="ct">Resumen Financiero</div></div>
-      ${[['Iniciales cobradas',fmt(S.creds.reduce((a,c)=>a+c.ini,0)),'green'],['Pagos mensuales',fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0)),'green'],['Pendiente cartera',fmt(S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+Math.max(0,(c.cuotaQ||c.cuota||0)*Math.max(0,(c.totalCuotas||c.plazo*2)-(c.pagado||0))),0)),'amber'],['Créditos recuperados',fmt(S.creds.filter(c=>c.estado==='recuperado').reduce((a,c)=>a+c.cuota,0)),'red']].map(([l,v,c])=>`<div class="kpi"><span class="kpi-l">${l}</span><span style="color:var(--${c});font-weight:800;font-family:var(--fd)">${v}</span></div>`).join('')}
+      ${[['Iniciales cobradas',fmt(totalIniciales),'green'],['Pagos mensuales',fmt(totalCobradoConfirmado),'green'],['Flujo de caja',fmt(flujoCajaActual),flujoCajaActual>=0?'green':'red'],['Dinero en la calle',fmt(dineroCalle),'amber'],['Créditos recuperados',fmt(S.creds.filter(c=>c.estado==='recuperado').reduce((a,c)=>a+(c.cuota||0),0)),'red']].map(([l,v,c])=>`<div class="kpi"><span class="kpi-l">${l}</span><span style="color:var(--${c});font-weight:800;font-family:var(--fd)">${v}</span></div>`).join('')}
       <div style="margin-top:11px;padding:12px;background:var(--greens);border-radius:var(--r8);border:1px solid rgba(14,203,129,0.2);display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">Margen del plan (1.90x − 1 = 90%)</span><span style="color:var(--green);font-family:var(--fd);font-size:19px;font-weight:900">90%</span></div>
     </div>
   </div></div>`;},
@@ -4446,6 +4460,7 @@ function openAmort(id){
   const startDate=new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
   const historial=c.pagosRegistrados||[];
   const saldoProxCuota=c.saldoProxCuota||0;
+  const infoLiquidacion=(c.tipoCierre==='liquidacion_anticipada') ? ('<div class="note" style="margin:8px 0 12px 0"><strong>Liquidación anticipada:</strong> saldo '+fmt(c.saldoOriginalLiquidacion||0)+' · descuento '+fmt(c.descuentoLiquidacion||0)+' · pago final '+fmt(c.montoLiquidado||0)+'</div>') : '';
 
   // Construir mapa cuota→pagos realizados
   var pagosPorCuota={};
@@ -4477,7 +4492,7 @@ function openAmort(id){
     var pagoDetalle='';
     if(histCuota.length>0){
       pagoDetalle=histCuota.map(function(h){
-        return '<div style="font-size:9px;color:var(--green);font-weight:700">+'+fmt(h.montoPagado)+' · '+h.fecha+'</div>';
+        return '<div style="font-size:9px;color:'+(h.tipo==='descuento_liquidacion'?'var(--amber)':'var(--green)')+';font-weight:700">+'+fmt(h.montoPagado)+' · '+h.fecha+(h.tipo==='descuento_liquidacion'?' · desc.':'')+'</div>';
       }).join('');
     }
 
@@ -4700,6 +4715,247 @@ function syncTodosEstadosClientes(){
   });
 }
 
+
+function getSaldoPendienteCredito(credId){
+  var c=S.creds.find(function(x){return x.id===credId;});
+  if(!c) return 0;
+  var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0);
+  var totalCuotas=c.totalCuotas||((parseInt(c.plazo,10)||0)*2);
+  var totalFinanciado=parseFloat((cuotaVal*totalCuotas).toFixed(2));
+  var totalAbonado=0;
+  if(Array.isArray(c.pagosRegistrados) && c.pagosRegistrados.length){
+    totalAbonado=c.pagosRegistrados.reduce(function(a,h){ return a + (parseFloat(h.montoPagado)||0); },0);
+  } else {
+    totalAbonado=(parseFloat(c.pagado)||0)*cuotaVal;
+  }
+  return Math.max(0, parseFloat((totalFinanciado-totalAbonado).toFixed(2)));
+}
+
+function openLiquidarAnticipado(credId){
+  var c=S.creds.find(function(x){return x.id===credId;});
+  if(!c) return;
+  if(c.estado==='completado' || c.estado==='cancelado'){
+    toast('Este financiamiento ya no se puede liquidar','info');
+    return;
+  }
+  var saldo=getSaldoPendienteCredito(credId);
+  if(saldo<=0){
+    toast('Este financiamiento ya no tiene saldo pendiente','info');
+    return;
+  }
+  $('mbh').innerHTML='Liquidación anticipada';
+  $('mbd').innerHTML=''
+    +'<div class="grid2">'
+    +  '<div><label>Crédito</label><input class="inp" value="'+c.id+'" disabled></div>'
+    +  '<div><label>Cliente</label><input class="inp" value="'+(c.cli||'')+'" disabled></div>'
+    +  '<div><label>Saldo actual</label><input id="liq_saldo" class="inp" value="'+saldo.toFixed(2)+'" disabled></div>'
+    +  '<div><label>Descuento</label><input id="liq_descuento" class="inp" type="number" min="0" step="0.01" value="0" oninput="updLiquidacionFinal()"></div>'
+    +  '<div><label>Monto final a pagar</label><input id="liq_monto_final" class="inp" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'" oninput="updLiquidacionDescuento()"></div>'
+    +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+((_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[{nombre:'Caja principal'}]).map(function(ct){return '<option value="'+ct.nombre+'">'+ct.nombre+'</option>';}).join(''))+'</select></div>'
+    +  '<div><label>Fecha</label><input id="liq_fecha" class="inp" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+    +  '<div><label>Motivo del descuento</label><input id="liq_motivo" class="inp" placeholder="Negociación por pago anticipado"></div>'
+    +  '<div><label>Observación</label><input id="liq_obs" class="inp" placeholder="Detalle interno del acuerdo"></div>'
+    +  '<div><label><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato al registrar</label></div>'
+    +  '<div><label><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label></div>'
+    +  '<div><label><input id="liq_moto_propia" type="checkbox" checked> Marcar moto como propia</label></div>'
+    +'</div>'
+    +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+  window._liqCredId=credId;
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" onclick="ejecutarLiquidacionAnticipada()">Liquidar ahora</button>';
+  $('ov').style.display='flex';
+}
+
+function updLiquidacionFinal(){
+  var saldo=parseFloat(($('liq_saldo')&&$('liq_saldo').value)||0)||0;
+  var descuento=parseFloat(($('liq_descuento')&&$('liq_descuento').value)||0)||0;
+  if(descuento<0) descuento=0;
+  if(descuento>saldo) descuento=saldo;
+  if($('liq_descuento')) $('liq_descuento').value=descuento.toFixed(2);
+  var final=Math.max(0, parseFloat((saldo-descuento).toFixed(2)));
+  if($('liq_monto_final')) $('liq_monto_final').value=final.toFixed(2);
+}
+
+function updLiquidacionDescuento(){
+  var saldo=parseFloat(($('liq_saldo')&&$('liq_saldo').value)||0)||0;
+  var montoFinal=parseFloat(($('liq_monto_final')&&$('liq_monto_final').value)||0)||0;
+  if(montoFinal<0) montoFinal=0;
+  if(montoFinal>saldo) montoFinal=saldo;
+  if($('liq_monto_final')) $('liq_monto_final').value=montoFinal.toFixed(2);
+  var descuento=Math.max(0, parseFloat((saldo-montoFinal).toFixed(2)));
+  if($('liq_descuento')) $('liq_descuento').value=descuento.toFixed(2);
+}
+
+function ejecutarLiquidacionAnticipada(){
+  var credId=window._liqCredId;
+  var ci=S.creds.findIndex(function(x){return x.id===credId;});
+  if(ci<0){ toast('Crédito no encontrado','error'); return; }
+  var c=S.creds[ci];
+  if(c.estado==='completado' || c.estado==='cancelado'){
+    toast('Este financiamiento ya no se puede liquidar','info');
+    return;
+  }
+  var saldo=getSaldoPendienteCredito(credId);
+  var descuento=parseFloat(($('liq_descuento')&&$('liq_descuento').value)||0)||0;
+  var montoFinal=parseFloat(($('liq_monto_final')&&$('liq_monto_final').value)||0)||0;
+  if(descuento<0) descuento=0;
+  if(descuento>saldo) descuento=saldo;
+  if(montoFinal<0) montoFinal=0;
+  if(parseFloat((montoFinal+descuento).toFixed(2))!==parseFloat(saldo.toFixed(2))){
+    montoFinal=parseFloat((saldo-descuento).toFixed(2));
+    if($('liq_monto_final')) $('liq_monto_final').value=montoFinal.toFixed(2);
+  }
+  if(montoFinal<=0 && descuento<=0){
+    toast('Debes indicar un monto o un descuento válido','error');
+    return;
+  }
+  if(descuento > saldo*0.4){
+    if(!confirm('El descuento supera 40% del saldo pendiente. ¿Deseas continuar?')) return;
+  }
+  var fecha=(($('liq_fecha')&&$('liq_fecha').value)||new Date().toISOString().split('T')[0]);
+  var cuenta=(($('liq_cuenta')&&$('liq_cuenta').value)||((_cuentasBanc&&_cuentasBanc[0]&&_cuentasBanc[0].nombre)||'Caja principal'));
+  var motivo=(($('liq_motivo')&&$('liq_motivo').value)||'Liquidación anticipada').trim();
+  var observacion=(($('liq_obs')&&$('liq_obs').value)||'').trim();
+  var usuario=(S.currentUser&&S.currentUser.nombre)||'Admin';
+  var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0);
+  var totalCuotas=c.totalCuotas||((parseInt(c.plazo,10)||0)*2);
+  var historial=Array.isArray(c.pagosRegistrados)?JSON.parse(JSON.stringify(c.pagosRegistrados)):[];
+  var saldoPorCuota=[];
+  for(var qi=0;qi<totalCuotas;qi++) saldoPorCuota[qi]=cuotaVal;
+  historial.forEach(function(h){
+    var idx=(h.cuota||0)-1;
+    if(idx>=0&&idx<totalCuotas) saldoPorCuota[idx]=Math.max(0,parseFloat((saldoPorCuota[idx]-(parseFloat(h.montoPagado)||0)).toFixed(2)));
+  });
+
+  var pagoId='P-LIQ-'+Date.now();
+  if(montoFinal>0){
+    var pago={
+      id:pagoId,
+      cred:credId,
+      cli:c.cli,
+      fecha:fecha,
+      monto:parseFloat(montoFinal.toFixed(2)),
+      metodo:cuenta,
+      cobrador:usuario,
+      estado:'confirmado',
+      referencia:'LIQ-ANT',
+      realizadoPor:usuario,
+      tipo:'liquidacion',
+      motivo:motivo,
+      observacion:observacion,
+      tasaBs:window._tasaBsGlobal||1
+    };
+    S.pagos.push(pago);
+    DB.savePago(pago);
+    var mov={
+      id:'MOV-'+Date.now(),
+      tipo:'deposito',
+      concepto:'Liquidación anticipada · '+c.cli+' · '+credId,
+      monto:parseFloat(montoFinal.toFixed(2)),
+      cuentaOrigen:null,
+      cuentaDestino:cuenta,
+      fecha:fecha,
+      referencia:'LIQ-ANT',
+      realizadoPor:usuario,
+      tasaBs:window._tasaBsGlobal||1,
+      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
+    };
+    S.movimientos.push(mov);
+    DB.saveMovimiento(mov);
+  }
+
+  var montoRestante=parseFloat(montoFinal.toFixed(2));
+  for(var qi=0;qi<totalCuotas && montoRestante>0.001;qi++){
+    if(saldoPorCuota[qi]>0.001){
+      var aplicar=Math.min(montoRestante,saldoPorCuota[qi]);
+      aplicar=parseFloat(aplicar.toFixed(2));
+      historial.push({cuota:qi+1,montoPagado:aplicar,fecha:fecha,pagoId:pagoId,tipo:'liquidacion'});
+      saldoPorCuota[qi]=parseFloat((saldoPorCuota[qi]-aplicar).toFixed(2));
+      montoRestante=parseFloat((montoRestante-aplicar).toFixed(2));
+    }
+  }
+
+  if(descuento>0){
+    var descuentoRestante=parseFloat(descuento.toFixed(2));
+    for(var qd=0;qd<totalCuotas && descuentoRestante>0.001;qd++){
+      if(saldoPorCuota[qd]>0.001){
+        var aplicarDesc=Math.min(descuentoRestante,saldoPorCuota[qd]);
+        aplicarDesc=parseFloat(aplicarDesc.toFixed(2));
+        historial.push({cuota:qd+1,montoPagado:aplicarDesc,fecha:fecha,pagoId:'DESC-'+pagoId,tipo:'descuento_liquidacion'});
+        saldoPorCuota[qd]=parseFloat((saldoPorCuota[qd]-aplicarDesc).toFixed(2));
+        descuentoRestante=parseFloat((descuentoRestante-aplicarDesc).toFixed(2));
+      }
+    }
+  }
+
+  var cuotasPagadas=0;
+  for(var i=0;i<totalCuotas;i++){
+    if(saldoPorCuota[i]<=0.001) cuotasPagadas++;
+    else break;
+  }
+  var saldoProxCuota=cuotasPagadas<totalCuotas ? saldoPorCuota[cuotasPagadas] : 0;
+  var liquidaciones=Array.isArray(c.liquidaciones)?JSON.parse(JSON.stringify(c.liquidaciones)):[];
+  liquidaciones.push({
+    id:'LQ-'+Date.now(),
+    fecha:fecha,
+    saldoOriginal:parseFloat(saldo.toFixed(2)),
+    descuento:parseFloat(descuento.toFixed(2)),
+    montoPagado:parseFloat(montoFinal.toFixed(2)),
+    motivo:motivo,
+    observacion:observacion,
+    realizadoPor:usuario
+  });
+
+  S.creds[ci].pagado=cuotasPagadas;
+  S.creds[ci].pagosRegistrados=historial;
+  S.creds[ci].saldoProxCuota=saldoProxCuota;
+  S.creds[ci].estado='completado';
+  S.creds[ci].fechaCompletado=fecha;
+  S.creds[ci].tipoCierre='liquidacion_anticipada';
+  S.creds[ci].saldoOriginalLiquidacion=parseFloat(saldo.toFixed(2));
+  S.creds[ci].descuentoLiquidacion=parseFloat(descuento.toFixed(2));
+  S.creds[ci].montoLiquidado=parseFloat(montoFinal.toFixed(2));
+  S.creds[ci].motivoLiquidacion=motivo;
+  S.creds[ci].observacionLiquidacion=observacion;
+  S.creds[ci].liquidaciones=liquidaciones;
+
+  DB.updateCred(credId,{
+    pagado:cuotasPagadas,
+    pagosRegistrados:historial,
+    saldoProxCuota:saldoProxCuota,
+    estado:'completado',
+    fechaCompletado:fecha,
+    tipoCierre:'liquidacion_anticipada',
+    saldoOriginalLiquidacion:parseFloat(saldo.toFixed(2)),
+    descuentoLiquidacion:parseFloat(descuento.toFixed(2)),
+    montoLiquidado:parseFloat(montoFinal.toFixed(2)),
+    motivoLiquidacion:motivo,
+    observacionLiquidacion:observacion,
+    liquidaciones:liquidaciones
+  });
+
+  if($('liq_moto_propia') && $('liq_moto_propia').checked){
+    var mIdx=S.motos.findIndex(function(m){return m.id===c.motoId;});
+    if(mIdx>=0){
+      S.motos[mIdx].estado='propia';
+      S.motos[mIdx].propietario=c.cli;
+      DB.saveMoto(S.motos[mIdx]);
+    }
+  }
+  var cliIdx=S.clientes.findIndex(function(cl){return cl.nombre===c.cli;});
+  if(cliIdx>=0){
+    S.clientes[cliIdx].estado='solvente';
+    DB.saveCliente(S.clientes[cliIdx]);
+  }
+  syncEstadoClientePorCredito(credId);
+  syncTodosEstadosClientes();
+  closeM();
+  nav('creditos');
+  toast('Liquidación anticipada registrada por '+fmt(montoFinal)+(descuento>0?' con descuento de '+fmt(descuento):''),'success');
+  if($('liq_finiquito') && $('liq_finiquito').checked){
+    setTimeout(function(){ abrirFiniquito(credId); }, 500);
+  }
+}
+
 function recalcularCreditoDesdePagos(credId){
   var ci=S.creds.findIndex(function(x){return x.id===credId;});
   if(ci<0) return null;
@@ -4731,12 +4987,26 @@ function recalcularCreditoDesdePagos(credId){
       if(saldoPorCuota[qi]>0.001){
         var aplicar=Math.min(montoRestante,saldoPorCuota[qi]);
         aplicar=parseFloat(aplicar.toFixed(2));
-        historial.push({cuota:qi+1,montoPagado:aplicar,fecha:fechaPago,pagoId:p.id});
+        historial.push({cuota:qi+1,montoPagado:aplicar,fecha:fechaPago,pagoId:p.id,tipo:p.tipo||'pago'});
         saldoPorCuota[qi]=parseFloat((saldoPorCuota[qi]-aplicar).toFixed(2));
         montoRestante=parseFloat((montoRestante-aplicar).toFixed(2));
       }
     }
   });
+
+  if(c.tipoCierre==='liquidacion_anticipada' && (parseFloat(c.descuentoLiquidacion)||0)>0){
+    var descRestante=parseFloat(c.descuentoLiquidacion)||0;
+    var fechaDesc=c.fechaCompletado||new Date().toISOString().split('T')[0];
+    for(var qd=0;qd<totalCuotas && descRestante>0.001;qd++){
+      if(saldoPorCuota[qd]>0.001){
+        var aplicarDesc=Math.min(descRestante,saldoPorCuota[qd]);
+        aplicarDesc=parseFloat(aplicarDesc.toFixed(2));
+        historial.push({cuota:qd+1,montoPagado:aplicarDesc,fecha:fechaDesc,pagoId:'DESC-LIQ-'+credId,tipo:'descuento_liquidacion'});
+        saldoPorCuota[qd]=parseFloat((saldoPorCuota[qd]-aplicarDesc).toFixed(2));
+        descRestante=parseFloat((descRestante-aplicarDesc).toFixed(2));
+      }
+    }
+  }
 
   var cuotasPagadas=0;
   for(var i=0;i<totalCuotas;i++){
