@@ -4004,6 +4004,9 @@ function openAddCred(motoId=null){
       <div class="fg"><label>GPS incluido</label><select class="fs" id="k_gps"><option value="si">Sí — GPS instalado</option><option value="no">No</option></select></div>
       <div class="fg"><label>Cobrador asignado</label><select class="fs" id="k_cobrador">${(_cobradores||[]).map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>
+    <div class="fgr c1">
+      <div class="fg"><label>Número de póliza de seguro (opcional)</label><input class="fi" id="k_poliza_seguro" placeholder="Ej: POL-2026-000123"></div>
+    </div>
 
     <div class="fsec" style="margin-top:14px">Pago Inicial</div>
     <div style="background:rgba(124,92,246,0.07);border:1px solid rgba(124,92,246,0.2);border-radius:10px;padding:12px;margin-bottom:4px">
@@ -4032,6 +4035,7 @@ function openAddCred(motoId=null){
     if(moto.eliminado || moto.estado!=='disponible'){toast('Solo puedes financiar motos disponibles','error');return false;}
     const vin=(($('k_vin')&&$('k_vin').value)||'').trim();
     if(!vin){toast('El VIN / Serial es obligatorio','error');return false;}
+    const polizaSeguro=(($('k_poliza_seguro')&&$('k_poliza_seguro').value)||'').trim();
     const r=calcMoto(moto.precio);
     const newCred={
       id:'CRED-'+String(S.creds.length+1).padStart(3,'0'),
@@ -4043,6 +4047,7 @@ function openAddCred(motoId=null){
       color:($('k_color')&&$('k_color').value)||'—',
       anio:($('k_anio')&&$('k_anio').value)||new Date().getFullYear(),
       placa:($('k_placa')&&$('k_placa').value)||'—',
+      polizaSeguro:polizaSeguro||'',
       precio:moto.precio,
       ini:r.ini,
       fin:r.fin,
@@ -4751,7 +4756,7 @@ function openLiquidarAnticipado(credId){
     +  '<div><label>Saldo actual</label><input id="liq_saldo" class="inp" value="'+saldo.toFixed(2)+'" disabled></div>'
     +  '<div><label>Descuento</label><input id="liq_descuento" class="inp" type="number" min="0" step="0.01" value="0" oninput="updLiquidacionFinal()"></div>'
     +  '<div><label>Monto final a pagar</label><input id="liq_monto_final" class="inp" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'" oninput="updLiquidacionDescuento()"></div>'
-    +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+((_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[{nombre:'Caja principal'}]).map(function(ct){return '<option value="'+ct.nombre+'">'+ct.nombre+'</option>';}).join(''))+'</select></div>'
+    +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+((((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]).map(function(ct){return '<option value="'+ct.nombre+'">'+ct.nombre+'</option>';}).join('')))+'</select></div>'
     +  '<div><label>Fecha</label><input id="liq_fecha" class="inp" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
     +  '<div><label>Motivo del descuento</label><input id="liq_motivo" class="inp" placeholder="Negociación por pago anticipado"></div>'
     +  '<div><label>Observación</label><input id="liq_obs" class="inp" placeholder="Detalle interno del acuerdo"></div>'
@@ -4786,6 +4791,7 @@ function updLiquidacionDescuento(){
 }
 
 function ejecutarLiquidacionAnticipada(){
+  try{
   var credId=window._liqCredId;
   var ci=S.creds.findIndex(function(x){return x.id===credId;});
   if(ci<0){ toast('Crédito no encontrado','error'); return; }
@@ -4812,7 +4818,7 @@ function ejecutarLiquidacionAnticipada(){
     if(!confirm('El descuento supera 40% del saldo pendiente. ¿Deseas continuar?')) return;
   }
   var fecha=(($('liq_fecha')&&$('liq_fecha').value)||new Date().toISOString().split('T')[0]);
-  var cuenta=(($('liq_cuenta')&&$('liq_cuenta').value)||((_cuentasBanc&&_cuentasBanc[0]&&_cuentasBanc[0].nombre)||'Caja principal'));
+  var cuenta=(($('liq_cuenta')&&$('liq_cuenta').value)||(((window._cuentasBanc&&window._cuentasBanc[0]&&window._cuentasBanc[0].nombre))||'Caja principal'));
   var motivo=(($('liq_motivo')&&$('liq_motivo').value)||'Liquidación anticipada').trim();
   var observacion=(($('liq_obs')&&$('liq_obs').value)||'').trim();
   var usuario=(S.currentUser&&S.currentUser.nombre)||'Admin';
@@ -4954,7 +4960,15 @@ function ejecutarLiquidacionAnticipada(){
   if($('liq_finiquito') && $('liq_finiquito').checked){
     setTimeout(function(){ abrirFiniquito(credId); }, 500);
   }
+  }catch(err){
+    console.error('Error en liquidación anticipada', err);
+    toast('No se pudo procesar la liquidación. Revisa consola o intenta de nuevo.','error');
+  }
 }
+window.openLiquidarAnticipado=openLiquidarAnticipado;
+window.ejecutarLiquidacionAnticipada=ejecutarLiquidacionAnticipada;
+window.updLiquidacionFinal=updLiquidacionFinal;
+window.updLiquidacionDescuento=updLiquidacionDescuento;
 
 function recalcularCreditoDesdePagos(credId){
   var ci=S.creds.findIndex(function(x){return x.id===credId;});
