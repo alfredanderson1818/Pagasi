@@ -3341,6 +3341,7 @@ notif(){
 
   setTimeout(function(){
     // Bind send button
+    renderHistorialNotificaciones();
     var btn=$('notif-send-btn');
     if(btn) btn.onclick=function(){ enviarNotificaciones(); };
     // Bind tipo change to update preview
@@ -4356,8 +4357,10 @@ function openAddPago(){
           }
           // Incrementar contador de créditos completados
           S.clientes[cliIdx].creditosCompletados=(S.clientes[cliIdx].creditosCompletados||0)+1;
+          S.clientes[cliIdx].estado='solvente';
           DB.saveCliente(S.clientes[cliIdx]);
         }
+        syncEstadoClientePorCredito(credId);
       } else if(cuotasPagadas<totalCuotas){
         recienCompletado=false;
       }
@@ -4378,6 +4381,7 @@ function openAddPago(){
       toast(msg,'success');
 
       // ── Punto 1: Mostrar finiquito si se acaba de completar ──
+      syncEstadoClientePorCredito(credId);
       if(recienCompletado){
         setTimeout(function(){ abrirFiniquito(credId); }, 600);
       }
@@ -4654,6 +4658,22 @@ function ejecutarDelPago(){
 }
 
 
+
+function syncEstadoClientePorCredito(credId){
+  var cred=S.creds.find(function(x){return x.id===credId;});
+  if(!cred) return;
+  var cliIdx=S.clientes.findIndex(function(cl){return cl.nombre===cred.cli;});
+  if(cliIdx<0) return;
+  var nombre=S.clientes[cliIdx].nombre;
+  var tieneActivos=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && (cr.estado==='activo' || cr.estado==='mora');});
+  var tieneCompletados=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && cr.estado==='completado';});
+  var nuevoEstado=tieneActivos ? 'activo' : (tieneCompletados ? 'solvente' : (S.clientes[cliIdx].estado||'activo'));
+  if(S.clientes[cliIdx].estado!==nuevoEstado){
+    S.clientes[cliIdx].estado=nuevoEstado;
+    DB.saveCliente(S.clientes[cliIdx]);
+  }
+}
+
 function recalcularCreditoDesdePagos(credId){
   var ci=S.creds.findIndex(function(x){return x.id===credId;});
   if(ci<0) return null;
@@ -4714,6 +4734,7 @@ function recalcularCreditoDesdePagos(credId){
     saldoProxCuota:saldoProxCuota,
     estado:nuevoEstado
   });
+  syncEstadoClientePorCredito(credId);
 
   return {
     pagado:cuotasPagadas,
@@ -4810,6 +4831,7 @@ function confirmarPago(pagoId){
     if(S.creds[ci].mora>0) S.creds[ci].mora=0;
     if(S.creds[ci].pagado>=(S.creds[ci].totalCuotas||S.creds[ci].plazo*2)) S.creds[ci].estado='completado';
     DB.updateCred(S.creds[ci].id,{pagado:S.creds[ci].pagado,mora:S.creds[ci].mora,estado:S.creds[ci].estado});
+    syncEstadoClientePorCredito(S.creds[ci].id);
   }
   calcularMoraAuto();
   toast('✓ Pago confirmado · '+pagoId,'success');
@@ -5077,15 +5099,81 @@ function delEgreso(id){
   var i=S.egresos.findIndex(function(x){return x.id===id;});
   if(i<0) return;
   var eg=S.egresos[i];
-  confirmarEliminacion({
-    titulo:'Eliminar Egreso',
-    descripcion:'¿Eliminar egreso: '+eg.concepto+' — '+fmt(eg.monto)+'?',
-    onConfirm:function(audit){
-      Object.assign(S.egresos[i],audit);
-      DB.saveEgreso(S.egresos[i]);
-      nav('conta'); toast('Egreso eliminado','info');
+  $('mic').textContent='Del';
+  $('mtt').textContent='Eliminar Egreso';
+  $('msb').textContent='El registro quedará auditado';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML=''
+    +'<div style="text-align:center;padding:8px 0 14px">'
+    +'<div style="font-size:40px;margin-bottom:10px">💸</div>'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">¿Eliminar egreso: '+eg.concepto+' — '+fmt(eg.monto)+'?</div>'
+    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:14px">Puedes decidir si el dinero regresa o no a la cuenta de origen.</div>'
+    +'</div>'
+    +'<div class="fg"><label>Razón de la eliminación</label>'
+    +'<select class="fs" id="eg_del_razon">'
+    +'<option value="">— Seleccionar —</option>'
+    +'<option>Error de captura</option>'
+    +'<option>Egreso duplicado</option>'
+    +'<option>Monto incorrecto</option>'
+    +'<option>Operación cancelada</option>'
+    +'<option>Orden del administrador</option>'
+    +'<option>Otro</option>'
+    +'</select></div>'
+    +'<div class="fg" style="margin-top:8px;display:none" id="eg_del_otro_wrap">'
+    +'<label>Especifica la razón</label>'
+    +'<input class="fi" id="eg_del_otro" placeholder="Describe la razón..."></div>'
+    +'<div class="fg" style="margin-top:10px"><label>¿Qué hacer con el dinero?</label>'
+    +'<div style="display:grid;gap:8px">'
+    +'<label style="display:flex;gap:8px;align-items:flex-start;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px"><input type="radio" name="eg_retorno" value="si" checked> <span><strong>Regresar el dinero a la cuenta</strong><br><span style="color:var(--ink3);font-size:12px">Crea un movimiento de reverso y suma el monto de nuevo a la cuenta.</span></span></label>'
+    +'<label style="display:flex;gap:8px;align-items:flex-start;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px"><input type="radio" name="eg_retorno" value="no"> <span><strong>Eliminar sin regresar el dinero</strong><br><span style="color:var(--ink3);font-size:12px">Solo se anula el egreso, pero no se compensa la cuenta.</span></span></label>'
+    +'</div></div>';
+  setTimeout(function(){
+    var sel=$('eg_del_razon');
+    if(sel) sel.onchange=function(){ var w=$('eg_del_otro_wrap'); if(w) w.style.display=sel.value==='Otro'?'block':'none'; };
+  },50);
+  S.saveFn=function(){
+    var razon=($('eg_del_razon')&&$('eg_del_razon').value)||'';
+    if(razon==='Otro') razon=(($('eg_del_otro')&&$('eg_del_otro').value)||'').trim()||'Otro';
+    if(!razon){ toast('Debes seleccionar una razón','error'); return false; }
+    var devolver=(document.querySelector('input[name="eg_retorno"]:checked')||{}).value!=='no';
+    var audit={
+      eliminado:true,
+      eliminadoPor:(S.currentUser&&S.currentUser.nombre)||'Administrador',
+      eliminadoPorUid:(S.currentUser&&S.currentUser.uid)||'',
+      eliminadoEn:new Date().toISOString(),
+      eliminadoRazon:razon,
+      eliminacionReversaCuenta:devolver
+    };
+    Object.assign(S.egresos[i],audit);
+    DB.saveEgreso(S.egresos[i]);
+    if(devolver){
+      var cuentaSalida=eg.forma||eg.cuenta||eg.cuentaOrigen||'';
+      if(!cuentaSalida && _cuentasBanc && _cuentasBanc.length>0) cuentaSalida=_cuentasBanc[0].nombre;
+      if(cuentaSalida){
+        var mov={
+          id:'MOV-REV-EG-'+Date.now(),
+          tipo:'deposito',
+          concepto:'Reverso egreso eliminado · '+eg.concepto,
+          monto:parseFloat(eg.monto)||0,
+          cuentaOrigen:null,
+          cuentaDestino:cuentaSalida,
+          fecha:new Date().toISOString().split('T')[0],
+          referencia:'Reverso por eliminación de egreso #'+eg.id,
+          realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
+          tasaBs:window._tasaBsGlobal||1,
+          hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}),
+          reversoDe:'egreso:'+eg.id
+        };
+        S.movimientos.push(mov);
+        DB.saveMovimiento(mov);
+      }
     }
-  });
+    closeM(); nav('conta');
+    toast(devolver?'Egreso eliminado y dinero regresado a la cuenta':'Egreso eliminado sin regresar dinero','info');
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">Eliminar Egreso</button>';
+  $('ov').style.display='flex';
 }
 
 // UTILS
@@ -6981,6 +7069,33 @@ function delMovimiento(id){
 // ══════════════════════════════════════════
 // NOTIFICACIONES — funciones reales
 // ══════════════════════════════════════════
+const NOTIF_HIST_KEY='pagasi_notif_historial_v1';
+function cargarHistorialNotificaciones(){
+  try{
+    if(Array.isArray(window._notifHistorial) && window._notifHistorial.length) return window._notifHistorial;
+    var raw=localStorage.getItem(NOTIF_HIST_KEY);
+    window._notifHistorial = raw ? JSON.parse(raw) : [];
+  }catch(e){ window._notifHistorial=[]; }
+  return window._notifHistorial;
+}
+function guardarHistorialNotificaciones(){
+  try{ localStorage.setItem(NOTIF_HIST_KEY, JSON.stringify(window._notifHistorial||[])); }catch(e){}
+}
+function renderHistorialNotificaciones(){
+  cargarHistorialNotificaciones();
+  var h=$('notif-historial');
+  if(!h) return;
+  if(!(window._notifHistorial||[]).length){
+    h.innerHTML='<div style="color:var(--ink3);font-size:12px;padding:12px 0">Sin envíos registrados. Los mensajes enviados aparecerán aquí.</div>';
+    return;
+  }
+  h.innerHTML=(window._notifHistorial||[]).map(function(n){
+    return '<div class="li"><div class="li-ic" style="background:var(--gs)">'+(n.canal==='whatsapp'?'WA':'≡')+'</div>'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+n.tipo+' → '+n.dest+'</div>'
+      +'<div class="tds">'+n.fecha+' · '+n.cantidad+' mensaje'+(n.cantidad!==1?'s':'')+'</div></div>'
+      +'<span class="bdg b-g">enviado</span></div>';
+  }).join('');
+}
 function actualizarPreviewNotif(){
   var tipo   = ($('notif-tipo')&&$('notif-tipo').value)||'mora';
   var dest   = ($('notif-dest')&&$('notif-dest').value)||'mora';
@@ -7128,6 +7243,7 @@ function enviarNotificaciones(){
   }
 
   // Save to history
+  cargarHistorialNotificaciones();
   if(!window._notifHistorial) window._notifHistorial=[];
   window._notifHistorial.unshift({
     tipo:{mora:'Mora',cuota:'Cuota próxima',confirmado:'Pago confirmado',custom:'Personalizado'}[tipo]||tipo,
@@ -7135,13 +7251,9 @@ function enviarNotificaciones(){
     cantidad:destinatarios.length,
     fecha:new Date().toLocaleDateString('es-VE')
   });
-  var h=$('notif-historial');
-  if(h) h.innerHTML=window._notifHistorial.map(function(n){
-    return '<div class="li"><div class="li-ic" style="background:var(--gs)">'+(n.canal==='whatsapp'?'WA':'≡')+'</div>'
-      +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+n.tipo+' → '+n.dest+'</div>'
-      +'<div class="tds">'+n.fecha+' · '+n.cantidad+' mensaje'+(n.cantidad!==1?'s':'')+'</div></div>'
-      +'<span class="bdg b-g">enviado</span></div>';
-  }).join('');
+  if(window._notifHistorial.length>100) window._notifHistorial=window._notifHistorial.slice(0,100);
+  guardarHistorialNotificaciones();
+  renderHistorialNotificaciones();
 }
 
 
@@ -7151,6 +7263,7 @@ function init() {
   // Mostrar el contenedor principal
   var appRoot = $('app-root');
   if (appRoot) appRoot.style.display = 'flex';
+  cargarHistorialNotificaciones();
 
   // Cargar datos desde Firebase o usar datos locales de demostración
   DB.load().then(function() {
