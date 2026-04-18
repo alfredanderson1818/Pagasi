@@ -1077,6 +1077,31 @@ tbody tr:hover td {
   border-color: rgba(91,78,212,0.20);
 }
 
+/* ─── DASHBOARD KPI CARDS ─── */
+.dash-kpi {
+  transition: transform .15s, box-shadow .15s;
+}
+.dash-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ─── BAR CHART BARS ─── */
+.bc > div > div[style*="height:"] {
+  transition: height .5s ease;
+}
+
+/* ─── LOGIN NETWORK ERROR STYLE ─── */
+.login-err-warn {
+  background: rgba(232,152,10,0.08);
+  border: 1px solid rgba(232,152,10,0.25);
+  color: var(--amber);
+  font-size: 11.5px;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-weight: 500;
+}
+
 </style>
 </head>
 <body>
@@ -1825,43 +1850,89 @@ function getMonthlyIngresos(){
 // ══════════════════════════════════════════
 const PG={
 dash(){
-  const mora=S.creds.filter(c=>c.mora>0).length;
-  const activos=S.creds.filter(c=>c.estado==='activo').length;
-  const cartera=S.creds.reduce((a,c)=>a+(c.fin-(c.pagado/c.plazo*c.fin)),0);
-  const ingMes=S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
-  const dispMotos=S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
-  const chartData=getMonthlyIngresos();
-  const iv=chartData.map(function(x){return x.total;}),ms=chartData.map(function(x){return x.label;});
-  const mx=Math.max(...iv)||1;
-  const hoy=(function(){
-    var hoyStr=new Date().toISOString().split('T')[0];
-    var prox=S.creds.filter(function(c){
-      if(c.estado!=='activo') return false;
-      if(!c.fecha) return false;
-      var start=new Date(c.fecha);
-      var cuotaNum=c.pagado+1;
-      var vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
-      var diffDays=Math.round((vence-new Date())/(24*60*60*1000));
-      return diffDays<=3 && diffDays>=-3;
-    });
-    return prox.length?prox:S.creds.filter(function(c){return c.estado==='activo';}).slice(0,3);
-  })();
-  const pendPagos=S.pagos.filter(p=>p.estado==='pendiente').length;
+  // ── core metrics ──────────────────────────────────────────────
+  const mora        = S.creds.filter(c=>c.mora>0).length;
+  const activos     = S.creds.filter(c=>c.estado==='activo').length;
+  const completados = S.creds.filter(c=>c.estado==='completado').length;
+  const totalCreds  = S.creds.filter(c=>!c.eliminado).length;
+  const cartera     = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>{
+    const pagado = (c.pagado||0);
+    const cuotas = c.totalCuotas || c.plazo*2;
+    const saldo  = Math.max(0, c.fin - (pagado/cuotas*c.fin));
+    return a + saldo;
+  },0);
+  const dispMotos   = S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
+  const ingMes      = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
+  const pendPagos   = S.pagos.filter(p=>p.estado==='pendiente').length;
+  const egMes       = (S.egresos||[]).filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
+  const utilidad    = ingMes - egMes;
 
-  // stat cards: [icon, label, value, change, changeClass, bg, color, navTarget, navHint]
-  const stats=[
-    ['MOTO','Motos en Sistema',S.motos.length,'↑ '+dispMotos+' disponibles','up','var(--gs)','var(--p1)','motos','Ver motocicletas'],
-    ['ACT','Créditos Activos',activos,'de '+S.creds.length+' total','up','var(--greens)','var(--green)','creditos','Ver financiamientos'],
-    ['COB','Cobrado este mes',fmt(ingMes),'pagos confirmados','up','var(--gs)','var(--p1)','pagos','Ver pagos'],
-    ['MORA','Clientes en Mora',mora,mora>0?'requiere atención':'todos al día',mora>0?'dn':'up','var(--reds)','var(--red)','cobranza','Ir a cobranza'],
-    ['CAR','Cartera Activa',fmt(cartera),'saldo pendiente total','neu','var(--blues)','var(--p2)','reportes','Ver reportes'],
-    ['PLN','Plan 10 Meses','1.90x','Factor · 40% inicial','neu','var(--gs)','var(--p1)','plan','Ver plan y precios'],
+  // ── chart data ────────────────────────────────────────────────
+  const chartData = getMonthlyIngresos();
+  const iv = chartData.map(x=>x.total);
+  const ms = chartData.map(x=>x.label);
+  const mx = Math.max(...iv)||1;
+
+  // ── cuotas próximas ───────────────────────────────────────────
+  const hoy=(function(){
+    var prox=S.creds.filter(function(c){
+      if(c.estado!=='activo'||!c.fecha) return false;
+      var start=new Date(c.fecha);
+      var cuotaNum=(c.pagado||0)+1;
+      var vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
+      var diff=Math.round((vence-new Date())/(24*60*60*1000));
+      return diff<=5 && diff>=-1;
+    });
+    return prox.length ? prox : S.creds.filter(c=>c.estado==='activo').slice(0,4);
+  })();
+
+  // ── mora por días ────────────────────────────────────────────
+  const moraBuckets = {
+    '1-15':   S.creds.filter(c=>c.mora>0&&c.mora<=15).length,
+    '16-30':  S.creds.filter(c=>c.mora>15&&c.mora<=30).length,
+    '31-60':  S.creds.filter(c=>c.mora>30&&c.mora<=60).length,
+    '+60':    S.creds.filter(c=>c.mora>60).length,
+  };
+
+  // ── cobranza: % recaudación ─────────────────────────────────
+  const cuotaEsperada = activos * (S.creds.filter(c=>c.estado==='activo')[0]?.cuotaQ || 0);
+  const pctCobro = cuotaEsperada > 0 ? Math.min(100, Math.round(ingMes / cuotaEsperada * 100)) : 0;
+
+  // ── donut data: estado motos ─────────────────────────────────
+  const mDisp  = S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
+  const mFin   = S.motos.filter(m=>!m.eliminado&&m.estado==='financiada').length;
+  const mRec   = S.motos.filter(m=>!m.eliminado&&m.estado==='recuperada').length;
+  const mInv   = S.motos.filter(m=>!m.eliminado&&m.estado==='inventario').length;
+  const mTotal = Math.max(1, mDisp+mFin+mRec+mInv);
+
+  // ── donut SVG helper ─────────────────────────────────────────
+  function donutArc(pct, offset, color, r=38, cx=50, cy=50){
+    const circ = 2*Math.PI*r;
+    const dash  = pct/100*circ;
+    const gap   = circ - dash;
+    const rot   = offset/100*360 - 90;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="12"
+      stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"
+      stroke-dashoffset="0"
+      transform="rotate(${rot} ${cx} ${cy})" />`;
+  }
+  const donutSlices = [
+    [mDisp/mTotal*100, 0,       '#06B06A', 'Disponibles'],
+    [mFin/mTotal*100,  mDisp/mTotal*100*1, '#5B4ED4', 'Financiadas'],
+    [mRec/mTotal*100,  (mDisp+mFin)/mTotal*100, '#D93B5A', 'Recuperadas'],
+    [mInv/mTotal*100,  (mDisp+mFin+mRec)/mTotal*100, '#5B8DEF', 'Inventario'],
   ];
+  let donutOffset = 0;
+  const donutArcs = donutSlices.map(([pct,,color])=>{
+    const arc = donutArc(pct, donutOffset, color);
+    donutOffset += pct;
+    return arc;
+  }).join('');
 
   return`<div class="page">
 
-  <!-- HERO STRIP -->
-  <div class="hero" style="margin-bottom:18px">
+  <!-- HERO -->
+  <div class="hero" style="margin-bottom:20px">
     <div>
       <div class="hero-tt">Bienvenido, ${(S.currentUser&&S.currentUser.nombre?S.currentUser.nombre.split(' ')[0]:'')}</div>
       <div class="hero-sb">${new Date().toLocaleDateString('es-VE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
@@ -1872,154 +1943,245 @@ dash(){
     </div>
   </div>
 
-  <!-- KPI CARDS -->
-  <div class="sg" style="margin-bottom:18px">
-    ${stats.map(([ic,lb,vl,ch,ct,bg,cl,target,hint])=>`
-    <div class="stat" onclick="nav('${target}')" style="cursor:pointer" title="${hint}">
-      <div class="st-glow" style="background:linear-gradient(90deg,${cl},transparent)"></div>
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-        <div class="st-ic" style="background:${bg};font-size:8px;font-weight:700;letter-spacing:0.5px;color:${cl};font-family:var(--fm)">${ic}</div>
-        <span style="font-size:9px;color:var(--ink3);font-weight:600;opacity:0.7">→</span>
+  <!-- ROW 1: KPI CARDS (4 wide, 2 tall) -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+
+    <!-- Cartera activa -->
+    <div class="card dash-kpi" onclick="nav('creditos')" style="cursor:pointer;border-left:3px solid var(--p1)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Cartera Activa</span>
+        <span style="font-size:9px;background:rgba(91,78,212,0.1);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${activos} créditos</span>
       </div>
-      <div class="st-v">${vl}</div>
-      <div class="st-l">${lb}</div>
-      <div class="st-c ${ct}" style="margin-top:8px">${ch}</div>
-    </div>`).join('')}
+      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">${fmt(cartera)}</div>
+      <div style="font-size:11px;color:var(--ink3)">Saldo pendiente de cobro</div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;font-size:10.5px">
+        <span style="color:var(--ink3)">${completados} completados</span>
+        <span style="color:var(--p1);font-weight:700">${totalCreds} total →</span>
+      </div>
+    </div>
+
+    <!-- Cobrado este mes -->
+    <div class="card dash-kpi" onclick="nav('pagos')" style="cursor:pointer;border-left:3px solid var(--green)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (mes)</span>
+        ${pendPagos>0?`<span style="font-size:9px;background:rgba(232,152,10,0.12);color:var(--amber);padding:2px 7px;border-radius:20px;font-weight:700">${pendPagos} pendientes</span>`:'<span style="font-size:9px;background:var(--greens);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:700">Al día</span>'}
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMes)}</div>
+      <div style="font-size:11px;color:var(--ink3)">Pagos confirmados</div>
+      <!-- mini progress bar: % recaudación -->
+      <div style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-bottom:4px">
+          <span>Recaudación</span><span style="font-weight:700;color:var(--green)">${pctCobro}%</span>
+        </div>
+        <div style="background:var(--rim);border-radius:4px;height:5px;overflow:hidden">
+          <div style="height:100%;width:${pctCobro}%;background:var(--green);border-radius:4px;transition:width .6s"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mora -->
+    <div class="card dash-kpi" onclick="nav('cobranza')" style="cursor:pointer;border-left:3px solid ${mora>0?'var(--red)':'var(--green)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${mora>0?'var(--red)':'var(--green)'};font-family:var(--fm)">En Mora</span>
+        <span style="font-size:9px;background:${mora>0?'var(--reds)':'var(--greens)'};color:${mora>0?'var(--red)':'var(--green)'};padding:2px 7px;border-radius:20px;font-weight:700">${mora>0?mora+' clientes':'Sin mora'}</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:${mora>0?'var(--red)':'var(--green)'};margin-bottom:4px">${mora>0?mora:'✓'}</div>
+      <div style="font-size:11px;color:var(--ink3)">${mora>0?'Requieren gestión':'Todos al día'}</div>
+      <!-- mora buckets mini bars -->
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:3px">
+        ${Object.entries(moraBuckets).map(([k,v])=>v>0?`
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:9px;color:var(--ink3);width:28px;font-family:var(--fm)">${k}d</span>
+          <div style="flex:1;background:var(--rim);border-radius:3px;height:4px"><div style="height:100%;width:${v/Math.max(1,mora)*100}%;background:var(--red);border-radius:3px"></div></div>
+          <span style="font-size:9px;font-weight:700;color:var(--red);width:12px;text-align:right">${v}</span>
+        </div>`:''
+        ).join('')}
+        ${mora===0?'<div style="font-size:10px;color:var(--green);text-align:center;padding:4px 0">✓ Sin clientes en atraso</div>':''}
+      </div>
+    </div>
+
+    <!-- Utilidad -->
+    <div class="card dash-kpi" onclick="nav('conta')" style="cursor:pointer;border-left:3px solid ${utilidad>=0?'var(--p2)':'var(--red)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p2);font-family:var(--fm)">Utilidad</span>
+        <span style="font-size:9px;background:rgba(91,141,239,0.1);color:var(--p2);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'})}</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:${utilidad>=0?'var(--p2)':'var(--red)'};margin-bottom:4px">${fmt(utilidad)}</div>
+      <div style="font-size:11px;color:var(--ink3)">Ingresos − Egresos</div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;font-size:10.5px">
+        <span style="color:var(--green)">↑ ${fmt(ingMes)}</span>
+        <span style="color:var(--red)">↓ ${fmt(egMes)}</span>
+      </div>
+    </div>
   </div>
 
-  <!-- MAIN CONTENT GRID -->
+  <!-- ROW 2: Chart grande + Cuotas del día -->
   <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
 
-    <!-- INGRESOS CHART -->
+    <!-- Ingresos chart -->
     <div class="card" onclick="nav('reportes')" style="cursor:pointer" title="Ver reporte completo">
-      <div class="ch" style="margin-bottom:12px">
+      <div class="ch" style="margin-bottom:16px">
         <div>
-          <div class="ct">Ingresos por Mes</div>
-          <div class="cs">Últimos 7 meses</div>
+          <div class="ct">Ingresos Mensuales</div>
+          <div class="cs">Últimos 7 meses · total acumulado: <strong style="color:var(--p1)">${'$'+iv.reduce((a,b)=>a+b,0).toLocaleString()}</strong></div>
         </div>
         <button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('reportes')">Ver detalle</button>
       </div>
-      <div class="bc">${iv.map((v,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center"><div class="bar" style="width:100%;height:${Math.round(v/mx*100)}%;background:${i===iv.length-1?'linear-gradient(0deg,var(--p1),var(--p2))':'var(--lift)'}"><span class="bv">${v?'$'+Math.round(v/1000)+'k':''}</span></div></div>`).join('')}</div>
-      <div style="display:flex;margin-top:4px">${ms.map(m=>`<div class="bl" style="flex:1">${m}</div>`).join('')}</div>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:11px;color:var(--ink3);font-weight:500">Total acumulado</span>
-        <span style="font-family:var(--fd);font-weight:700;font-size:15px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">$${iv.reduce(function(a,b){return a+b;},0).toLocaleString()}</span>
+
+      <!-- Bar chart with value labels -->
+      <div style="display:flex;align-items:flex-end;gap:6px;height:110px;padding:0 2px">
+        ${iv.map((v,i)=>{
+          const pct = Math.round(v/mx*100);
+          const isLast = i===iv.length-1;
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end">
+            <div style="font-size:9px;font-weight:700;color:${isLast?'var(--p1)':'var(--ink3)'};margin-bottom:3px">${v?'$'+Math.round(v/1000)+'k':''}</div>
+            <div style="width:100%;height:${Math.max(pct,2)}%;background:${isLast?'linear-gradient(0deg,var(--p1),var(--p2))':'var(--rim2)'};border-radius:5px 5px 2px 2px;transition:all .3s"></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <!-- Month labels -->
+      <div style="display:flex;margin-top:6px">
+        ${ms.map((m,i)=>`<div style="flex:1;text-align:center;font-size:9.5px;color:${i===ms.length-1?'var(--p1)':'var(--ink3)'};font-weight:${i===ms.length-1?'700':'400'};font-family:var(--fm)">${m}</div>`).join('')}
       </div>
     </div>
 
-    <!-- CUOTAS DEL DIA -->
-    <div class="card" style="display:flex;flex-direction:column;gap:8px">
-      <div class="ch" style="margin-bottom:4px">
-        <div class="ct">Vencimientos Próximos</div>
-        <span class="bdg b-a" style="cursor:pointer" onclick="nav('pagos')">${hoy.length}</span>
+    <!-- Vencimientos -->
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="ch" style="margin-bottom:10px">
+        <div class="ct">Cuotas Próximas</div>
+        <span class="bdg ${hoy.length>0?'b-a':'b-g'}" onclick="nav('pagos')" style="cursor:pointer">${hoy.length}</span>
       </div>
-      ${hoy.length===0?`<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin cuotas próximas</div>`:''}
-      ${hoy.map(c=>`
-      <div onclick="openAddPago()" style="background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .14s" onmouseover="this.style.borderColor='var(--rim2)';this.style.background='var(--lift)'" onmouseout="this.style.borderColor='var(--rim)';this.style.background='var(--surf2)'">
-        <div>
-          <div style="font-weight:600;color:var(--ink);font-size:12px">${c.cli}</div>
-          <div style="font-size:10.5px;color:var(--ink3);font-family:var(--fm)">${c.id}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-weight:700;font-family:var(--fd);font-size:13px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmt(c.cuotaQ||c.cuota)}</div>
-          <div style="font-size:9.5px;color:var(--p1);font-weight:600;margin-top:2px">Registrar →</div>
-        </div>
-      </div>`).join('')}
-      <button class="btn btn-g btn-sm" style="width:100%;margin-top:4px" onclick="nav('pagos')">Ver todos los pagos</button>
+      <div style="display:flex;flex-direction:column;gap:7px;flex:1">
+        ${hoy.length===0?'<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin cuotas próximas</div>':''}
+        ${hoy.slice(0,4).map(c=>{
+          const start=new Date(c.fecha);
+          const cuotaNum=(c.pagado||0)+1;
+          const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
+          const diff=Math.round((vence-new Date())/(24*60*60*1000));
+          const urgencia = diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--p1)';
+          const diffLabel = diff<0?`${Math.abs(diff)}d atraso`:diff===0?'Hoy':`en ${diff}d`;
+          return`<div onclick="openAddPago()" style="background:var(--surf2);border:1px solid var(--rim);border-radius:9px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .12s" onmouseover="this.style.background='var(--lift)'" onmouseout="this.style.background='var(--surf2)'">
+            <div>
+              <div style="font-weight:600;color:var(--ink);font-size:12px">${c.cli}</div>
+              <div style="font-size:10px;color:${urgencia};font-weight:700;font-family:var(--fm)">${diffLabel}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:700;font-family:var(--fd);font-size:13px;color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</div>
+              <div style="font-size:9px;color:var(--p1);font-weight:600">Cobrar →</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="btn btn-g btn-sm" style="width:100%;margin-top:10px" onclick="nav('pagos')">Ver todos los pagos</button>
     </div>
   </div>
 
-  <!-- SECOND ROW -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+  <!-- ROW 3: Motos donut + Últimos pagos + Alertas -->
+  <div style="display:grid;grid-template-columns:1fr 1.5fr 1.5fr;gap:14px;margin-bottom:14px">
 
-    <!-- ULTIMOS PAGOS -->
+    <!-- Inventario donut -->
+    <div class="card" onclick="nav('motos')" style="cursor:pointer">
+      <div class="ch" style="margin-bottom:10px">
+        <div class="ct">Inventario</div>
+        <span style="font-size:11px;color:var(--p1);font-weight:600">${S.motos.filter(m=>!m.eliminado).length} unidades</span>
+      </div>
+      <!-- donut SVG -->
+      <div style="display:flex;align-items:center;gap:14px">
+        <svg viewBox="0 0 100 100" style="width:80px;height:80px;flex-shrink:0">
+          <circle cx="50" cy="50" r="38" fill="none" stroke="var(--rim)" stroke-width="12"/>
+          ${donutArcs}
+          <text x="50" y="54" text-anchor="middle" style="font-size:14px;font-weight:900;fill:var(--ink);font-family:sans-serif">${S.motos.filter(m=>!m.eliminado).length}</text>
+        </svg>
+        <div style="display:flex;flex-direction:column;gap:5px;flex:1">
+          ${[['#06B06A','Disponibles',mDisp],['#5B4ED4','Financiadas',mFin],['#D93B5A','Recuperadas',mRec],['#5B8DEF','Inventario',mInv]].map(([c,l,v])=>
+            v>0?`<div style="display:flex;align-items:center;gap:5px">
+              <div style="width:8px;height:8px;border-radius:2px;background:${c};flex-shrink:0"></div>
+              <span style="font-size:10px;color:var(--ink3);flex:1">${l}</span>
+              <span style="font-size:10.5px;font-weight:700;color:var(--ink);font-family:var(--fm)">${v}</span>
+            </div>`:''
+          ).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Últimos pagos -->
     <div class="card">
-      <div class="ch" style="margin-bottom:12px">
+      <div class="ch" style="margin-bottom:10px">
         <div class="ct">Últimos Pagos</div>
         <span style="font-size:11px;font-weight:600;cursor:pointer;color:var(--p1)" onclick="nav('pagos')">Ver todos</span>
       </div>
       <div class="lst">
-        ${S.pagos.slice(0,6).map(p=>`
-        <div class="li" onclick="nav('pagos')" title="Ir a pagos">
+        ${S.pagos.filter(p=>!p.eliminado).slice(0,5).map(p=>`
+        <div class="li" onclick="nav('pagos')" style="cursor:pointer">
           <div class="li-ic" style="background:var(--greens);font-size:8px;font-weight:700;color:var(--green);font-family:var(--fm)">PAG</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:600;color:var(--ink)">${p.cli}</div>
-            <div style="font-size:10.5px;color:var(--ink3);font-family:var(--fm)">${p.fecha} · ${p.metodo}</div>
+            <div style="font-size:10px;color:var(--ink3);font-family:var(--fm)">${p.fecha} · ${p.metodo||'—'}</div>
           </div>
           <div style="text-align:right;flex-shrink:0">
             <div style="font-weight:700;color:var(--green);font-family:var(--fd);font-size:12.5px">${fmt(p.monto)}</div>
-            <span class="bdg ${sbg(p.estado)}" style="font-size:9px">${p.estado}</span>
+            <span class="bdg ${sbg(p.estado)}" style="font-size:8.5px">${p.estado}</span>
           </div>
         </div>`).join('')}
+        ${S.pagos.filter(p=>!p.eliminado).length===0?'<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin pagos registrados</div>':''}
       </div>
-      ${pendPagos>0?`<div onclick="nav('pagos')" style="margin-top:10px;padding:9px 12px;background:var(--ambers);border-radius:9px;border:1px solid rgba(232,152,10,0.2);cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11.5px;font-weight:600;color:var(--amber)">${pendPagos} pago${pendPagos>1?'s':''} por confirmar</span><span style="font-size:11px;color:var(--amber);font-weight:700">Confirmar →</span></div>`:''}
+      ${pendPagos>0?`<div onclick="nav('pagos')" style="margin-top:8px;padding:8px 11px;background:var(--ambers);border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11.5px;font-weight:600;color:var(--amber)">${pendPagos} por confirmar</span>
+        <span style="font-size:11px;color:var(--amber);font-weight:700">Confirmar →</span>
+      </div>`:''}
     </div>
 
-    <!-- ALERTAS COBRANZA -->
+    <!-- Alertas cobranza -->
     <div class="card">
-      <div class="ch" style="margin-bottom:12px">
+      <div class="ch" style="margin-bottom:10px">
         <div class="ct">Alertas de Cobranza</div>
-        ${mora>0
-          ?`<span class="bdg b-r" style="cursor:pointer" onclick="nav('cobranza')">${mora} en mora</span>`
-          :`<span class="bdg b-g">Al día</span>`}
+        ${mora>0?`<span class="bdg b-r" style="cursor:pointer" onclick="nav('cobranza')">${mora} en mora</span>`:`<span class="bdg b-g">Al día</span>`}
       </div>
       ${mora>0
         ?`<div class="lst">
           ${S.creds.filter(c=>c.mora>0).slice(0,4).map(c=>`
-          <div class="li" onclick="nav('cobranza')" title="Gestionar cobranza" style="border-color:rgba(217,59,90,0.12)">
-            <div class="li-ic" style="background:var(--reds);font-size:8px;font-weight:700;color:var(--red);font-family:var(--fm)">ALR</div>
-            <div style="flex:1">
+          <div class="li" onclick="nav('cobranza')" style="cursor:pointer;border-color:rgba(217,59,90,0.12)">
+            <div style="width:36px;height:36px;border-radius:9px;background:var(--reds);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <span style="font-size:11px;font-weight:900;color:var(--red);font-family:var(--fm)">${c.mora}d</span>
+            </div>
+            <div style="flex:1;min-width:0">
               <div style="font-size:12px;font-weight:600;color:var(--ink)">${c.cli}</div>
-              <div style="font-size:10.5px;color:var(--ink3)">${c.mora} días · ${c.modelo}</div>
+              <div style="font-size:10px;color:var(--ink3)">${c.id} · ${c.modelo}</div>
             </div>
             <div style="text-align:right;flex-shrink:0">
-              <div style="font-weight:700;color:var(--red);font-family:var(--fd);font-size:12.5px">${fmt(c.cuotaQ||c.cuota)}</div>
-              <div style="font-size:9.5px;color:var(--red);font-weight:600;margin-top:2px">Gestionar →</div>
+              <div style="font-weight:700;color:var(--red);font-family:var(--fd);font-size:12px">${fmt(c.cuotaQ||c.cuota)}</div>
+              <div style="font-size:9px;color:var(--red);font-weight:600">Gestionar →</div>
             </div>
           </div>`).join('')}
         </div>
         <button class="btn btn-d btn-sm" style="width:100%;margin-top:10px" onclick="nav('cobranza')">Ir a Cobranza</button>`
-        :`<div style="text-align:center;padding:30px 20px">
-          <div style="width:44px;height:44px;border-radius:50%;background:var(--greens);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:18px;color:var(--green);font-weight:700">✓</div>
-          <div style="font-weight:700;font-size:13.5px;color:var(--green);margin-bottom:4px">Todo al día</div>
-          <div style="font-size:11.5px;color:var(--ink3)">Sin clientes en mora</div>
-          <button class="btn btn-g btn-sm" style="margin-top:14px" onclick="nav('cobranza')">Ver cobranza</button>
+        :`<div style="text-align:center;padding:24px 20px">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--greens);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:18px;color:var(--green);font-weight:700">✓</div>
+          <div style="font-weight:700;font-size:13px;color:var(--green)">Todo al día</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:3px">Sin clientes en mora</div>
+          <button class="btn btn-g btn-sm" style="margin-top:12px" onclick="nav('cobranza')">Ver cobranza</button>
         </div>`}
     </div>
   </div>
 
-  <!-- QUICK ACCESS STRIP -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-    <div class="card" onclick="nav('clientes')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 18px" title="Ver clientes">
-      <div style="width:38px;height:38px;border-radius:10px;background:var(--gs);border:1px solid var(--rim2);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:var(--p1);font-family:var(--fm);flex-shrink:0">CLI</div>
-      <div style="flex:1">
-        <div style="font-family:var(--fd);font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-1px">${S.clientes.length}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:1px;font-weight:500">Clientes registrados</div>
+  <!-- ROW 4: Quick access strip -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+    ${[
+      ['CLI','var(--gs)','var(--p1)','rgba(91,78,212,0.15)','Clientes',S.clientes.length,'registrados',"nav('clientes')"],
+      ['MOT','var(--greens)','var(--green)','rgba(6,176,106,0.15)','Disponibles',dispMotos,'de '+S.motos.filter(m=>!m.eliminado).length+" motos","nav('motos');setTimeout(()=>setMTab('disponible'),100)"],
+      ['ACT','rgba(91,78,212,0.08)','var(--p1)','rgba(91,78,212,0.2)','Activos',activos,'créditos activos',"nav('creditos')"],
+      ['PLN','var(--gs)','var(--p1)','var(--rim2)','Catálogo',CATALOGO.length,'modelos',"nav('plan')"],
+    ].map(([ic,bg,cl,br,label,val,sub,action])=>`
+    <div class="card" onclick="${action}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:13px 15px;border-color:${br}" onmouseover="this.style.borderColor='rgba(91,78,212,0.25)'" onmouseout="this.style.borderColor='${br}'">
+      <div style="width:36px;height:36px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:${cl};font-family:var(--fm);flex-shrink:0">${ic}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--fd);font-weight:700;font-size:20px;color:var(--ink);letter-spacing:-1px;line-height:1">${val}</div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px;font-weight:500">${sub}</div>
       </div>
-      <div style="font-size:14px;color:var(--ink3);font-weight:300">→</div>
-    </div>
-
-    <div class="card" onclick="nav('motos');setTimeout(()=>setMTab('disponible'),100)" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 18px" title="Ver motos disponibles">
-      <div style="width:38px;height:38px;border-radius:10px;background:var(--greens);border:1px solid rgba(6,176,106,0.2);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:var(--green);font-family:var(--fm);flex-shrink:0">MOT</div>
-      <div style="flex:1">
-        <div style="font-family:var(--fd);font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-1px">${dispMotos}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:1px;font-weight:500">Motos disponibles</div>
-      </div>
-      <div style="font-size:14px;color:var(--ink3);font-weight:300">→</div>
-    </div>
-
-    <div class="card" onclick="nav('plan')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 18px;background:linear-gradient(135deg,var(--surf),var(--surf2));border-color:var(--rim2)" title="Ver plan y precios">
-      <div style="width:38px;height:38px;border-radius:10px;background:var(--gs);border:1px solid var(--rim2);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:var(--p1);font-family:var(--fm);flex-shrink:0">PLN</div>
-      <div style="flex:1">
-        <div style="font-family:var(--fd);font-weight:700;font-size:22px;letter-spacing:-1px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${CATALOGO.length}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:1px;font-weight:500">Modelos en catálogo</div>
-      </div>
-      <div style="font-size:14px;color:var(--ink3);font-weight:300">→</div>
-    </div>
+    </div>`).join('')}
   </div>
   </div>`;
 },
-
 motos(){
   return`<div class="page">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:9px 13px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim);font-size:11.5px;color:var(--ink3)"><span style="font-weight:700;color:var(--ink)">Inventario</span> = unidades físicas (VIN, color, estado) &nbsp;·&nbsp; <span style="font-weight:700;color:var(--ink)">Catálogo</span> = modelos y precios → <button class="btn btn-g btn-xs" onclick="nav('plan')">Ver catálogo</button></div>
@@ -5434,8 +5596,26 @@ function doLogin() {
     .then(function() { hideLoader(); })
     .catch(function(e) {
       hideLoader();
-      if (errEl) { errEl.textContent = '⛔ Credenciales incorrectas'; errEl.style.display = 'block'; }
-      console.warn('Login error:', e.message);
+      if (errEl) {
+        if (e.code === 'auth/network-request-failed') {
+          errEl.textContent = 'Sin conexión a internet. Verifica tu red e intenta de nuevo.';
+          errEl.style.background = 'rgba(232,152,10,0.08)';
+          errEl.style.borderColor = 'rgba(232,152,10,0.3)';
+          errEl.style.color = 'var(--amber)';
+        } else if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+          errEl.textContent = 'Usuario o contraseña incorrectos.';
+          errEl.style.background = '';
+          errEl.style.borderColor = '';
+          errEl.style.color = '';
+        } else {
+          errEl.textContent = 'Error: ' + (e.message || e.code);
+          errEl.style.background = '';
+          errEl.style.borderColor = '';
+          errEl.style.color = '';
+        }
+        errEl.style.display = 'block';
+      }
+      console.warn('Login error:', e.code, e.message);
     });
 }
 
