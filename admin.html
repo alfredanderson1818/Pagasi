@@ -2091,6 +2091,17 @@ const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
 const PGL={dash:'Dashboard',clientes:'Clientes',motos:'Motocicletas',creditos:'Financiamientos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Reportes',cuentas:'Cuentas',conta:'Contabilidad',plan:'Plan & Precios',config:'Configuración',users:'Usuarios'};
 
+const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
+function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
+function isAdminUser(){ return !!(S.currentUser && S.currentUser.rol==='Administrador'); }
+function hasModuleAccess(key){ return isAdminUser() || getCurrentPerms().includes(key); }
+function canDeleteAction(){ return isAdminUser() || getCurrentPerms().includes('perm_delete'); }
+function requireDeletePermission(){
+  if(canDeleteAction()) return true;
+  toast('No tienes permiso para eliminar','error');
+  return false;
+}
+
 // Variables globales de configuración
 var _cuentasBanc = [];
 var _cobradores = ['Juan Admin'];
@@ -2150,9 +2161,8 @@ function updateBadge(){
 function nav(p){
   if(typeof closeMobileMenu==='function') closeMobileMenu();
   // Verificar permiso
-  if(S.currentUser && S.currentUser.rol !== 'Administrador'){
-    var perms = S.currentUser.permisos || [];
-    if(!perms.includes(p)){
+  if(S.currentUser){
+    if(!hasModuleAccess(p)){
       document.querySelectorAll('.si').forEach(function(e){e.classList.remove('on');});
       $('pgT').textContent = 'Sin acceso'; if($('pgT-mob')) $('pgT-mob').textContent='Sin acceso';
       $('cnt').innerHTML = '<div class="empty"><div style="font-size:36px;margin-bottom:14px;opacity:0.3;font-family:monospace">style="font-size:36px;margin-bottom:14px;opacity:0.3"></div>#128274;</div><div class="e-tt">Acceso restringido</div><div style="font-size:12px;margin-top:5px">No tienes permiso para ver este módulo.<br>Contacta al administrador.</div></div>';
@@ -3669,7 +3679,7 @@ users(){
           +'<td class="tds">'+u.email+'</td>'
           +'<td><span class="bdg '+rc+'">'+u.rol+'</span></td>'
           +'<td class="tds">'+mods+' módulos</td>'
-          +'<td style="display:flex;gap:5px;align-items:center">'+'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'+((!esMio&&(S.currentUser&&(S.currentUser.rol==='Administrador'||S.currentUser.rol==='Gerente')))?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email)+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">Eliminar</button>':'')+'</td>'
+          +'<td style="display:flex;gap:5px;align-items:center">'+'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'+((!esMio&&canDeleteAction())?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email)+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">Eliminar</button>':'')+'</td>'
 +'</tr>';
       }).join('');
     }).catch(function(){ /* sin Firebase, no hay lista */ });
@@ -3804,6 +3814,7 @@ function previewCalc(){
 function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
 function delMoto(id){
+  if(!requireDeletePermission()) return;
   const m=S.motos.find(x=>x.id===id);if(!m)return;
   $('mic').textContent='Del';$('mtt').textContent='Eliminar Moto';$('msb').textContent='No se puede deshacer';
   $('modal-box').className='modal';
@@ -3854,6 +3865,7 @@ function confirmarEliminacion(opts){
 }
 
 function ejecutarEliminacionAuditada(){
+  if(!requireDeletePermission()) return;
   var razon = ($('del_razon')&&$('del_razon').value)||'';
   if(razon==='Otro') razon = ($('del_otro')&&$('del_otro').value.trim())||'Otro';
   if(!razon){ toast('Debes seleccionar una razón','error'); return; }
@@ -3934,6 +3946,7 @@ function openAddCliente(id=null){
 }
 function editCliente(id){openAddCliente(id);}
 function delCliente(id){
+  if(!requireDeletePermission()) return;
   const c=S.clientes.find(x=>x.id===id);if(!c)return;
   if(S.creds.some(cr=>cr.cli===c.nombre&&cr.estado==='activo')){toast('No puedes eliminar un cliente con crédito activo','error');return;}
   confirmarEliminacion({titulo:'Eliminar Cliente',descripcion:'¿Eliminar a '+c.nombre+'?',onConfirm:function(audit){Object.assign(c,audit);DB.saveCliente(c);nav('clientes');toast('Cliente eliminado','info');}});
@@ -4062,6 +4075,7 @@ function openAddCred(motoId=null){
 
 
 function cancelarCred(credId){
+  if(!requireDeletePermission()) return;
   var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
   window._cancelCredId = credId;
   $('mic').textContent='✕'; $('mtt').textContent='Cancelar Financiamiento'; $('msb').textContent=c.id+' · '+c.cli;
@@ -4589,6 +4603,7 @@ function confirmarDelPago(id){
 
 
 function auditarYEliminarPago(){
+  if(!requireDeletePermission()) return;
   var id=window._delPagoId; var p=S.pagos.find(function(x){return x.id===id;});if(!p)return;
   closeM();
   confirmarEliminacion({
@@ -5058,6 +5073,7 @@ function openAddEgreso(){
   $('ov').style.display='flex';
 }
 function delEgreso(id){
+  if(!requireDeletePermission()) return;
   var i=S.egresos.findIndex(function(x){return x.id===id;});
   if(i<0) return;
   var eg=S.egresos[i];
@@ -5575,6 +5591,7 @@ function openEditCatalogo(id){
   $('ov').style.display = 'flex';
 }
 function delCatalogo(id){
+  if(!requireDeletePermission()) return;
   var item = CATALOGO.find(function(c){return c.id===id;});
   if(!item) return;
   $('mic').textContent='Del'; $('mtt').textContent='Eliminar Modelo'; $('msb').textContent='No se puede deshacer';
@@ -5588,6 +5605,7 @@ function delCatalogo(id){
   $('ov').style.display = 'flex';
 }
 function cDelCatalogo(id){
+  if(!requireDeletePermission()) return;
   var i = CATALOGO.findIndex(function(c){return c.id===id;});
   if(i>=0) CATALOGO.splice(i,1);
   if(db){
@@ -5602,6 +5620,7 @@ function cDelCatalogo(id){
 // ══════════════════════════════════════════
 
 function delPlanExtra(idx){
+  if(!requireDeletePermission()) return;
   if(!window._planesExtra) return;
   window._planesExtra.splice(idx,1);
   if(db){
@@ -7181,7 +7200,7 @@ async function doLogin() {
 
     if (ok) {
       $('login-screen').style.display = 'none';
-      S.currentUser = { nombre: localUser.nombre || 'Administrador', rol: localUser.rol || 'Administrador', email: email, permisos: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users'] };
+      S.currentUser = { nombre: localUser.nombre || 'Administrador', rol: localUser.rol || 'Administrador', email: email, permisos: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users','perm_delete'] };
       var sbUn = document.querySelector('.sb-un');
       if (sbUn) sbUn.textContent = S.currentUser.nombre;
       var sbAv = document.querySelector('.sb-av');
@@ -7381,7 +7400,7 @@ function openInviteUser(){
   var modCheckboxes = Object.keys(PGL).map(function(key){
     return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;cursor:pointer">'
       +'<input type="checkbox" value="'+key+'" checked style="accent-color:var(--p1)"> '+PGL[key]+'</label>';
-  }).join('');
+  }).join('') + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;cursor:pointer"><input type="checkbox" value="perm_delete" style="accent-color:var(--p1)"> '+EXTRA_PERMS.perm_delete+'</label>';
   $('mbd').innerHTML=''
     +'<div class="fg"><label>Email del usuario *</label><input class="fi" id="inv_email" type="email" placeholder="usuario@email.com"></div>'
     +'<div class="fg" style="margin-top:8px"><label>Rol</label>'
@@ -7456,7 +7475,7 @@ function editarUsuario(uid){
       var checked=(u.permisos||[]).includes(key);
       return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;cursor:pointer">'
         +'<input type="checkbox" value="'+key+'" '+(checked?'checked':'')+' style="accent-color:var(--p1)"> '+PGL[key]+'</label>';
-    }).join('');
+    }).join('') + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;cursor:pointer"><input type="checkbox" value="perm_delete" '+(((u.permisos||[]).includes('perm_delete'))?'checked':'')+' style="accent-color:var(--p1)"> '+EXTRA_PERMS.perm_delete+'</label>';
     $('mbd').innerHTML=''
       +'<div style="background:var(--surf2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px">'
       +'<div style="font-weight:800">'+( u.nombre||u.email)+'</div>'
@@ -7481,6 +7500,7 @@ function editarUsuario(uid){
 }
 
 function confirmarEliminarUsuario(uid,nombre){
+  if(!requireDeletePermission()) return;
   $('mic').textContent='Del'; $('mtt').textContent='Eliminar Usuario'; $('msb').textContent=nombre;
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div style="text-align:center;padding:12px 0">'
@@ -7565,19 +7585,19 @@ if (auth) {
             email: user.email,
             nombre: data.nombre || user.displayName || user.email,
             rol: data.rol || 'Administrador',
-            permisos: data.permisos || ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users']
+            permisos: data.permisos || ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users','perm_delete']
           };
           var sbUn = document.querySelector('.sb-un');
           if (sbUn) sbUn.textContent = S.currentUser.nombre;
           var sbAv = document.querySelector('.sb-av');
           if (sbAv) sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
         }).catch(function(){
-          S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: [] };
+          S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: ['perm_delete'] };
         }).finally(function(){
           if (!window._appInited) { window._appInited = true; init(); }
         });
       } else {
-        S.currentUser = { uid: user.uid, email: user.email, nombre: user.displayName || user.email, rol: 'Administrador', permisos: [] };
+        S.currentUser = { uid: user.uid, email: user.email, nombre: user.displayName || user.email, rol: 'Administrador', permisos: ['perm_delete'] };
         if (!window._appInited) { window._appInited = true; init(); }
       }
     } else {
