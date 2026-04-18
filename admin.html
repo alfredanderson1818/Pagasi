@@ -4563,16 +4563,27 @@ function confirmarDelPago(id){
   var p=S.pagos.find(function(x){return x.id===id;});if(!p)return;
   window._delPagoId=id;
   window._delPagoRazon='';
-  $('mic').textContent='Del';$('mtt').textContent='Eliminar Pago';$('msb').textContent='El crédito se revertirá';
+  window._delPagoModo=(p.mantenerEnAmortizacion===true)?'mantener':'completo';
+  $('mic').textContent='Del';$('mtt').textContent='Eliminar Pago';$('msb').textContent='El registro quedará auditado';
   $('modal-box').className='modal';
-  $('mbd').innerHTML='<div style="text-align:center;padding:16px 0">'
-    +'<div style="font-size:42px;margin-bottom:10px">PAG</div>'
-    +'<div style="font-size:15px;font-weight:800">¿Eliminar pago '+p.id+'?</div>'
-    +'<div style="color:var(--ink3);font-size:13px;margin-top:6px">'+p.cli+' · '+fmt(p.monto)+' · '+p.fecha+'</div>'
+  $('mbd').innerHTML='<div style="text-align:left;padding:10px 0">'
+    +'<div style="text-align:center;font-size:42px;margin-bottom:10px">PAG</div>'
+    +'<div style="text-align:center;font-size:15px;font-weight:800">¿Cómo quieres eliminar el pago '+p.id+'?</div>'
+    +'<div style="text-align:center;color:var(--ink3);font-size:13px;margin-top:6px">'+p.cli+' · '+fmt(p.monto)+' · '+p.fecha+'</div>'
+    +'<div style="margin-top:14px;display:grid;gap:10px">'
+    +'<label style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer">'
+    +'<input type="radio" name="del_pago_modo" value="mantener" '+(window._delPagoModo==='mantener'?'checked':'')+' onchange="window._delPagoModo=this.value">'
+    +'<div><div style="font-weight:800">Eliminar pero seguir contando en amortización</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">El pago desaparece del flujo operativo, pero la cuota seguirá contando en la tabla de amortización. El registro queda auditado.</div></div></label>'
+    +'<label style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer">'
+    +'<input type="radio" name="del_pago_modo" value="completo" '+(window._delPagoModo!=='mantener'?'checked':'')+' onchange="window._delPagoModo=this.value">'
+    +'<div><div style="font-weight:800">Eliminar por completo</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">El pago deja de contar en la amortización, se recalcula el crédito y el movimiento en Cuentas también se marca como eliminado. El registro queda auditado.</div></div></label>'
+    +'</div>'
     +'<div style="margin-top:10px;padding:9px;background:var(--ambers);border-radius:8px;font-size:12px;color:var(--ink)">'
-    +'⚠ La cuota pagada se restará del crédito y el movimiento en Cuentas se eliminará.</div></div>';
+    +'⚠ En ambos casos el pago no se borra de la base: queda con trazabilidad de quién lo eliminó, cuándo y por qué.</div></div>';
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="auditarYEliminarPago()">Del Eliminar</button>';
+    +'<button class="btn btn-d" onclick="auditarYEliminarPago()">Confirmar eliminación</button>';
   $('ov').style.display='flex';
 }
 
@@ -4595,25 +4606,108 @@ function ejecutarDelPago(){
   var pi=S.pagos.findIndex(function(x){return x.id===id;});
   if(pi<0){closeM();return;}
   var p=S.pagos[pi];
+  var modo=(window._delPagoModo==='mantener')?'mantener':'completo';
   // Soft delete con auditoría
   S.pagos[pi].eliminadoPor=(S.currentUser&&S.currentUser.nombre)||'Admin';
   S.pagos[pi].eliminadoPorUid=(S.currentUser&&S.currentUser.uid)||'';
   S.pagos[pi].eliminadoEn=new Date().toISOString();
   S.pagos[pi].eliminadoRazon=window._delPagoRazon||'Sin especificar';
-  S.pagos[pi].eliminado=true; DB.savePago(S.pagos[pi]);
-  // Revertir cuota del crédito
-  var ci=S.creds.findIndex(function(x){return x.id===p.cred;});
-  if(ci>=0){
-    S.creds[ci].pagado=Math.max(0,S.creds[ci].pagado-1);
-    if(S.creds[ci].estado==='completado') S.creds[ci].estado='activo';
-    DB.updateCred(p.cred,{pagado:S.creds[ci].pagado,estado:S.creds[ci].estado});
+  S.pagos[pi].eliminado=true;
+  S.pagos[pi].eliminadoModo=modo;
+  S.pagos[pi].mantenerEnAmortizacion=(modo==='mantener');
+  DB.savePago(S.pagos[pi]);
+
+  // Si es eliminación completa, recalcular el crédito y eliminar el movimiento asociado.
+  if(modo==='completo'){
+    recalcularCreditoDesdePagos(p.cred);
+    var mi=S.movimientos.findIndex(function(m){return m.concepto&&m.concepto.includes(p.cred)&&m.monto===p.monto&&m.fecha===p.fecha&&!m.eliminado;});
+    if(mi>=0){
+      S.movimientos[mi].eliminado=true;
+      S.movimientos[mi].eliminadoPor=(S.currentUser&&S.currentUser.nombre)||'Admin';
+      S.movimientos[mi].eliminadoEn=new Date().toISOString();
+      DB.saveMovimiento(S.movimientos[mi]);
+    }
+  } else {
+    // Mantener en amortización: preservar el efecto financiero en el crédito.
+    recalcularCreditoDesdePagos(p.cred);
   }
-  // Eliminar movimiento relacionado (buscar por concepto)
-  var mi=S.movimientos.findIndex(function(m){return m.concepto&&m.concepto.includes(p.cred)&&m.monto===p.monto&&m.fecha===p.fecha;});
-  if(mi>=0){S.movimientos[mi].eliminado=true;DB.saveMovimiento(S.movimientos[mi]);}
+
   window._delPagoId=null;
-  closeM(); nav('pagos'); toast('Pago eliminado · crédito revertido','info');
+  window._delPagoModo=null;
+  closeM(); nav('pagos');
+  toast(modo==='mantener' ? 'Pago eliminado del flujo, pero sigue contando en amortización' : 'Pago eliminado por completo y crédito recalculado','info');
 }
+
+
+function recalcularCreditoDesdePagos(credId){
+  var ci=S.creds.findIndex(function(x){return x.id===credId;});
+  if(ci<0) return null;
+  var c=S.creds[ci];
+  var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0);
+  var totalCuotas=c.totalCuotas||((parseInt(c.plazo,10)||0)*2);
+  if(totalCuotas<0) totalCuotas=0;
+
+  var pagosAplicables=S.pagos
+    .filter(function(p){
+      return p.cred===credId && (p.estado||'confirmado')==='confirmado' && (!p.eliminado || p.mantenerEnAmortizacion===true);
+    })
+    .slice()
+    .sort(function(a,b){
+      var fa=(a.fecha||'').localeCompare(b.fecha||'');
+      if(fa!==0) return fa;
+      return String(a.id||'').localeCompare(String(b.id||''));
+    });
+
+  var historial=[];
+  var saldoPorCuota=[];
+  for(var qi=0;qi<totalCuotas;qi++) saldoPorCuota[qi]=cuotaVal;
+
+  pagosAplicables.forEach(function(p){
+    var montoRestante=parseFloat(p.monto)||0;
+    if(montoRestante<=0) return;
+    var fechaPago=p.fecha||new Date().toISOString().split('T')[0];
+    for(var qi=0;qi<totalCuotas && montoRestante>0.001;qi++){
+      if(saldoPorCuota[qi]>0.001){
+        var aplicar=Math.min(montoRestante,saldoPorCuota[qi]);
+        aplicar=parseFloat(aplicar.toFixed(2));
+        historial.push({cuota:qi+1,montoPagado:aplicar,fecha:fechaPago,pagoId:p.id});
+        saldoPorCuota[qi]=parseFloat((saldoPorCuota[qi]-aplicar).toFixed(2));
+        montoRestante=parseFloat((montoRestante-aplicar).toFixed(2));
+      }
+    }
+  });
+
+  var cuotasPagadas=0;
+  for(var i=0;i<totalCuotas;i++){
+    if(saldoPorCuota[i]<=0.001) cuotasPagadas++;
+    else break;
+  }
+  var proxCuotaIdx=cuotasPagadas;
+  var saldoProxCuota=proxCuotaIdx<totalCuotas ? saldoPorCuota[proxCuotaIdx] : 0;
+  var nuevoEstado=c.estado;
+  if(nuevoEstado==='completado' && cuotasPagadas<totalCuotas) nuevoEstado='activo';
+  if(cuotasPagadas>=totalCuotas && totalCuotas>0) nuevoEstado='completado';
+
+  S.creds[ci].pagado=cuotasPagadas;
+  S.creds[ci].pagosRegistrados=historial;
+  S.creds[ci].saldoProxCuota=saldoProxCuota;
+  S.creds[ci].estado=nuevoEstado;
+
+  DB.updateCred(credId,{
+    pagado:cuotasPagadas,
+    pagosRegistrados:historial,
+    saldoProxCuota:saldoProxCuota,
+    estado:nuevoEstado
+  });
+
+  return {
+    pagado:cuotasPagadas,
+    pagosRegistrados:historial,
+    saldoProxCuota:saldoProxCuota,
+    estado:nuevoEstado
+  };
+}
+
 
 function openPagoRapido(credId){
   openAddPago();
