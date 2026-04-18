@@ -5624,7 +5624,89 @@ function imprimirRecibo(pago, cred){
     +'<div class="footer">'+empresa+' · Documento generado el '+new Date().toLocaleDateString('es-VE')+' · Conserve este comprobante</div>'
     +'</div>'
     +'<script>window.onload=function(){window.print();}<\/script>'
-    +'</body></html>';
+    +'
+<script>
+(function(){
+  function q(id){ return document.getElementById(id); }
+  function safeToast(msg,type){ try{ if(window.toast) return window.toast(msg,type||'info'); }catch(e){} console.log(msg); }
+  function fmt2(n){ try{ return window.fmt ? window.fmt(n) : ('$'+Number(n||0).toFixed(2)); }catch(e){ return '$'+Number(n||0).toFixed(2); } }
+  function saldoCredito(credId){
+    try{ if(window.getSaldoPendienteCredito) return window.getSaldoPendienteCredito(credId); }catch(e){}
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c) return 0;
+    var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0)||0;
+    var totalFinanciado=parseFloat(c.total||((c.totalCuotas||((parseInt(c.plazo,10)||0)*2))*cuotaVal)||0)||0;
+    var abonado=0;
+    if(Array.isArray(c.pagosRegistrados)&&c.pagosRegistrados.length){
+      abonado=c.pagosRegistrados.reduce(function(a,h){ return a+(parseFloat(h.montoPagado)||0); },0);
+    } else {
+      abonado=(parseFloat(c.pagado)||0)*cuotaVal;
+    }
+    return Math.max(0, +(totalFinanciado-abonado).toFixed(2));
+  }
+  function renderLiquidarModal(credId){
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c){ safeToast('Crédito no encontrado','error'); return; }
+    if(c.estado==='completado' || c.estado==='cancelado'){ safeToast('Este financiamiento ya no se puede liquidar','info'); return; }
+    var saldo=saldoCredito(credId);
+    if(!(saldo>0)){ safeToast('Este financiamiento ya no tiene saldo pendiente','info'); return; }
+    if(!q('mbh')||!q('mbd')||!q('mft')||!q('ov')){ alert('No se encontró la ventana modal del sistema.'); return; }
+    var cuentas=((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]);
+    q('mbh').innerHTML='Liquidación anticipada';
+    q('mbd').innerHTML=''
+      +'<div class="grid2">'
+      +  '<div><label>Crédito</label><input class="inp" value="'+(c.id||'')+'" disabled></div>'
+      +  '<div><label>Cliente</label><input class="inp" value="'+(c.cli||'')+'" disabled></div>'
+      +  '<div><label>Saldo actual</label><input id="liq_saldo" class="inp" value="'+saldo.toFixed(2)+'" disabled></div>'
+      +  '<div><label>Descuento</label><input id="liq_descuento" class="inp" type="number" min="0" step="0.01" value="0"></div>'
+      +  '<div><label>Monto final a pagar</label><input id="liq_monto_final" class="inp" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'"></div>'
+      +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+cuentas.map(function(ct){ var n=ct&&ct.nombre?ct.nombre:'Caja principal'; return '<option value="'+n+'">'+n+'</option>'; }).join('')+'</select></div>'
+      +  '<div><label>Fecha</label><input id="liq_fecha" class="inp" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+      +  '<div><label>Motivo del descuento</label><input id="liq_motivo" class="inp" placeholder="Negociación por pago anticipado"></div>'
+      +  '<div><label>Observación</label><input id="liq_obs" class="inp" placeholder="Detalle interno del acuerdo"></div>'
+      +  '<div><label><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato al registrar</label></div>'
+      +  '<div><label><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label></div>'
+      +  '<div><label><input id="liq_moto_propia" type="checkbox" checked> Marcar moto como propia</label></div>'
+      +'</div>'
+      +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+    window._liqCredId=credId;
+    q('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" id="btn_liq_exec">Liquidar ahora</button>';
+    q('ov').style.display='flex';
+    function syncFromDescuento(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var d=parseFloat((q('liq_descuento')&&q('liq_descuento').value)||0)||0;
+      if(d<0) d=0; if(d>saldo) d=saldo;
+      q('liq_descuento').value=d.toFixed(2);
+      q('liq_monto_final').value=Math.max(0, +(saldo-d).toFixed(2)).toFixed(2);
+    }
+    function syncFromMonto(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var m=parseFloat((q('liq_monto_final')&&q('liq_monto_final').value)||0)||0;
+      if(m<0) m=0; if(m>saldo) m=saldo;
+      q('liq_monto_final').value=m.toFixed(2);
+      q('liq_descuento').value=Math.max(0, +(saldo-m).toFixed(2)).toFixed(2);
+    }
+    q('liq_descuento').addEventListener('input', syncFromDescuento);
+    q('liq_monto_final').addEventListener('input', syncFromMonto);
+    q('btn_liq_exec').addEventListener('click', function(){
+      if(window.ejecutarLiquidacionAnticipada) return window.ejecutarLiquidacionAnticipada();
+      safeToast('La función de liquidación no está disponible','error');
+    });
+  }
+  window.openLiquidarAnticipado = renderLiquidarModal;
+  // also force onclick fallback delegation for existing buttons with broken inline context
+  document.addEventListener('click', function(ev){
+    var btn=ev.target.closest && ev.target.closest('button');
+    if(!btn) return;
+    if((btn.textContent||'').trim()==='Liquidar' && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('openLiquidarAnticipado')>=0){
+      // let normal onclick handle it if working
+      return;
+    }
+  }, true);
+})();
+</script>
+
+</body></html>';
   var w = window.open('','_blank','width=520,height=700');
   if(w){ w.document.write(html); w.document.close(); }
 }
@@ -6128,7 +6210,89 @@ function imprimirFiniquito(){
   var doc=$('finiquito-doc');
   if(!doc){window.print();return;}
   var w=window.open('','_blank','width=800,height=600');
-  w.document.write('<html><head><title>Finiquito</title><style>body{font-family:Georgia,serif;padding:40px;color:#111}@media print{body{padding:20px}}</style></head><body>'+doc.outerHTML+'<script>window.onload=function(){window.print();}<\/script></body></html>');
+  w.document.write('<html><head><title>Finiquito</title><style>body{font-family:Georgia,serif;padding:40px;color:#111}@media print{body{padding:20px}}</style></head><body>'+doc.outerHTML+'<script>window.onload=function(){window.print();}<\/script>
+<script>
+(function(){
+  function q(id){ return document.getElementById(id); }
+  function safeToast(msg,type){ try{ if(window.toast) return window.toast(msg,type||'info'); }catch(e){} console.log(msg); }
+  function fmt2(n){ try{ return window.fmt ? window.fmt(n) : ('$'+Number(n||0).toFixed(2)); }catch(e){ return '$'+Number(n||0).toFixed(2); } }
+  function saldoCredito(credId){
+    try{ if(window.getSaldoPendienteCredito) return window.getSaldoPendienteCredito(credId); }catch(e){}
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c) return 0;
+    var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0)||0;
+    var totalFinanciado=parseFloat(c.total||((c.totalCuotas||((parseInt(c.plazo,10)||0)*2))*cuotaVal)||0)||0;
+    var abonado=0;
+    if(Array.isArray(c.pagosRegistrados)&&c.pagosRegistrados.length){
+      abonado=c.pagosRegistrados.reduce(function(a,h){ return a+(parseFloat(h.montoPagado)||0); },0);
+    } else {
+      abonado=(parseFloat(c.pagado)||0)*cuotaVal;
+    }
+    return Math.max(0, +(totalFinanciado-abonado).toFixed(2));
+  }
+  function renderLiquidarModal(credId){
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c){ safeToast('Crédito no encontrado','error'); return; }
+    if(c.estado==='completado' || c.estado==='cancelado'){ safeToast('Este financiamiento ya no se puede liquidar','info'); return; }
+    var saldo=saldoCredito(credId);
+    if(!(saldo>0)){ safeToast('Este financiamiento ya no tiene saldo pendiente','info'); return; }
+    if(!q('mbh')||!q('mbd')||!q('mft')||!q('ov')){ alert('No se encontró la ventana modal del sistema.'); return; }
+    var cuentas=((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]);
+    q('mbh').innerHTML='Liquidación anticipada';
+    q('mbd').innerHTML=''
+      +'<div class="grid2">'
+      +  '<div><label>Crédito</label><input class="inp" value="'+(c.id||'')+'" disabled></div>'
+      +  '<div><label>Cliente</label><input class="inp" value="'+(c.cli||'')+'" disabled></div>'
+      +  '<div><label>Saldo actual</label><input id="liq_saldo" class="inp" value="'+saldo.toFixed(2)+'" disabled></div>'
+      +  '<div><label>Descuento</label><input id="liq_descuento" class="inp" type="number" min="0" step="0.01" value="0"></div>'
+      +  '<div><label>Monto final a pagar</label><input id="liq_monto_final" class="inp" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'"></div>'
+      +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+cuentas.map(function(ct){ var n=ct&&ct.nombre?ct.nombre:'Caja principal'; return '<option value="'+n+'">'+n+'</option>'; }).join('')+'</select></div>'
+      +  '<div><label>Fecha</label><input id="liq_fecha" class="inp" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+      +  '<div><label>Motivo del descuento</label><input id="liq_motivo" class="inp" placeholder="Negociación por pago anticipado"></div>'
+      +  '<div><label>Observación</label><input id="liq_obs" class="inp" placeholder="Detalle interno del acuerdo"></div>'
+      +  '<div><label><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato al registrar</label></div>'
+      +  '<div><label><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label></div>'
+      +  '<div><label><input id="liq_moto_propia" type="checkbox" checked> Marcar moto como propia</label></div>'
+      +'</div>'
+      +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+    window._liqCredId=credId;
+    q('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" id="btn_liq_exec">Liquidar ahora</button>';
+    q('ov').style.display='flex';
+    function syncFromDescuento(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var d=parseFloat((q('liq_descuento')&&q('liq_descuento').value)||0)||0;
+      if(d<0) d=0; if(d>saldo) d=saldo;
+      q('liq_descuento').value=d.toFixed(2);
+      q('liq_monto_final').value=Math.max(0, +(saldo-d).toFixed(2)).toFixed(2);
+    }
+    function syncFromMonto(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var m=parseFloat((q('liq_monto_final')&&q('liq_monto_final').value)||0)||0;
+      if(m<0) m=0; if(m>saldo) m=saldo;
+      q('liq_monto_final').value=m.toFixed(2);
+      q('liq_descuento').value=Math.max(0, +(saldo-m).toFixed(2)).toFixed(2);
+    }
+    q('liq_descuento').addEventListener('input', syncFromDescuento);
+    q('liq_monto_final').addEventListener('input', syncFromMonto);
+    q('btn_liq_exec').addEventListener('click', function(){
+      if(window.ejecutarLiquidacionAnticipada) return window.ejecutarLiquidacionAnticipada();
+      safeToast('La función de liquidación no está disponible','error');
+    });
+  }
+  window.openLiquidarAnticipado = renderLiquidarModal;
+  // also force onclick fallback delegation for existing buttons with broken inline context
+  document.addEventListener('click', function(ev){
+    var btn=ev.target.closest && ev.target.closest('button');
+    if(!btn) return;
+    if((btn.textContent||'').trim()==='Liquidar' && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('openLiquidarAnticipado')>=0){
+      // let normal onclick handle it if working
+      return;
+    }
+  }, true);
+})();
+</script>
+
+</body></html>');
   w.document.close();
 }
 
@@ -6150,7 +6314,89 @@ function _abrirVentanaImpresion(titulo, htmlContenido){
     @media print{body{padding:12px}button{display:none!important}}
   `;
   var w = window.open('','_blank','width=860,height=700');
-  w.document.write('<html><head><title>'+titulo+'</title><style>'+estilos+'</style></head><body>'+htmlContenido+'<br><button onclick="window.print()" style="background:#6C5CE7;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px">Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},400);<\/script></body></html>');
+  w.document.write('<html><head><title>'+titulo+'</title><style>'+estilos+'</style></head><body>'+htmlContenido+'<br><button onclick="window.print()" style="background:#6C5CE7;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px">Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},400);<\/script>
+<script>
+(function(){
+  function q(id){ return document.getElementById(id); }
+  function safeToast(msg,type){ try{ if(window.toast) return window.toast(msg,type||'info'); }catch(e){} console.log(msg); }
+  function fmt2(n){ try{ return window.fmt ? window.fmt(n) : ('$'+Number(n||0).toFixed(2)); }catch(e){ return '$'+Number(n||0).toFixed(2); } }
+  function saldoCredito(credId){
+    try{ if(window.getSaldoPendienteCredito) return window.getSaldoPendienteCredito(credId); }catch(e){}
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c) return 0;
+    var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0)||0;
+    var totalFinanciado=parseFloat(c.total||((c.totalCuotas||((parseInt(c.plazo,10)||0)*2))*cuotaVal)||0)||0;
+    var abonado=0;
+    if(Array.isArray(c.pagosRegistrados)&&c.pagosRegistrados.length){
+      abonado=c.pagosRegistrados.reduce(function(a,h){ return a+(parseFloat(h.montoPagado)||0); },0);
+    } else {
+      abonado=(parseFloat(c.pagado)||0)*cuotaVal;
+    }
+    return Math.max(0, +(totalFinanciado-abonado).toFixed(2));
+  }
+  function renderLiquidarModal(credId){
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c){ safeToast('Crédito no encontrado','error'); return; }
+    if(c.estado==='completado' || c.estado==='cancelado'){ safeToast('Este financiamiento ya no se puede liquidar','info'); return; }
+    var saldo=saldoCredito(credId);
+    if(!(saldo>0)){ safeToast('Este financiamiento ya no tiene saldo pendiente','info'); return; }
+    if(!q('mbh')||!q('mbd')||!q('mft')||!q('ov')){ alert('No se encontró la ventana modal del sistema.'); return; }
+    var cuentas=((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]);
+    q('mbh').innerHTML='Liquidación anticipada';
+    q('mbd').innerHTML=''
+      +'<div class="grid2">'
+      +  '<div><label>Crédito</label><input class="inp" value="'+(c.id||'')+'" disabled></div>'
+      +  '<div><label>Cliente</label><input class="inp" value="'+(c.cli||'')+'" disabled></div>'
+      +  '<div><label>Saldo actual</label><input id="liq_saldo" class="inp" value="'+saldo.toFixed(2)+'" disabled></div>'
+      +  '<div><label>Descuento</label><input id="liq_descuento" class="inp" type="number" min="0" step="0.01" value="0"></div>'
+      +  '<div><label>Monto final a pagar</label><input id="liq_monto_final" class="inp" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'"></div>'
+      +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+cuentas.map(function(ct){ var n=ct&&ct.nombre?ct.nombre:'Caja principal'; return '<option value="'+n+'">'+n+'</option>'; }).join('')+'</select></div>'
+      +  '<div><label>Fecha</label><input id="liq_fecha" class="inp" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+      +  '<div><label>Motivo del descuento</label><input id="liq_motivo" class="inp" placeholder="Negociación por pago anticipado"></div>'
+      +  '<div><label>Observación</label><input id="liq_obs" class="inp" placeholder="Detalle interno del acuerdo"></div>'
+      +  '<div><label><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato al registrar</label></div>'
+      +  '<div><label><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label></div>'
+      +  '<div><label><input id="liq_moto_propia" type="checkbox" checked> Marcar moto como propia</label></div>'
+      +'</div>'
+      +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+    window._liqCredId=credId;
+    q('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" id="btn_liq_exec">Liquidar ahora</button>';
+    q('ov').style.display='flex';
+    function syncFromDescuento(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var d=parseFloat((q('liq_descuento')&&q('liq_descuento').value)||0)||0;
+      if(d<0) d=0; if(d>saldo) d=saldo;
+      q('liq_descuento').value=d.toFixed(2);
+      q('liq_monto_final').value=Math.max(0, +(saldo-d).toFixed(2)).toFixed(2);
+    }
+    function syncFromMonto(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var m=parseFloat((q('liq_monto_final')&&q('liq_monto_final').value)||0)||0;
+      if(m<0) m=0; if(m>saldo) m=saldo;
+      q('liq_monto_final').value=m.toFixed(2);
+      q('liq_descuento').value=Math.max(0, +(saldo-m).toFixed(2)).toFixed(2);
+    }
+    q('liq_descuento').addEventListener('input', syncFromDescuento);
+    q('liq_monto_final').addEventListener('input', syncFromMonto);
+    q('btn_liq_exec').addEventListener('click', function(){
+      if(window.ejecutarLiquidacionAnticipada) return window.ejecutarLiquidacionAnticipada();
+      safeToast('La función de liquidación no está disponible','error');
+    });
+  }
+  window.openLiquidarAnticipado = renderLiquidarModal;
+  // also force onclick fallback delegation for existing buttons with broken inline context
+  document.addEventListener('click', function(ev){
+    var btn=ev.target.closest && ev.target.closest('button');
+    if(!btn) return;
+    if((btn.textContent||'').trim()==='Liquidar' && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('openLiquidarAnticipado')>=0){
+      // let normal onclick handle it if working
+      return;
+    }
+  }, true);
+})();
+</script>
+
+</body></html>');
   w.document.close();
 }
 
@@ -6503,7 +6749,89 @@ function generarReporte(tipo){
   doc.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+' — '+empresa+'</title>'+estilos+'</head><body>'
     +'<div class="header"><div class="logo-area"><h1>'+empresa+'</h1><h2>'+titulo+'</h2></div>'
     +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#6C5CE7;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px">Imprimir / Guardar PDF</button></div>'
-    +'</div>'+html_content+'</body></html>');
+    +'</div>'+html_content+'
+<script>
+(function(){
+  function q(id){ return document.getElementById(id); }
+  function safeToast(msg,type){ try{ if(window.toast) return window.toast(msg,type||'info'); }catch(e){} console.log(msg); }
+  function fmt2(n){ try{ return window.fmt ? window.fmt(n) : ('$'+Number(n||0).toFixed(2)); }catch(e){ return '$'+Number(n||0).toFixed(2); } }
+  function saldoCredito(credId){
+    try{ if(window.getSaldoPendienteCredito) return window.getSaldoPendienteCredito(credId); }catch(e){}
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c) return 0;
+    var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0)||0;
+    var totalFinanciado=parseFloat(c.total||((c.totalCuotas||((parseInt(c.plazo,10)||0)*2))*cuotaVal)||0)||0;
+    var abonado=0;
+    if(Array.isArray(c.pagosRegistrados)&&c.pagosRegistrados.length){
+      abonado=c.pagosRegistrados.reduce(function(a,h){ return a+(parseFloat(h.montoPagado)||0); },0);
+    } else {
+      abonado=(parseFloat(c.pagado)||0)*cuotaVal;
+    }
+    return Math.max(0, +(totalFinanciado-abonado).toFixed(2));
+  }
+  function renderLiquidarModal(credId){
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c){ safeToast('Crédito no encontrado','error'); return; }
+    if(c.estado==='completado' || c.estado==='cancelado'){ safeToast('Este financiamiento ya no se puede liquidar','info'); return; }
+    var saldo=saldoCredito(credId);
+    if(!(saldo>0)){ safeToast('Este financiamiento ya no tiene saldo pendiente','info'); return; }
+    if(!q('mbh')||!q('mbd')||!q('mft')||!q('ov')){ alert('No se encontró la ventana modal del sistema.'); return; }
+    var cuentas=((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]);
+    q('mbh').innerHTML='Liquidación anticipada';
+    q('mbd').innerHTML=''
+      +'<div class="grid2">'
+      +  '<div><label>Crédito</label><input class="inp" value="'+(c.id||'')+'" disabled></div>'
+      +  '<div><label>Cliente</label><input class="inp" value="'+(c.cli||'')+'" disabled></div>'
+      +  '<div><label>Saldo actual</label><input id="liq_saldo" class="inp" value="'+saldo.toFixed(2)+'" disabled></div>'
+      +  '<div><label>Descuento</label><input id="liq_descuento" class="inp" type="number" min="0" step="0.01" value="0"></div>'
+      +  '<div><label>Monto final a pagar</label><input id="liq_monto_final" class="inp" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'"></div>'
+      +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+cuentas.map(function(ct){ var n=ct&&ct.nombre?ct.nombre:'Caja principal'; return '<option value="'+n+'">'+n+'</option>'; }).join('')+'</select></div>'
+      +  '<div><label>Fecha</label><input id="liq_fecha" class="inp" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+      +  '<div><label>Motivo del descuento</label><input id="liq_motivo" class="inp" placeholder="Negociación por pago anticipado"></div>'
+      +  '<div><label>Observación</label><input id="liq_obs" class="inp" placeholder="Detalle interno del acuerdo"></div>'
+      +  '<div><label><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato al registrar</label></div>'
+      +  '<div><label><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label></div>'
+      +  '<div><label><input id="liq_moto_propia" type="checkbox" checked> Marcar moto como propia</label></div>'
+      +'</div>'
+      +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+    window._liqCredId=credId;
+    q('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" id="btn_liq_exec">Liquidar ahora</button>';
+    q('ov').style.display='flex';
+    function syncFromDescuento(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var d=parseFloat((q('liq_descuento')&&q('liq_descuento').value)||0)||0;
+      if(d<0) d=0; if(d>saldo) d=saldo;
+      q('liq_descuento').value=d.toFixed(2);
+      q('liq_monto_final').value=Math.max(0, +(saldo-d).toFixed(2)).toFixed(2);
+    }
+    function syncFromMonto(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var m=parseFloat((q('liq_monto_final')&&q('liq_monto_final').value)||0)||0;
+      if(m<0) m=0; if(m>saldo) m=saldo;
+      q('liq_monto_final').value=m.toFixed(2);
+      q('liq_descuento').value=Math.max(0, +(saldo-m).toFixed(2)).toFixed(2);
+    }
+    q('liq_descuento').addEventListener('input', syncFromDescuento);
+    q('liq_monto_final').addEventListener('input', syncFromMonto);
+    q('btn_liq_exec').addEventListener('click', function(){
+      if(window.ejecutarLiquidacionAnticipada) return window.ejecutarLiquidacionAnticipada();
+      safeToast('La función de liquidación no está disponible','error');
+    });
+  }
+  window.openLiquidarAnticipado = renderLiquidarModal;
+  // also force onclick fallback delegation for existing buttons with broken inline context
+  document.addEventListener('click', function(ev){
+    var btn=ev.target.closest && ev.target.closest('button');
+    if(!btn) return;
+    if((btn.textContent||'').trim()==='Liquidar' && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('openLiquidarAnticipado')>=0){
+      // let normal onclick handle it if working
+      return;
+    }
+  }, true);
+})();
+</script>
+
+</body></html>');
   doc.document.close();
 }
 
@@ -8141,7 +8469,87 @@ window.addEventListener('resize', function(){
 });
 
 </script>
+
+<script>
+(function(){
+  function q(id){ return document.getElementById(id); }
+  function safeToast(msg,type){ try{ if(window.toast) return window.toast(msg,type||'info'); }catch(e){} console.log(msg); }
+  function fmt2(n){ try{ return window.fmt ? window.fmt(n) : ('$'+Number(n||0).toFixed(2)); }catch(e){ return '$'+Number(n||0).toFixed(2); } }
+  function saldoCredito(credId){
+    try{ if(window.getSaldoPendienteCredito) return window.getSaldoPendienteCredito(credId); }catch(e){}
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c) return 0;
+    var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0)||0;
+    var totalFinanciado=parseFloat(c.total||((c.totalCuotas||((parseInt(c.plazo,10)||0)*2))*cuotaVal)||0)||0;
+    var abonado=0;
+    if(Array.isArray(c.pagosRegistrados)&&c.pagosRegistrados.length){
+      abonado=c.pagosRegistrados.reduce(function(a,h){ return a+(parseFloat(h.montoPagado)||0); },0);
+    } else {
+      abonado=(parseFloat(c.pagado)||0)*cuotaVal;
+    }
+    return Math.max(0, +(totalFinanciado-abonado).toFixed(2));
+  }
+  function renderLiquidarModal(credId){
+    var c=(window.S&&Array.isArray(S.creds))?S.creds.find(function(x){return x.id===credId;}):null;
+    if(!c){ safeToast('Crédito no encontrado','error'); return; }
+    if(c.estado==='completado' || c.estado==='cancelado'){ safeToast('Este financiamiento ya no se puede liquidar','info'); return; }
+    var saldo=saldoCredito(credId);
+    if(!(saldo>0)){ safeToast('Este financiamiento ya no tiene saldo pendiente','info'); return; }
+    if(!q('mbh')||!q('mbd')||!q('mft')||!q('ov')){ alert('No se encontró la ventana modal del sistema.'); return; }
+    var cuentas=((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]);
+    q('mbh').innerHTML='Liquidación anticipada';
+    q('mbd').innerHTML=''
+      +'<div class="grid2">'
+      +  '<div><label>Crédito</label><input class="inp" value="'+(c.id||'')+'" disabled></div>'
+      +  '<div><label>Cliente</label><input class="inp" value="'+(c.cli||'')+'" disabled></div>'
+      +  '<div><label>Saldo actual</label><input id="liq_saldo" class="inp" value="'+saldo.toFixed(2)+'" disabled></div>'
+      +  '<div><label>Descuento</label><input id="liq_descuento" class="inp" type="number" min="0" step="0.01" value="0"></div>'
+      +  '<div><label>Monto final a pagar</label><input id="liq_monto_final" class="inp" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'"></div>'
+      +  '<div><label>Cuenta destino</label><select id="liq_cuenta" class="inp">'+cuentas.map(function(ct){ var n=ct&&ct.nombre?ct.nombre:'Caja principal'; return '<option value="'+n+'">'+n+'</option>'; }).join('')+'</select></div>'
+      +  '<div><label>Fecha</label><input id="liq_fecha" class="inp" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+      +  '<div><label>Motivo del descuento</label><input id="liq_motivo" class="inp" placeholder="Negociación por pago anticipado"></div>'
+      +  '<div><label>Observación</label><input id="liq_obs" class="inp" placeholder="Detalle interno del acuerdo"></div>'
+      +  '<div><label><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato al registrar</label></div>'
+      +  '<div><label><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label></div>'
+      +  '<div><label><input id="liq_moto_propia" type="checkbox" checked> Marcar moto como propia</label></div>'
+      +'</div>'
+      +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+    window._liqCredId=credId;
+    q('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" id="btn_liq_exec">Liquidar ahora</button>';
+    q('ov').style.display='flex';
+    function syncFromDescuento(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var d=parseFloat((q('liq_descuento')&&q('liq_descuento').value)||0)||0;
+      if(d<0) d=0; if(d>saldo) d=saldo;
+      q('liq_descuento').value=d.toFixed(2);
+      q('liq_monto_final').value=Math.max(0, +(saldo-d).toFixed(2)).toFixed(2);
+    }
+    function syncFromMonto(){
+      var saldo=parseFloat((q('liq_saldo')&&q('liq_saldo').value)||0)||0;
+      var m=parseFloat((q('liq_monto_final')&&q('liq_monto_final').value)||0)||0;
+      if(m<0) m=0; if(m>saldo) m=saldo;
+      q('liq_monto_final').value=m.toFixed(2);
+      q('liq_descuento').value=Math.max(0, +(saldo-m).toFixed(2)).toFixed(2);
+    }
+    q('liq_descuento').addEventListener('input', syncFromDescuento);
+    q('liq_monto_final').addEventListener('input', syncFromMonto);
+    q('btn_liq_exec').addEventListener('click', function(){
+      if(window.ejecutarLiquidacionAnticipada) return window.ejecutarLiquidacionAnticipada();
+      safeToast('La función de liquidación no está disponible','error');
+    });
+  }
+  window.openLiquidarAnticipado = renderLiquidarModal;
+  // also force onclick fallback delegation for existing buttons with broken inline context
+  document.addEventListener('click', function(ev){
+    var btn=ev.target.closest && ev.target.closest('button');
+    if(!btn) return;
+    if((btn.textContent||'').trim()==='Liquidar' && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('openLiquidarAnticipado')>=0){
+      // let normal onclick handle it if working
+      return;
+    }
+  }, true);
+})();
+</script>
+
 </body>
 </html>
-
-setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.isArray(S.creds)) syncTodosEstadosClientes(); }catch(e){} }, 1200);
