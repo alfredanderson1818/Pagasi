@@ -1848,6 +1848,45 @@ var FIREBASE_READY = false;
 // Credenciales locales (modo sin Firebase)
 var USERS_LOCAL = [{ user: '', pass: '', nombre: 'Administrador', rol: 'Administrador' }]; // Configura en Configuración → Acceso Local
 
+var LOCAL_CREDS_KEY = 'pagasi_local_creds';
+
+async function sha256Hex(str){
+  if(!(window.crypto&&window.crypto.subtle&&window.TextEncoder)) throw new Error('SHA-256 no disponible');
+  var buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(str||'')));
+  return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+
+function getCreditoTotalCuotas(c){
+  return parseInt((c&&c.totalCuotas) || ((c&&c.plazo) ? c.plazo*2 : 20), 10) || 20;
+}
+function getCreditoCuotaBase(c){
+  return parseFloat((c&&(c.cuotaQ||c.cuota)) || 0) || 0;
+}
+function getCreditoPagosConfirmados(c){
+  if(!c) return 0;
+  var pagosDelCred = (S&&Array.isArray(S.pagos))
+    ? S.pagos.filter(function(p){ return p && !p.eliminado && p.estado==='confirmado' && p.cred===c.id; })
+    : [];
+  if(pagosDelCred.length){
+    return pagosDelCred.reduce(function(a,p){ return a + (parseFloat(p.monto)||0); }, 0);
+  }
+  if(Array.isArray(c.pagosRegistrados) && c.pagosRegistrados.length){
+    return c.pagosRegistrados.reduce(function(a,h){ return a + (parseFloat(h.montoPagado)||0); }, 0);
+  }
+  return (parseInt(c.pagado,10)||0) * getCreditoCuotaBase(c);
+}
+function getCreditoCuotasPagadas(c){
+  if(!c) return 0;
+  var totalCuotas = getCreditoTotalCuotas(c);
+  var cuotaBase = getCreditoCuotaBase(c);
+  var pagadoRegistrado = parseInt(c.pagado,10) || 0;
+  var pagadoPorMonto = cuotaBase>0 ? Math.floor((getCreditoPagosConfirmados(c)+0.000001)/cuotaBase) : pagadoRegistrado;
+  return Math.max(0, Math.min(totalCuotas, Math.max(pagadoRegistrado, pagadoPorMonto)));
+}
+function getCreditoSaldoPendiente(c){
+  return Math.max(0, (parseFloat((c&&c.total) || 0)||0) - getCreditoPagosConfirmados(c));
+}
+
 try {
   if(typeof firebase === 'undefined'){
     console.warn('SDK de Firebase no cargado — modo local activo');
@@ -3420,10 +3459,12 @@ config(){
     db.collection('config').doc('plan').get().then(function(doc){
       if(!doc.exists) return;
       var d = doc.data();
-      if(d.factor)   { PLAN.factor=d.factor;   if($('cfg_factor'))  $('cfg_factor').value=d.factor; }
-      if(d.inicial)  { PLAN.inicial=d.inicial;  if($('cfg_ini'))     $('cfg_ini').value=d.inicial*100; }
-      if(d.gracia)   { PLAN.diasGracia=d.gracia; if($('cfg_gracia')) $('cfg_gracia').value=d.gracia; }
-      if(d.mora_pct) { PLAN.moraPct=d.mora_pct; if($('cfg_mora'))   $('cfg_mora').value=d.mora_pct; }
+      if(Object.prototype.hasOwnProperty.call(d,'factor'))     { PLAN.factor=d.factor; if($('cfg_factor')) $('cfg_factor').value=d.factor; }
+      if(Object.prototype.hasOwnProperty.call(d,'inicial'))    { PLAN.inicial=d.inicial; if($('cfg_ini')) $('cfg_ini').value=(d.inicial*100); }
+      var graciaCfg = Object.prototype.hasOwnProperty.call(d,'diasGracia') ? d.diasGracia : d.gracia;
+      if(typeof graciaCfg !== 'undefined' && graciaCfg !== null){ PLAN.diasGracia=graciaCfg; if($('cfg_gracia')) $('cfg_gracia').value=graciaCfg; }
+      var moraCfg = Object.prototype.hasOwnProperty.call(d,'moraPct') ? d.moraPct : d.mora_pct;
+      if(typeof moraCfg !== 'undefined' && moraCfg !== null){ PLAN.moraPct=moraCfg; if($('cfg_mora')) $('cfg_mora').value=moraCfg; }
     });
     db.collection('config').doc('tasa').get().then(function(doc){
       if(doc.exists && doc.data().tasaBs) {
@@ -4805,8 +4846,8 @@ function renderContrato(){
         ['Número de cuotas', c.plazo+' cuotas mensuales'],
         ['Monto de cada cuota mensual', fmt(c.cuota)],
         ['Monto de cada cuota quincenal', fmt(c.cuotaQ)+' (opción quincenal)'],
-        ['Cuotas ya canceladas', c.pagado+' de '+c.plazo],
-        ['Cuotas pendientes', cuotasRestantes+' restantes'],
+        ['Cuotas ya canceladas', getCreditoCuotasPagadas(c)+' de '+getCreditoTotalCuotas(c)],
+        ['Cuotas pendientes', Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c))+' restantes'],
         ['Fecha de inicio del plan', c.fecha],
       ].map(([k,v])=>`<tr><td style="padding:5px 0;border-bottom:1px solid #f0f0f0;color:#555;width:55%">${k}</td><td style="padding:5px 0;border-bottom:1px solid #f0f0f0;font-weight:700;color:#111">${v}</td></tr>`).join('')}
     </table>
@@ -5234,23 +5275,24 @@ function toast(msg,type='info'){
 // (guardarCredencialesLocales defined below)
 
 
-function guardarCredencialesLocales(){
+async function guardarCredencialesLocales(){
   var user   = ($('cfg_local_user')  && $('cfg_local_user').value.trim())   || '';
   var pass   = ($('cfg_local_pass')  && $('cfg_local_pass').value.trim())   || '';
   var nombre = ($('cfg_local_nombre')&& $('cfg_local_nombre').value.trim()) || '';
   if(!user){ toast('El usuario no puede estar vacío','error'); return; }
   if(!pass){ toast('Ingresa una contraseña','error'); return; }
   if(pass.length < 6){ toast('La contraseña debe tener al menos 6 caracteres','error'); return; }
-  // Update in memory
-  USERS_LOCAL[0] = { user: user, pass: pass, nombre: nombre||user, rol: 'Administrador' };
-  // Persist in localStorage so it survives reloads
   try {
-    localStorage.setItem('pagasi_local_creds', JSON.stringify(USERS_LOCAL[0]));
+    var passwordHash = await sha256Hex(pass);
+    USERS_LOCAL[0] = { user: user, passwordHash: passwordHash, nombre: nombre||user, rol: 'Administrador' };
+    localStorage.setItem(LOCAL_CREDS_KEY, JSON.stringify(USERS_LOCAL[0]));
     toast('✓ Credenciales locales actualizadas', 'success');
-    // Clear password field for security
-    if($('cfg_local_pass')) $('cfg_local_pass').value = '';
   } catch(e) {
-    toast('Credenciales actualizadas (solo esta sesión)', 'info');
+    USERS_LOCAL[0] = { user: user, pass: pass, nombre: nombre||user, rol: 'Administrador' };
+    try { localStorage.setItem(LOCAL_CREDS_KEY, JSON.stringify(USERS_LOCAL[0])); } catch(_) {}
+    toast('Credenciales actualizadas, pero el hash seguro no estuvo disponible en este navegador', 'info');
+  } finally {
+    if($('cfg_local_pass')) $('cfg_local_pass').value = '';
   }
 }
 
@@ -5263,10 +5305,10 @@ function guardarCredencialesLocales(){
 // Restore local credentials from localStorage on startup
 (function(){
   try {
-    var saved = localStorage.getItem('pagasi_local_creds');
+    var saved = localStorage.getItem(LOCAL_CREDS_KEY);
     if(saved){
       var creds = JSON.parse(saved);
-      if(creds && creds.user && creds.pass){
+      if(creds && creds.user && (creds.passwordHash || creds.pass)){
         USERS_LOCAL[0] = creds;
       }
     }
@@ -5301,10 +5343,14 @@ function guardarEmpresa(){
 }
 
 function guardarPlan(){
-  var factor  = parseFloat(($('cfg_factor')&&$('cfg_factor').value))||PLAN.factor;
-  var inicial = (parseFloat(($('cfg_ini')&&$('cfg_ini').value))||40)/100;
-  var gracia  = parseInt(($('cfg_gracia')&&$('cfg_gracia').value))||5;
-  var mora    = parseFloat(($('cfg_mora')&&$('cfg_mora').value))||5;
+  var factorIn  = parseFloat(($('cfg_factor')&&$('cfg_factor').value));
+  var inicialIn = parseFloat(($('cfg_ini')&&$('cfg_ini').value));
+  var graciaIn  = parseInt(($('cfg_gracia')&&$('cfg_gracia').value),10);
+  var moraIn    = parseFloat(($('cfg_mora')&&$('cfg_mora').value));
+  var factor  = Number.isFinite(factorIn)  ? factorIn  : PLAN.factor;
+  var inicial = Number.isFinite(inicialIn) ? (inicialIn/100) : PLAN.inicial;
+  var gracia  = Number.isFinite(graciaIn)  ? graciaIn  : (PLAN.diasGracia||5);
+  var mora    = Number.isFinite(moraIn)    ? moraIn    : (PLAN.moraPct||5);
   PLAN.factor      = factor;
   PLAN.inicial     = inicial;
   PLAN.diasGracia  = gracia;
@@ -5519,9 +5565,7 @@ function openAddPlan(){
 function abrirFiniquito(credId){
   var c=S.creds.find(function(x){return x.id===credId;}); if(!c) return;
   var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
-  var totalPagado=Array.isArray(c.pagosRegistrados)
-    ? c.pagosRegistrados.reduce(function(a,h){return a+h.montoPagado;},0)
-    : (c.pagado||0)*(c.cuotaQ||c.cuota||0);
+  var totalPagado=getCreditoPagosConfirmados(c);
   var fechaFin=c.fechaCompletado||new Date().toISOString().split('T')[0];
 
   $('mic').textContent='';
@@ -5851,7 +5895,7 @@ function generarReporte(tipo){
   } else if(tipo==='creditos'){
     titulo = 'Reporte de Créditos Activos';
     var activos = S.creds.filter(function(c){return c.estado==='activo';});
-    var totalCartera = activos.reduce(function(a,c){return a+(c.total-(c.pagado*(c.cuotaQ||0)*2));},0);
+    var totalCartera = activos.reduce(function(a,c){return a+getCreditoSaldoPendiente(c);},0);
     html_content = '<div class="stat-grid">'
       +'<div class="stat-box"><div class="stat-v">'+activos.length+'</div><div class="stat-l">Créditos activos</div></div>'
       +'<div class="stat-box"><div class="stat-v">$'+totalCartera.toFixed(2)+'</div><div class="stat-l">Cartera vigente</div></div>'
@@ -6440,12 +6484,8 @@ function renderCobrar(ocultarCero){
   var byCliente={};
   credActivos.forEach(function(c){
     if(!byCliente[c.cli]) byCliente[c.cli]={cli:c.cli,creds:[],total:0,pendCount:0,diasRest:null};
-    // compute saldo pendiente: total - pagos realizados
-    var pagosDelCred=S.pagos.filter(function(p){return p.cred===c.id&&p.estado==='confirmado'&&!p.eliminado;});
-    var totalPagado=pagosDelCred.reduce(function(a,p){return a+p.monto;},0);
-    var saldoPend=Math.max(0,(c.total||0)-totalPagado);
-    // Next cuota due
-    var cuotasRestantes=Math.max(0,(c.totalCuotas||c.plazo*2||20)-(c.pagado||0));
+    var saldoPend=getCreditoSaldoPendiente(c);
+    var cuotasRestantes=Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c));
     byCliente[c.cli].creds.push({id:c.id,saldoPend:saldoPend,cuotasRestantes:cuotasRestantes,fecha:c.fecha,estado:c.estado});
     byCliente[c.cli].total+=saldoPend;
     byCliente[c.cli].pendCount+=cuotasRestantes;
@@ -7019,7 +7059,7 @@ function init() {
 }
 
 // ── AUTENTICACIÓN ──────────────────────────────────────────
-function doLogin() {
+async function doLogin() {
   var email = ($('l_user') || {}).value || '';
   var pass  = ($('l_pass') || {}).value || '';
   var errEl = $('login-err');
@@ -7027,16 +7067,27 @@ function doLogin() {
 
   // Modo local (sin Firebase)
   if (!auth) {
-    // Intentar con USERS_LOCAL primero, luego fallback a admin/admin
     var localUser = (typeof USERS_LOCAL !== 'undefined' && USERS_LOCAL.length)
       ? USERS_LOCAL[0]
       : null;
     if(!localUser){ if(errEl){errEl.textContent='⚠ Configura tus credenciales en Configuración → Acceso Local';errEl.style.display='block';} return; }
 
-    if (email === localUser.user && pass === localUser.pass) {
+    var ok = false;
+    if (email === localUser.user) {
+      if (localUser.passwordHash) {
+        try {
+          ok = (await sha256Hex(pass)) === localUser.passwordHash;
+        } catch(e) {
+          ok = false;
+        }
+      } else {
+        ok = pass === localUser.pass;
+      }
+    }
+
+    if (ok) {
       $('login-screen').style.display = 'none';
       S.currentUser = { nombre: localUser.nombre || 'Administrador', rol: localUser.rol || 'Administrador', email: email, permisos: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users'] };
-      // Update sidebar display name
       var sbUn = document.querySelector('.sb-un');
       if (sbUn) sbUn.textContent = S.currentUser.nombre;
       var sbAv = document.querySelector('.sb-av');
@@ -7447,10 +7498,10 @@ if (auth) {
 } else {
   // Sin Firebase: mostrar pantalla de login local
   var mEl = $('login-mode');
-  var localCreds = (typeof USERS_LOCAL !== 'undefined' && USERS_LOCAL.length && USERS_LOCAL[0].user)
-    ? USERS_LOCAL[0].user + '/' + USERS_LOCAL[0].pass
-    : 'admin/admin';
-  if (mEl) mEl.textContent = 'modo local (' + localCreds + ')';
+  var localUserTxt = (typeof USERS_LOCAL !== 'undefined' && USERS_LOCAL.length && USERS_LOCAL[0].user)
+    ? USERS_LOCAL[0].user
+    : 'admin';
+  if (mEl) mEl.textContent = 'modo local (' + localUserTxt + ')';
 }
 
 // ── Mobile Menu ──────────────────────────
