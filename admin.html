@@ -5624,29 +5624,25 @@ function imprimirRecibo(pago, cred){
     +'<div class="footer">'+empresa+' · Documento generado el '+new Date().toLocaleDateString('es-VE')+' · Conserve este comprobante</div>'
     +'</div>'
     +'<script>window.onload=function(){window.print();}<\/script>'
-    +'
-<script>
-(function(){
-  try{
-    if (typeof window.openLiquidarAnticipado !== 'function' && typeof openLiquidarAnticipado === 'function') {
-      window.openLiquidarAnticipado = openLiquidarAnticipado;
-    }
-    if (typeof window.ejecutarLiquidacionAnticipada !== 'function' && typeof ejecutarLiquidacionAnticipada === 'function') {
-      window.ejecutarLiquidacionAnticipada = ejecutarLiquidacionAnticipada;
-    }
-    if (typeof window.updLiquidacionFinal !== 'function' && typeof updLiquidacionFinal === 'function') {
-      window.updLiquidacionFinal = updLiquidacionFinal;
-    }
-    if (typeof window.updLiquidacionDescuento !== 'function' && typeof updLiquidacionDescuento === 'function') {
-      window.updLiquidacionDescuento = updLiquidacionDescuento;
-    }
-    if (typeof window.doLogin !== 'function' && typeof doLogin === 'function') {
-      window.doLogin = doLogin;
-    }
-  } catch(e) {
-    console.error('Fix bootstrap error', e);
-  }
-})();
-</script>
+    +'</body></html>';
+  var w = window.open('', '_blank');
+  if(!w){ toast('No se pudo abrir la ventana de impresión','error'); return; }
+  w.document.write(html);
+  w.document.close();
+}
 
-</body></html>
+// Bindings globales seguros
+try{
+  window.openLiquidarAnticipado = openLiquidarAnticipado;
+  window.ejecutarLiquidacionAnticipada = ejecutarLiquidacionAnticipada;
+  window.updLiquidacionFinal = updLiquidacionFinal;
+  window.updLiquidacionDescuento = updLiquidacionDescuento;
+  window.doLogin = doLogin;
+}catch(e){ console.error('Bootstrap bindings error', e); }
+
+// Sincronizar estados de clientes luego de cargar
+setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.isArray(S.creds)) syncTodosEstadosClientes(); }catch(e){} }, 1200);
+
+</script>
+</body>
+</html>
