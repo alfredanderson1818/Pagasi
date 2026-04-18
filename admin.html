@@ -6407,9 +6407,10 @@ function generarReporte(tipo){
 
   if(tipo==='ingresos'){
     titulo = 'Reporte de Ingresos Mensuales';
-    var pagosConf = S.pagos.filter(function(p){return p.estado==='confirmado';});
+    var pagosConf = S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';});
+    var pagosElim = S.pagos.filter(function(p){return p.eliminado&&p.estado==='confirmado';});
     var totalCobrado = pagosConf.reduce(function(a,p){return a+p.monto;},0);
-    var totalIni = S.creds.reduce(function(a,c){return a+c.ini;},0);
+    var totalIni = S.creds.filter(function(c){return !c.eliminado;}).reduce(function(a,c){return a+(c.ini||0);},0);
     // Group by month
     var byMonth = {};
     pagosConf.forEach(function(p){
@@ -6445,6 +6446,10 @@ function generarReporte(tipo){
       +pagosConf.map(function(p){
         return '<tr><td>'+p.id+'</td><td>'+p.cli+'</td><td>'+p.cred+'</td><td>'+(p.fecha||'—')+'</td><td>$'+p.monto.toFixed(2)+'</td><td><strong>'+(p.metodo||'—')+'</strong></td><td>'+(p.referencia||'—')+'</td><td>'+(p.cobrador||'—')+'</td></tr>';
       }).join('')
+      +(pagosElim.length?'<tr><td colspan="8" style="background:#fde8ec;color:#b5162d;font-weight:700;padding:6px 9px">⚠ Registros eliminados (no cuentan en totales)</td></tr>'
+        +pagosElim.map(function(p){
+          return '<tr style="opacity:0.6;text-decoration:line-through;background:#fff5f5"><td>'+p.id+'</td><td>'+p.cli+'</td><td>'+p.cred+'</td><td>'+(p.fecha||'—')+'</td><td>$'+p.monto.toFixed(2)+'</td><td>'+(p.metodo||'—')+'</td><td>'+(p.referencia||'—')+'</td><td>'+( p.eliminadoRazon||'Eliminado')+'</td></tr>';
+        }).join(''):'')
       +'</tbody></table>';
 
   } else if(tipo==='creditos'){
@@ -6494,33 +6499,49 @@ function generarReporte(tipo){
 
   } else if(tipo==='pyl'){
     titulo = 'Estado de Resultados (P&L)';
-    var tIngresos = S.creds.reduce(function(a,c){return a+c.ini;},0) + S.pagos.filter(function(p){return p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0);
-    var tEgresos = S.egresos.filter(function(e){return !e.eliminado;}).reduce(function(a,e){return a+e.monto;},0);
+    var tIni = S.creds.filter(function(c){return !c.eliminado;}).reduce(function(a,c){return a+(c.ini||0);},0);
+    var tPagos = S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0);
+    var tIngresos = tIni + tPagos;
+    var egresosActPyl = S.egresos.filter(function(e){return !e.eliminado;});
+    var egresosElimPyl = S.egresos.filter(function(e){return e.eliminado;});
+    var tEgresos = egresosActPyl.reduce(function(a,e){return a+(e.monto||0);},0);
     var utilidad = tIngresos - tEgresos;
     html_content = '<div class="stat-grid">'
       +'<div class="stat-box"><div class="stat-v" style="color:#0a7a50">$'+tIngresos.toFixed(2)+'</div><div class="stat-l">Ingresos totales</div></div>'
       +'<div class="stat-box"><div class="stat-v" style="color:#b5162d">$'+tEgresos.toFixed(2)+'</div><div class="stat-l">Egresos totales</div></div>'
       +'<div class="stat-box"><div class="stat-v" style="color:'+(utilidad>=0?'#0a7a50':'#b5162d')+'">$'+Math.abs(utilidad).toFixed(2)+'</div><div class="stat-l">'+(utilidad>=0?'Utilidad neta':'Pérdida neta')+'</div></div>'
-      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return c.estado==='activo';}).length+'</div><div class="stat-l">Créditos activos</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return !c.eliminado&&c.estado==='activo';}).length+'</div><div class="stat-l">Créditos activos</div></div>'
       +'</div>'
       +'<table><thead><tr><th>Concepto</th><th>Monto</th></tr></thead><tbody>'
-      +'<tr><td>Iniciales cobradas</td><td>$'+S.creds.reduce(function(a,c){return a+c.ini;},0).toFixed(2)+'</td></tr>'
-      +'<tr><td>Pagos de cuotas</td><td>$'+S.pagos.filter(function(p){return p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0).toFixed(2)+'</td></tr>'
+      +'<tr><td>Iniciales cobradas</td><td>$'+tIni.toFixed(2)+'</td></tr>'
+      +'<tr><td>Pagos de cuotas</td><td>$'+tPagos.toFixed(2)+'</td></tr>'
       +'<tr class="total-row"><td>TOTAL INGRESOS</td><td>$'+tIngresos.toFixed(2)+'</td></tr>'
-      +S.egresos.map(function(e){return '<tr><td>(-) '+e.concepto+'</td><td>$'+e.monto.toFixed(2)+'</td></tr>';}).join('')
+      +egresosActPyl.map(function(e){return '<tr><td>(-) '+e.concepto+'</td><td>$'+(e.monto||0).toFixed(2)+'</td></tr>';}).join('')
       +'<tr class="total-row"><td>TOTAL EGRESOS</td><td>$'+tEgresos.toFixed(2)+'</td></tr>'
       +'<tr class="total-row" style="background:#6C5CE7!important;color:#fff"><td>UTILIDAD NETA</td><td>$'+utilidad.toFixed(2)+'</td></tr>'
+      +(egresosElimPyl.length?'<tr><td colspan="2" style="background:#fde8ec;color:#b5162d;font-weight:700;padding:6px 9px">⚠ Egresos eliminados (no cuentan en totales)</td></tr>'
+        +egresosElimPyl.map(function(e){return '<tr style="opacity:0.5;text-decoration:line-through;background:#fff5f5"><td>(-) '+e.concepto+' <em style="font-size:10px">['+( e.eliminadoRazon||'Eliminado')+']</em></td><td>$'+(e.monto||0).toFixed(2)+'</td></tr>';}).join(''):'')
       +'</tbody></table>';
 
   } else if(tipo==='flujo'){
     titulo = 'Flujo de Caja';
-    var allPagos = S.pagos.filter(function(p){return p.estado==='confirmado';});
+    var allPagos = S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';});
+    var pagosElimFlujo = S.pagos.filter(function(p){return p.eliminado&&p.estado==='confirmado';});
+    var egresosActivos = S.egresos.filter(function(e){return !e.eliminado;});
+    var egresosElim = S.egresos.filter(function(e){return e.eliminado;});
     html_content = '<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Entrada</th><th>Salida</th><th>Forma</th><th>Cuenta</th></tr></thead><tbody>'
       +allPagos.map(function(p){
         return '<tr><td>'+(p.fecha||'—')+'</td><td><span class="badge green">Ingreso</span></td><td>'+p.cli+' · '+p.cred+'</td><td>$'+p.monto.toFixed(2)+'</td><td>—</td><td>'+(p.metodo||'—')+'</td><td>'+(p.cuenta||'—')+'</td></tr>';
       }).join('')
-      +S.egresos.map(function(e){
+      +egresosActivos.map(function(e){
         return '<tr><td>'+(e.fecha||'—')+'</td><td><span class="badge red">Egreso</span></td><td>'+e.concepto+'</td><td>—</td><td>$'+e.monto.toFixed(2)+'</td><td>—</td><td>—</td></tr>';
+      }).join('')
+      +(pagosElimFlujo.length||egresosElim.length?'<tr><td colspan="7" style="background:#fde8ec;color:#b5162d;font-weight:700;padding:6px 9px">⚠ Registros eliminados (no cuentan en totales)</td></tr>':'')
+      +pagosElimFlujo.map(function(p){
+        return '<tr style="opacity:0.5;text-decoration:line-through;background:#fff5f5"><td>'+(p.fecha||'—')+'</td><td><span class="badge gray">Eliminado</span></td><td>'+p.cli+' · '+p.cred+'</td><td>$'+p.monto.toFixed(2)+'</td><td>—</td><td>'+(p.metodo||'—')+'</td><td>'+(p.eliminadoRazon||'Eliminado')+'</td></tr>';
+      }).join('')
+      +egresosElim.map(function(e){
+        return '<tr style="opacity:0.5;text-decoration:line-through;background:#fff5f5"><td>'+(e.fecha||'—')+'</td><td><span class="badge gray">Eliminado</span></td><td>'+e.concepto+'</td><td>—</td><td>$'+e.monto.toFixed(2)+'</td><td>—</td><td>'+(e.eliminadoRazon||'Eliminado')+'</td></tr>';
       }).join('')
       +'</tbody></table>';
 
