@@ -5023,8 +5023,8 @@ function ofrecerRecibo(pago, cred){
     +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+pago.fecha+(pago.referencia?' · Ref: #'+pago.referencia:'')+'</div>'
     +'<div style="display:flex;gap:8px;justify-content:center;margin-top:18px">'
     +'<button class="btn btn-g btn-sm" onclick="closeM()">Cerrar</button>'
-    +'<button class="btn btn-g btn-sm" onclick="closeM();abrirWhatsAppRecibo('+JSON.stringify(pago).replace(/"/g,\'&quot;\')+')" style="background:#25D366;color:#fff;border:none">📱 WhatsApp</button>'
-    +'<button class="btn btn-p btn-sm" onclick="imprimirRecibo('+JSON.stringify(pago).replace(/"/g,\'&quot;\')+','+JSON.stringify(cred).replace(/"/g,\'&quot;\')+')">🖨 Recibo PDF</button>'
+    +'<button class="btn btn-g btn-sm" onclick="closeM();abrirWhatsAppRecibo('+JSON.stringify(pago).replace(/"/g,"&quot;")+')" style="background:#25D366;color:#fff;border:none">📱 WhatsApp</button>'
+    +'<button class="btn btn-p btn-sm" onclick="imprimirRecibo('+JSON.stringify(pago).replace(/"/g,"&quot;")+','+JSON.stringify(cred).replace(/"/g,"&quot;")+')">🖨 Recibo PDF</button>'
     +'</div>'
     +'</div>';
   $('mft').innerHTML = '';
