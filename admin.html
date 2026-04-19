@@ -1885,6 +1885,31 @@ function getCreditoCuotasPagadas(c){
 function getCreditoSaldoPendiente(c){
   return Math.max(0, (parseFloat((c&&c.total) || 0)||0) - getCreditoPagosConfirmados(c));
 }
+function esMovimientoInicialCredito(m){
+  if(!m || m.eliminado) return false;
+  var concepto = (m.concepto||'');
+  return m.tipoOperacion==='inicial_credito' || concepto.indexOf('Inicial · ')===0;
+}
+function getTotalInicialesCobradas(){
+  return (S&&Array.isArray(S.movimientos) ? S.movimientos : []).filter(esMovimientoInicialCredito).reduce(function(a,m){
+    return a + (parseFloat(m.monto)||0);
+  }, 0);
+}
+function marcarInicialCreditoEliminada(credId, motivo){
+  if(!credId || !Array.isArray(S.movimientos)) return;
+  var ahora = new Date().toISOString();
+  var actor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+  S.movimientos.forEach(function(m){
+    if(!m || m.eliminado) return;
+    var esDeEsteCredito = m.creditoId===credId || m.conceptoCredito===credId || ((m.concepto||'').indexOf('Inicial · ')===0 && (m.concepto||'').indexOf(credId)>=0);
+    if(!esDeEsteCredito) return;
+    m.eliminado = true;
+    m.eliminadoPor = actor;
+    m.eliminadoEn = ahora;
+    if(motivo) m.eliminadoRazon = motivo;
+    DB.saveMovimiento(m);
+  });
+}
 
 try {
   if(typeof firebase === 'undefined'){
@@ -2990,7 +3015,7 @@ dash(){
   // (usa la función canónica que respeta pagos parciales)
   const cartera     = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
   const cuotasCobradas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
-  const inicialesCobradas = S.creds.filter(c=>!c.eliminado).reduce((a,c)=>a+(parseFloat(c.ini)||0),0);
+  const inicialesCobradas = getTotalInicialesCobradas();
   const ingMes    = cuotasCobradas + inicialesCobradas; // Ingresos totales: cuotas confirmadas + iniciales
   const egMes     = (S.egresos||[]).filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const utilidad  = ingMes - egMes;
@@ -3440,7 +3465,7 @@ creditos(){
   const cuotaEsp   = activos.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
   const valorTotal = allCreds.reduce((a,c)=>a+parseFloat(c.total||0),0);
   const cobradoAll = allCreds.reduce((a,c)=>a+getCreditoPagosConfirmados(c),0);
-  const inicialAll = allCreds.reduce((a,c)=>a+parseFloat(c.ini||0),0);
+  const inicialAll = getTotalInicialesCobradas();
   const pctRecaudado = valorTotal>0 ? Math.round(((cobradoAll+inicialAll)/(valorTotal+inicialAll))*100) : 0;
 
   // ─── Filtro por tab ───
@@ -4309,7 +4334,7 @@ reportes(){
   const credsComp   = S.creds.filter(c=>!c.eliminado&&c.estado==='completado');
   const credsRec    = S.creds.filter(c=>!c.eliminado&&(c.estado==='recuperada'||c.estado==='recuperado'));
   const totalCobrado= pagosConf.reduce((a,p)=>a+p.monto,0);
-  const totalIniciales= S.creds.filter(c=>!c.eliminado).reduce((a,c)=>a+(c.ini||0),0);
+  const totalIniciales= getTotalInicialesCobradas();
   const totalEgresos= S.egresos.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const totalIngresos=totalCobrado+totalIniciales;
   const utilidad    = totalIngresos-totalEgresos;
@@ -4523,7 +4548,7 @@ reportes(){
   </div>`;},
 
 conta(){
-  const totalIni    = S.creds.filter(c=>!c.eliminado).reduce((a,c)=>a+(c.ini||0),0);
+  const totalIni    = getTotalInicialesCobradas();
   const totalCuotas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
   const totalIngresos = totalIni + totalCuotas;
   const egresos     = S.egresos.filter(e=>!e.eliminado);
@@ -6057,6 +6082,16 @@ function _wzRenderResultado(){
         return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rim2);font-size:12.5px"><span style="color:var(--ink3)">'+row[0]+'</span><span style="font-weight:700;color:'+col2color+'">'+row[1]+'</span></div>';
       }).join('')
       +'</div>'
+      +'<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Cobro de Inicial</div>'
+      +'<div class="fgr">'
+      +'<div class="fg"><label>Método de pago inicial *</label><select class="fs" id="wz_ini_metodo">'
+      +(((_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(function(c){ return '<option value="'+c.nombre+'">'+c.nombre+'</option>'; }).join('')) || '<option value="Efectivo USD">Efectivo USD</option>')
+      +'</select></div>'
+      +'<div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="wz_ini_ref" placeholder="N° de referencia (opcional)"></div>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-top:6px">La inicial se acreditará a la cuenta seleccionada al guardar el financiamiento.</div>'
+      +'</div>'
     :'');
 }
 
@@ -6166,13 +6201,19 @@ function _wzGuardar(){
   }
 
   // Movimiento de inicial
+  var iniMetodo = ($('wz_ini_metodo')&&$('wz_ini_metodo').value) || (_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD');
+  var iniRef = ($('wz_ini_ref')&&$('wz_ini_ref').value) || '';
   var movIni = {
     id:'MOV-'+Date.now(),
     tipo:'deposito',
+    tipoOperacion:'inicial_credito',
+    creditoId:credId,
+    conceptoCredito:credId,
     concepto:'Inicial · '+newCred.cli+' · '+credId+' ('+newCred.modelo+')',
     monto:r.ini,
-    cuentaDestino:(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD'),
+    cuentaDestino:iniMetodo,
     fecha:newCred.fecha,
+    referencia:iniRef,
     realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
     hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
   };
@@ -6181,7 +6222,7 @@ function _wzGuardar(){
 
   _wzClose();
   nav('creditos');
-  toast('✅ Solicitud creada · '+credId+' · Score Indexa: '+WZ.score,'success');
+  toast('✅ Solicitud creada · '+credId+' · Inicial '+fmt(r.ini)+' → '+iniMetodo,'success');
 }
 
 // ══════════════════════════════════════════
@@ -6299,6 +6340,9 @@ function openAddCredLegacy(motoId=null){
     var movIni={
       id:'MOV-'+Date.now(),
       tipo:'deposito',
+      tipoOperacion:'inicial_credito',
+      creditoId:newCred.id,
+      conceptoCredito:newCred.id,
       concepto:'Inicial · '+newCred.cli+' · '+newCred.id+' ('+newCred.modelo+')',
       monto:r.ini,
       cuentaOrigen:null,
@@ -6363,6 +6407,7 @@ function cancelarCred(credId){
         canceladoRazon:razon,
         canceladoNotas:S.creds[ci].canceladoNotas
       });
+      marcarInicialCreditoEliminada(credId, 'Financiamiento cancelado: '+razon);
       // Return moto to inventory
       var mi = S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
       if(mi>=0&&S.motos[mi].estado==='financiada'){
@@ -6943,7 +6988,9 @@ function ejecutarDelPago(){
   // Si es eliminación completa, recalcular el crédito y eliminar el movimiento asociado.
   if(modo==='completo'){
     recalcularCreditoDesdePagos(p.cred);
-    var mi=S.movimientos.findIndex(function(m){return m.concepto&&m.concepto.includes(p.cred)&&m.monto===p.monto&&m.fecha===p.fecha&&!m.eliminado;});
+    var mi=S.movimientos.findIndex(function(m){
+      return !m.eliminado && (m.conceptoPago===p.id || (m.concepto&&m.concepto.includes(p.cred)&&m.monto===p.monto&&m.fecha===p.fecha));
+    });
     if(mi>=0){
       S.movimientos[mi].eliminado=true;
       S.movimientos[mi].eliminadoPor=(S.currentUser&&S.currentUser.nombre)||'Admin';
