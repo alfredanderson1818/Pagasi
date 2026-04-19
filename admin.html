@@ -1977,6 +1977,7 @@ var DB = {
       S.cuentasPendientes = pnd;
       calcularMoraAuto();
       cargarCuentasBanc();
+      cargarEmpresa();
       hideLoader();
       setTimeout(mostrarAlertaMora, 800); // pequeño delay para que el dashboard cargue
     }).catch(function(e){
@@ -2080,7 +2081,7 @@ const S = {
   cuentas:    [],
   movimientos:[],
   cuentasPendientes:[],
-  page:'dash', mTab:'disponible', saveFn:null, clienteFiltro:'',
+  page:'dash', mTab:'todas', credTab:'todos', pagosTab:'todos', saveFn:null, clienteFiltro:'',
   currentUser: null
 };
 
@@ -2229,6 +2230,38 @@ function requireDeletePermission(){
 // Variables globales de configuración
 var _cuentasBanc = [];
 var _cobradores = ['Juan Admin'];
+// Datos de la empresa (nombre, RIF, ciudad, tel, email) — se usan en contratos y reportes
+// Fuente única de verdad que NO depende del DOM (Config solo existe cuando estás en esa página)
+var _empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'' };
+
+// Helper global para leer empresa de forma consistente.
+// Primero intenta el DOM (por si está en Config editándose), si no usa la variable cacheada.
+function getEmpresa(){
+  var nombre = ($('cfg_empresa')&&$('cfg_empresa').value) || _empresa.nombre || 'Pagasi';
+  var rif    = ($('cfg_rif')    &&$('cfg_rif').value)    || _empresa.rif    || 'J-00000000-0';
+  var ciudad = ($('cfg_ciudad') &&$('cfg_ciudad').value) || _empresa.ciudad || 'Caracas';
+  var tel    = ($('cfg_tel')    &&$('cfg_tel').value)    || _empresa.tel    || '';
+  var email  = ($('cfg_email2') &&$('cfg_email2').value) || _empresa.email  || '';
+  return { nombre:nombre.trim(), rif:rif.trim(), ciudad:ciudad.trim(), tel:tel.trim(), email:email.trim(), direccion:(_empresa.direccion||'').trim() };
+}
+
+// Cargar datos de empresa desde Firebase al iniciar
+function cargarEmpresa(){
+  if(!db) return;
+  db.collection('config').doc('empresa').get().then(function(doc){
+    if(doc.exists){
+      var d = doc.data()||{};
+      _empresa = {
+        nombre:   d.nombre   || 'Pagasi',
+        rif:      d.rif      || 'J-00000000-0',
+        ciudad:   d.ciudad   || 'Caracas',
+        tel:      d.tel      || '',
+        email:    d.email    || '',
+        direccion:d.direccion|| ''
+      };
+    }
+  }).catch(function(){});
+}
 
 // Carga las cuentas bancarias y cobradores desde Firebase al iniciar la app
 function cargarCuentasBanc(){
@@ -2953,16 +2986,12 @@ dash(){
   const activos     = S.creds.filter(c=>c.estado==='activo').length;
   const completados = S.creds.filter(c=>c.estado==='completado').length;
   const totalCreds  = S.creds.filter(c=>!c.eliminado).length;
-  const cartera     = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>{
-    const pagado = c.pagado||0;
-    const cuotas = c.totalCuotas || c.plazo*2 || 20;
-    const cuotaQ = c.cuotaQ || c.cuota || 0;
-    const saldo  = cuotaQ > 0
-      ? Math.max(0, (cuotas - pagado) * cuotaQ)
-      : Math.max(0, c.fin * (1 - pagado / cuotas));
-    return a + saldo;
-  },0);
-  const ingMes    = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
+  // Cartera: suma del saldo pendiente REAL de cada crédito activo
+  // (usa la función canónica que respeta pagos parciales)
+  const cartera     = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
+  const cuotasCobradas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
+  const inicialesCobradas = S.creds.filter(c=>!c.eliminado).reduce((a,c)=>a+(parseFloat(c.ini)||0),0);
+  const ingMes    = cuotasCobradas + inicialesCobradas; // Ingresos totales: cuotas confirmadas + iniciales
   const egMes     = (S.egresos||[]).filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const utilidad  = ingMes - egMes;
   const pendPagos = S.pagos.filter(p=>p.estado==='pendiente').length;
@@ -2975,8 +3004,10 @@ dash(){
     '31-60': S.creds.filter(c=>c.mora>30&&c.mora<=60).length,
     '+60':   S.creds.filter(c=>c.mora>60).length,
   };
-  const cuotaEsperada = activos * (S.creds.filter(c=>c.estado==='activo')[0]?.cuotaQ || 0);
-  const pctCobro = cuotaEsperada > 0 ? Math.min(100, Math.round(ingMes / cuotaEsperada * 100)) : 0;
+  // BUG FIX: sumar la cuota REAL de cada crédito activo (antes multiplicaba count × primer cuota,
+  // lo cual era incorrecto si los créditos tenían distintos montos)
+  const cuotaEsperada = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
+  const pctCobro = cuotaEsperada > 0 ? Math.min(100, Math.round(cuotasCobradas / cuotaEsperada * 100)) : 0;
 
   // ── Moto inventory ──
   const mDisp  = S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
@@ -3397,62 +3428,305 @@ motos(){
 },
 
 creditos(){
+  // ─── Métricas canónicas ───
+  const allCreds   = S.creds.filter(c=>!c.eliminado);
+  const activos    = allCreds.filter(c=>c.estado==='activo');
+  const enMora     = allCreds.filter(c=>c.mora>0 && c.estado==='activo');
+  const completados= allCreds.filter(c=>c.estado==='completado');
+  const recuperados= allCreds.filter(c=>c.estado==='recuperado'||c.estado==='recuperada');
+  const cancelados = allCreds.filter(c=>c.estado==='cancelado');
+
+  const carteraViva= activos.reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
+  const cuotaEsp   = activos.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
+  const valorTotal = allCreds.reduce((a,c)=>a+parseFloat(c.total||0),0);
+  const cobradoAll = allCreds.reduce((a,c)=>a+getCreditoPagosConfirmados(c),0);
+  const inicialAll = allCreds.reduce((a,c)=>a+parseFloat(c.ini||0),0);
+  const pctRecaudado = valorTotal>0 ? Math.round(((cobradoAll+inicialAll)/(valorTotal+inicialAll))*100) : 0;
+
+  // ─── Filtro por tab ───
+  const tab = S.credTab||'todos';
+  let filtered = allCreds;
+  if(tab==='activos')    filtered = activos;
+  if(tab==='mora')       filtered = enMora;
+  if(tab==='completados')filtered = completados;
+  if(tab==='recuperados')filtered = recuperados;
+  if(tab==='cancelados') filtered = cancelados;
+
+  // ─── Distribución visual (barra horizontal) ───
+  const total = Math.max(1, allCreds.length);
+  const segs = [
+    {k:'activos',    n:activos.length-enMora.length, c:'var(--p1)',    l:'Al día'},
+    {k:'mora',       n:enMora.length,                c:'var(--red)',   l:'En mora'},
+    {k:'completados',n:completados.length,           c:'var(--green)', l:'Completados'},
+    {k:'recuperados',n:recuperados.length,           c:'var(--amber)', l:'Recuperados'},
+    {k:'cancelados', n:cancelados.length,            c:'var(--ink3)',  l:'Cancelados'},
+  ];
+
   return`<div class="page">
-  <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
-    <div class="stat"><div class="st-v" style="font-size:20px">${S.creds.filter(c=>c.estado==='activo').length}</div><div class="st-l">Créditos activos</div></div>
-    <div class="stat"><div class="st-v" style="font-size:20px">10m</div><div class="st-l">Plazo único</div></div>
-    <div class="stat"><div class="st-v" style="font-size:20px">1.90x</div><div class="st-l">Factor</div></div>
-    <div class="stat"><div class="st-v" style="font-size:20px">40%</div><div class="st-l">Inicial</div></div>
+
+  <!-- Header con título + CTA -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.1">Financiamientos</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">${allCreds.length} créditos registrados · ${fmt(valorTotal)} valor total financiado</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ CSV</button>
+      <button class="btn btn-p btn-sm" onclick="openAddCred()" style="gap:6px">＋ Nueva Solicitud</button>
+    </div>
   </div>
-  <div class="card"><div class="ch"><div class="ct">Financiamientos Activos</div><div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nueva Solicitud</button></div></div>
-  <div class="tw"><table>
-    <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN / Serial</th><th>Cuota Quincenal</th><th>Progreso</th><th>Saldo por pagar</th><th>Estado</th><th></th></tr></thead>
-    <tbody>${(()=>{const _ca=S.creds.filter(c=>!c.eliminado);const _cp=pgGet('creditos');return _ca.slice((_cp-1)*50,_cp*50).map(c=>{
-      // Calcular saldo real pendiente considerando pagos parciales
-      var totalCuotas=c.totalCuotas||c.plazo*2;
-      var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0);
-      var totalFinanciado=cuotaVal*totalCuotas;
-      // Restar lo ya pagado del historial detallado si existe
-      var totalAbonado=0;
-      if(Array.isArray(c.pagosRegistrados)&&c.pagosRegistrados.length){
-        totalAbonado=c.pagosRegistrados.reduce(function(a,h){return a+h.montoPagado;},0);
-      } else {
-        totalAbonado=(c.pagado||0)*cuotaVal;
-      }
-      var saldoPendiente=parseFloat((totalFinanciado-totalAbonado).toFixed(2));if(saldoPendiente<0.05)saldoPendiente=0;saldoPendiente=Math.max(0,saldoPendiente);if(c.estado==='completado')saldoPendiente=0;
-      var pct=totalFinanciado>0?Math.round((totalAbonado/totalFinanciado)*100):0;
+
+  <!-- 6 KPI cards -->
+  <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">CRD</div>
+      <div class="st-v" style="color:var(--p1)">${activos.length}</div>
+      <div class="st-l">Créditos activos</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--red)">
+      <div class="st-ic" style="background:var(--reds);color:var(--red);font-size:9px;font-weight:800">MOR</div>
+      <div class="st-v" style="color:var(--red)">${enMora.length}</div>
+      <div class="st-l">En mora <span style="opacity:.6;font-size:10px">${activos.length?Math.round(enMora.length/activos.length*100):0}%</span></div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--green)">
+      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">OK</div>
+      <div class="st-v" style="color:var(--green)">${completados.length}</div>
+      <div class="st-l">Completados</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--amber)">
+      <div class="st-ic" style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:800">$↗</div>
+      <div class="st-v" style="color:var(--amber);font-size:18px">${fmt(carteraViva)}</div>
+      <div class="st-l">Cartera viva (por cobrar)</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">MES</div>
+      <div class="st-v" style="color:var(--p1);font-size:18px">${fmt(cuotaEsp)}</div>
+      <div class="st-l">Cuota esperada / mes</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--green)">
+      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">REC</div>
+      <div class="st-v" style="color:var(--green);font-size:18px">${pctRecaudado}%</div>
+      <div class="st-l">Recaudado ${fmt(cobradoAll+inicialAll)}</div>
+    </div>
+  </div>
+
+  <!-- Distribución visual por estado -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="ch"><div><div class="ct">Distribución de la cartera</div><div class="cs">Estado actual de los ${allCreds.length} créditos</div></div></div>
+    <div style="display:flex;width:100%;height:28px;border-radius:8px;overflow:hidden;background:var(--rim);margin-top:6px">
+      ${segs.map(s=>s.n>0?`<div style="flex:${s.n};background:${s.c};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff" title="${s.l}: ${s.n}">${s.n>=Math.ceil(total*0.08)?s.n:''}</div>`:'').join('')}
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11.5px">
+      ${segs.map(s=>`<div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:${s.c}"></span><span style="color:var(--ink3)">${s.l}:</span><strong style="color:var(--ink)">${s.n}</strong></div>`).join('')}
+    </div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    ${[
+      ['todos','Todos',allCreds.length],
+      ['activos','Activos',activos.length],
+      ['mora','En mora',enMora.length],
+      ['completados','Completados',completados.length],
+      ['recuperados','Recuperados',recuperados.length],
+      ['cancelados','Cancelados',cancelados.length],
+    ].map(([k,l,n])=>`<button class="btn btn-sm${tab===k?' btn-p':' btn-g'}" onclick="setCredTab('${k}')" style="gap:6px">${l} <span style="opacity:.7;font-size:10px;font-weight:800">${n}</span></button>`).join('')}
+  </div>
+
+  <!-- Tabla principal -->
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct">Listado de créditos</div><div class="cs">${filtered.length} resultado${filtered.length!==1?'s':''} · ${tab==='todos'?'todos los estados':'filtrado por '+tab}</div></div>
+    </div>
+    <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN</th><th>Cuota Quinc.</th><th>Progreso</th><th>Saldo</th><th>Mora</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${(()=>{const _cp=pgGet('creditos');return filtered.slice((_cp-1)*50,_cp*50).map(c=>{
+      var totalCuotas = getCreditoTotalCuotas(c);
+      var cuotaVal    = getCreditoCuotaBase(c);
+      var totalFinanciado = cuotaVal * totalCuotas;
+      var totalAbonado    = getCreditoPagosConfirmados(c);
+      var saldoPendiente  = getCreditoSaldoPendiente(c);
+      if(c.estado==='completado' || c.estado==='cancelado') saldoPendiente = 0;
+      var cuotasPagadasReal = getCreditoCuotasPagadas(c);
+      var pct = totalFinanciado>0 ? Math.round((totalAbonado/totalFinanciado)*100) : 0;
       var saldoColor=saldoPendiente===0?'var(--green)':c.mora>0?'var(--red)':'var(--ink)';
-      return`<tr>
+      var moraCell = c.mora>0
+        ? `<span class="bdg ${c.mora>60?'b-r':c.mora>30?'b-a':'b-b'}">${c.mora}d</span>`
+        : `<span style="color:var(--ink3);font-size:11px">—</span>`;
+      return`<tr style="cursor:pointer" onclick="openAmort('${c.id}')">
       <td class="tdm" style="font-family:var(--fd)">${c.id}</td>
       <td><span class="tdm">${c.cli}</span></td>
       <td class="tds">${c.modelo}</td>
       <td class="tds" style="font-family:monospace;font-size:11px;color:var(--ink3)">${c.vin||'—'}</td>
-      <td style="font-weight:900;font-family:var(--fd);background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmt(cuotaVal)}</td>
-      <td style="min-width:100px"><div class="tds" style="margin-bottom:3px">${c.pagado}/${totalCuotas} cuotas quinc.</div><div class="prog"><div class="pf ${c.mora>0?'p-r':'p-p'}" style="width:${pct}%"></div></div></td>
-      <td style="font-weight:900;font-family:var(--fd);color:${saldoColor}">${saldoPendiente===0?'✓ Saldo $0':fmt(saldoPendiente)}</td>
+      <td style="font-weight:900;font-family:var(--fd);color:var(--p1)">${fmt(cuotaVal)}</td>
+      <td style="min-width:110px"><div class="tds" style="margin-bottom:3px">${cuotasPagadasReal}/${totalCuotas}</div><div class="prog"><div class="pf ${c.mora>0?'p-r':'p-p'}" style="width:${pct}%"></div></div></td>
+      <td style="font-weight:900;font-family:var(--fd);color:${saldoColor}">${saldoPendiente===0?'✓ $0':fmt(saldoPendiente)}</td>
+      <td>${moraCell}</td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
-      <td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button><button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">Editar</button>${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar anticipadamente">Liquidar</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}</td>
-    </tr>`;}).join('')})()}${S.creds.filter(c=>c.estado==='cancelado').length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:5px'>Cancelados (${S.creds.filter(c=>c.estado==='cancelado').length})</div>${S.creds.filter(c=>c.estado==='cancelado').map(c=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px"><span style="font-family:var(--fd);font-weight:700;min-width:90px;opacity:0.6">'+c.id+'</span><span style="flex:1;opacity:0.6;text-decoration:line-through">'+c.cli+' — '+c.modelo+'</span><span style="color:var(--red)">✕ '+(c.canceladoPor||'Admin')+'</span><span style="color:var(--ink3)">'+(c.canceladoRazon?'· '+c.canceladoRazon:'')+'</span><span style="color:var(--ink3)">'+(c.canceladoEn?'· '+c.canceladoEn.split('T')[0]:'')+'</span></div>').join('')}</div></td></tr>`:''}}</tbody>
-  </table></div></div></div>`+pgControls('creditos',S.creds.filter(c=>!c.eliminado).length,50,'pgNav');
+      <td style="display:flex;gap:4px;flex-wrap:wrap" onclick="event.stopPropagation()">
+        <button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button>
+        <button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">Editar</button>
+        ${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar anticipadamente">Liquidar</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}
+      </td>
+    </tr>`;}).join('')})()}
+    ${filtered.length===0?`<tr><td colspan="10" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin resultados para este filtro</td></tr>`:''}
+    </tbody>
+  </table></div>
+  </div>
+  </div>`+pgControls('creditos',filtered.length,50,'pgNav');
 },
 
-pagos(){return`<div class="page">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    <div class="stat"><div class="st-ic" style="background:var(--greens)">✓</div><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Cobrado (confirmado)</div></div>
-    <div class="stat"><div class="st-ic" style="background:var(--ambers)">PND</div><div class="st-v">${fmt(S.pagos.filter(p=>!p.eliminado&&p.estado==='pendiente').reduce((a,p)=>a+p.monto,0))}</div><div class="st-l">Pendiente por confirmar</div></div>
+pagos(){
+  const allPagos = S.pagos.filter(p=>!p.eliminado);
+  const confs    = allPagos.filter(p=>p.estado==='confirmado');
+  const pends    = allPagos.filter(p=>p.estado==='pendiente');
+  const totalConf= confs.reduce((a,p)=>a+p.monto,0);
+  const totalPend= pends.reduce((a,p)=>a+p.monto,0);
+
+  // Mes actual
+  const hoy = new Date();
+  const mesKey = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+  const pagosMes = confs.filter(p=>p.fecha && p.fecha.startsWith(mesKey));
+  const totalMes = pagosMes.reduce((a,p)=>a+p.monto,0);
+  const promMes  = pagosMes.length ? totalMes/pagosMes.length : 0;
+
+  // Por método/cuenta
+  const porMetodo = {};
+  confs.forEach(function(p){
+    var k = p.metodo||'Sin especificar';
+    if(!porMetodo[k]) porMetodo[k]={nombre:k,total:0,count:0};
+    porMetodo[k].total += p.monto;
+    porMetodo[k].count++;
+  });
+  const metodosList = Object.values(porMetodo).sort((a,b)=>b.total-a.total);
+  const topMetodo = metodosList[0]||{nombre:'—',total:0};
+
+  // Últimos 14 días para el mini chart
+  const dias = [];
+  for(let i=13;i>=0;i--){
+    const d = new Date(hoy); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+    const k = d.toISOString().slice(0,10);
+    const tot = confs.filter(p=>p.fecha===k).reduce((a,p)=>a+p.monto,0);
+    dias.push({k,d,tot,lbl:d.getDate()});
+  }
+  const maxDia = Math.max(1,...dias.map(d=>d.tot));
+
+  // Filtro por tab
+  const tab = S.pagosTab||'todos';
+  let filtered = allPagos;
+  if(tab==='confirmados') filtered = confs;
+  if(tab==='pendientes')  filtered = pends;
+
+  return`<div class="page">
+
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.1">Pagos</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">${allPagos.length} pagos registrados · ${fmt(totalConf)} cobrado en total</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-g btn-sm" onclick="exportarCSV('pagos')">↓ CSV</button>
+      <button class="btn btn-p btn-sm" onclick="openAddPago()" style="gap:6px">＋ Registrar Pago</button>
+    </div>
   </div>
-  <div class="card"><div class="ch"><div class="ct">Registro de Pagos</div><div style="display:flex;gap:6px"><div style="display:flex;gap:5px"><button class="btn btn-g btn-sm" onclick="exportarCSV('pagos')">↓ CSV Pagos</button><button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ CSV Créditos</button><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV Clientes</button></div><button class="btn btn-p btn-sm" onclick="openAddPago()">＋ Registrar Pago</button></div></div>
-  <div class="tw"><table>
-    <thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha</th><th>Monto</th><th>Método</th><th>Cobrador</th><th>Estado</th><th></th></tr></thead>
-    <tbody>${(()=>{const _pa=S.pagos.filter(p=>!p.eliminado);const _pp=pgGet('pagos');return _pa.slice((_pp-1)*50,_pp*50).map(p=>`<tr>
-      <td class="tdm" style="font-family:var(--fd)">${p.id}</td><td class="tdm">${p.cli}</td>
-      <td class="tds">${p.cred}</td><td class="tds">${p.fecha}</td>
+
+  <!-- KPI cards -->
+  <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">
+    <div class="stat" style="border-left:3px solid var(--green)">
+      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">✓</div>
+      <div class="st-v" style="color:var(--green);font-size:18px">${fmt(totalConf)}</div>
+      <div class="st-l">Cobrado confirmado <span style="opacity:.6;font-size:10px">${confs.length}</span></div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--amber)">
+      <div class="st-ic" style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:800">PND</div>
+      <div class="st-v" style="color:var(--amber);font-size:18px">${fmt(totalPend)}</div>
+      <div class="st-l">Pendiente por confirmar <span style="opacity:.6;font-size:10px">${pends.length}</span></div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">MES</div>
+      <div class="st-v" style="color:var(--p1);font-size:18px">${fmt(totalMes)}</div>
+      <div class="st-l">Cobrado este mes <span style="opacity:.6;font-size:10px">${pagosMes.length} pagos</span></div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">AVG</div>
+      <div class="st-v" style="color:var(--p1);font-size:18px">${fmt(promMes)}</div>
+      <div class="st-l">Promedio por pago (mes)</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--green)">
+      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">TOP</div>
+      <div class="st-v" style="color:var(--green);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${topMetodo.nombre}</div>
+      <div class="st-l">Método más usado · ${fmt(topMetodo.total)}</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-bottom:12px">
+
+    <!-- Chart últimos 14 días -->
+    <div class="card">
+      <div class="ch"><div><div class="ct">Cobros últimos 14 días</div><div class="cs">Pagos confirmados por día</div></div></div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:10px">
+        ${dias.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:8.5px;font-weight:700;color:var(--ink3);height:12px">${d.tot>0?fmt(d.tot).replace('$','$').slice(0,6):''}</div>
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end">
+            <div style="width:100%;background:${d.tot>0?'var(--p1)':'var(--rim)'};border-radius:3px 3px 0 0;height:${d.tot>0?Math.max(6,Math.round(d.tot/maxDia*90)):3}px;transition:height .3s"></div>
+          </div>
+          <div style="font-size:9px;color:var(--ink3);font-weight:600">${d.lbl}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Métodos de pago -->
+    <div class="card">
+      <div class="ch"><div><div class="ct">Por método / cuenta</div><div class="cs">Cobros confirmados totales</div></div></div>
+      ${metodosList.length ? metodosList.slice(0,6).map(function(m){
+        var pct = totalConf>0 ? Math.round(m.total/totalConf*100) : 0;
+        return `<div style="margin-bottom:9px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="font-weight:700">${m.nombre}</span>
+            <span style="color:var(--ink3)">${fmt(m.total)} <span style="opacity:.6;font-size:10px">${pct}%</span></span>
+          </div>
+          <div style="height:6px;background:var(--rim);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--p1);border-radius:3px"></div>
+          </div>
+        </div>`;
+      }).join('') : '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:20px 0">Sin pagos registrados aún</div>'}
+    </div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    ${[
+      ['todos','Todos',allPagos.length],
+      ['confirmados','Confirmados',confs.length],
+      ['pendientes','Pendientes',pends.length],
+    ].map(([k,l,n])=>`<button class="btn btn-sm${tab===k?' btn-p':' btn-g'}" onclick="setPagosTab('${k}')" style="gap:6px">${l} <span style="opacity:.7;font-size:10px;font-weight:800">${n}</span></button>`).join('')}
+  </div>
+
+  <!-- Tabla -->
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct">Registro de pagos</div><div class="cs">${filtered.length} resultado${filtered.length!==1?'s':''}</div></div>
+    </div>
+    <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha</th><th>Monto</th><th>Recibido en</th><th>Cobrador</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${(()=>{const _pp=pgGet('pagos');return filtered.slice((_pp-1)*50,_pp*50).map(p=>`<tr>
+      <td class="tdm" style="font-family:var(--fd)">${p.id}</td>
+      <td class="tdm">${p.cli}</td>
+      <td class="tds">${p.cred}</td>
+      <td class="tds">${p.fecha}</td>
       <td style="color:var(--green);font-weight:800;font-family:var(--fd)">${fmt(p.monto)}</td>
-      <td class="tds">${p.metodo}</td><td class="tds">${p.cobrador}</td>
+      <td class="tds">${p.metodo}</td>
+      <td class="tds">${p.cobrador}</td>
       <td><span class="bdg ${sbg(p.estado)}">${p.estado}</span></td>
       <td><div style="display:flex;gap:4px">${p.estado==='pendiente'?`<button class="btn btn-s btn-xs" onclick="confirmarPago('${p.id}')">✓</button>`:''}<button class="btn btn-p btn-xs" onclick="openEditPago('${p.id}')" title="Editar">Editar</button><button class="btn btn-d btn-xs" onclick="confirmarDelPago('${p.id}')" title="Eliminar">Eliminar</button></div></td>
-    </tr>`).join('')})()}${S.pagos.filter(p=>p.eliminado).length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:6px'>Eliminados (${S.pagos.filter(p=>p.eliminado).length})</div>${S.pagos.filter(p=>p.eliminado).map(p=>'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim);opacity:0.7"><span style="font-size:11px;font-family:var(--fd);font-weight:700;min-width:70px">'+p.id+'</span><span style="font-size:11px;flex:1">'+p.cli+' · '+fmt(p.monto)+'</span><span style="font-size:10px;color:var(--red)">Del '+(p.eliminadoPor||'Admin')+' · '+(p.eliminadoEn?p.eliminadoEn.split('T')[0]:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( p.eliminadoRazon||'')+'</span></div>').join('')}</div></td></tr>`:''}</tbody>
-  </table></div></div></div>`+pgControls('pagos',S.pagos.filter(p=>!p.eliminado).length,50,'pgNav');
+    </tr>`).join('')})()}
+    ${filtered.length===0?`<tr><td colspan="9" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin pagos con este filtro</td></tr>`:''}
+    ${S.pagos.filter(p=>p.eliminado).length?`<tr><td colspan='9' style='padding:0'><div style='padding:8px 12px;background:var(--surf2);border-top:2px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:6px'>Eliminados (${S.pagos.filter(p=>p.eliminado).length})</div>${S.pagos.filter(p=>p.eliminado).map(p=>'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim);opacity:0.7"><span style="font-size:11px;font-family:var(--fd);font-weight:700;min-width:70px">'+p.id+'</span><span style="font-size:11px;flex:1">'+p.cli+' · '+fmt(p.monto)+'</span><span style="font-size:10px;color:var(--red)">Del '+(p.eliminadoPor||'Admin')+' · '+(p.eliminadoEn?p.eliminadoEn.split('T')[0]:'')+'</span><span style="font-size:10px;color:var(--ink3)">'+( p.eliminadoRazon||'')+'</span></div>').join('')}</div></td></tr>`:''}
+    </tbody>
+  </table></div>
+  </div>
+  </div>`+pgControls('pagos',filtered.length,50,'pgNav');
 },
 
 cobranza(){
@@ -3464,6 +3738,27 @@ cobranza(){
   const deudaTotal = mora.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0)*Math.ceil(c.mora/15),0);
   const promMora   = mora.length?Math.round(mora.reduce((a,c)=>a+c.mora,0)/mora.length):0;
   const recuperadas= S.creds.filter(c=>c.estado==='recuperado'||c.estado==='recuperada').length;
+  const cuotaCobrable = mora.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
+
+  // ── Chart: Recuperación por semana (últimas 8 semanas) ──
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const semanas = [];
+  for(let i=7;i>=0;i--){
+    const inicio = new Date(hoy); inicio.setDate(hoy.getDate() - (i*7 + hoy.getDay()));
+    const fin = new Date(inicio); fin.setDate(inicio.getDate()+6);
+    const iniStr = inicio.toISOString().slice(0,10);
+    const finStr = fin.toISOString().slice(0,10);
+    const tot = S.pagos
+      .filter(p=>!p.eliminado && p.estado==='confirmado' && p.fecha>=iniStr && p.fecha<=finStr)
+      .reduce((a,p)=>a+p.monto,0);
+    const cnt = S.pagos.filter(p=>!p.eliminado && p.estado==='confirmado' && p.fecha>=iniStr && p.fecha<=finStr).length;
+    const lbl = String(inicio.getDate()).padStart(2,'0')+'/'+String(inicio.getMonth()+1).padStart(2,'0');
+    semanas.push({lbl, tot, cnt});
+  }
+  const maxSem = Math.max(1,...semanas.map(s=>s.tot));
+
+  // ── Top 5 deudores ──
+  const topDeudores = mora.slice().sort((a,b)=>(b.mora||0)-(a.mora||0)).slice(0,5);
 
   setTimeout(function(){
     var el=$('cobranza-notas-list');
@@ -3538,7 +3833,7 @@ cobranza(){
   </div>
 
   <!-- Buckets de severidad -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
     ${[
       ['1–15 días',bucket1.length,'var(--ambers)','rgba(232,152,10,.3)','var(--amber)'],
       ['16–30 días',bucket2.length,'rgba(217,59,90,.07)','rgba(217,59,90,.25)','var(--red)'],
@@ -3548,6 +3843,49 @@ cobranza(){
       <div style="font-size:22px;font-weight:900;color:${col};line-height:1">${n}</div>
       <div style="font-size:10px;font-weight:700;color:var(--ink3);margin-top:4px">${lbl}</div>
     </div>`).join('')}
+  </div>
+
+  <!-- Charts: Recuperación semanal + Top deudores -->
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;margin-bottom:16px">
+
+    <div class="card">
+      <div class="ch"><div><div class="ct">Recuperación por semana</div><div class="cs">Últimas 8 semanas · cobros confirmados</div></div>
+        <div style="font-weight:900;font-size:16px;color:var(--green)">${fmt(semanas.reduce((a,s)=>a+s.tot,0))}</div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:5px;height:130px;margin-top:12px">
+        ${semanas.map((s,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:9px;font-weight:800;color:${s.tot>0?'var(--green)':'var(--ink3)'};height:14px">${s.tot>0?fmt(s.tot).replace('$','$').slice(0,7):''}</div>
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end">
+            <div style="width:100%;background:${i===semanas.length-1?'var(--p1)':s.tot>0?'var(--green)':'var(--rim)'};border-radius:4px 4px 0 0;height:${s.tot>0?Math.max(8,Math.round(s.tot/maxSem*100)):4}px;transition:height .3s"></div>
+          </div>
+          <div style="font-size:9px;color:var(--ink3);font-weight:600">${s.lbl}</div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;padding-top:10px;border-top:1px solid var(--rim2);font-size:11.5px">
+        <div><span style="color:var(--ink3)">Total 8 sem:</span> <strong style="color:var(--green)">${fmt(semanas.reduce((a,s)=>a+s.tot,0))}</strong></div>
+        <div><span style="color:var(--ink3)">Pagos:</span> <strong>${semanas.reduce((a,s)=>a+s.cnt,0)}</strong></div>
+        <div><span style="color:var(--ink3)">Semana en curso:</span> <strong style="color:var(--p1)">${fmt(semanas[semanas.length-1].tot)}</strong></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div><div class="ct">Top 5 deudores</div><div class="cs">Mayor mora acumulada</div></div></div>
+      ${topDeudores.length ? topDeudores.map(function(c,i){
+        var col = c.mora>60?'#8B0000':c.mora>30?'var(--red)':'var(--amber)';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rim2);cursor:pointer" onclick="openAmort('${c.id}')">
+          <div style="width:26px;height:26px;border-radius:7px;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;flex-shrink:0">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cli}</div>
+            <div style="font-size:11px;color:var(--ink3)">${c.modelo}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:15px;font-weight:900;color:${col};line-height:1">${c.mora}d</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">${fmt(c.cuotaQ||c.cuota||0)}</div>
+          </div>
+        </div>`;
+      }).join('') : '<div style="color:var(--green);padding:24px 0;text-align:center;font-size:13px;font-weight:600">✓ Sin deudores</div>'}
+    </div>
+
   </div>
 
   <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px">
@@ -3661,7 +3999,9 @@ contratos(){return`<div class="page"><div style="display:grid;grid-template-colu
     <div class="fgr c1" style="gap:9px">
       <div class="fg"><label>Cliente / Crédito</label><select class="fs" id="sel-cred">${S.creds.map(c=>`<option value="${c.id}">${c.id} — ${c.cli} · ${c.modelo}</option>`).join('')}</select></div>
       <div class="fg"><label>Tipo de documento</label><select class="fs"><option>Contrato de Compraventa en Cuotas</option><option>Pagaré</option><option>Carta de Instrucciones</option><option>Cláusula de Reserva de Dominio</option></select></div>
-      <div class="fg"><label>Ciudad</label><input class="fi" id="sel-ciudad" value="Caracas"></div>
+    </div>
+    <div style="margin-top:10px;padding:9px 11px;background:var(--gs);border:1px solid var(--rim2);border-radius:8px;font-size:11px;color:var(--ink3)">
+      <strong style="color:var(--ink2)">Datos de la empresa:</strong> se toman de Configuración → Datos de la Empresa (nombre, RIF, ciudad).
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px">
       <button class="btn btn-p btn-sm" onclick="renderContrato()">Ver Vista Previa</button>
@@ -3724,12 +4064,33 @@ notif(){
     return {nombre:c.cli, tel:cl.tel||'', cred:c.id, cuota:c.cuotaQ||c.cuota, modelo:c.modelo};
   });
 
+  // ── Segmentos de urgencia ──
+  var moraCritica  = moraClientes.filter(c=>c.mora>60);
+  var moraAlta     = moraClientes.filter(c=>c.mora>30 && c.mora<=60);
+  var moraMedia    = moraClientes.filter(c=>c.mora>15 && c.mora<=30);
+  var moraBaja     = moraClientes.filter(c=>c.mora>0  && c.mora<=15);
+  var clientesActivos  = S.clientes.filter(c=>!c.eliminado&&c.estado==='activo');
+  var conTelefono  = clientesActivos.filter(c=>c.tel&&c.tel.replace(/[^0-9]/g,'').length>=7);
+  var sinTelefono  = clientesActivos.length - conTelefono.length;
+  var pctCobertura = clientesActivos.length>0 ? Math.round(conTelefono.length/clientesActivos.length*100) : 0;
+
+  // ── Historial: envíos por día (últimos 14 días) ──
+  var historial = window._notifHistorial || [];
+  var hoyNotif = new Date(); hoyNotif.setHours(0,0,0,0);
+  var diasNotif = [];
+  for(let i=13;i>=0;i--){
+    let d = new Date(hoyNotif); d.setDate(d.getDate()-i);
+    let k = d.toISOString().slice(0,10);
+    let n = historial.filter(h=>h.fecha && h.fecha.startsWith(k)).reduce((a,h)=>a+(h.cantidad||1),0);
+    diasNotif.push({lbl:d.getDate(), n});
+  }
+  var maxNotif = Math.max(1, ...diasNotif.map(d=>d.n));
+  var totalEnviados = historial.reduce((a,h)=>a+(h.cantidad||1),0);
+
   setTimeout(function(){
-    // Bind send button
     renderHistorialNotificaciones();
     var btn=$('notif-send-btn');
     if(btn) btn.onclick=function(){ enviarNotificaciones(); };
-    // Bind tipo change to update preview and description
     var tipoSel=$('notif-tipo');
     if(tipoSel) tipoSel.onchange=function(){ actualizarPreviewNotif(); actualizarTipoDesc(); };
     var destSel=$('notif-dest');
@@ -3740,24 +4101,87 @@ notif(){
 
   return`<div class="page">
 
-  <!-- Stats bar -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">
-    <div class="card" style="padding:14px;text-align:center;border-left:3px solid var(--red)">
-      <div style="font-size:22px;font-weight:900;font-family:var(--fd);color:var(--red)">${moraClientes.length}</div>
-      <div style="font-size:11px;color:var(--ink3);font-weight:600;margin-top:2px">Clientes en mora</div>
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.1">Notificaciones</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">${totalEnviados} mensajes enviados · ${pctCobertura}% de clientes con WhatsApp</div>
     </div>
-    <div class="card" style="padding:14px;text-align:center;border-left:3px solid var(--amber)">
-      <div style="font-size:22px;font-weight:900;font-family:var(--fd);color:var(--amber)">${proximasCuotas.length}</div>
-      <div style="font-size:11px;color:var(--ink3);font-weight:600;margin-top:2px">Cuotas esta semana</div>
+  </div>
+
+  <!-- Stats KPI -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:14px">
+    <div class="stat" style="border-left:3px solid var(--red)">
+      <div class="st-ic" style="background:var(--reds);color:var(--red);font-size:9px;font-weight:800">MOR</div>
+      <div class="st-v" style="color:var(--red)">${moraClientes.length}</div>
+      <div class="st-l">Clientes en mora</div>
     </div>
-    <div class="card" style="padding:14px;text-align:center;border-left:3px solid var(--p1)">
-      <div style="font-size:22px;font-weight:900;font-family:var(--fd);color:var(--p1)">${S.creds.filter(c=>c.estado==='activo').length}</div>
-      <div style="font-size:11px;color:var(--ink3);font-weight:600;margin-top:2px">Créditos activos</div>
+    <div class="stat" style="border-left:3px solid var(--amber)">
+      <div class="st-ic" style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:800">VEN</div>
+      <div class="st-v" style="color:var(--amber)">${proximasCuotas.length}</div>
+      <div class="st-l">Vencen esta semana</div>
     </div>
-    <div class="card" style="padding:14px;text-align:center;border-left:3px solid var(--green)">
-      <div style="font-size:22px;font-weight:900;font-family:var(--fd);color:var(--green)">${S.clientes.filter(c=>!c.eliminado&&c.tel).length}</div>
-      <div style="font-size:11px;color:var(--ink3);font-weight:600;margin-top:2px">Con WhatsApp</div>
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">ACT</div>
+      <div class="st-v" style="color:var(--p1)">${S.creds.filter(c=>c.estado==='activo').length}</div>
+      <div class="st-l">Créditos activos</div>
     </div>
+    <div class="stat" style="border-left:3px solid var(--green)">
+      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">WA</div>
+      <div class="st-v" style="color:var(--green)">${conTelefono.length}</div>
+      <div class="st-l">Con WhatsApp · ${pctCobertura}%</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--ink3)">
+      <div class="st-ic" style="background:var(--surf2);color:var(--ink3);font-size:9px;font-weight:800">—</div>
+      <div class="st-v" style="color:var(--ink3)">${sinTelefono}</div>
+      <div class="st-l">Sin teléfono registrado</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">ENV</div>
+      <div class="st-v" style="color:var(--p1)">${totalEnviados}</div>
+      <div class="st-l">Enviados histórico</div>
+    </div>
+  </div>
+
+  <!-- Row: segmentos de mora (acciones rápidas) + envíos 14 días -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+
+    <div class="card">
+      <div class="ch"><div><div class="ct">Segmentos por urgencia</div><div class="cs">Notifica por grupo de mora</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:8px">
+        ${[
+          ['Crítico +60 días',  moraCritica.length, '#8B0000', 'rgba(139,0,0,.08)'],
+          ['Alta 31–60 días',   moraAlta.length,    'var(--red)',   'rgba(217,59,90,.07)'],
+          ['Media 16–30 días',  moraMedia.length,   'var(--amber)', 'var(--ambers)'],
+          ['Baja 1–15 días',    moraBaja.length,    'var(--amber)', 'rgba(232,152,10,.05)'],
+          ['Cuotas esta semana',proximasCuotas.length,'var(--p1)',  'var(--gs)'],
+        ].map(function(row){
+          var lbl=row[0], n=row[1], col=row[2], bg=row[3];
+          var disabled = n===0;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:${bg};border:1px solid var(--rim);border-radius:9px;${disabled?'opacity:.5':''}">
+            <div style="width:34px;height:34px;border-radius:9px;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;flex-shrink:0">${n}</div>
+            <div style="flex:1;min-width:0;font-size:12.5px;font-weight:700">${lbl}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div><div class="ct">Actividad últimos 14 días</div><div class="cs">Mensajes enviados por día</div></div>
+        <div style="font-weight:900;font-size:16px;color:var(--p1)">${diasNotif.reduce((a,d)=>a+d.n,0)}</div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:14px">
+        ${diasNotif.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:9px;font-weight:800;color:${d.n>0?'var(--p1)':'var(--ink3)'};height:12px">${d.n>0?d.n:''}</div>
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end">
+            <div style="width:100%;background:${d.n>0?'var(--p1)':'var(--rim)'};border-radius:3px 3px 0 0;height:${d.n>0?Math.max(8,Math.round(d.n/maxNotif*90)):4}px;transition:height .3s"></div>
+          </div>
+          <div style="font-size:9px;color:var(--ink3);font-weight:600">${d.lbl}</div>
+        </div>`).join('')}
+      </div>
+      ${totalEnviados===0?'<div style="text-align:center;color:var(--ink3);font-size:11.5px;margin-top:10px;padding:8px;background:var(--gs);border-radius:8px">Aún no has enviado notificaciones. Usa el formulario abajo para empezar.</div>':''}
+    </div>
+
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:14px">
@@ -4577,6 +5001,8 @@ function previewCalc(){
 }
 function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
+function setCredTab(t){S.credTab=t;window._pages={};nav('creditos');}
+function setPagosTab(t){S.pagosTab=t;window._pages={};nav('pagos');}
 function delMoto(id){
   if(!requireDeletePermission()) return;
   const m=S.motos.find(x=>x.id===id);if(!m)return;
@@ -6008,6 +6434,7 @@ function openAddPago(){
         id:'MOV-'+Date.now(),
         tipo:'deposito',
         concepto:'Pago cuota · '+cred.cli+' · '+credId,
+        conceptoPago:newPago.id,  // link al pago para evitar movimientos duplicados
         monto:monto,
         cuentaOrigen:null,
         cuentaDestino:pagoMetodo,
@@ -6285,15 +6712,15 @@ function whatsappCliente(credId){
   var tel=(cl.tel||'').replace(/\D/g,'').replace(/^0/,'');
   if(!tel){toast('Este cliente no tiene teléfono registrado','error');return;}
   var empresa=($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
-  var cuotaStr=fmt(c.cuotaQ||c.cuota||0);
-  var moraStr=c.mora>0?' Tienes '+c.mora+' día'+(c.mora!==1?'s':'')+' de atraso.':'';
-  var cuotasPagadas2=parseInt(c.pagado||0);
-  var totalCuotas2=parseInt(c.totalCuotas||((c.plazo||10)*2)||20);
-  var cuotaNum2=cuotasPagadas2+1;
-  var cuotasRest2=totalCuotas2-cuotasPagadas2;
-  var saldoPendiente=Math.max(0,cuotasRest2*(parseFloat(c.cuotaQ||c.cuota||0)));
-  var totalPagado2=cuotasPagadas2*(parseFloat(c.cuotaQ||c.cuota||0));
-  var pct2=totalCuotas2>0?Math.round(cuotasPagadas2/totalCuotas2*100):0;
+  // Usar helpers canónicos para que los números coincidan con el resto del app
+  var totalCuotas2   = getCreditoTotalCuotas(c);
+  var cuotasPagadas2 = getCreditoCuotasPagadas(c);
+  var totalPagado2   = getCreditoPagosConfirmados(c);
+  var saldoPendiente = getCreditoSaldoPendiente(c);
+  var cuotaNum2      = Math.min(cuotasPagadas2+1, totalCuotas2);
+  var cuotasRest2    = totalCuotas2-cuotasPagadas2;
+  var cuotaStr       = fmt(c.cuotaQ||c.cuota||0);
+  var pct2           = totalCuotas2>0?Math.round(cuotasPagadas2/totalCuotas2*100):0;
   var fechaProxima='', fechaVencFin2='';
   if(c.fecha){
     var sig2=new Date(new Date(c.fecha).getTime()+((cuotasPagadas2+1)*15*24*60*60*1000));
@@ -6920,9 +7347,40 @@ function openEditPago(pagoId){
 function confirmarPago(pagoId){
   var pi=S.pagos.findIndex(function(x){return x.id===pagoId;});
   if(pi<0) return;
-  S.pagos[pi].estado='confirmado';
-  DB.savePago(S.pagos[pi]);
-  var ci=S.creds.findIndex(function(x){return x.id===S.pagos[pi].cred;});
+  var pago = S.pagos[pi];
+  pago.estado='confirmado';
+  DB.savePago(pago);
+
+  // ── BUG FIX: crear movimiento en Cuentas si no existe uno para este pago ──
+  // Esto asegura que los saldos bancarios coincidan con los pagos confirmados
+  var movExistente = (S.movimientos||[]).find(function(m){
+    return !m.eliminado && m.conceptoPago === pago.id;
+  });
+  if(!movExistente){
+    var cuentaDest = pago.cuenta || pago.metodo || '';
+    if(!cuentaDest && _cuentasBanc && _cuentasBanc.length>0) cuentaDest = _cuentasBanc[0].nombre;
+    if(cuentaDest){
+      var mov = {
+        id: 'MOV-'+Date.now(),
+        tipo: 'deposito',
+        concepto: 'Pago cuota · '+pago.cli+' · '+pago.cred,
+        conceptoPago: pago.id,  // referencia para evitar duplicados
+        monto: pago.monto,
+        cuentaOrigen: null,
+        cuentaDestino: cuentaDest,
+        fecha: pago.fecha,
+        referencia: pago.referencia||'',
+        realizadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
+        tasaBs: pago.tasaBs || window._tasaBsGlobal || 1,
+        hora: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
+      };
+      if(!S.movimientos) S.movimientos = [];
+      S.movimientos.push(mov);
+      DB.saveMovimiento(mov);
+    }
+  }
+
+  var ci=S.creds.findIndex(function(x){return x.id===pago.cred;});
   if(ci>=0){
     S.creds[ci].pagado=Math.min(S.creds[ci].pagado+1,S.creds[ci].totalCuotas||S.creds[ci].plazo*2);
     if(S.creds[ci].mora>0) S.creds[ci].mora=0;
@@ -7045,20 +7503,27 @@ function renderContrato(){
   const credId=($('sel-cred')&&$('sel-cred').value);
   const c=S.creds.find(x=>x.id===credId)||S.creds[0];
   const logoSrc=(document.querySelector('.sb-logo img')||{}).src||'';
-  const ciudad=($('sel-ciudad')&&$('sel-ciudad').value)||'Caracas';
+  // Leer empresa de la variable global (funciona aunque no estés en Config)
+  const emp = getEmpresa();
+  const empresa   = emp.nombre;
+  const empresaUp = empresa.toUpperCase();
+  const rif       = emp.rif;
+  const direccion = emp.direccion;
+  const ciudad    = emp.ciudad;
+  const tel       = emp.tel;
   const cli=S.clientes.find(x=>x.nombre===c.cli)||{cedula:'—',tel:'—',ciudad:'Venezuela'};
   const hoy=new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
   const cuotasRestantes=c.plazo-c.pagado;
   $('cz').innerHTML=`<div class="cdoc">
     <div style="text-align:center;margin-bottom:4px"><img src="${logoSrc}" style="height:42px;object-fit:contain"></div>
-    <div style="text-align:center;font-size:10px;color:#777;margin-bottom:2px;font-weight:600;letter-spacing:0.5px">PAGASI — VENTA DE MOTOCICLETAS EN CUOTAS</div>
-    <div style="text-align:center;font-size:9.5px;color:#999;margin-bottom:16px">RIF: J-00000000-0 · ${ciudad}, Venezuela</div>
+    <div style="text-align:center;font-size:10px;color:#777;margin-bottom:2px;font-weight:600;letter-spacing:0.5px">${empresaUp} — VENTA DE MOTOCICLETAS EN CUOTAS</div>
+    <div style="text-align:center;font-size:9.5px;color:#999;margin-bottom:16px">RIF: ${rif} · ${ciudad}, Venezuela${direccion?' · '+direccion:''}${tel?' · Tel: '+tel:''}</div>
     <h2>CONTRATO DE COMPRAVENTA EN CUOTAS</h2>
     <div style="text-align:center;font-size:11px;color:#888;margin-bottom:20px">N° ${c.id} · ${ciudad}, ${hoy}</div>
 
     <h3>PRIMERA: DE LAS PARTES</h3>
     <p>El presente contrato se celebra entre:</p>
-    <p style="margin-top:8px"><strong>EL VENDEDOR:</strong> PAGASI VENTA DE MOTOS EN CUOTAS, C.A., debidamente constituida conforme a las leyes de la República Bolivariana de Venezuela, representada en este acto por su Representante Legal.</p>
+    <p style="margin-top:8px"><strong>EL VENDEDOR:</strong> ${empresaUp}, debidamente constituida conforme a las leyes de la República Bolivariana de Venezuela, inscrita bajo el RIF ${rif}, con domicilio en ${ciudad}, Venezuela, representada en este acto por su Representante Legal.</p>
     <p style="margin-top:8px"><strong>EL COMPRADOR:</strong> ${c.cli}, titular de la cédula de identidad N° ${cli.cedula}, domiciliado en ${cli.ciudad||'Venezuela'}, teléfono ${cli.tel||'—'}.</p>
 
     <h3>SEGUNDA: OBJETO DEL CONTRATO</h3>
@@ -7115,7 +7580,7 @@ function renderContrato(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:44px">
       <div style="text-align:center">
         <div style="border-top:1px solid #333;padding-top:7px;margin-top:55px;font-size:10.5px;color:#333">
-          <strong>EL VENDEDOR</strong><br>PAGASI — Venta de Motos en Cuotas<br>Representante Legal
+          <strong>EL VENDEDOR</strong><br>${empresaUp}<br>Representante Legal
         </div>
       </div>
       <div style="text-align:center">
@@ -7632,10 +8097,12 @@ function guardarEmpresa(){
   var tel    = (($('cfg_tel')&&$('cfg_tel').value)||'').trim();
   var email  = (($('cfg_email2')&&$('cfg_email2').value)||'').trim();
   if(!nombre){ toast('Escribe el nombre de la empresa','error'); return; }
+  // Actualizar la variable global también (para que contratos/reportes la lean aun sin estar en Config)
+  _empresa = { nombre:nombre, rif:rif, ciudad:ciudad, tel:tel, email:email, direccion:_empresa.direccion||'' };
   var data = {nombre, rif, ciudad, tel, email, updated: new Date().toISOString()};
   if(db){
     db.collection('config').doc('empresa').set(data)
-      .then(function(){ toast('Empresa guardada','success'); })
+      .then(function(){ toast('Empresa guardada — se reflejará en contratos y reportes','success'); })
       .catch(function(e){ toast('Error: '+e.message,'error'); });
   } else {
     toast('Empresa guardada (local)','success');
@@ -9274,34 +9741,55 @@ function actualizarPreviewNotif(){
 }
 
 function getDestinatariosNotif(dest){
+  // Helper: construye un destinatario completo con TODA la info que necesita buildMensajeNotif
+  function mkDest(cl, c){
+    cl = cl || {};
+    c = c || {};
+    return {
+      nombre: cl.nombre || c.cli || 'Cliente',
+      tel:    cl.tel || c.tel || '',
+      mora:   c.mora || 0,
+      cuota:  c.cuotaQ || c.cuota || 0,
+      modelo: c.modelo || '',
+      cred:   c.id || null     // ← CRÍTICO: sin esto buildMensajeNotif no puede hallar el crédito
+    };
+  }
+  // Helper: busca un cliente por nombre O por id (robusto ante datos inconsistentes)
+  function findCliente(c){
+    if(c.cliId){
+      var byId = S.clientes.find(function(x){ return x.id===c.cliId; });
+      if(byId) return byId;
+    }
+    return S.clientes.find(function(x){ return x.nombre===c.cli; }) || {};
+  }
+
   if(dest==='mora'){
-    return S.creds.filter(c=>c.mora>0).map(function(c){
-      var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
-      return {nombre:c.cli, tel:cl.tel||'', mora:c.mora, cuota:c.cuotaQ||c.cuota, modelo:c.modelo, cred:c.id};
+    return S.creds.filter(function(c){ return !c.eliminado && c.mora>0; }).map(function(c){
+      return mkDest(findCliente(c), c);
     });
   }
   if(dest==='proximas'){
     return S.creds.filter(function(c){
-      if(c.estado!=='activo'||!c.fecha) return false;
-      var sig=new Date(new Date(c.fecha).getTime()+((c.pagado+1)*15*24*60*60*1000));
-      var diff=Math.floor((sig-new Date())/(24*60*60*1000));
-      return diff>=0&&diff<=7;
+      if(c.eliminado || c.estado!=='activo' || !c.fecha) return false;
+      var sig = new Date(new Date(c.fecha).getTime() + ((c.pagado+1)*15*24*60*60*1000));
+      var diff = Math.floor((sig - new Date())/(24*60*60*1000));
+      return diff>=0 && diff<=7;
     }).map(function(c){
-      var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
-      return {nombre:c.cli, tel:cl.tel||'', cuota:c.cuotaQ||c.cuota, modelo:c.modelo, cred:c.id};
+      return mkDest(findCliente(c), c);
     });
   }
   if(dest==='especifico'){
-    var selId=parseInt(($('notif-cliente-sel')&&$('notif-cliente-sel').value)||0);
-    var cl=S.clientes.find(function(x){return x.id===selId;});
+    var selId = parseInt(($('notif-cliente-sel')&&$('notif-cliente-sel').value)||0);
+    var cl = S.clientes.find(function(x){ return x.id===selId; });
     if(!cl) return [];
-    var cred=S.creds.find(function(c){return c.cli===cl.nombre&&c.estado==='activo';});
-    return [{nombre:cl.nombre, tel:cl.tel||'', cuota:(cred&&(cred.cuotaQ||cred.cuota))||0, modelo:(cred&&cred.modelo)||''}];
+    // Preferir crédito activo; si no hay, tomar el más reciente
+    var cred = S.creds.find(function(c){ return !c.eliminado && c.cli===cl.nombre && c.estado==='activo'; })
+            || S.creds.filter(function(c){ return !c.eliminado && c.cli===cl.nombre; }).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');})[0];
+    return [mkDest(cl, cred||{})];
   }
-  // todos activos
-  return S.clientes.filter(c=>!c.eliminado&&c.estado==='activo').map(function(cl){
-    var cred=S.creds.find(function(c){return c.cli===cl.nombre&&c.estado==='activo';});
-    return {nombre:cl.nombre, tel:cl.tel||'', cuota:(cred&&(cred.cuotaQ||cred.cuota))||0, modelo:(cred&&cred.modelo)||''};
+  // todos activos: un destinatario por cada crédito activo (no por cliente, porque un cliente podría tener varios)
+  return S.creds.filter(function(c){ return !c.eliminado && c.estado==='activo'; }).map(function(c){
+    return mkDest(findCliente(c), c);
   });
 }
 
@@ -9313,17 +9801,18 @@ function buildMensajeNotif(tipo, d){
   var cred   = d.cred  || '—';
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
   var cr = d.cred ? (S&&S.creds ? S.creds.find(function(x){return x.id===d.cred;}) : null) : null;
-  var totalCuotas = cr ? parseInt(cr.totalCuotas||((cr.plazo||10)*2)||20) : 0;
-  var cuotaNum    = cr ? parseInt(cr.pagado||0)+1 : 0;
-  var cuotasPagadas = cr ? parseInt(cr.pagado||0) : 0;
-  var cuotasRest  = totalCuotas - cuotasPagadas;
-  var montoTotal  = cr ? parseFloat(cr.fin||cr.total||0) : 0;
-  var saldoPend   = cr ? Math.max(0, cuotasRest * parseFloat(cr.cuotaQ||cr.cuota||0)) : 0;
-  var totalPagado = cr ? cuotasPagadas * parseFloat(cr.cuotaQ||cr.cuota||0) : 0;
-  var pct         = totalCuotas > 0 ? Math.round(cuotasPagadas/totalCuotas*100) : 0;
-  var fechaInicio = cr&&cr.fecha ? new Date(cr.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-  var fechaProx   = '';
-  var fechaVencFin = '';
+  // Usar helpers canónicos para que los números coincidan con dashboard/reportes/contabilidad
+  var totalCuotas   = cr ? getCreditoTotalCuotas(cr)   : 0;
+  var cuotasPagadas = cr ? getCreditoCuotasPagadas(cr) : 0;
+  var totalPagado   = cr ? getCreditoPagosConfirmados(cr) : 0;
+  var saldoPend     = cr ? getCreditoSaldoPendiente(cr)   : 0;
+  var cuotaNum      = cr ? Math.min(cuotasPagadas+1, totalCuotas) : 0;
+  var cuotasRest    = totalCuotas - cuotasPagadas;
+  var montoTotal    = cr ? parseFloat(cr.total||cr.fin||0) : 0;
+  var pct           = totalCuotas > 0 ? Math.round(cuotasPagadas/totalCuotas*100) : 0;
+  var fechaInicio   = cr&&cr.fecha ? new Date(cr.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+  var fechaProx     = '';
+  var fechaVencFin  = '';
   if(cr&&cr.fecha){
     var sig=new Date(new Date(cr.fecha).getTime()+((cuotasPagadas+1)*15*24*60*60*1000));
     fechaProx=sig.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -9795,10 +10284,48 @@ function showAdminProfile() {
   var rol = user.rol || 'Administrador';
   var inicial = nombre.charAt(0).toUpperCase();
 
-  // Stats del usuario actual
+  // ── Stats del usuario actual ──
   var solCreadas = S.creds.filter(function(c){ return c.creadoPor === nombre; }).length;
-  var pagosReg   = S.pagos.filter(function(p){ return !p.eliminado && p.cobrador === nombre; }).length;
+  var misPagos   = S.pagos.filter(function(p){ return !p.eliminado && p.cobrador === nombre; });
+  var misPagosConf = misPagos.filter(function(p){ return p.estado==='confirmado'; });
+  var pagosReg   = misPagos.length;
+  var totalCobrado = misPagosConf.reduce(function(a,p){ return a+(parseFloat(p.monto)||0); }, 0);
   var credsActivos = S.creds.filter(function(c){ return !c.eliminado && c.estado === 'activo'; }).length;
+  var misClientes= new Set(misPagosConf.map(function(p){ return p.cli; })).size;
+
+  // ── Chart: actividad últimas 12 semanas (pagos cobrados por el user) ──
+  var hoyProf = new Date(); hoyProf.setHours(0,0,0,0);
+  var semProf = [];
+  for(var i=11;i>=0;i--){
+    var ini = new Date(hoyProf); ini.setDate(hoyProf.getDate() - (i*7 + hoyProf.getDay()));
+    var fin = new Date(ini); fin.setDate(ini.getDate()+6);
+    var iniS = ini.toISOString().slice(0,10);
+    var finS = fin.toISOString().slice(0,10);
+    var tot = misPagosConf
+      .filter(function(p){ return p.fecha>=iniS && p.fecha<=finS; })
+      .reduce(function(a,p){ return a+p.monto; }, 0);
+    semProf.push({lbl: String(ini.getDate()).padStart(2,'0')+'/'+String(ini.getMonth()+1).padStart(2,'0'), tot:tot});
+  }
+  var maxSemProf = Math.max(1, ...semProf.map(function(s){ return s.tot; }));
+
+  // ── Top 5 clientes más atendidos ──
+  var topClientesMap = {};
+  misPagosConf.forEach(function(p){
+    if(!topClientesMap[p.cli]) topClientesMap[p.cli] = {nombre:p.cli, total:0, count:0};
+    topClientesMap[p.cli].total += p.monto;
+    topClientesMap[p.cli].count++;
+  });
+  var topClientesList = Object.values(topClientesMap).sort(function(a,b){ return b.total-a.total; }).slice(0,5);
+
+  // ── Actividad mes actual vs mes anterior ──
+  var mesAct = hoyProf.getFullYear()+'-'+String(hoyProf.getMonth()+1).padStart(2,'0');
+  var mesAnt = new Date(hoyProf.getFullYear(), hoyProf.getMonth()-1, 1);
+  var mesAntK = mesAnt.getFullYear()+'-'+String(mesAnt.getMonth()+1).padStart(2,'0');
+  var pagosMesAct = misPagosConf.filter(function(p){ return p.fecha && p.fecha.startsWith(mesAct); });
+  var pagosMesAnt = misPagosConf.filter(function(p){ return p.fecha && p.fecha.startsWith(mesAntK); });
+  var cobradoMesAct = pagosMesAct.reduce(function(a,p){return a+p.monto;}, 0);
+  var cobradoMesAnt = pagosMesAnt.reduce(function(a,p){return a+p.monto;}, 0);
+  var pctCrecimiento = cobradoMesAnt > 0 ? Math.round((cobradoMesAct-cobradoMesAnt)/cobradoMesAnt*100) : (cobradoMesAct>0?100:0);
 
   // Rol color
   var rolColors = {Administrador:'var(--p1)',Gerente:'var(--p2)',Empleado:'var(--green)',Vendedor:'var(--green)',Cobrador:'var(--green)',Contador:'var(--ink3)'};
@@ -9828,25 +10355,69 @@ function showAdminProfile() {
     + '</div>'
 
     // Body
-    + '<div style="max-width:680px;margin:0 auto;padding:24px 20px 80px">'
+    + '<div style="max-width:900px;margin:0 auto;padding:24px 20px 80px">'
 
-    // Avatar card
-    + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:16px;padding:24px;margin-bottom:14px;display:flex;align-items:center;gap:20px">'
-      + '<div style="width:72px;height:72px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 6px 24px rgba(91,78,212,.25)">'+ inicial +'</div>'
+    // Avatar card con gradient
+    + '<div style="background:var(--grad);border-radius:16px;padding:24px;margin-bottom:14px;display:flex;align-items:center;gap:20px;color:#fff;box-shadow:0 10px 40px rgba(91,78,212,.2)">'
+      + '<div style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.25);backdrop-filter:blur(10px);border:3px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:#fff;flex-shrink:0">'+ inicial +'</div>'
       + '<div style="flex:1;min-width:0">'
-        + '<div style="font-size:20px;font-weight:900;letter-spacing:-.4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ nombre +'</div>'
-        + '<div style="font-size:13px;color:var(--ink3);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ email +'</div>'
-        + '<span style="display:inline-block;background:'+ rolColor +';color:#fff;font-size:11px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:.3px">'+ rol.toUpperCase() +'</span>'
+        + '<div style="font-size:22px;font-weight:900;letter-spacing:-.4px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ nombre +'</div>'
+        + '<div style="font-size:13px;opacity:.85;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ email +'</div>'
+        + '<span style="display:inline-block;background:rgba(255,255,255,.25);color:#fff;font-size:11px;font-weight:800;padding:4px 14px;border-radius:20px;letter-spacing:.3px;backdrop-filter:blur(10px)">'+ rol.toUpperCase() +'</span>'
       + '</div>'
     + '</div>'
 
-    // Stats rápidas (solo si hay datos relevantes)
-    + (solCreadas > 0 || pagosReg > 0 || credsActivos > 0 ?
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">'
-      + _profStat('Solicitudes creadas', solCreadas, 'var(--p1)')
-      + _profStat('Pagos registrados', pagosReg, 'var(--green)')
-      + _profStat('Créditos activos hoy', credsActivos, 'var(--amber)')
-      + '</div>' : '')
+    // 6 KPI stats
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:14px">'
+      + _profKpi('Cobrado total', fmt(totalCobrado), 'var(--green)', 'TOT')
+      + _profKpi('Este mes', fmt(cobradoMesAct), pctCrecimiento>=0?'var(--p1)':'var(--red)', (pctCrecimiento>=0?'↑':'↓')+' '+Math.abs(pctCrecimiento)+'%')
+      + _profKpi('Pagos registrados', pagosReg, 'var(--p1)', 'PAG')
+      + _profKpi('Solicitudes creadas', solCreadas, 'var(--amber)', 'SOL')
+      + _profKpi('Clientes atendidos', misClientes, 'var(--green)', 'CLI')
+      + _profKpi('Créditos activos', credsActivos, 'var(--p1)', 'ACT')
+    + '</div>'
+
+    // Chart: cobros últimas 12 semanas
+    + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+        + '<div><div style="font-size:14px;font-weight:800">Mi actividad de cobros</div><div style="font-size:11.5px;color:var(--ink3)">Últimas 12 semanas</div></div>'
+        + '<div style="font-weight:900;font-size:15px;color:var(--green)">'+ fmt(semProf.reduce(function(a,s){return a+s.tot;}, 0)) +'</div>'
+      + '</div>'
+      + (misPagosConf.length > 0
+        ? '<div style="display:flex;align-items:flex-end;gap:4px;height:140px">'
+          + semProf.map(function(s,i){
+              return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'
+                + '<div style="font-size:9px;font-weight:800;color:'+(s.tot>0?'var(--green)':'var(--ink3)')+';height:14px">'+(s.tot>0?fmt(s.tot).replace('$','$').slice(0,7):'')+'</div>'
+                + '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'
+                  + '<div style="width:100%;background:'+(i===semProf.length-1?'var(--p1)':s.tot>0?'var(--green)':'var(--rim)')+';border-radius:4px 4px 0 0;height:'+(s.tot>0?Math.max(8,Math.round(s.tot/maxSemProf*110)):4)+'px"></div>'
+                + '</div>'
+                + '<div style="font-size:9px;color:var(--ink3);font-weight:600">'+s.lbl+'</div>'
+              + '</div>';
+            }).join('')
+        + '</div>'
+        : '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:12.5px">Aún no tienes pagos registrados a tu nombre</div>')
+    + '</div>'
+
+    // Top clientes
+    + (topClientesList.length > 0
+      ? '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
+        + '<div style="font-size:14px;font-weight:800;margin-bottom:12px">Tus top 5 clientes <span style="color:var(--ink3);font-weight:500;font-size:11.5px">· por monto cobrado</span></div>'
+        + topClientesList.map(function(c,i){
+            var pct = totalCobrado>0 ? Math.round(c.total/totalCobrado*100) : 0;
+            return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rim2)">'
+              + '<div style="width:28px;height:28px;border-radius:8px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0">'+(i+1)+'</div>'
+              + '<div style="flex:1;min-width:0">'
+                + '<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.nombre+'</div>'
+                + '<div style="font-size:10.5px;color:var(--ink3)">'+c.count+' pago'+(c.count!==1?'s':'')+'</div>'
+              + '</div>'
+              + '<div style="text-align:right;flex-shrink:0">'
+                + '<div style="font-size:13.5px;font-weight:900;color:var(--green)">'+fmt(c.total)+'</div>'
+                + '<div style="font-size:10.5px;color:var(--ink3)">'+pct+'% de total</div>'
+              + '</div>'
+            + '</div>';
+          }).join('')
+      + '</div>'
+      : '')
 
     // Módulos accesibles
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
@@ -9893,11 +10464,12 @@ function showAdminProfile() {
     + '</div>'; // end body
 }
 
-function _profStat(label, val, color){
-  return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;text-align:center">'
-    + '<div style="font-size:26px;font-weight:900;color:'+ color +';letter-spacing:-1px;line-height:1">'+ val +'</div>'
-    + '<div style="font-size:11px;color:var(--ink3);margin-top:4px;font-weight:500">'+ label +'</div>'
-    + '</div>';
+function _profKpi(label, val, color, badge){
+  return '<div class="stat" style="border-left:3px solid '+color+'">'
+    + '<div class="st-ic" style="background:var(--gs);color:'+color+';font-size:9px;font-weight:800">'+badge+'</div>'
+    + '<div class="st-v" style="color:'+color+';font-size:17px">'+val+'</div>'
+    + '<div class="st-l">'+label+'</div>'
+  + '</div>';
 }
 
 function cambiarPasswordPerfil() {
