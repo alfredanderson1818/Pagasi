@@ -2703,7 +2703,7 @@ function verCliente(id){
   const creditosCompletados=creditos.filter(function(cr){return cr.estado==='completado';});
   const creditosActivos=creditos.filter(function(cr){return cr.estado==='activo'||cr.estado==='mora';});
   const totalPagadoReal=pagos.reduce(function(a,p){return a+p.monto;},0);
-  const tuvomora=creditos.some(function(cr){return cr.mora>0||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});});
+  const tuvomora=creditos.some(function(cr){return cr.mora>0||cr.tuvoMoraHistorica===true||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});});
   const esPremium=c.premium===true;
 
   $('mic').textContent=esPremium?'★':'CLI';
@@ -2740,7 +2740,7 @@ function verCliente(id){
       var abonado=Array.isArray(cr.pagosRegistrados)?cr.pagosRegistrados.reduce(function(a,h){return a+h.montoPagado;},0):(cr.pagado||0)*cuotaV;
       var saldo=Math.max(0,parseFloat((cuotaV*totalCr-abonado).toFixed(2)));
       var pct=cuotaV*totalCr>0?Math.round(abonado/(cuotaV*totalCr)*100):0;
-      var tuvoMoraCr=S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});
+      var tuvoMoraCr=(cr.tuvoMoraHistorica===true)||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});
       return `<div class="li" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer" onclick="openAmort('${cr.id}')">
         <div style="display:flex;width:100%;align-items:center;gap:8px">
           <div class="li-ic" style="background:var(--gs)">${cr.estado==='completado'?'✓':'≡'}</div>
@@ -6579,7 +6579,7 @@ function openAddPago(){
       S.creds[ci].saldoProxCuota=saldoProxCuota;
       if(S.creds[ci].mora>0){S.creds[ci].mora=0;S.creds[ci].estado='activo';}
 
-      var recienCompletado = !S.creds[ci].estado==='completado' && cuotasPagadas>=totalCuotas;
+      var recienCompletado = S.creds[ci].estado!=='completado' && cuotasPagadas>=totalCuotas;
       if(cuotasPagadas>=totalCuotas && S.creds[ci].estado!=='completado'){
         recienCompletado = true;
         S.creds[ci].estado='completado';
@@ -6596,7 +6596,7 @@ function openAddPago(){
         // ── Punto 5: Marcar cliente como premium si pagó sin mora ──
         var cliIdx=S.clientes.findIndex(function(cl){return cl.nombre===S.creds[ci].cli;});
         if(cliIdx>=0){
-          var tuvomora=S.pagos.some(function(p){return p.cred===credId&&p.mora>0;});
+          var tuvomora=(S.creds[ci].tuvoMoraHistorica===true)||S.pagos.some(function(p){return p.cred===credId&&p.mora>0;});
           if(!tuvomora && !(S.creds[ci].mora>0)){
             S.clientes[cliIdx].premium=true;
             S.clientes[cliIdx].premioPor=credId;
@@ -6621,6 +6621,13 @@ function openAddPago(){
         pagosRegistrados:historial,
         saldoProxCuota:saldoProxCuota
       });
+      recalcularCreditoDesdePagos(credId);
+      calcularMoraAuto();
+      c2=S.creds[ci];
+      cuotaVal=parseFloat(c2.cuotaQ||c2.cuota||0);
+      saldoProxCuota=parseFloat(c2.saldoProxCuota||0)||0;
+      cuotasPagadas=parseInt(c2.pagado||0,10)||0;
+      recienCompletado = c2.estado==='completado' && !!c2.fechaCompletado;
 
       var msg='✓ Pago de '+fmt(monto)+' registrado';
       if(cuotasAfectadas.length>1) msg+=' · Cuotas '+cuotasAfectadas[0]+' a '+cuotasAfectadas[cuotasAfectadas.length-1]+' cubiertas';
@@ -7313,6 +7320,8 @@ function recalcularCreditoDesdePagos(credId){
   S.creds[ci].pagosRegistrados=historial;
   S.creds[ci].saldoProxCuota=saldoProxCuota;
   S.creds[ci].estado=nuevoEstado;
+  if(nuevoEstado==='completado' && !S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=new Date().toISOString().split('T')[0];
+  if(nuevoEstado!=='completado' && S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=null;
 
   // Si el crédito era liquidación anticipada pero ya no hay pago de liquidación activo,
   // limpiar los metadatos de liquidación para que el saldo vuelva al real original
@@ -7335,7 +7344,8 @@ function recalcularCreditoDesdePagos(credId){
     pagado:cuotasPagadas,
     pagosRegistrados:historial,
     saldoProxCuota:saldoProxCuota,
-    estado:nuevoEstado
+    estado:nuevoEstado,
+    fechaCompletado:S.creds[ci].fechaCompletado||null
   },extraClear));
   syncEstadoClientePorCredito(credId);
   syncTodosEstadosClientes();
@@ -7400,24 +7410,38 @@ function openEditPago(pagoId){
     +'<div class="fg"><label>Cobrador</label>'
     +'<select class="fs" id="ep_cobrador">'+(cobrOpts||'<option>'+p.cobrador+'</option>')+'</select></div>'
     +'</div>'
-    +'<div style="margin-top:10px;padding:8px 11px;background:var(--ambers);border-radius:8px;font-size:11.5px">'
-    +'⚠ Editar el monto NO recalcula el crédito automáticamente. Si cambias el monto por un error, verifica el progreso del crédito.</div>';
+    +'<div style="margin-top:10px;padding:8px 11px;background:var(--okbg);border:1px solid var(--okbd);border-radius:8px;font-size:11.5px;color:var(--green)">'
+    +'✓ El crédito se recalculará automáticamente al guardar cualquier cambio en el pago.</div>';
   S.saveFn = function(){
     var nuevoMonto = parseFloat(($('ep_monto')&&$('ep_monto').value))||0;
     if(nuevoMonto<=0){ toast('El monto debe ser mayor a 0','error'); return false; }
     var pi = S.pagos.findIndex(function(x){return x.id===pagoId;});
     if(pi<0){ toast('Pago no encontrado','error'); return false; }
+    var credId = S.pagos[pi].cred;
     // Save who edited and when for audit trail
     S.pagos[pi].monto      = nuevoMonto;
     S.pagos[pi].fecha      = ($('ep_fecha')&&$('ep_fecha').value)||p.fecha;
     S.pagos[pi].metodo     = ($('ep_metodo')&&$('ep_metodo').value)||p.metodo;
+    S.pagos[pi].cuenta     = S.pagos[pi].metodo;
     S.pagos[pi].estado     = ($('ep_estado')&&$('ep_estado').value)||p.estado;
     S.pagos[pi].referencia = ($('ep_ref')&&$('ep_ref').value)||'';
     S.pagos[pi].cobrador   = ($('ep_cobrador')&&$('ep_cobrador').value)||p.cobrador;
     S.pagos[pi].editadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
     S.pagos[pi].editadoEn  = new Date().toISOString();
     DB.savePago(S.pagos[pi]);
-    closeM(); nav('pagos'); toast('Pago actualizado ✓','success'); return true;
+
+    var mi = (S.movimientos||[]).findIndex(function(m){ return !m.eliminado && m.conceptoPago===pagoId; });
+    if(mi>=0){
+      S.movimientos[mi].monto = nuevoMonto;
+      S.movimientos[mi].fecha = S.pagos[pi].fecha;
+      S.movimientos[mi].cuentaDestino = S.pagos[pi].metodo || S.movimientos[mi].cuentaDestino;
+      S.movimientos[mi].referencia = S.pagos[pi].referencia || '';
+      DB.saveMovimiento(S.movimientos[mi]);
+    }
+
+    recalcularCreditoDesdePagos(credId);
+    calcularMoraAuto();
+    closeM(); nav('pagos'); toast('Pago actualizado y crédito recalculado ✓','success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     +'<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
@@ -7431,8 +7455,7 @@ function confirmarPago(pagoId){
   pago.estado='confirmado';
   DB.savePago(pago);
 
-  // ── BUG FIX: crear movimiento en Cuentas si no existe uno para este pago ──
-  // Esto asegura que los saldos bancarios coincidan con los pagos confirmados
+  // Crear o actualizar movimiento bancario vinculado al pago
   var movExistente = (S.movimientos||[]).find(function(m){
     return !m.eliminado && m.conceptoPago === pago.id;
   });
@@ -7444,7 +7467,7 @@ function confirmarPago(pagoId){
         id: 'MOV-'+Date.now(),
         tipo: 'deposito',
         concepto: 'Pago cuota · '+pago.cli+' · '+pago.cred,
-        conceptoPago: pago.id,  // referencia para evitar duplicados
+        conceptoPago: pago.id,
         monto: pago.monto,
         cuentaOrigen: null,
         cuentaDestino: cuentaDest,
@@ -7458,17 +7481,19 @@ function confirmarPago(pagoId){
       S.movimientos.push(mov);
       DB.saveMovimiento(mov);
     }
+  }else{
+    movExistente.monto = pago.monto;
+    movExistente.fecha = pago.fecha;
+    movExistente.cuentaDestino = pago.cuenta || pago.metodo || movExistente.cuentaDestino;
+    movExistente.referencia = pago.referencia || '';
+    DB.saveMovimiento(movExistente);
   }
 
-  var ci=S.creds.findIndex(function(x){return x.id===pago.cred;});
-  if(ci>=0){
-    S.creds[ci].pagado=Math.min(S.creds[ci].pagado+1,S.creds[ci].totalCuotas||S.creds[ci].plazo*2);
-    if(S.creds[ci].mora>0) S.creds[ci].mora=0;
-    if(S.creds[ci].pagado>=(S.creds[ci].totalCuotas||S.creds[ci].plazo*2)) S.creds[ci].estado='completado';
-    DB.updateCred(S.creds[ci].id,{pagado:S.creds[ci].pagado,mora:S.creds[ci].mora,estado:S.creds[ci].estado});
-    syncEstadoClientePorCredito(S.creds[ci].id);
+  if(pago.cred){
+    recalcularCreditoDesdePagos(pago.cred);
+    calcularMoraAuto();
+    syncEstadoClientePorCredito(pago.cred);
   }
-  calcularMoraAuto();
   toast('✓ Pago confirmado · '+pagoId,'success');
   nav('pagos');
 }
@@ -7476,21 +7501,45 @@ function confirmarPago(pagoId){
 // ── MORA: CALCULAR DÍAS AUTOMÁTICAMENTE AL CARGAR ──
 function calcularMoraAuto(){
   var hoy=new Date(); hoy.setHours(0,0,0,0);
-  S.creds.forEach(function(c){
-    if(c.estado!=='activo'||!c.fecha) return;
+  (S.creds||[]).forEach(function(c){
+    if(!c || c.eliminado || !c.fecha) return;
+    if(c.estado==='completado' || c.estado==='cancelado'){
+      if(c.mora!==0){
+        c.mora=0;
+        DB.updateCred(c.id,{mora:0});
+      } else {
+        c.mora=0;
+      }
+      return;
+    }
+    var cuotasPagadas=parseInt(c.pagado||0,10)||0;
+    var totalCuotas=getCreditoTotalCuotas(c);
+    if(cuotasPagadas>=totalCuotas && totalCuotas>0){
+      if(c.estado!=='completado' || c.mora!==0){
+        c.estado='completado';
+        c.mora=0;
+        DB.updateCred(c.id,{mora:0,estado:'completado'});
+      }else{
+        c.mora=0;
+      }
+      return;
+    }
     var inicio=new Date(c.fecha);
-    var cuotaSiguiente=c.pagado+1;
+    inicio.setHours(0,0,0,0);
+    var cuotaSiguiente=cuotasPagadas+1;
     var fechaVence=new Date(inicio.getTime()+(cuotaSiguiente*15*24*60*60*1000));
     fechaVence.setHours(0,0,0,0);
     var diasAtraso=Math.floor((hoy-fechaVence)/(24*60*60*1000));
     var gracia=PLAN.diasGracia||5;
     var nuevaMora=diasAtraso>gracia?diasAtraso:0;
-    if(nuevaMora!==c.mora){
-      c.mora=nuevaMora;
-      if(nuevaMora>0&&c.estado==='activo') c.estado='mora';
-      if(nuevaMora===0&&c.estado==='mora') c.estado='activo';
-      DB.updateCred(c.id,{mora:c.mora,estado:c.estado});
-    } else { c.mora=nuevaMora; }
+    var nuevoEstado=nuevaMora>0?'mora':'activo';
+    if(c.estado==='mora' || nuevaMora>0) c.tuvoMoraHistorica=true;
+    var cambio=(nuevaMora!==parseInt(c.mora||0,10)) || (c.estado!==nuevoEstado) || ((nuevaMora>0) && c.tuvoMoraHistorica!==true);
+    c.mora=nuevaMora;
+    c.estado=nuevoEstado;
+    if(cambio){
+      DB.updateCred(c.id,{mora:c.mora,estado:c.estado,tuvoMoraHistorica:!!c.tuvoMoraHistorica});
+    }
   });
 }
 
@@ -7593,7 +7642,7 @@ function renderContrato(){
   const tel       = emp.tel;
   const cli=S.clientes.find(x=>x.nombre===c.cli)||{cedula:'—',tel:'—',ciudad:'Venezuela'};
   const hoy=new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
-  const cuotasRestantes=c.plazo-c.pagado;
+  const cuotasRestantes=Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c));
   $('cz').innerHTML=`<div class="cdoc">
     <div style="text-align:center;margin-bottom:4px"><img src="${logoSrc}" style="height:42px;object-fit:contain"></div>
     <div style="text-align:center;font-size:10px;color:#777;margin-bottom:2px;font-weight:600;letter-spacing:0.5px">${empresaUp} — VENTA DE MOTOCICLETAS EN CUOTAS</div>
@@ -7616,18 +7665,18 @@ function renderContrato(){
     <p>Las partes acuerdan el siguiente plan de cuotas para la cancelación de la motocicleta descrita:</p>
     <table style="width:100%;font-size:11.5px;border-collapse:collapse;margin-top:8px">
       ${[
-        ['Número de cuotas', c.plazo+' cuotas mensuales'],
-        ['Monto de cada cuota mensual', fmt(c.cuota)],
-        ['Monto de cada cuota quincenal', fmt(c.cuotaQ)+' (opción quincenal)'],
+        ['Número de cuotas', getCreditoTotalCuotas(c)+' cuotas quincenales'],
+        ['Monto de cada cuota quincenal', fmt(c.cuotaQ||c.cuota)],
+        ['Equivalente mensual referencial', fmt(c.cuotaM||((c.cuotaQ||c.cuota||0)*2))],
         ['Cuotas ya canceladas', getCreditoCuotasPagadas(c)+' de '+getCreditoTotalCuotas(c)],
         ['Cuotas pendientes', Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c))+' restantes'],
         ['Fecha de inicio del plan', c.fecha],
       ].map(([k,v])=>`<tr><td style="padding:5px 0;border-bottom:1px solid #f0f0f0;color:#555;width:55%">${k}</td><td style="padding:5px 0;border-bottom:1px solid #f0f0f0;font-weight:700;color:#111">${v}</td></tr>`).join('')}
     </table>
-    <p style="margin-top:10px;font-size:10.5px;color:#888">EL COMPRADOR declara conocer y aceptar el monto de cada cuota como condición de la venta en cuotas. Las cuotas deberán cancelarse puntualmente en las fechas acordadas, sin necesidad de cobro o requerimiento previo por parte de EL VENDEDOR.</p>
+    <p style="margin-top:10px;font-size:10.5px;color:#888">EL COMPRADOR declara conocer y aceptar que el plan operativo del crédito se maneja en cuotas quincenales sucesivas de quince (15) días, contadas desde la fecha de inicio indicada, sin necesidad de cobro o requerimiento previo por parte de EL VENDEDOR.</p>
 
     <h3>CUARTA: FORMA DE PAGO</h3>
-    <p>EL COMPRADOR se obliga a cancelar cada cuota en la fecha acordada mediante cualquiera de los siguientes métodos: transferencia bancaria, pago móvil, Zelle, PayPal o efectivo en USD. El pago se considerará efectuado únicamente cuando EL VENDEDOR confirme la recepción del monto completo. Pagos parciales no interrumpen el cómputo de mora.</p>
+    <p>EL COMPRADOR se obliga a cancelar cada cuota en la fecha acordada mediante cualquiera de los siguientes métodos: transferencia bancaria, pago móvil, Zelle, PayPal o efectivo en USD. El pago se considerará efectuado únicamente cuando EL VENDEDOR confirme la recepción del monto correspondiente. Los pagos parciales se aplicarán primero a la cuota quincenal más antigua pendiente y solo detendrán la mora cuando la cuota vencida quede totalmente cubierta según el sistema de amortización del crédito.</p>
 
     <h3>QUINTA: RESERVA DE DOMINIO</h3>
     <p>De conformidad con la Ley de Venta con Reserva de Dominio vigente en Venezuela, EL VENDEDOR se reserva el dominio y la propiedad de la motocicleta hasta tanto EL COMPRADOR cancele la <strong>totalidad del precio pactado</strong>. El incumplimiento de <strong>tres (3) cuotas consecutivas</strong> o <strong>cinco (5) cuotas alternadas</strong> faculta a EL VENDEDOR a recuperar la unidad de forma inmediata y sin necesidad de intervención judicial, renunciando EL COMPRADOR expresamente a cualquier recurso de oposición por esta causa. EL COMPRADOR no podrá oponer derechos de retención ni reclamar mejoras realizadas sobre la unidad.</p>
