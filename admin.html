@@ -4854,23 +4854,54 @@ users(){
     DB.getUsuarios().then(function(lista){
       var tb = $('users-tbody');
       if(!tb) return;
-      if(!lista.length){ tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--ink3);padding:20px">Sin usuarios registrados</td></tr>'; return; }
+      // Actualizar KPIs
+      var total = lista.length;
+      var admins = lista.filter(function(u){return (u.rol||'').toLowerCase()==='administrador';}).length;
+      var empleados = lista.filter(function(u){
+        var r = (u.rol||'').toLowerCase();
+        return r==='empleado'||r==='cobrador'||r==='vendedor';
+      }).length;
+      var gerentes = lista.filter(function(u){return (u.rol||'').toLowerCase()==='gerente';}).length;
+      if($('users-kpi-total'))    $('users-kpi-total').textContent=total;
+      if($('users-kpi-admins'))   $('users-kpi-admins').textContent=admins;
+      if($('users-kpi-empleados'))$('users-kpi-empleados').textContent=empleados;
+      if($('users-kpi-gerentes')) $('users-kpi-gerentes').textContent=gerentes;
+
+      if(!lista.length){
+        tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--ink3);padding:30px 0"><div style="font-size:13px;font-weight:700;margin-bottom:4px">Sin usuarios registrados</div><div style="font-size:11.5px">Usa el botón "Invitar Usuario" para agregar el primero</div></td></tr>';
+        return;
+      }
+      // Ordenar: admin primero, luego alfabético por nombre
+      lista.sort(function(a,b){
+        var ra=(a.rol||'').toLowerCase(), rb=(b.rol||'').toLowerCase();
+        if(ra==='administrador' && rb!=='administrador') return -1;
+        if(rb==='administrador' && ra!=='administrador') return 1;
+        return (a.nombre||a.email||'').localeCompare(b.nombre||b.email||'');
+      });
       tb.innerHTML = lista.map(function(u){
-        var initials = (u.nombre||u.email||'?').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+        var nombre = u.nombre||u.email||'?';
+        var initials = nombre.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
         var rc = rolBadge[u.rol]||'b-x';
-        var mods = (u.permisos||[]).length;
+        var mods = (u.permisos||[]).filter(function(p){return p!=='perm_delete';}).length;
         var esMio = S.currentUser && S.currentUser.uid === u.uid;
-        return '<tr>'
-          +'<td><div style="display:flex;align-items:center;gap:9px">'
-          +'<div style="width:29px;height:29px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff">'+initials+'</div>'
-          +'<div><div class="tdm">'+( u.nombre||u.email)+'</div>'+(esMio?'<div class="tds">Tú</div>':'')+'</div></div></td>'
-          +'<td class="tds">'+u.email+'</td>'
-          +'<td><span class="bdg '+rc+'">'+u.rol+'</span></td>'
-          +'<td class="tds">'+mods+' módulos</td>'
-          +'<td style="display:flex;gap:5px;align-items:center">'+'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'+((!esMio&&canDeleteAction())?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email)+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">Eliminar</button>':'')+'</td>'
-+'</tr>';
+        var rolLabel = u.rol || 'Sin rol';
+        return '<tr style="transition:background .15s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
+          +'<td><div style="display:flex;align-items:center;gap:10px">'
+          +'<div style="width:34px;height:34px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(91,78,212,.2)">'+initials+'</div>'
+          +'<div style="min-width:0"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nombre+(esMio?' <span style="color:var(--p1);font-size:9.5px;background:var(--gs);padding:2px 6px;border-radius:6px;font-weight:700;margin-left:4px">TÚ</span>':'')+'</div></div></div></td>'
+          +'<td class="tds" style="font-family:monospace;font-size:11.5px">'+u.email+'</td>'
+          +'<td><span class="bdg '+rc+'">'+rolLabel+'</span></td>'
+          +'<td class="tds">'+mods+' módulo'+(mods!==1?'s':'')+((u.permisos||[]).indexOf('perm_delete')>=0?' <span style="font-size:10px;color:var(--red);margin-left:4px">+ eliminar</span>':'')+'</td>'
+          +'<td style="display:flex;gap:5px;align-items:center">'
+            +'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'
+            +((!esMio&&canDeleteAction())?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email).replace(/"/g,'&quot;')+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">Eliminar</button>':'')
+          +'</td>'
+        +'</tr>';
       }).join('');
-    }).catch(function(){ /* sin Firebase, no hay lista */ });
+    }).catch(function(e){
+      var tb = $('users-tbody');
+      if(tb) tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--red);padding:20px;font-size:12px">Error cargando usuarios: '+(e.message||'sin conexión Firebase')+'</td></tr>';
+    });
     // Cargar invitaciones pendientes
     if(db){
       db.collection('invitaciones').where('usado','==',false).get().then(function(snap){
@@ -4878,31 +4909,79 @@ users(){
         if(!pi) return;
         if(snap.empty){ pi.style.display='none'; return; }
         pi.style.display='';
-        pi.innerHTML = snap.docs.map(function(d){
-          var inv = d.data();
-          return '<div class="li"><div style="flex:1"><div style="font-size:12px;font-weight:700">'+inv.email+'</div>'
-            +'<div class="tds">'+inv.rol+' · '+inv.permisos.length+' módulos · Pendiente</div></div>'
-            +'<button class="btn btn-g btn-xs" data-token="'+d.id+'" onclick="copiarLink(this.dataset.token)">Copiar link</button>'
-            +'</div>';
-        }).join('');
-      });
+        var cnt = $('pending-invites-count');
+        if(cnt) cnt.textContent = snap.size;
+        var listEl = pi.querySelector('.lst');
+        if(listEl){
+          listEl.innerHTML = snap.docs.map(function(d){
+            var inv = d.data();
+            return '<div class="li"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+inv.email+'</div>'
+              +'<div class="tds">'+inv.rol+' · '+inv.permisos.length+' módulos · <span style="color:var(--amber)">Pendiente de aceptar</span></div></div>'
+              +'<button class="btn btn-g btn-xs" data-token="'+d.id+'" onclick="copiarLink(this.dataset.token)">Copiar link</button>'
+              +'</div>';
+          }).join('');
+        }
+      }).catch(function(){});
     }
   }, 80);
   return`<div class="page">
+
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.1">Usuarios</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">Gestiona accesos y permisos del sistema</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-g btn-sm" onclick="nav('users')" title="Refrescar lista">↻ Refrescar</button>
+      <button class="btn btn-p btn-sm" onclick="openInviteUser()" style="gap:6px">＋ Invitar Usuario</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">USR</div>
+      <div class="st-v" style="color:var(--p1)" id="users-kpi-total">...</div>
+      <div class="st-l">Usuarios totales</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">ADM</div>
+      <div class="st-v" style="color:var(--p1)" id="users-kpi-admins">...</div>
+      <div class="st-l">Administradores</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--amber)">
+      <div class="st-ic" style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:800">GER</div>
+      <div class="st-v" style="color:var(--amber)" id="users-kpi-gerentes">...</div>
+      <div class="st-l">Gerentes</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--green)">
+      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">EMP</div>
+      <div class="st-v" style="color:var(--green)" id="users-kpi-empleados">...</div>
+      <div class="st-l">Empleados</div>
+    </div>
+  </div>
+
+  <!-- Tabla de usuarios -->
   <div class="card" style="margin-bottom:12px">
     <div class="ch">
-      <div><div class="ct">Usuarios del Sistema</div><div class="cs">Gestiona accesos y permisos por módulo</div></div>
-      <button class="btn btn-p btn-sm" onclick="openInviteUser()">＋ Invitar Usuario</button>
+      <div><div class="ct">Lista de usuarios</div><div class="cs">Incluye a todos los que han iniciado sesión al menos una vez</div></div>
     </div>
     <div class="tw"><table>
-      <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Acceso a módulos</th><th></th></tr></thead>
+      <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Accesos</th><th></th></tr></thead>
       <tbody id="users-tbody"><tr><td colspan="5" style="text-align:center;color:var(--ink3);padding:16px">Cargando...</td></tr></tbody>
     </table></div>
   </div>
+
+  <!-- Invitaciones pendientes -->
   <div class="card" id="pending-invites" style="display:none">
-    <div class="ch"><div class="ct">Invitaciones pendientes</div><div class="cs">Usuarios que aún no han aceptado su invitación</div></div>
+    <div class="ch">
+      <div><div class="ct">Invitaciones pendientes <span style="background:var(--ambers);color:var(--amber);font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:6px" id="pending-invites-count">0</span></div>
+      <div class="cs">Usuarios que aún no han aceptado su invitación</div></div>
+    </div>
     <div class="lst"></div>
   </div>
+
   </div>`;},
 };
 
@@ -10934,6 +11013,38 @@ if (auth) {
       if (db) {
         db.collection('usuarios').doc(user.uid).get().then(function(doc) {
           var data = doc.exists ? doc.data() : {};
+          // BUG FIX: si el doc no existe en Firestore (usuario creado antes de la
+          // colección, o que nunca pasó por el flujo de invitación), lo creamos
+          // automáticamente para que aparezca en la lista de Usuarios.
+          if (!doc.exists) {
+            var defaultRol = 'Administrador';
+            var defaultPerms = ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users','perm_delete'];
+            var defaultData = {
+              nombre: user.displayName || (user.email||'').split('@')[0] || 'Usuario',
+              email: user.email,
+              rol: defaultRol,
+              permisos: defaultPerms,
+              creado: new Date().toISOString(),
+              autoCreado: true  // marca para saber que se creó aquí, no por invitación
+            };
+            db.collection('usuarios').doc(user.uid).set(defaultData, {merge:true})
+              .then(function(){ console.log('Usuario creado en Firestore:', user.email); })
+              .catch(function(){});
+            data = defaultData;
+          } else {
+            // Si existe pero le faltan campos críticos (nombre, rol, permisos), completarlos
+            var needsUpdate = {};
+            if (!data.email) needsUpdate.email = user.email;
+            if (!data.nombre) needsUpdate.nombre = user.displayName || (user.email||'').split('@')[0] || 'Usuario';
+            if (!data.rol || data.rol === 'admin') needsUpdate.rol = 'Administrador'; // normalizar minúscula legacy
+            if (!Array.isArray(data.permisos) || data.permisos.length === 0) {
+              needsUpdate.permisos = ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users','perm_delete'];
+            }
+            if (Object.keys(needsUpdate).length > 0) {
+              db.collection('usuarios').doc(user.uid).set(needsUpdate, {merge:true}).catch(function(){});
+              Object.assign(data, needsUpdate);
+            }
+          }
           S.currentUser = {
             uid: user.uid,
             email: user.email,
