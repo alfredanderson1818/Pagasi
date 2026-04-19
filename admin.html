@@ -5330,7 +5330,10 @@ function _wzRender(motoId){
     : '<div style="font-size:12px;color:var(--ink3);padding:7px 16px;background:var(--surf2);border-radius:50px;border:1px solid var(--rim)">Score aparece al completar datos</div>';
 
   // ── PASO 1: Datos del cliente ──
-  var step1 = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+  var step1 = '<div class="fg" style="margin-bottom:10px"><label class="fsec" style="display:block;margin-bottom:5px">Cliente registrado</label>'
+    + '<select class="fs" id="wz_cliente_sel" onchange="_wzPickCliente(this)">'+_wzClienteOptions()+'</select>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Puedes elegir un cliente ya registrado o dejarlo en nuevo cliente y escribir los datos manualmente.</div></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     + _wzFg('Nombre completo *','wz_nom','text','Ej: Carlos Pérez','',true)
     + _wzFg('N° Cédula *','wz_ci','text','V-12345678','',true)
     + _wzFg('Teléfono *','wz_tel','tel','0412-0000000','',true)
@@ -5652,8 +5655,75 @@ function _wzRender(motoId){
 
 // ── Helper: campo de formulario ──
 function _wzFg(label, id, type, placeholder, extra, required){
+  var val = (WZ && WZ[id] != null) ? String(WZ[id]).replace(/"/g,'&quot;') : '';
   return '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">'+label+'</label>'
-    +'<input class="fi" id="'+id+'" type="'+type+'" placeholder="'+placeholder+'" '+(extra||'')+' '+(required?'required':'')+' style="width:100%"></div>';
+    +'<input class="fi" id="'+id+'" type="'+type+'" placeholder="'+placeholder+'" value="'+val+'" '+(extra||'')+' '+(required?'required':'')+' style="width:100%"></div>';
+}
+
+function _wzClienteOptions(){
+  var list = (S.clientes||[]).filter(function(c){ return c && !c.eliminado; });
+  return '<option value="">Nuevo cliente</option>' + list.map(function(c){
+    return '<option value="'+c.id+'">'+(c.nombre||'Sin nombre')+' — C.I. '+(c.cedula||'—')+'</option>';
+  }).join('');
+}
+
+function _wzPickCliente(sel){
+  var id = parseInt((sel&&sel.value)||0,10);
+  WZ.clienteSel = id || '';
+  if(!id){
+    WZ.wz_nom = WZ.wz_ci = WZ.wz_tel = WZ.wz_wa = WZ.wz_email = WZ.wz_ciudad = '';
+    WZ.wz_emp = WZ.wz_ant = WZ.wz_conocio = '';
+    WZ.wz_ing = WZ.wz_ifam = '';
+    return _wzRender();
+  }
+  var c = (S.clientes||[]).find(function(x){ return parseInt(x.id,10)===id; });
+  if(!c) return;
+  WZ.nom = WZ.wz_nom = c.nombre || '';
+  WZ.ci = WZ.wz_ci = c.cedula || '';
+  WZ.tel = WZ.wz_tel = c.tel || '';
+  WZ.wa = WZ.wz_wa = c.wa || c.tel || '';
+  WZ.email = WZ.wz_email = c.email || '';
+  WZ.ciudad = WZ.wz_ciudad = c.ciudad || '';
+  WZ.emp = WZ.wz_emp = c.trabajo || '';
+  WZ.ant = WZ.wz_ant = c.antiguedad || '';
+  WZ.ing = WZ.wz_ing = c.ingreso || '';
+  WZ.ifam = WZ.wz_ifam = c.ingreso_familiar || '';
+  WZ.conocio = WZ.wz_conocio = c.conocio || '';
+  WZ.viv = WZ.wz_viv = c.vivienda || '';
+  WZ.tdir = WZ.wz_tdir = c.tiempo_dir || '';
+  WZ.estado_ubi = WZ.wz_estado = c.estado_ubi || '';
+  WZ.ciudad_res = WZ.wz_ciudad_res = c.ciudad || '';
+  WZ.dir_det = WZ.wz_dir_det = c.dir || '';
+  WZ.empresa = WZ.wz_empresa = c.empresa || '';
+  WZ.cargo = WZ.wz_cargo = c.cargo || '';
+  WZ.rem = WZ.wz_rem = c.remesas || '';
+  WZ.dep = c.dependientes || 0;
+  WZ.hist = c.historial || '';
+  WZ.deuda = c.deudas || '';
+  WZ.banco = WZ.wz_banco = c.banco_estado || '';
+  WZ.banco_nm = WZ.wz_banco_nm = c.banco_nombre || '';
+  WZ.banco_cobro = WZ.wz_banco_cobro = c.banco_cobro || '';
+  WZ.cuenta = WZ.wz_cuenta = c.cuenta_digitos || '';
+  WZ.ahorro = WZ.wz_ahorro = c.ahorro || '';
+  WZ.cashea = c.cashea || 'no';
+  WZ.cashea_nivel = WZ.wz_cashea_nivel = c.cashea_nivel || '';
+  WZ.cashea_pago = WZ.wz_cashea_pago = c.cashea_pago || '';
+  WZ.fiador_tiene = c.fiador || 'no';
+  WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
+  WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
+  WZ.fiador_ci = WZ.wz_fiador_ci = c.fiador_ci || '';
+  WZ.fiador_rel = WZ.wz_fiador_rel = c.fiador_rel || '';
+  WZ.r1n = c.ref1&&c.ref1.nom || '';
+  WZ.r1t = c.ref1&&c.ref1.tel || '';
+  WZ.r1r = c.ref1&&c.ref1.rel || '';
+  WZ.r1obs = c.ref1&&c.ref1.obs || '';
+  WZ.r2n = c.ref2&&c.ref2.nom || '';
+  WZ.r2t = c.ref2&&c.ref2.tel || '';
+  WZ.r2r = c.ref2&&c.ref2.rel || '';
+  WZ.r2obs = c.ref2&&c.ref2.obs || '';
+  WZ.docsCount = c.docs_count || 0;
+  WZ.impresion = c.impresion || '';
+  _wzRender();
 }
 
 // ── Selección de moto del inventario ──
@@ -5947,27 +6017,30 @@ function _wzValidar(){
   }
   // Guardar valores antes de avanzar
   if(s===1){
+    WZ.clienteSel = g('wz_cliente_sel');
     WZ.nom = g('wz_nom'); WZ.ci = g('wz_ci'); WZ.tel = g('wz_tel');
     WZ.wa = g('wz_wa'); WZ.email = g('wz_email'); WZ.ciudad = g('wz_ciudad');
     WZ.emp = g('wz_emp'); WZ.ant = g('wz_ant');
     WZ.ing = parseFloat((document.getElementById('wz_ing')||{}).value)||0;
     WZ.conocio = g('wz_conocio');
+    WZ.wz_nom = WZ.nom; WZ.wz_ci = WZ.ci; WZ.wz_tel = WZ.tel; WZ.wz_wa = WZ.wa; WZ.wz_email = WZ.email; WZ.wz_ciudad = WZ.ciudad;
+    WZ.wz_emp = WZ.emp; WZ.wz_ant = WZ.ant; WZ.wz_ing = WZ.ing; WZ.wz_conocio = WZ.conocio;
   }
   if(s===3){
     WZ.uso = g('wz_uso');
     WZ.vin = g('wz_vin'); WZ.color = g('wz_color'); WZ.placa = g('wz_placa');
   }
   if(s===2){
-    WZ.obs = g('wz_obs');
-    WZ.viv = g('wz_viv');
-    WZ.tdir = g('wz_tdir');
-    WZ.estado_ubi = g('wz_estado');
-    WZ.ciudad_res = g('wz_ciudad_res');
-    WZ.dir_det = g('wz_dir_det');
-    WZ.dir_q = g('wz_dir_q');
+    WZ.obs = g('wz_obs'); WZ.wz_obs = WZ.obs;
+    WZ.viv = g('wz_viv'); WZ.wz_viv = WZ.viv;
+    WZ.tdir = g('wz_tdir'); WZ.wz_tdir = WZ.tdir;
+    WZ.estado_ubi = g('wz_estado'); WZ.wz_estado = WZ.estado_ubi;
+    WZ.ciudad_res = g('wz_ciudad_res'); WZ.wz_ciudad_res = WZ.ciudad_res;
+    WZ.dir_det = g('wz_dir_det'); WZ.wz_dir_det = WZ.dir_det;
+    WZ.dir_q = g('wz_dir_q'); WZ.wz_dir_q = WZ.dir_q;
     WZ.emp = _wzChipVal('wz_emp_g')||g('wz_emp')||'';
-    WZ.empresa = g('wz_empresa');
-    WZ.cargo = g('wz_cargo');
+    WZ.empresa = g('wz_empresa'); WZ.wz_empresa = WZ.empresa;
+    WZ.cargo = g('wz_cargo'); WZ.wz_cargo = WZ.cargo;
     WZ.ing = parseFloat(g('wz_ing'))||0;
     WZ.ifam = parseFloat(g('wz_ifam'))||0;
     WZ.ant = g('wz_ant');
@@ -6104,9 +6177,15 @@ function _wzGuardar(){
 
   // Crear cliente
   var cliId = S.clientes.length ? Math.max.apply(null,S.clientes.map(function(x){return x.id||0;}))+1 : 1;
-  // Verificar si ya existe por cédula
-  var existing = S.clientes.find(function(c){ return !c.eliminado && c.cedula && c.cedula.replace(/\s/g,'').toLowerCase()===(WZ.ci||'').replace(/\s/g,'').toLowerCase(); });
-  if(existing){ cliId = existing.id; }
+  // Verificar si ya existe por selector o por cédula
+  var existing = null;
+  if(WZ.clienteSel){
+    existing = S.clientes.find(function(c){ return !c.eliminado && String(c.id)===String(WZ.clienteSel); }) || null;
+  }
+  if(!existing){
+    existing = S.clientes.find(function(c){ return !c.eliminado && c.cedula && c.cedula.replace(/\s/g,'').toLowerCase()===(WZ.ci||'').replace(/\s/g,'').toLowerCase(); }) || null;
+  }
+  if(existing){ cliId = existing.id; WZ.nom = existing.nombre || WZ.nom; }
 
   var cliente = existing || {
     id: cliId,
@@ -6161,7 +6240,7 @@ function _wzGuardar(){
   var credId = 'CRED-'+String(S.creds.length+1).padStart(3,'0');
   var newCred = {
     id: credId,
-    cli: WZ.nom||'',
+    cli: (existing&&existing.nombre)||WZ.nom||'',
     clienteId: cliId,
     modelo: WZ.motoModelo||'',
     motoId: WZ.motoInvId||null,
@@ -6197,7 +6276,7 @@ function _wzGuardar(){
   // Marcar moto como financiada
   if(WZ.motoInvId){
     var mi = S.motos.findIndex(function(m){ return m.id===WZ.motoInvId; });
-    if(mi>=0){ S.motos[mi].estado='financiada'; S.motos[mi].cliente=WZ.nom; DB.saveMoto(S.motos[mi]); }
+    if(mi>=0){ S.motos[mi].estado='financiada'; S.motos[mi].cliente=((existing&&existing.nombre)||WZ.nom); DB.saveMoto(S.motos[mi]); }
   }
 
   // Movimiento de inicial
@@ -10898,6 +10977,36 @@ function doLogout() {
   }
 }
 
+function _buildInviteLink(token){
+  return window.location.href.split('?')[0]+'?invite='+encodeURIComponent(token);
+}
+function _randomToken(len){
+  len = len || 32;
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  var out='';
+  for(var i=0;i<len;i++) out += chars.charAt(Math.floor(Math.random()*chars.length));
+  return out;
+}
+function _randomTempPass(){
+  return 'Pg!' + _randomToken(10) + '9a';
+}
+function _secondaryInviteAuth(){
+  if(typeof firebase==='undefined' || !FIREBASE_CONFIG || FIREBASE_CONFIG.apiKey==='TU_API_KEY') return null;
+  var name='__invite_creator__';
+  try { return firebase.app(name).auth(); } catch(e) {}
+  try {
+    var app = firebase.initializeApp(FIREBASE_CONFIG, name);
+    return app.auth();
+  } catch(e) {
+    try { return firebase.app(name).auth(); } catch(ex) { return null; }
+  }
+}
+function _cleanupSecondaryInviteAuth(){
+  try {
+    var app = firebase.app('__invite_creator__');
+    app.delete();
+  } catch(e) {}
+}
 // ══════════════════════════════════════════
 // GESTIÓN DE USUARIOS
 // ══════════════════════════════════════════
@@ -10947,32 +11056,70 @@ function openInviteUser(){
     document.querySelectorAll('#mbd input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
 
     showLoader('Creando usuario...','');
-    auth.createUserWithEmailAndPassword(email, 'Pagasi2024!Temp')
+    var inviteAuth = _secondaryInviteAuth();
+    if(!inviteAuth){ hideLoader(); toast('No fue posible inicializar el creador de invitaciones','error'); return false; }
+    var tempPass = _randomTempPass();
+    var inviteToken = 'INV-'+Date.now()+'-'+_randomToken(18);
+    var inviteLink = _buildInviteLink(inviteToken);
+
+    inviteAuth.createUserWithEmailAndPassword(email, tempPass)
       .then(function(userCred){
         var uid=userCred.user.uid;
-        if(nombre) return userCred.user.updateProfile({displayName:nombre}).then(function(){ return uid; });
-        return uid;
+        var chain = Promise.resolve();
+        if(nombre){ chain = chain.then(function(){ return userCred.user.updateProfile({displayName:nombre}); }); }
+        return chain.then(function(){ return uid; });
       })
       .then(function(uid){
         return DB.saveUsuario(uid,{
           uid:uid, email:email, nombre:nombre||email, rol:rol, permisos:permisos,
           creadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
-          creadoEn:new Date().toISOString(), debeActualizar:true
+          creadoEn:new Date().toISOString(), debeActualizar:true,
+          inviteToken: inviteToken,
+          inviteStatus: 'pendiente',
+          inviteTempPass: tempPass,
+          inviteLink: inviteLink
         });
       })
       .then(function(){
-        hideLoader(); closeM(); nav('users');
-        toast('✓ '+email+' creado · Contraseña temporal: Pagasi2024!Temp','success');
+        return inviteAuth.signOut().catch(function(){});
+      })
+      .then(function(){
+        _cleanupSecondaryInviteAuth();
+        hideLoader();
+        closeM();
+        nav('users');
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(inviteLink).then(function(){
+            toast('✓ Invitación creada y link copiado para '+email,'success');
+          }).catch(function(){ toast('✓ Invitación creada para '+email,'success'); });
+        } else {
+          toast('✓ Invitación creada para '+email,'success');
+        }
+        setTimeout(function(){ try{ copiarLink(inviteToken); }catch(e){} }, 80);
       })
       .catch(function(e){
         hideLoader();
+        try{ inviteAuth.signOut(); }catch(_e){}
+        _cleanupSecondaryInviteAuth();
         if(e.code==='auth/email-already-in-use'){
           db.collection('usuarios').where('email','==',email).get().then(function(snap){
             if(!snap.empty){
               var uid=snap.docs[0].id;
-              return DB.updateUsuario(uid,{rol:rol,permisos:permisos,nombre:nombre||snap.docs[0].data().nombre});
+              return DB.updateUsuario(uid,{
+                rol:rol,
+                permisos:permisos,
+                nombre:nombre||snap.docs[0].data().nombre,
+                inviteToken: inviteToken,
+                inviteStatus: 'pendiente',
+                inviteTempPass: tempPass,
+                inviteLink: inviteLink
+              });
             }
-          }).then(function(){ closeM(); nav('users'); toast('Permisos actualizados para '+email,'success'); })
+          }).then(function(){
+            closeM(); nav('users');
+            try{ copiarLink(inviteToken); }catch(_x){}
+            toast('Permisos actualizados y link regenerado para '+email,'success');
+          })
           .catch(function(e2){ toast('Error: '+e2.message,'error'); });
         } else { toast('Error: '+e.message,'error'); }
       });
@@ -11046,7 +11193,7 @@ function confirmarEliminarUsuario(uid,nombre){
 }
 
 function copiarLink(token){
-  var url=window.location.href.split('?')[0]+'?invite='+token;
+  var url = (token&&String(token).indexOf('http')===0) ? token : window.location.href.split('?')[0]+'?invite='+token;
   if(navigator.clipboard){
     navigator.clipboard.writeText(url).then(function(){ toast('Link copiado al portapapeles','success'); });
   } else {
@@ -11054,14 +11201,64 @@ function copiarLink(token){
   }
 }
 
+function _getInviteToken(){
+  try { return new URLSearchParams(window.location.search).get('invite') || ''; } catch(e) { return ''; }
+}
+function _clearInviteParams(){
+  try {
+    var url = window.location.href.split('?')[0];
+    window.history.replaceState({}, document.title, url);
+  } catch(e) {}
+}
+function _showInviteScreenForDoc(docData){
+  var invSc = $('invite-screen');
+  var loginSc = $('login-screen');
+  if(loginSc) loginSc.style.display = 'none';
+  if(invSc) invSc.style.display = 'flex';
+  S.pendingInvite = docData || null;
+  if($('inv_nombre')) $('inv_nombre').value = docData && docData.nombre && docData.nombre!==docData.email ? docData.nombre : '';
+  if($('inv_pass')) $('inv_pass').value = '';
+  if($('inv_pass2')) $('inv_pass2').value = '';
+  if($('invite-err')) $('invite-err').style.display = 'none';
+  if($('inv-footer')) $('inv-footer').innerHTML = 'Invitación para <b>' + ((docData&&docData.email)||'') + '</b><br>Elige tu nombre y tu clave para activar la cuenta.';
+}
+function _resolverInvitacionPendiente(){
+  if(!auth || !db) return;
+  var token = _getInviteToken();
+  if(!token) return;
+  db.collection('usuarios').where('inviteToken','==',token).limit(1).get().then(function(snap){
+    if(snap.empty){
+      if($('login-err')){ $('login-err').textContent='El link de invitación no es válido o ya fue usado.'; $('login-err').style.display='block'; }
+      _clearInviteParams();
+      return;
+    }
+    var doc = snap.docs[0];
+    var data = doc.data() || {};
+    data.uid = doc.id;
+    if(data.inviteStatus==='aceptada'){
+      if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
+      _clearInviteParams();
+      return;
+    }
+    _showInviteScreenForDoc(data);
+  }).catch(function(e){
+    if($('login-err')){ $('login-err').textContent='Error al abrir la invitación: '+(e.message||e); $('login-err').style.display='block'; }
+  });
+}
+
 function aceptarInvitacion() {
-  var nombre = ($('inv_nombre') || {}).value || '';
-  var pass   = ($('inv_pass')   || {}).value || '';
-  var pass2  = ($('inv_pass2')  || {}).value || '';
+  var nombre = (($('inv_nombre') || {}).value || '').trim();
+  var pass   = (($('inv_pass')   || {}).value || '');
+  var pass2  = (($('inv_pass2')  || {}).value || '');
   var errEl  = $('invite-err');
   if (errEl) errEl.style.display = 'none';
 
-  if (!nombre.trim()) {
+  var pending = S.pendingInvite || null;
+  if (!pending || !pending.email || !pending.inviteTempPass) {
+    if (errEl) { errEl.textContent = '⛔ Esta invitación no es válida o ya expiró'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (!nombre) {
     if (errEl) { errEl.textContent = '⛔ Ingresa tu nombre'; errEl.style.display = 'block'; }
     return;
   }
@@ -11078,33 +11275,60 @@ function aceptarInvitacion() {
   if (btn) btn.disabled = true;
   showLoader('Creando cuenta...', '');
 
-  auth.currentUser.updatePassword(pass)
-    .then(function() {
-      return db.collection('usuarios').doc(auth.currentUser.uid).set({
+  var doAuth = Promise.resolve();
+  if(auth.currentUser && auth.currentUser.email !== pending.email){
+    doAuth = auth.signOut();
+  }
+  doAuth
+    .then(function(){
+      if(auth.currentUser && auth.currentUser.email === pending.email) return auth.currentUser;
+      return auth.signInWithEmailAndPassword(pending.email, pending.inviteTempPass).then(function(r){ return r.user; });
+    })
+    .then(function(user){
+      return user.updateProfile({ displayName: nombre }).then(function(){ return user; });
+    })
+    .then(function(user){
+      return user.updatePassword(pass).then(function(){ return user; });
+    })
+    .then(function(user){
+      return db.collection('usuarios').doc(user.uid).set({
+        uid: user.uid,
         nombre: nombre,
-        email: auth.currentUser.email,
-        rol: 'admin'
+        email: user.email,
+        inviteStatus: 'aceptada',
+        inviteAcceptedAt: new Date().toISOString(),
+        inviteTempPass: firebase.firestore.FieldValue.delete(),
+        inviteToken: firebase.firestore.FieldValue.delete(),
+        inviteLink: firebase.firestore.FieldValue.delete(),
+        debeActualizar: false
       }, { merge: true });
     })
     .then(function() {
       hideLoader();
+      _clearInviteParams();
+      S.pendingInvite = null;
       $('invite-screen').style.display = 'none';
       init();
     })
     .catch(function(e) {
       hideLoader();
       if (btn) btn.disabled = false;
-      if (errEl) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+      if (errEl) { errEl.textContent = e.message || 'Error al activar la cuenta'; errEl.style.display = 'block'; }
     });
 }
 
 // ── Arranque con Firebase Auth ──────────────────────────────
 if (auth) {
   auth.onAuthStateChanged(function(user) {
+    var inviteToken = _getInviteToken();
+    if (inviteToken && (!user || (S.pendingInvite && user.email===S.pendingInvite.email))) {
+      _resolverInvitacionPendiente();
+      if (!user) return;
+    }
     if (user) {
       $('login-screen').style.display = 'none';
       var invSc = $('invite-screen');
-      if (invSc) invSc.style.display = 'none';
+      if (invSc && !inviteToken) invSc.style.display = 'none';
       // Cargar datos del usuario desde Firestore
       if (db) {
         db.collection('usuarios').doc(user.uid).get().then(function(doc) {
@@ -11164,11 +11388,20 @@ if (auth) {
       }
     } else {
       window._appInited = false;
-      $('login-screen').style.display = 'flex';
-      var appRoot = $('app-root');
-      if (appRoot) appRoot.style.display = 'none';
-      var mEl = $('login-mode');
-      if (mEl) mEl.textContent = 'Firebase Auth activo';
+      var inviteToken = _getInviteToken();
+      if (inviteToken) {
+        var appRoot = $('app-root');
+        if (appRoot) appRoot.style.display = 'none';
+        _resolverInvitacionPendiente();
+      } else {
+        $('login-screen').style.display = 'flex';
+        var invSc = $('invite-screen');
+        if (invSc) invSc.style.display = 'none';
+        var appRoot = $('app-root');
+        if (appRoot) appRoot.style.display = 'none';
+        var mEl = $('login-mode');
+        if (mEl) mEl.textContent = 'Firebase Auth activo';
+      }
     }
   });
 } else {
