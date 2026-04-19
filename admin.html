@@ -3455,6 +3455,7 @@ motos(){
 creditos(){
   // ─── Métricas canónicas ───
   const allCreds   = S.creds.filter(c=>!c.eliminado);
+  const registradosCreds = allCreds.filter(c=>c.estado!=='cancelado');
   const activos    = allCreds.filter(c=>c.estado==='activo');
   const enMora     = allCreds.filter(c=>c.mora>0 && c.estado==='activo');
   const completados= allCreds.filter(c=>c.estado==='completado');
@@ -3463,7 +3464,7 @@ creditos(){
 
   const carteraViva= activos.reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
   const cuotaEsp   = activos.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
-  const valorTotal = allCreds.reduce((a,c)=>a+parseFloat(c.total||0),0);
+  const valorTotal = registradosCreds.reduce((a,c)=>a+parseFloat(c.total||0),0);
   const cobradoAll = allCreds.reduce((a,c)=>a+getCreditoPagosConfirmados(c),0);
   const inicialAll = getTotalInicialesCobradas();
   const pctRecaudado = valorTotal>0 ? Math.round(((cobradoAll+inicialAll)/(valorTotal+inicialAll))*100) : 0;
@@ -3493,7 +3494,7 @@ creditos(){
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
     <div>
       <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.1">Financiamientos</div>
-      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">${allCreds.length} créditos registrados · ${fmt(valorTotal)} valor total financiado</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">${registradosCreds.length} créditos registrados · ${fmt(valorTotal)} valor total financiado</div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ CSV</button>
@@ -9082,6 +9083,7 @@ function pgControls(key, total, perPage, navFn){
 function pgNav(key, n){ pgSet(key,n); nav(S.page); }
 
 function generarReporte(tipo){
+  try{
   var titulo, html_content;
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
   var fecha = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
@@ -9092,7 +9094,7 @@ function generarReporte(tipo){
     var pagosConf = S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';});
     var pagosElim = S.pagos.filter(function(p){return p.eliminado&&p.estado==='confirmado';});
     var totalCobrado = pagosConf.reduce(function(a,p){return a+p.monto;},0);
-    var totalIni = S.creds.filter(function(c){return !c.eliminado;}).reduce(function(a,c){return a+(c.ini||0);},0);
+    var totalIni = getTotalInicialesCobradas();
     // Group by month
     var byMonth = {};
     pagosConf.forEach(function(p){
@@ -9136,13 +9138,13 @@ function generarReporte(tipo){
 
   } else if(tipo==='creditos'){
     titulo = 'Reporte de Créditos Activos';
-    var activos = S.creds.filter(function(c){return c.estado==='activo';});
+    var activos = S.creds.filter(function(c){return !c.eliminado&&c.estado==='activo';});
     var totalCartera = activos.reduce(function(a,c){return a+getCreditoSaldoPendiente(c);},0);
     html_content = '<div class="stat-grid">'
       +'<div class="stat-box"><div class="stat-v">'+activos.length+'</div><div class="stat-l">Créditos activos</div></div>'
       +'<div class="stat-box"><div class="stat-v">$'+totalCartera.toFixed(2)+'</div><div class="stat-l">Cartera vigente</div></div>'
-      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return c.estado==='completado';}).length+'</div><div class="stat-l">Completados</div></div>'
-      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return c.mora>0;}).length+'</div><div class="stat-l">En mora</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return !c.eliminado&&c.estado==='completado';}).length+'</div><div class="stat-l">Completados</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return !c.eliminado&&c.mora>0;}).length+'</div><div class="stat-l">En mora</div></div>'
       +'</div>'
       +'<table><thead><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Fecha</th><th>Cuota Q.</th><th>Pagadas</th><th>Estado</th></tr></thead><tbody>'
       +activos.map(function(c){
@@ -9153,7 +9155,7 @@ function generarReporte(tipo){
 
   } else if(tipo==='mora'){
     titulo = 'Reporte de Mora';
-    var enMora = S.creds.filter(function(c){return c.mora>0||c.estado==='vencido';});
+    var enMora = S.creds.filter(function(c){return !c.eliminado&&(c.mora>0||c.estado==='vencido');});
     html_content = '<div class="stat-grid">'
       +'<div class="stat-box"><div class="stat-v">'+enMora.length+'</div><div class="stat-l">Clientes en mora</div></div>'
       +'<div class="stat-box"><div class="stat-v">$'+enMora.reduce(function(a,c){return a+(c.cuotaQ||c.cuota||0);},0).toFixed(2)+'</div><div class="stat-l">Cuotas pendientes</div></div>'
@@ -9170,18 +9172,18 @@ function generarReporte(tipo){
       +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return !m.eliminado&&m.estado==='disponible';}).length+'</div><div class="stat-l">Disponibles</div></div>'
       +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return !m.eliminado&&m.estado==='financiada';}).length+'</div><div class="stat-l">Financiadas</div></div>'
       +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return !m.eliminado&&m.estado==='recuperada';}).length+'</div><div class="stat-l">Recuperadas</div></div>'
-      +'<div class="stat-box"><div class="stat-v">'+S.motos.length+'</div><div class="stat-l">Total</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return !m.eliminado;}).length+'</div><div class="stat-l">Total</div></div>'
       +'</div>'
       +'<table><thead><tr><th>ID</th><th>Modelo</th><th>VIN</th><th>Color</th><th>Precio</th><th>Estado</th><th>Cliente</th><th>GPS</th></tr></thead><tbody>'
-      +S.motos.map(function(m){
+      +S.motos.filter(function(m){return !m.eliminado;}).map(function(m){
         var est={'disponible':'<span class="badge green">Disponible</span>','financiada':'<span class="badge blue">Financiada</span>','recuperada':'<span class="badge red">Recuperada</span>','inventario':'<span class="badge gray">Inventario</span>'}[m.estado]||m.estado;
-        return '<tr><td>'+m.id+'</td><td>'+m.modelo+'</td><td>'+(m.vin||'—')+'</td><td>'+(m.color||'—')+'</td><td>$'+m.precio.toFixed(2)+'</td><td>'+est+'</td><td>'+(m.cliente||'—')+'</td><td>'+(m.gps?'✓':'—')+'</td></tr>';
+        return '<tr><td>'+m.id+'</td><td>'+m.modelo+'</td><td>'+(m.vin||'—')+'</td><td>'+(m.color||'—')+'</td><td>$'+Number(m.precio||0).toFixed(2)+'</td><td>'+est+'</td><td>'+(m.cliente||'—')+'</td><td>'+(m.gps?'✓':'—')+'</td></tr>';
       }).join('')
       +'</tbody></table>';
 
   } else if(tipo==='pyl'){
     titulo = 'Estado de Resultados (P&L)';
-    var tIni = S.creds.filter(function(c){return !c.eliminado;}).reduce(function(a,c){return a+(c.ini||0);},0);
+    var tIni = getTotalInicialesCobradas();
     var tPagos = S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0);
     var tIngresos = tIni + tPagos;
     var egresosActPyl = S.egresos.filter(function(e){return !e.eliminado;});
@@ -9245,12 +9247,18 @@ function generarReporte(tipo){
     toast('Reporte no implementado aún','info'); return;
   }
 
-  var doc = window.open('','_blank','width=900,height=700');
+  var doc = window.open('about:blank','_blank');
+  if(!doc){ toast('No se pudo abrir el reporte. Permite ventanas emergentes para pagasi.io','error'); return; }
+  doc.document.open();
   doc.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+' — '+empresa+'</title>'+estilos+'</head><body>'
     +'<div class="header"><div class="logo-area"><h1>'+empresa+'</h1><h2>'+titulo+'</h2></div>'
     +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#6C5CE7;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px">Imprimir / Guardar PDF</button></div>'
     +'</div>'+html_content+'</body></html>');
   doc.document.close();
+  }catch(err){
+    console.error('Error generando reporte', err);
+    toast('No se pudo generar el reporte','error');
+  }
 }
 
 
