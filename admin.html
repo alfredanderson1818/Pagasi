@@ -11072,6 +11072,10 @@ function cambiarPasswordPerfil() {
 }
 
 function doLogout() {
+  // Cerrar perfil overlay si está abierto
+  var overlay = document.getElementById('profile-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
   if (auth) {
     auth.signOut();
   } else {
@@ -11079,8 +11083,11 @@ function doLogout() {
   }
 }
 
-function _buildInviteLink(token){
-  return window.location.href.split('?')[0]+'?invite='+encodeURIComponent(token);
+function _buildInviteLink(token, email){
+  var base = window.location.href.split('?')[0];
+  var qs = '?invite=' + encodeURIComponent(token);
+  if(email) qs += '&ie=' + encodeURIComponent(email);
+  return base + qs;
 }
 function _randomToken(len){
   len = len || 32;
@@ -11158,7 +11165,7 @@ function openInviteUser(){
     document.querySelectorAll('#mbd input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
 
     var inviteToken = 'INV-'+Date.now()+'-'+_randomToken(18);
-    var inviteLink = _buildInviteLink(inviteToken);
+    var inviteLink = _buildInviteLink(inviteToken, email);
 
     showLoader('Guardando invitación...','');
     DB.saveInvitacion(inviteToken, {
@@ -11303,7 +11310,7 @@ function copiarInvitacionUsuario(uid){
     }
     // Si no hay inviteToken, regenerar una nueva invitación
     var nuevoToken = 'INV-'+Date.now()+'-'+_randomToken(18);
-    var nuevoLink = _buildInviteLink(nuevoToken);
+    var nuevoLink = _buildInviteLink(nuevoToken, data.email);
     // Buscar rol y permisos del usuario para guardarlos en la nueva invitación
     var rol = data.rol || 'Empleado';
     var permisos = data.permisos || [];
@@ -11341,11 +11348,35 @@ function _showInviteScreenForDoc(docData){
   if($('inv-footer')) $('inv-footer').innerHTML = 'Invitación para <b>' + ((docData&&docData.email)||'') + '</b><br>Elige tu nombre y tu clave para activar la cuenta.';
 }
 function _resolverInvitacionPendiente(){
-  if(!auth || !db) return;
+  if(!auth) return;
   var token = _getInviteToken();
   if(!token) return;
 
-  // Nuevo flujo: buscar en colección 'invitaciones'
+  // Extraer email del parámetro &ie= embebido en el link
+  var emailFromUrl = '';
+  try { emailFromUrl = decodeURIComponent(new URLSearchParams(window.location.search).get('ie') || ''); } catch(e){}
+
+  // Si tenemos el email desde el URL, mostrar el formulario INMEDIATAMENTE sin esperar Firestore
+  // (evita el problema de reglas de seguridad para usuarios no autenticados)
+  if(emailFromUrl){
+    var quickData = { token: token, email: emailFromUrl, nombre: '', rol: 'Empleado', permisos: [] };
+    _showInviteScreenForDoc(quickData);
+    // Luego intentar cargar datos completos de Firestore para pre-rellenar nombre/rol si es posible
+    if(db){
+      db.collection('invitaciones').doc(token).get().then(function(doc){
+        if(doc.exists){
+          var d = doc.data()||{};
+          if(d.usado){ return; } // ya usada, pero no forzamos salida (el usuario ya ve el form)
+          d.token = token;
+          _showInviteScreenForDoc(d); // actualizar con datos completos
+        }
+      }).catch(function(){}); // ignorar errores de permisos
+    }
+    return;
+  }
+
+  // Fallback: sin email en URL, intentar Firestore (flujo legacy)
+  if(!db){ if($('login-err')){ $('login-err').textContent='No se puede verificar la invitación sin conexión.'; $('login-err').style.display='block'; } return; }
   db.collection('invitaciones').doc(token).get().then(function(doc){
     if(doc.exists){
       var data = doc.data() || {};
@@ -11353,7 +11384,7 @@ function _resolverInvitacionPendiente(){
         if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
         _clearInviteParams(); return;
       }
-      data.token = token; // guardar token para marcarlo como usado al aceptar
+      data.token = token;
       _showInviteScreenForDoc(data);
       return;
     }
@@ -11373,7 +11404,12 @@ function _resolverInvitacionPendiente(){
       if($('login-err')){ $('login-err').textContent='Error al abrir la invitación: '+(e.message||e); $('login-err').style.display='block'; }
     });
   }).catch(function(e){
-    if($('login-err')){ $('login-err').textContent='Error al abrir la invitación: '+(e.message||e); $('login-err').style.display='block'; }
+    // Reglas de Firestore bloquean la lectura - mostrar form vacío igual
+    if(emailFromUrl){
+      _showInviteScreenForDoc({ token: token, email: emailFromUrl, nombre: '', rol: 'Empleado', permisos: [] });
+    } else {
+      if($('login-err')){ $('login-err').textContent='No se pudo verificar la invitación. Por favor intenta de nuevo.'; $('login-err').style.display='block'; }
+    }
   });
 }
 
