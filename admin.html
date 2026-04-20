@@ -11157,77 +11157,33 @@ function openInviteUser(){
     var permisos=[];
     document.querySelectorAll('#mbd input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
 
-    showLoader('Creando usuario...','');
-    var inviteAuth = _secondaryInviteAuth();
-    if(!inviteAuth){ hideLoader(); toast('No fue posible inicializar el creador de invitaciones','error'); return false; }
-    var tempPass = _randomTempPass();
     var inviteToken = 'INV-'+Date.now()+'-'+_randomToken(18);
     var inviteLink = _buildInviteLink(inviteToken);
 
-    inviteAuth.createUserWithEmailAndPassword(email, tempPass)
-      .then(function(userCred){
-        var uid=userCred.user.uid;
-        var chain = Promise.resolve();
-        if(nombre){ chain = chain.then(function(){ return userCred.user.updateProfile({displayName:nombre}); }); }
-        return chain.then(function(){ return uid; });
-      })
-      .then(function(uid){
-        return DB.saveUsuario(uid,{
-          uid:uid, email:email, nombre:nombre||email, rol:rol, permisos:permisos,
-          creadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
-          creadoEn:new Date().toISOString(), debeActualizar:true,
-          inviteToken: inviteToken,
-          inviteStatus: 'pendiente',
-          inviteTempPass: tempPass,
-          inviteLink: inviteLink
-        });
-      })
-      .then(function(){
-        return inviteAuth.signOut().catch(function(){});
-      })
-      .then(function(){
-        _cleanupSecondaryInviteAuth();
-        hideLoader();
-        closeM();
-        nav('users');
-        if(navigator.clipboard && navigator.clipboard.writeText){
-          navigator.clipboard.writeText(inviteLink).then(function(){
-            toast('✓ Invitación creada y link copiado para '+email,'success');
-          }).catch(function(){ toast('✓ Invitación creada para '+email,'success'); });
-        } else {
-          toast('✓ Invitación creada para '+email,'success');
-        }
-        setTimeout(function(){ try{ copiarLink(inviteToken); }catch(e){} }, 80);
-      })
-      .catch(function(e){
-        hideLoader();
-        try{ inviteAuth.signOut(); }catch(_e){}
-        _cleanupSecondaryInviteAuth();
-        if(e.code==='auth/email-already-in-use'){
-          db.collection('usuarios').where('email','==',email).get().then(function(snap){
-            if(!snap.empty){
-              var uid=snap.docs[0].id;
-              return DB.updateUsuario(uid,{
-                rol:rol,
-                permisos:permisos,
-                nombre:nombre||snap.docs[0].data().nombre,
-                inviteToken: inviteToken,
-                inviteStatus: 'pendiente',
-                inviteTempPass: tempPass,
-                inviteLink: inviteLink
-              });
-            }
-          }).then(function(){
-            closeM(); nav('users');
-            try{ copiarLink(inviteToken); }catch(_x){}
-            toast('Permisos actualizados y link regenerado para '+email,'success');
-          })
-          .catch(function(e2){ toast('Error: '+e2.message,'error'); });
-        } else { toast('Error: '+e.message,'error'); }
-      });
+    showLoader('Guardando invitación...','');
+    DB.saveInvitacion(inviteToken, {
+      token: inviteToken,
+      email: email,
+      nombre: nombre || email,
+      rol: rol,
+      permisos: permisos,
+      creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
+      creadoEn: new Date().toISOString(),
+      usado: false,
+      inviteLink: inviteLink
+    }).then(function(){
+      hideLoader();
+      closeM();
+      nav('users');
+      // Mostrar modal con link inmediatamente
+      setTimeout(function(){ mostrarLinkInvitacion(inviteLink, email); }, 250);
+    }).catch(function(e){
+      hideLoader();
+      toast('Error guardando invitación: '+(e.message||e),'error');
+    });
     return true;
   };
-  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear Usuario</button>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear invitación →</button>';
   $('ov').style.display='flex';
 }
 
@@ -11302,6 +11258,36 @@ function copiarLink(token){
     prompt('Copia este link de invitación:',url);
   }
 }
+function mostrarLinkInvitacion(link, email){
+  $('mic').textContent='🔗'; $('mtt').textContent='Link de invitación'; $('msb').textContent='Envíalo a '+email;
+  $('modal-box').className='modal';
+  $('mbd').innerHTML=''
+    +'<div style="text-align:center;margin-bottom:16px">'
+    +'<div style="font-size:32px;margin-bottom:6px">🎉</div>'
+    +'<div style="font-size:13px;font-weight:800;color:var(--ink1);margin-bottom:4px">Invitación lista para <span style="color:var(--p1)">'+email+'</span></div>'
+    +'<div style="font-size:11.5px;color:var(--ink3)">El usuario abre este link, elige su contraseña y activa su cuenta</div>'
+    +'</div>'
+    +'<div style="background:var(--surf2);border:2px solid var(--p1);border-radius:10px;padding:12px 14px;margin-bottom:14px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--p1);margin-bottom:7px">🔗 Link de activación</div>'
+    +'<input id="invite-link-field" type="text" value="'+link+'" readonly onclick="this.select()" style="width:100%;background:var(--bg);border:1px solid var(--rim);border-radius:6px;padding:8px 10px;font-size:11px;font-family:monospace;color:var(--ink1);outline:none;cursor:text;box-sizing:border-box">'
+    +'</div>'
+    +'<button id="inv-copy-btn" class="btn btn-p" style="width:100%;font-size:13.5px;font-weight:800;padding:11px" onclick="(function(){'
+    +'var inp=document.getElementById(\'invite-link-field\');'
+    +'inp.select();'
+    +'var copyDone=function(){'
+    +'var b=document.getElementById(\'inv-copy-btn\');'
+    +'if(b){b.textContent=\'✓ ¡Copiado!\';b.style.background=\'var(--green)\';}  '
+    +'setTimeout(function(){if(b){b.textContent=\'📋 Copiar link\';b.style.background=\'\';}},2500);'
+    +'};'
+    +'if(navigator.clipboard&&navigator.clipboard.writeText){'
+    +'navigator.clipboard.writeText(inp.value).then(copyDone).catch(function(){try{document.execCommand(\'copy\');copyDone();}catch(ex){}});'
+    +'} else {try{document.execCommand(\'copy\');copyDone();}catch(ex){toast(\'Selecciona el link y cópialo manualmente\',\'info\');}}'
+    +'})()">📋 Copiar link</button>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()" style="min-width:90px">Cerrar</button>';
+  $('ov').style.display='flex';
+  setTimeout(function(){ var f=$('invite-link-field'); if(f){f.focus();f.select();} }, 200);
+}
+
 function copiarInvitacionUsuario(uid){
   if(!db){ toast('Requiere Firebase activo','error'); return; }
   if(!uid){ toast('Usuario no válido','error'); return; }
@@ -11309,21 +11295,24 @@ function copiarInvitacionUsuario(uid){
     if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
     var data = doc.data() || {};
     if(!data.email){ toast('El usuario no tiene email válido','error'); return; }
-    if(!data.inviteTempPass){
-      toast('Este usuario no tiene una invitación activa para crear su clave. Vuélvelo a invitar desde "Invitar Usuario".','error');
+    // Si tiene token activo, reconstruir link y mostrarlo
+    if(data.inviteToken){
+      var link = _buildInviteLink(data.inviteToken);
+      mostrarLinkInvitacion(link, data.email);
       return;
     }
-    var token = data.inviteToken || ('INV-'+Date.now()+'-'+_randomToken(18));
-    var link = _buildInviteLink(token);
-    var payload = {
-      inviteToken: token,
-      inviteLink: link,
-      inviteStatus: 'pendiente',
-      debeActualizar: true
-    };
-    return db.collection('usuarios').doc(uid).set(payload,{merge:true}).then(function(){
-      copiarLink(link);
-    });
+    // Si no hay inviteToken, regenerar una nueva invitación
+    var nuevoToken = 'INV-'+Date.now()+'-'+_randomToken(18);
+    var nuevoLink = _buildInviteLink(nuevoToken);
+    // Buscar rol y permisos del usuario para guardarlos en la nueva invitación
+    var rol = data.rol || 'Empleado';
+    var permisos = data.permisos || [];
+    var payload = { token: nuevoToken, email: data.email, nombre: data.nombre||data.email,
+      rol: rol, permisos: permisos, creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
+      creadoEn: new Date().toISOString(), usado: false, inviteLink: nuevoLink };
+    DB.saveInvitacion(nuevoToken, payload).then(function(){
+      mostrarLinkInvitacion(nuevoLink, data.email);
+    }).catch(function(e){ toast('Error: '+(e.message||e),'error'); });
   }).catch(function(e){
     toast('Error: '+(e.message||e),'error');
   });
@@ -11355,21 +11344,34 @@ function _resolverInvitacionPendiente(){
   if(!auth || !db) return;
   var token = _getInviteToken();
   if(!token) return;
-  db.collection('usuarios').where('inviteToken','==',token).limit(1).get().then(function(snap){
-    if(snap.empty){
-      if($('login-err')){ $('login-err').textContent='El link de invitación no es válido o ya fue usado.'; $('login-err').style.display='block'; }
-      _clearInviteParams();
+
+  // Nuevo flujo: buscar en colección 'invitaciones'
+  db.collection('invitaciones').doc(token).get().then(function(doc){
+    if(doc.exists){
+      var data = doc.data() || {};
+      if(data.usado){
+        if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
+        _clearInviteParams(); return;
+      }
+      data.token = token; // guardar token para marcarlo como usado al aceptar
+      _showInviteScreenForDoc(data);
       return;
     }
-    var doc = snap.docs[0];
-    var data = doc.data() || {};
-    data.uid = doc.id;
-    if(data.inviteStatus==='aceptada'){
-      if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
-      _clearInviteParams();
-      return;
-    }
-    _showInviteScreenForDoc(data);
+    // Flujo legacy: buscar en 'usuarios' por inviteToken
+    db.collection('usuarios').where('inviteToken','==',token).limit(1).get().then(function(snap){
+      if(snap.empty){
+        if($('login-err')){ $('login-err').textContent='El link de invitación no es válido o ya fue usado.'; $('login-err').style.display='block'; }
+        _clearInviteParams(); return;
+      }
+      var d = snap.docs[0]; var data = d.data()||{}; data.uid = d.id; data._legacy = true;
+      if(data.inviteStatus==='aceptada'){
+        if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
+        _clearInviteParams(); return;
+      }
+      _showInviteScreenForDoc(data);
+    }).catch(function(e){
+      if($('login-err')){ $('login-err').textContent='Error al abrir la invitación: '+(e.message||e); $('login-err').style.display='block'; }
+    });
   }).catch(function(e){
     if($('login-err')){ $('login-err').textContent='Error al abrir la invitación: '+(e.message||e); $('login-err').style.display='block'; }
   });
@@ -11383,12 +11385,12 @@ function aceptarInvitacion() {
   if (errEl) errEl.style.display = 'none';
 
   var pending = S.pendingInvite || null;
-  if (!pending || !pending.email || !pending.inviteTempPass) {
+  if (!pending || !pending.email) {
     if (errEl) { errEl.textContent = '⛔ Esta invitación no es válida o ya expiró'; errEl.style.display = 'block'; }
     return;
   }
   if (!nombre) {
-    if (errEl) { errEl.textContent = '⛔ Ingresa tu nombre'; errEl.style.display = 'block'; }
+    if (errEl) { errEl.textContent = '⛔ Ingresa tu nombre completo'; errEl.style.display = 'block'; }
     return;
   }
   if (pass.length < 6) {
@@ -11396,54 +11398,76 @@ function aceptarInvitacion() {
     return;
   }
   if (pass !== pass2) {
-    if (errEl) { errEl.textContent = 'Las contraseñas no coinciden'; errEl.style.display = 'block'; }
+    if (errEl) { errEl.textContent = '⛔ Las contraseñas no coinciden'; errEl.style.display = 'block'; }
     return;
   }
 
   var btn = $('inv-btn');
   if (btn) btn.disabled = true;
-  showLoader('Creando cuenta...', '');
+  showLoader('Activando cuenta...', '');
 
-  var doAuth = Promise.resolve();
-  if(auth.currentUser && auth.currentUser.email !== pending.email){
-    doAuth = auth.signOut();
+  var token = pending.token || pending.inviteToken || null;
+  var isLegacy = !!(pending._legacy && pending.inviteTempPass);
+
+  function finalizarActivacion(user) {
+    return user.updateProfile({ displayName: nombre })
+      .then(function(){
+        var updateData = {
+          uid: user.uid,
+          nombre: nombre,
+          email: user.email,
+          rol: pending.rol || 'Empleado',
+          permisos: pending.permisos || [],
+          inviteStatus: 'aceptada',
+          inviteAcceptedAt: new Date().toISOString(),
+          debeActualizar: false
+        };
+        // Limpiar campos temporales del flujo legacy
+        if(pending.inviteTempPass !== undefined){
+          updateData.inviteTempPass = firebase.firestore.FieldValue.delete();
+          updateData.inviteToken = firebase.firestore.FieldValue.delete();
+          updateData.inviteLink = firebase.firestore.FieldValue.delete();
+        }
+        return db.collection('usuarios').doc(user.uid).set(updateData, { merge: true });
+      })
+      .then(function(){
+        if(token){ try{ DB.usarInvitacion(token, user.uid); }catch(_e){} }
+        hideLoader();
+        _clearInviteParams();
+        S.pendingInvite = null;
+        $('invite-screen').style.display = 'none';
+        init();
+      });
   }
-  doAuth
-    .then(function(){
-      if(auth.currentUser && auth.currentUser.email === pending.email) return auth.currentUser;
-      return auth.signInWithEmailAndPassword(pending.email, pending.inviteTempPass).then(function(r){ return r.user; });
-    })
-    .then(function(user){
-      return user.updateProfile({ displayName: nombre }).then(function(){ return user; });
-    })
-    .then(function(user){
-      return user.updatePassword(pass).then(function(){ return user; });
-    })
-    .then(function(user){
-      return db.collection('usuarios').doc(user.uid).set({
-        uid: user.uid,
-        nombre: nombre,
-        email: user.email,
-        inviteStatus: 'aceptada',
-        inviteAcceptedAt: new Date().toISOString(),
-        inviteTempPass: firebase.firestore.FieldValue.delete(),
-        inviteToken: firebase.firestore.FieldValue.delete(),
-        inviteLink: firebase.firestore.FieldValue.delete(),
-        debeActualizar: false
-      }, { merge: true });
-    })
-    .then(function() {
-      hideLoader();
-      _clearInviteParams();
-      S.pendingInvite = null;
-      $('invite-screen').style.display = 'none';
-      init();
-    })
-    .catch(function(e) {
-      hideLoader();
-      if (btn) btn.disabled = false;
-      if (errEl) { errEl.textContent = e.message || 'Error al activar la cuenta'; errEl.style.display = 'block'; }
-    });
+
+  var p;
+  if (isLegacy) {
+    // Flujo legacy: iniciar sesión con contraseña temporal y actualizarla
+    var doAuth = Promise.resolve();
+    if(auth.currentUser && auth.currentUser.email !== pending.email) doAuth = auth.signOut();
+    p = doAuth
+      .then(function(){
+        if(auth.currentUser && auth.currentUser.email === pending.email) return auth.currentUser;
+        return auth.signInWithEmailAndPassword(pending.email, pending.inviteTempPass).then(function(r){ return r.user; });
+      })
+      .then(function(user){ return user.updatePassword(pass).then(function(){ return user; }); })
+      .then(finalizarActivacion);
+  } else {
+    // Nuevo flujo: crear el usuario directamente con la contraseña elegida
+    var doSignOut = auth.currentUser ? auth.signOut() : Promise.resolve();
+    p = doSignOut
+      .then(function(){ return auth.createUserWithEmailAndPassword(pending.email, pass); })
+      .then(function(r){ return r.user; })
+      .then(finalizarActivacion);
+  }
+
+  p.catch(function(e) {
+    hideLoader();
+    if (btn) btn.disabled = false;
+    var msg = e.message || 'Error al activar la cuenta';
+    if(e.code === 'auth/email-already-in-use') msg = 'Este email ya tiene una cuenta activa. Inicia sesión normalmente.';
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  });
 }
 
 // ── Arranque con Firebase Auth ──────────────────────────────
