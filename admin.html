@@ -7082,13 +7082,17 @@ function ejecutarDelCred(audit){
     S.creds[ci].canceladoNotas= '';
     S.creds[ci].eliminadoModo = modo;
     if(audit) Object.assign(S.creds[ci], audit);
+    // El financiamiento debe seguir visible como cancelado en la tabla.
+    // Aunque se audite la eliminación y se borren pagos/cuentas en modo completo,
+    // el crédito NO debe marcarse como eliminado lógico para no desaparecer del listado.
+    S.creds[ci].eliminado = false;
     DB.updateCred(credId,{
       estado:'cancelado',
       canceladoPor:S.creds[ci].canceladoPor,
       canceladoEn:S.creds[ci].canceladoEn,
       canceladoRazon:S.creds[ci].canceladoRazon,
       canceladoNotas:S.creds[ci].canceladoNotas,
-      eliminado: !!(audit&&audit.eliminado),
+      eliminado: false,
       eliminadoPor: audit&&audit.eliminadoPor,
       eliminadoPorUid: audit&&audit.eliminadoPorUid,
       eliminadoEn: audit&&audit.eliminadoEn,
