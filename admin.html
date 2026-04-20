@@ -2027,9 +2027,38 @@ var DB = {
       Promise.resolve({docs:[]}),
       db.collection('movimientos').get(),
       db.collection('cuentasPendientes').get(),
+      db.collection('config').doc('plan').get(),
+      db.collection('config').doc('catalogo').get(),
+      db.collection('config').doc('planes').get(),
     ]).then(function(snaps){
       function read(snap){return snap.docs.map(function(d){return d.data();});}
       var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
+      var planDoc = snaps[8], catalogoDoc = snaps[9], planesDoc = snaps[10];
+      if(planDoc && planDoc.exists){
+        var pd = planDoc.data() || {};
+        if(Object.prototype.hasOwnProperty.call(pd,'factor')) PLAN.factor = pd.factor;
+        if(Object.prototype.hasOwnProperty.call(pd,'inicial')) PLAN.inicial = pd.inicial;
+        if(Object.prototype.hasOwnProperty.call(pd,'tasaMensual')) PLAN.tasaMensual = pd.tasaMensual;
+        if(Object.prototype.hasOwnProperty.call(pd,'plazo')) PLAN.plazo = pd.plazo;
+        if(Object.prototype.hasOwnProperty.call(pd,'apy')) PLAN.apy = pd.apy;
+        var graciaCfg = Object.prototype.hasOwnProperty.call(pd,'diasGracia') ? pd.diasGracia : pd.gracia;
+        if(typeof graciaCfg !== 'undefined' && graciaCfg !== null) PLAN.diasGracia = graciaCfg;
+        var moraCfg = Object.prototype.hasOwnProperty.call(pd,'moraPct') ? pd.moraPct : pd.mora_pct;
+        if(typeof moraCfg !== 'undefined' && moraCfg !== null) PLAN.moraPct = moraCfg;
+      }
+      if(catalogoDoc && catalogoDoc.exists){
+        var catData = catalogoDoc.data() || {};
+        if(Array.isArray(catData.items) && catData.items.length){
+          CATALOGO.splice(0, CATALOGO.length);
+          catData.items.forEach(function(item){ CATALOGO.push(item); });
+        }
+      }
+      if(planesDoc && planesDoc.exists){
+        var extraData = planesDoc.data() || {};
+        window._planesExtra = Array.isArray(extraData.items) ? extraData.items : [];
+      } else {
+        window._planesExtra = window._planesExtra || [];
+      }
       S.motos       = mergeMotosPreferLocal(m.map(mapMoto), motosCacheLocal);
       saveMotosCache(S.motos);
       S.clientes    = cl;
@@ -2068,7 +2097,7 @@ var DB = {
 
 // Usuarios e invitaciones en Firestore
 DB.getUsuarios    = function(){ if(!db) return Promise.resolve([]); return db.collection('usuarios').get().then(function(s){return s.docs.map(function(d){return Object.assign({uid:d.id},d.data());});}); };
-DB.saveUsuario    = function(uid,data){ if(!db) return Promise.resolve(); return db.collection('usuarios').doc(uid).set(data); };
+DB.saveUsuario    = function(uid,data){ if(!db) return Promise.resolve(); return db.collection('usuarios').doc(uid).set(data,{merge:true}); };
 DB.updateUsuario  = function(uid,data){ if(!db) return; _dbSilent(function(){ return db.collection('usuarios').doc(uid).update(data); }); };
 DB.deleteUsuario  = function(uid){ if(!db) return; _dbSilent(function(){ return db.collection('usuarios').doc(uid).delete(); }); };
 DB.saveInvitacion = function(token,data){ if(!db) return; return db.collection('invitaciones').doc(token).set(data); };
@@ -2105,6 +2134,25 @@ var MODULOS = [
 // CATÁLOGO OFICIAL PAGASI — PLAN 10 MESES
 // ══════════════════════════════════════════
 const PLAN = {plazo:10, factor:1.90, inicial:0.40, tasaMensual:13.77, apy:370.28};
+
+try {
+  var _catLs = JSON.parse(localStorage.getItem('pagasi_catalogo_config')||'null');
+  if(Array.isArray(_catLs) && _catLs.length){ CATALOGO.splice(0, CATALOGO.length); _catLs.forEach(function(item){ CATALOGO.push(item); }); }
+  var _planLs = JSON.parse(localStorage.getItem('pagasi_config_plan')||'null');
+  if(_planLs && typeof _planLs==='object'){
+    if(Object.prototype.hasOwnProperty.call(_planLs,'factor')) PLAN.factor = _planLs.factor;
+    if(Object.prototype.hasOwnProperty.call(_planLs,'inicial')) PLAN.inicial = _planLs.inicial;
+    if(Object.prototype.hasOwnProperty.call(_planLs,'tasaMensual')) PLAN.tasaMensual = _planLs.tasaMensual;
+    if(Object.prototype.hasOwnProperty.call(_planLs,'plazo')) PLAN.plazo = _planLs.plazo;
+    if(Object.prototype.hasOwnProperty.call(_planLs,'apy')) PLAN.apy = _planLs.apy;
+    var _gr = Object.prototype.hasOwnProperty.call(_planLs,'diasGracia') ? _planLs.diasGracia : _planLs.gracia;
+    if(typeof _gr!=='undefined' && _gr!==null) PLAN.diasGracia = _gr;
+    var _mp = Object.prototype.hasOwnProperty.call(_planLs,'moraPct') ? _planLs.moraPct : _planLs.mora_pct;
+    if(typeof _mp!=='undefined' && _mp!==null) PLAN.moraPct = _mp;
+  }
+  window._planesExtra = JSON.parse(localStorage.getItem('pagasi_planes_extra')||'[]') || [];
+} catch(_cfgErr) { window._planesExtra = window._planesExtra || []; }
+
 
 const CATALOGO = [
   {id:1,modelo:'NEW HORSE 150',precio:1320.00},
@@ -8424,7 +8472,7 @@ function guardarPlan(){
   var data = {factor, inicial, diasGracia:gracia, moraPct:mora, updated:new Date().toISOString()};
   if(db){
     db.collection('config').doc('plan').set(data)
-      .then(function(){ toast('Plan financiero guardado','success'); nav('config'); })
+      .then(function(){ try{ localStorage.setItem('pagasi_config_plan', JSON.stringify(data)); }catch(_e){} toast('Plan financiero guardado','success'); nav('config'); })
       .catch(function(e){ toast('Error: '+e.message,'error'); });
   } else {
     toast('Plan guardado (local)','success'); nav('config');
@@ -8538,6 +8586,7 @@ function openEditCatalogo(id){
     // Save to Firestore
     if(db){
       db.collection('config').doc('catalogo').set({items: CATALOGO})
+        .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); }catch(_e){} })
         .catch(function(){});
     }
     closeM(); nav('plan'); return true;
@@ -8566,6 +8615,7 @@ function cDelCatalogo(id){
   if(i>=0) CATALOGO.splice(i,1);
   if(db){
     db.collection('config').doc('catalogo').set({items:CATALOGO})
+      .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); }catch(_e){} })
       .catch(function(){});
   }
   closeM(); nav('plan'); toast('Modelo eliminado','success');
@@ -8581,6 +8631,7 @@ function delPlanExtra(idx){
   window._planesExtra.splice(idx,1);
   if(db){
     db.collection('config').doc('planes').set({items:window._planesExtra})
+      .then(function(){ try{ localStorage.setItem('pagasi_planes_extra', JSON.stringify(window._planesExtra)); }catch(_e){} })
       .catch(function(){});
   }
   nav('plan'); toast('Plan eliminado','success');
@@ -11076,10 +11127,10 @@ function openInviteUser(){
   }
 
   $('mbd').innerHTML=''
-    +'<div class="fg" style="margin-bottom:10px"><label>Email del usuario *</label><input class="fi" id="inv_email" type="email" placeholder="empleado@pagasi.com" autofocus></div>'
-    +'<div class="fg" style="margin-bottom:12px"><label>Nombre</label><input class="fi" id="inv_nombre" placeholder="Nombre completo"></div>'
+    +'<div class="fg" style="margin-bottom:10px"><label>Email del usuario *</label><input class="fi" id="invu_email" type="email" placeholder="empleado@pagasi.com" autofocus></div>'
+    +'<div class="fg" style="margin-bottom:12px"><label>Nombre</label><input class="fi" id="invu_nombre" placeholder="Nombre completo"></div>'
     +'<div class="fg" style="margin-bottom:12px"><label>Rol</label>'
-    +'<select class="fs" id="inv_rol" onchange="(function(v){'
+    +'<select class="fs" id="invu_rol" onchange="(function(v){'
     +  'var preset=({Administrador:'+JSON.stringify((ROL_PERMISOS.Administrador||[]))+','
     +  'Gerente:'+JSON.stringify((ROL_PERMISOS.Gerente||[]))+','
     +  'Empleado:'+JSON.stringify((ROL_PERMISOS.Empleado||[]))+','
@@ -11099,10 +11150,10 @@ function openInviteUser(){
     +'</div>';
 
   S.saveFn=function(){
-    var email=(($('inv_email')&&$('inv_email').value)||'').trim();
-    var nombre=(($('inv_nombre')&&$('inv_nombre').value)||'').trim();
+    var email=(($('invu_email')&&$('invu_email').value)||'').trim();
+    var nombre=(($('invu_nombre')&&$('invu_nombre').value)||'').trim();
     if(!email||!email.includes('@')){ toast('Ingresa un email válido','error'); return false; }
-    var rol=($('inv_rol')&&$('inv_rol').value)||'Empleado';
+    var rol=($('invu_rol')&&$('invu_rol').value)||'Empleado';
     var permisos=[];
     document.querySelectorAll('#mbd input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
 
@@ -11257,12 +11308,19 @@ function copiarInvitacionUsuario(uid){
   db.collection('usuarios').doc(uid).get().then(function(doc){
     if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
     var data = doc.data() || {};
+    if(!data.email){ toast('El usuario no tiene email válido','error'); return; }
+    if(!data.inviteTempPass){
+      toast('Este usuario no tiene una invitación activa para crear su clave. Vuélvelo a invitar desde "Invitar Usuario".','error');
+      return;
+    }
     var token = data.inviteToken || ('INV-'+Date.now()+'-'+_randomToken(18));
     var link = _buildInviteLink(token);
-    var payload = {};
-    if(!data.inviteToken) payload.inviteToken = token;
-    payload.inviteLink = link;
-    if(!data.inviteStatus || data.inviteStatus==='expirada') payload.inviteStatus = 'pendiente';
+    var payload = {
+      inviteToken: token,
+      inviteLink: link,
+      inviteStatus: 'pendiente',
+      debeActualizar: true
+    };
     return db.collection('usuarios').doc(uid).set(payload,{merge:true}).then(function(){
       copiarLink(link);
     });
