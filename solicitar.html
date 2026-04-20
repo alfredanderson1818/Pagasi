@@ -328,6 +328,11 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 .nav-links a.active{color:var(--ink);font-weight:700;}
 
 </style>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
 </head>
 <body><div id="mob">
   <button class="mob-x" onclick="closeMob()">&#10005;</button>
@@ -353,110 +358,122 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
     <div class="reveal">
       <div class="tag">Aplicar</div>
       <h2 class="head">Solicita tu moto</h2>
-      <p class="sub">Completa el formulario. Un asesor te contactara en menos de 24 horas.</p>
+      <p class="sub">Completa Cliente y Perfil. Guardaremos tu información directamente en Pagasi.</p>
     </div>
     <div class="fw">
       <div class="prog">
         <div class="ps on" id="pd1"></div>
         <div class="ps" id="pd2"></div>
-        <div class="ps" id="pd3"></div>
       </div>
       <div class="fcard">
         <div class="fs on" id="fs1">
-          <h3 class="ft">Datos personales</h3>
-          <p class="fsub">Informacion basica para procesar tu solicitud</p>
+          <h3 class="ft">Cliente</h3>
+          <p class="fsub">Información personal y laboral</p>
           <div class="frow">
-            <div class="fg"><label class="fl">Nombre completo *</label><input type="text" id="fN" placeholder="Juan Perez"></div>
-            <div class="fg"><label class="fl">Cedula de identidad *</label><input type="text" id="fC" placeholder="V-12.345.678"></div>
+            <div class="fg"><label class="fl">Nombre completo *</label><input type="text" id="wz_nom" placeholder="Ej: Carlos Pérez"></div>
+            <div class="fg"><label class="fl">Cédula *</label><input type="text" id="wz_ci" placeholder="V-12.345.678"></div>
           </div>
           <div class="frow">
-            <div class="fg"><label class="fl">WhatsApp *</label><input type="tel" id="fT" placeholder="+58 414-0000000"></div>
-            <div class="fg"><label class="fl">Estado / Ciudad</label>
-              <select id="fE"><option value="">Selecciona...</option><option>Caracas</option><option>Miranda</option><option>Zulia</option><option>Carabobo</option><option>Aragua</option><option>Lara</option><option>Bolivar</option><option>Anzoategui</option><option>Merida</option><option>Tachira</option><option>Otro</option></select>
+            <div class="fg"><label class="fl">Teléfono *</label><input type="tel" id="wz_tel" placeholder="+58 414-0000000"></div>
+            <div class="fg"><label class="fl">WhatsApp</label><input type="tel" id="wz_wa" placeholder="+58 414-0000000"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Email</label><input type="email" id="wz_email" placeholder="correo@ejemplo.com"></div>
+            <div class="fg"><label class="fl">Ciudad</label><input type="text" id="wz_ciudad" placeholder="Caracas"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Tipo de empleo *</label>
+              <select id="wz_emp"><option value="">Seleccionar...</option><option value="formal">Formal</option><option value="publico">Público</option><option value="delivery">Delivery</option><option value="independiente">Independiente</option><option value="comerciante">Comerciante</option><option value="remesas">Remesas</option><option value="informal">Informal</option></select>
+            </div>
+            <div class="fg"><label class="fl">Antigüedad laboral</label>
+              <select id="wz_ant"><option value="">Seleccionar...</option><option value="1">Menos de 6 meses</option><option value="2">6m – 1 año</option><option value="3">1 a 3 años</option><option value="5">Más de 3 años</option></select>
             </div>
           </div>
-          <div class="fg"><label class="fl">Direccion completa</label><input type="text" id="fD" placeholder="Urb., Av., Sector, Casa o Apto..."></div>
-          <div class="fg"><label class="fl">Utiliza Cashea?</label>
-            <div class="rrow">
-              <label class="rt" id="rSi"><input type="radio" name="cashea" value="si" onchange="setR('rSi','rNo')">Si, tengo Cashea</label>
-              <label class="rt" id="rNo"><input type="radio" name="cashea" value="no" onchange="setR('rNo','rSi')">No utilizo</label>
-            </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Ingreso mensual propio (USD) *</label><input type="number" id="wz_ing" min="0" step="10" placeholder="0"></div>
+            <div class="fg"><label class="fl">Ingreso familiar total (USD)</label><input type="number" id="wz_ifam" min="0" step="10" placeholder="0"></div>
           </div>
-          <div class="fg"><label class="fl">Referencia personal (foto cedula de familiar)</label>
-            <label class="udrop" for="uRef" id="zRef">
-              <div style="font-size:22px;margin-bottom:6px;font-weight:700;color:var(--ink-3);">&#8679;</div>
-              <div style="font-weight:700;font-size:14px;margin-bottom:3px;">Subir referencia personal</div>
-              <div style="font-size:12px;color:var(--ink-4);">Foto cedula del familiar o conocido &middot; Max 5MB</div>
-              <input type="file" id="uRef" accept=".jpg,.jpeg,.png,.pdf" onchange="showUp(this,'zRef')">
-            </label>
+          <div class="fg"><label class="fl">¿Cómo nos conoció?</label>
+            <select id="wz_conocio"><option value="">Seleccionar...</option><option value="referido">Referido por cliente</option><option value="redes">Redes sociales</option><option value="vitrina">Vitrina / local</option><option value="google">Google / internet</option><option value="anterior">Cliente anterior</option><option value="otro">Otro</option></select>
           </div>
-          <div class="fg"><label class="fl">Recibo de servicio (luz, agua o gas)</label>
-            <label class="udrop" for="uRecibo1" id="zRecibo1">
-              <div style="font-size:22px;margin-bottom:6px;font-weight:700;color:var(--ink-3);">&#8679;</div>
-              <div style="font-weight:700;font-size:14px;margin-bottom:3px;">Subir recibo de servicio</div>
-              <div style="font-size:12px;color:var(--ink-4);">Debe coincidir con tu direccion &middot; Max 5MB</div>
-              <input type="file" id="uRecibo1" accept=".jpg,.jpeg,.png,.pdf" onchange="showUp(this,'zRecibo1')">
-            </label>
-          </div>
-          <div class="fnav"><button class="btn btn-p" onclick="goS(2)" style="flex:1;justify-content:center;">Continuar</button></div>
+          <div class="fnav"><button type="button" id="btnContinuarSolicitud" class="btn btn-p" onclick="goS(2); return false;" style="flex:1;justify-content:center;">Continuar</button></div>
         </div>
 
         <div class="fs" id="fs2">
-          <h3 class="ft">Informacion financiera</h3>
-          <p class="fsub">Cuentanos sobre tu situacion economica</p>
-          <div class="fg"><label class="fl">Moto de interes *</label>
-            <select id="fM"><option value="">Selecciona un modelo</option></select>
+          <h3 class="ft">Perfil</h3>
+          <p class="fsub">Perfil crediticio. El CrediScore se calcula internamente.</p>
+          <div class="frow">
+            <div class="fg"><label class="fl">Estado</label><input type="text" id="wz_estado" placeholder="Miranda"></div>
+            <div class="fg"><label class="fl">Ciudad / Municipio</label><input type="text" id="wz_ciudad_res" placeholder="Baruta"></div>
+          </div>
+          <div class="fg"><label class="fl">Dirección completa</label><textarea id="wz_dir_det" class="fta" placeholder="Urb., Av., Sector, Casa o Apto..." style="min-height:70px"></textarea></div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Tiempo en esta dirección</label><select id="wz_tdir"><option value="0">Seleccionar...</option><option value="1">Menos de 1 año</option><option value="2">1–3 años</option><option value="3">3–5 años</option><option value="4">Más de 5 años</option></select></div>
+            <div class="fg"><label class="fl">Tipo de vivienda</label><select id="wz_viv"><option value="propia">Propia</option><option value="alquilada">Alquilada</option><option value="familiar">Familiar / prestada</option><option value="otro">Otro</option></select></div>
           </div>
           <div class="frow">
-            <div class="fg"><label class="fl">Inicial disponible (USD)</label><input type="text" id="fIni" placeholder="Ej: $462"></div>
-            <div class="fg"><label class="fl">Plazo preferido</label>
-              <select id="fPl"><option>6 meses</option><option selected>12 meses</option><option>18 meses</option></select>
-            </div>
+            <div class="fg"><label class="fl">Empresa / Negocio</label><input type="text" id="wz_empresa" placeholder="Nombre del empleador"></div>
+            <div class="fg"><label class="fl">Cargo / Actividad</label><input type="text" id="wz_cargo" placeholder="Ej: Motorizado, Vendedor"></div>
           </div>
-          <div class="fg"><label class="fl">Ingresos mensuales aproximados (USD) *</label>
-            <select id="fInc"><option value="">Selecciona un rango</option><option>Menos de $200</option><option>$200 - $400</option><option>$400 - $700</option><option>$700 - $1,000</option><option>Mas de $1,000</option></select>
+          <div class="frow">
+            <div class="fg"><label class="fl">¿Recibe remesas / otros ingresos?</label><select id="wz_rem"><option value="no">No</option><option value="si">Sí</option></select></div>
+            <div class="fg"><label class="fl">Dependientes económicos</label><select id="wz_dep_g"><option value="0">Ninguno</option><option value="1">1</option><option value="2">2</option><option value="3">3+</option></select></div>
           </div>
-          <div class="fg"><label class="fl">Actividad economica</label>
-            <select><option value="">Selecciona...</option><option>Empleado formal</option><option>Independiente / freelance</option><option>Comerciante</option><option>Delivery / transporte</option><option>Otro</option></select>
+          <div class="frow">
+            <div class="fg"><label class="fl">Créditos anteriores *</label><select id="wz_hist_g"><option value="ninguno">Sin historial</option><option value="bueno">Puntual</option><option value="mora_leve">Mora leve</option><option value="malo">Mora grave</option></select></div>
+            <div class="fg"><label class="fl">Deudas activas actualmente</label><select id="wz_deuda_g"><option value="no">Sin deudas</option><option value="menores">Menores</option><option value="graves">Importantes</option></select></div>
           </div>
-          <div class="fg"><label class="fl">Referencia personal (nombre y telefono)</label>
-            <input type="text" id="fRef2" placeholder="Nombre completo - +58 XXX-XXXXXXX">
+          <div class="frow">
+            <div class="fg"><label class="fl">Estado bancario</label><select id="wz_banco"><option value="activa">Cuenta activa</option><option value="no">No posee</option><option value="inactiva">Inactiva</option></select></div>
+            <div class="fg"><label class="fl">Banco principal</label><input type="text" id="wz_banco_nm" placeholder="Banco de Venezuela"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Banco donde cobra</label><input type="text" id="wz_banco_cobro" placeholder="Banco Mercantil"></div>
+            <div class="fg"><label class="fl">Últimos 4 dígitos de cuenta</label><input type="text" id="wz_cuenta" placeholder="1234"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">¿Tiene ahorros?</label><select id="wz_ahorro"><option value="no">No</option><option value="si">Sí</option></select></div>
+            <div class="fg"><label class="fl">¿Utiliza Cashea?</label><select id="wz_cashea"><option value="no">No</option><option value="si">Sí</option></select></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Nivel Cashea</label><input type="number" id="wz_cashea_nivel" min="0" placeholder="0"></div>
+            <div class="fg"><label class="fl">Pago al día en Cashea</label><select id="wz_cashea_pago"><option value="">Seleccionar...</option><option value="si">Sí</option><option value="no">No</option></select></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">¿Tiene fiador?</label><select id="wz_fiador"><option value="no">No</option><option value="si">Sí</option></select></div>
+            <div class="fg"><label class="fl">Nombre del fiador</label><input type="text" id="wz_fiador_nom" placeholder="Nombre completo"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Teléfono fiador</label><input type="text" id="wz_fiador_tel" placeholder="+58..."></div>
+            <div class="fg"><label class="fl">Cédula fiador</label><input type="text" id="wz_fiador_ci" placeholder="V-..."></div>
+          </div>
+          <div class="fg"><label class="fl">Relación con el fiador</label><input type="text" id="wz_fiador_rel" placeholder="Hermano, amigo, socio..."></div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Referencia 1 · Nombre</label><input type="text" id="wz_r1n" placeholder="Nombre completo"></div>
+            <div class="fg"><label class="fl">Referencia 1 · Teléfono</label><input type="text" id="wz_r1t" placeholder="+58..."></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Referencia 1 · Relación</label><input type="text" id="wz_r1r" placeholder="Pariente, amigo..."></div>
+            <div class="fg"><label class="fl">Referencia 1 · Observación</label><input type="text" id="wz_r1obs" placeholder="Opcional"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Referencia 2 · Nombre</label><input type="text" id="wz_r2n" placeholder="Nombre completo"></div>
+            <div class="fg"><label class="fl">Referencia 2 · Teléfono</label><input type="text" id="wz_r2t" placeholder="+58..."></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Referencia 2 · Relación</label><input type="text" id="wz_r2r" placeholder="Pariente, amigo..."></div>
+            <div class="fg"><label class="fl">Referencia 2 · Observación</label><input type="text" id="wz_r2obs" placeholder="Opcional"></div>
           </div>
           <div class="fnav">
-            <button class="btn btn-s" onclick="goS(1)" style="flex:0 0 auto;">Atras</button>
-            <button class="btn btn-p" onclick="goS(3)" style="flex:1;justify-content:center;">Continuar</button>
-          </div>
-        </div>
-
-        <div class="fs" id="fs3">
-          <h3 class="ft">Documentos</h3>
-          <p class="fsub">Adjunta los documentos para completar tu solicitud</p>
-          <div class="fg"><label class="fl">Foto de cedula (ambas caras) *</label>
-            <label class="udrop" for="uC" id="zC">
-              <div style="font-size:22px;margin-bottom:6px;font-weight:700;color:var(--ink-3);">&#8679;</div>
-              <div style="font-weight:700;font-size:14px;margin-bottom:3px;">Subir cedula</div>
-              <div style="font-size:12px;color:var(--ink-4);">JPG, PNG o PDF - Max 5MB</div>
-              <input type="file" id="uC" accept=".jpg,.jpeg,.png,.pdf" onchange="showUp(this,'zC')">
-            </label>
-          </div>
-          <div class="fg"><label class="fl">Comprobante de ingresos</label>
-            <label class="udrop" for="uI" id="zI">
-              <div style="font-size:22px;margin-bottom:6px;font-weight:700;color:var(--ink-3);">&#8679;</div>
-              <div style="font-weight:700;font-size:14px;margin-bottom:3px;">Subir comprobante</div>
-              <div style="font-size:12px;color:var(--ink-4);">Nomina, cuenta o factura - Max 5MB</div>
-              <input type="file" id="uI" accept=".jpg,.jpeg,.png,.pdf" onchange="showUp(this,'zI')">
-            </label>
-          </div>
-          <div class="fnav">
-            <button class="btn btn-s" onclick="goS(2)" style="flex:0 0 auto;">Atras</button>
-            <button class="btn btn-p" onclick="submitF()" style="flex:1;justify-content:center;">Enviar solicitud</button>
+            <button type="button" id="btnAtrasSolicitud" class="btn btn-s" onclick="goS(1); return false;" style="flex:0 0 auto;">Atrás</button>
+            <button type="button" id="btnGuardarSolicitud" class="btn btn-p" onclick="submitF(); return false;" style="flex:1;justify-content:center;">Guardar en Pagasi</button>
           </div>
         </div>
 
         <div id="fOK" style="display:none;text-align:center;padding:48px 0;">
-          <div style="font-size:56px;margin-bottom:16px;">&#127881;</div>
-          <h3 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:10px;">Solicitud enviada!</h3>
-          <p style="font-size:15px;color:var(--ink-3);line-height:1.7;margin-bottom:28px;">Un asesor te contactara en las proximas <strong>24 horas</strong> al numero que indicaste.</p>
+          <div style="font-size:56px;margin-bottom:16px;">🎉</div>
+          <h3 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:10px;">Solicitud enviada</h3>
+          <p id="okText" style="font-size:15px;color:var(--ink-3);line-height:1.7;margin-bottom:28px;">Tus datos fueron cargados en Pagasi como cliente nuevo.</p>
           <a href="https://wa.me/584140000000" class="btn btn-p" style="display:inline-flex;margin:0 auto;">Ir a WhatsApp</a>
         </div>
       </div>
@@ -504,34 +521,201 @@ var fM=document.getElementById('fM');
 CATALOG.forEach(function(m,i){fM.add(new Option(m.name+' — $'+m.price.toLocaleString(),i));});
 var urlMoto=new URLSearchParams(window.location.search).get('moto');
 if(urlMoto!==null){fM.value=parseInt(urlMoto);}
+var FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDrtg1AOD3nX1bnS3WW87g14ofa9_OPxDo',
+  authDomain: 'pagasi-b859b.firebaseapp.com',
+  projectId: 'pagasi-b859b',
+  storageBucket: 'pagasi-b859b.firebasestorage.app',
+  messagingSenderId: '230117681047',
+  appId: '1:230117681047:web:53dc6a914fec4068f606d2'
+};
+var fbApp=null, fbAuth=null, db=null;
+try{
+  if(window.firebase){
+    fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth = firebase.auth();
+    db = firebase.firestore();
+  }
+}catch(e){ console.warn('Firebase init error', e); }
+
 var cur=1;
 function goS(s){
   if(cur===1&&s===2){
-    if(!document.getElementById('fN').value||!document.getElementById('fC').value||!document.getElementById('fT').value){
-      alert('Por favor completa los campos requeridos.');return;
+    var req=['wz_nom','wz_ci','wz_tel','wz_emp','wz_ing'];
+    for(var i=0;i<req.length;i++){
+      var reqEl=document.getElementById(req[i]);
+      if(!reqEl || !String(reqEl.value||'').trim()){
+        alert('Por favor completa los campos requeridos.');
+        return false;
+      }
     }
   }
-  document.getElementById('fs'+cur).classList.remove('on');
-  var pd=document.getElementById('pd'+cur);pd.classList.remove('on');pd.classList.add('done');
+  var totalSteps = document.querySelectorAll('.prog .ps').length || 2;
+  document.querySelectorAll('.fs').forEach(function(el){ if(el) el.classList.remove('on'); });
+  document.querySelectorAll('.prog .ps').forEach(function(el){ if(el) el.classList.remove('on'); });
   cur=s;
-  document.getElementById('fs'+cur).classList.add('on');
-  document.getElementById('pd'+cur).classList.add('on');
-  document.getElementById('pd'+cur).classList.remove('done');
-  for(var j=s+1;j<=3;j++){var d=document.getElementById('pd'+j);d.classList.remove('done','on');}
+  var fs=document.getElementById('fs'+cur);
+  var pd=document.getElementById('pd'+cur);
+  if(fs) fs.classList.add('on');
+  if(pd) pd.classList.add('on');
+  for(var j=1;j<cur;j++){
+    var doneEl=document.getElementById('pd'+j);
+    if(doneEl) doneEl.classList.add('done');
+  }
+  for(var j=cur;j<=totalSteps;j++){
+    var stepEl=document.getElementById('pd'+j);
+    if(stepEl && j!==cur) stepEl.classList.remove('done');
+    if(stepEl && j===cur) stepEl.classList.remove('done');
+  }
+  return false;
 }
-function submitF(){
-  document.getElementById('fs3').classList.remove('on');
-  document.getElementById('fOK').style.display='block';
-  document.getElementById('pd3').classList.remove('on');document.getElementById('pd3').classList.add('done');
+
+
+function calcCrediScore(){
+  var g=function(id){ var el=document.getElementById(id); return el?el.value:''; };
+  var ing=parseFloat(g('wz_ing'))||0;
+  var ifam=parseFloat(g('wz_ifam'))||0;
+  var emp=g('wz_emp')||'';
+  var ant=g('wz_ant')||'';
+  var hist=g('wz_hist_g')||'ninguno';
+  var deuda=g('wz_deuda_g')||'no';
+  var dep=parseInt(g('wz_dep_g')||0,10)||0;
+  var banco=g('wz_banco')||'activa';
+  var viv=g('wz_viv')||'propia';
+  var rem=g('wz_rem')||'no';
+  var conocio=g('wz_conocio')||'';
+  var cashea=g('wz_cashea')||'no';
+  var casheaNivel=parseInt(g('wz_cashea_nivel')||0,10)||0;
+  var fiador=(g('wz_fiador')||'no')==='si';
+  var ingEf=Math.max(ing,ifam);
+  var ratio=0;
+  var f1={ninguno:50,bueno:100,mora_leve:35,malo:5}[hist]||50;
+  if(deuda==='menores')f1=Math.max(0,f1-12); else if(deuda==='graves')f1=Math.max(0,f1-35);
+  if(banco==='activa')f1=Math.min(100,f1+10); else if(banco==='no')f1=Math.max(0,f1-10);
+  if(cashea==='si')f1=Math.min(100,f1+(casheaNivel>=3?18:casheaNivel>=2?10:5));
+  var ingBase={formal:80,publico:70,independiente:60,comerciante:65,delivery:70,remesas:55,informal:30};
+  var f2=ingEf>0?Math.min(100,((ingEf-100)/900)*100+30):0;
+  if(emp)f2=Math.min(100,f2*(ingBase[emp]||50)/70);
+  if(dep===1)f2=Math.max(0,f2-8); else if(dep===2)f2=Math.max(0,f2-18); else if(dep>=3)f2=Math.max(0,f2-28);
+  if(viv==='propia')f2=Math.min(100,f2+10); else if(viv==='alquilada')f2=Math.max(0,f2-8);
+  var empBase={formal:78,publico:70,independiente:65,comerciante:68,delivery:70,remesas:60,informal:38};
+  var antBase={'1':0,'2':10,'3':22,'5':35};
+  var f3=Math.min(100,(empBase[emp]||30)+(antBase[ant]||0));
+  if(rem==='si'&&emp!=='remesas')f3=Math.min(100,f3+8);
+  var f4=25; if(fiador)f4=Math.min(100,f4+45); if(viv==='propia')f4=Math.min(100,f4+15); else if(viv==='familiar')f4=Math.min(100,f4+5); if(banco==='activa')f4=Math.min(100,f4+10); else if(banco==='no')f4=Math.max(0,f4-10);
+  var f5=50; if(conocio==='referido')f5=Math.min(100,f5+30); else if(conocio==='anterior')f5=Math.min(100,f5+22); else if(conocio==='redes')f5=Math.min(100,f5+5); if(deuda==='no')f5=Math.min(100,f5+10); else if(deuda==='graves')f5=Math.max(0,f5-15); if(rem==='si')f5=Math.min(100,f5+8);
+  var hardReject=(ingEf>0&&ingEf<100)||(hist==='malo'&&deuda==='graves');
+  var raw=Math.round((f1*30+f2*30+f3*20+f4*15+f5*5)/100*10);
+  var score=hardReject?300:Math.max(300,Math.min(850,Math.round(300+(raw/1000)*550)));
+  return {score:score,f1:Math.round(f1),f2:Math.round(f2),f3:Math.round(f3),f4:Math.round(f4),f5:Math.round(f5),ratio:ratio};
 }
-function setR(on,off){document.getElementById(on).classList.add('on');document.getElementById(off).classList.remove('on');}
-function showUp(inp,zId){
-  if(inp.files&&inp.files[0]){
-    var z=document.getElementById(zId);
-    z.querySelector('div:nth-child(2)').textContent='OK: '+inp.files[0].name;
-    z.querySelector('div:nth-child(3)').textContent='Listo para enviar';
-    z.style.borderColor='var(--p)';z.style.background='var(--p-xs)';
+
+function buildClientePayload(){
+  var scoreData=calcCrediScore();
+  return {
+    id: 'WEB-'+Date.now(),
+    nombre: document.getElementById('wz_nom').value.trim(),
+    cedula: document.getElementById('wz_ci').value.trim(),
+    tel: document.getElementById('wz_tel').value.trim(),
+    wa: document.getElementById('wz_wa').value.trim() || document.getElementById('wz_tel').value.trim(),
+    email: document.getElementById('wz_email').value.trim(),
+    ciudad: document.getElementById('wz_ciudad_res').value.trim() || document.getElementById('wz_ciudad').value.trim(),
+    estado_ubi: document.getElementById('wz_estado').value.trim(),
+    dir: document.getElementById('wz_dir_det').value.trim(),
+    trabajo: document.getElementById('wz_emp').value,
+    empresa: document.getElementById('wz_empresa').value.trim(),
+    cargo: document.getElementById('wz_cargo').value.trim(),
+    ingreso: parseFloat(document.getElementById('wz_ing').value)||0,
+    ingreso_familiar: parseFloat(document.getElementById('wz_ifam').value)||0,
+    antiguedad: document.getElementById('wz_ant').value,
+    remesas: document.getElementById('wz_rem').value,
+    dependientes: parseInt(document.getElementById('wz_dep_g').value||0,10)||0,
+    vivienda: document.getElementById('wz_viv').value,
+    tiempo_dir: document.getElementById('wz_tdir').value,
+    historial: document.getElementById('wz_hist_g').value,
+    deudas: document.getElementById('wz_deuda_g').value,
+    banco_estado: document.getElementById('wz_banco').value,
+    banco_nombre: document.getElementById('wz_banco_nm').value.trim(),
+    banco_cobro: document.getElementById('wz_banco_cobro').value.trim(),
+    cuenta_digitos: document.getElementById('wz_cuenta').value.trim(),
+    ahorro: document.getElementById('wz_ahorro').value,
+    cashea: document.getElementById('wz_cashea').value,
+    cashea_nivel: document.getElementById('wz_cashea_nivel').value.trim(),
+    cashea_pago: document.getElementById('wz_cashea_pago').value,
+    fiador: document.getElementById('wz_fiador').value,
+    fiador_nom: document.getElementById('wz_fiador_nom').value.trim(),
+    fiador_tel: document.getElementById('wz_fiador_tel').value.trim(),
+    fiador_ci: document.getElementById('wz_fiador_ci').value.trim(),
+    fiador_rel: document.getElementById('wz_fiador_rel').value.trim(),
+    ref1:{nom:document.getElementById('wz_r1n').value.trim(),tel:document.getElementById('wz_r1t').value.trim(),rel:document.getElementById('wz_r1r').value.trim(),obs:document.getElementById('wz_r1obs').value.trim()},
+    ref2:{nom:document.getElementById('wz_r2n').value.trim(),tel:document.getElementById('wz_r2t').value.trim(),rel:document.getElementById('wz_r2r').value.trim(),obs:document.getElementById('wz_r2obs').value.trim()},
+    docs_count: 0,
+    impresion: '',
+    conocio: document.getElementById('wz_conocio').value,
+    score_indexa: scoreData.score,
+    f1: scoreData.f1, f2: scoreData.f2, f3: scoreData.f3, f4: scoreData.f4, f5: scoreData.f5,
+    estado: 'activo',
+    creado: new Date().toISOString(),
+    origen: 'solicitar_web'
+  };
+}
+
+async function ensureAnonAuth(){
+  if(!fbAuth) throw new Error('Firebase no disponible');
+  if(fbAuth.currentUser) return fbAuth.currentUser;
+  try{
+    var cred = await fbAuth.signInAnonymously();
+    return cred.user;
+  }catch(e){
+    throw new Error('Activa Anonymous Auth en Firebase para guardar solicitudes públicas.');
   }
 }
+
+async function submitF(){
+  var payload=buildClientePayload();
+  if(!payload.nombre||!payload.cedula||!payload.tel||!payload.trabajo||!payload.ingreso){
+    alert('Completa los campos obligatorios de Cliente.'); return;
+  }
+  var btns=document.querySelectorAll('#fs2 .btn'); btns.forEach(function(b){b.disabled=true;});
+  try{
+    await ensureAnonAuth();
+    var dup = await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
+    if(!dup.empty){
+      var ref=dup.docs[0].ref;
+      var old=dup.docs[0].data()||{};
+      payload.id = old.id || dup.docs[0].id;
+      payload.creado = old.creado || payload.creado;
+      await ref.set(payload,{merge:true});
+    }else{
+      await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
+    }
+    await db.collection('solicitudes_publicas').doc(String(payload.id)).set({clienteId: payload.id, cedula: payload.cedula, nombre: payload.nombre, creado: payload.creado, origen:'solicitar_web', estado:'nuevo'} ,{merge:true});
+    document.getElementById('fs2').classList.remove('on');
+    document.getElementById('fOK').style.display='block';
+    document.getElementById('pd2').classList.remove('on');document.getElementById('pd2').classList.add('done');
+    document.getElementById('okText').textContent='Tus datos fueron cargados en Pagasi como cliente nuevo.';
+  }catch(err){
+    console.error(err);
+    alert(err.message || 'No se pudo guardar la solicitud en Pagasi.');
+  }finally{
+    btns.forEach(function(b){b.disabled=false;});
+  }
+}
+
+(function(){
+  function bindSolicitudButtons(){
+    var b1=document.getElementById('btnContinuarSolicitud');
+    if(b1) b1.addEventListener('click', function(ev){ ev.preventDefault(); goS(2); });
+    var b2=document.getElementById('btnAtrasSolicitud');
+    if(b2) b2.addEventListener('click', function(ev){ ev.preventDefault(); goS(1); });
+    var b3=document.getElementById('btnGuardarSolicitud');
+    if(b3) b3.addEventListener('click', function(ev){ ev.preventDefault(); submitF(); });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindSolicitudButtons);
+  else bindSolicitudButtons();
+})();
+
+function setR(on,off){var a=document.getElementById(on), b=document.getElementById(off); if(a)a.classList.add('on'); if(b)b.classList.remove('on');}
+function showUp(inp,zId){}
 </script>
 </body></html>
