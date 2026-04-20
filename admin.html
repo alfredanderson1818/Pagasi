@@ -3503,7 +3503,7 @@ clientes(){
   return`<div class="page">
   <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap">
     <div class="srch" style="flex:1"><span class="srch-i">◆</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
-    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nueva Solicitud</button></div>
+    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
   </div>
   <div id="clienteList">${renderClienteList()}</div>
   </div>`;
@@ -5296,84 +5296,173 @@ function cDel(id){
 // ══════════════════════════════════════════
 // CLIENTE CRUD
 // ══════════════════════════════════════════
-var _cliWizard = {step:1,id:null};
-function _cliVal(id){ var el=$(id); return el ? (el.value||'').trim() : ''; }
-function _cliNum(id){ var v=parseFloat(_cliVal(id)); return isNaN(v)?0:v; }
-function _cliWizardData(base){
-  return {
-    id:(base&&base.id)||null,
-    nombre:(base&&base.nombre)||'', cedula:(base&&base.cedula)||'', tel:(base&&base.tel)||'', wa:(base&&base.wa)||'', email:(base&&base.email)||'', ciudad:(base&&base.ciudad)||'', notas:(base&&base.notas)||'', emergencia:(base&&base.emergencia)||'',
-    trabajo:(base&&base.trabajo)||'', ingreso:(base&&base.ingreso)||'', empresa:(base&&base.empresa)||'', cargo:(base&&base.cargo)||'', ingreso_familiar:(base&&base.ingreso_familiar)||'', antiguedad:(base&&base.antiguedad)||'', remesas:(base&&base.remesas)||'no', dependientes:(base&&base.dependientes)||0,
-    vivienda:(base&&base.vivienda)||'', tiempo_dir:(base&&base.tiempo_dir)||'', estado_ubi:(base&&base.estado_ubi)||'', dir:(base&&base.dir)||'', historial:(base&&base.historial)||'', deudas:(base&&base.deudas)||'', banco_estado:(base&&base.banco_estado)||'', banco_nombre:(base&&base.banco_nombre)||'', banco_cobro:(base&&base.banco_cobro)||'', cuenta_digitos:(base&&base.cuenta_digitos)||'', ahorro:(base&&base.ahorro)||'', score_indexa:(base&&base.score_indexa)||'', estado:(base&&base.estado)||'activo'
+function openAddCliente(id=null){
+  const c=id?S.clientes.find(x=>x.id===id):null,ed=!!c;
+  let cliStep=1;
+  function v(x){ return x==null?'':String(x).replace(/"/g,'&quot;'); }
+  function radio(name,current,siLbl='Sí',noLbl='No'){
+    const val=current||'no';
+    return `<div style="display:flex;gap:12px;align-items:center;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="radio" name="${name}" value="si" ${val==='si'?'checked':''}> ${siLbl}</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="radio" name="${name}" value="no" ${val!=='si'?'checked':''}> ${noLbl}</label>
+    </div>`;
+  }
+  function fg(label,idv,val='',ph='',type='text'){
+    return `<div class="fg"><label>${label}</label><input class="fi" id="${idv}" type="${type}" value="${v(val)}" placeholder="${ph}"></div>`;
+  }
+  function render(){
+    $('mic').textContent='CLI';
+    $('mtt').textContent=ed?'Editar Cliente':'Nuevo Cliente';
+    $('msb').textContent=ed?(c.nombre||'Cliente'):'Cliente y Perfil';
+    $('modal-box').className='modal modal-lg';
+    const stepCliente = `
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn ${cliStep===1?'btn-p':'btn-g'} btn-sm" onclick="window.__cliStepSet(1)">1. Cliente</button>
+        <button class="btn ${cliStep===2?'btn-p':'btn-g'} btn-sm" onclick="window.__cliStepSet(2)">2. Perfil</button>
+      </div>
+      <div class="fsec">Datos del Cliente</div>
+      <div class="fgr">
+        ${fg('Nombre completo *','c_n',(c&&c.nombre)||'','Nombre completo')}
+        ${fg('N° Cédula *','c_ced',(c&&c.cedula)||'','V-00000000')}
+        ${fg('Teléfono *','c_tel',(c&&c.tel)||'','0412-0000000','tel')}
+        ${fg('WhatsApp','c_wa',(c&&c.wa)||'','0412-0000000','tel')}
+        ${fg('Email','c_email',(c&&c.email)||'','correo@ejemplo.com','email')}
+        ${fg('Ciudad','c_ciudad',(c&&c.ciudad)||'','Caracas')}
+      </div>
+      <div class="fgr c1" style="margin-top:8px">
+        <div class="fg"><label>¿Cómo nos conoció?</label><input class="fi" id="c_conocio" value="${v((c&&c.conocio)||'')}" placeholder="Instagram, referido, tienda..."></div>
+      </div>
+    `;
+    const stepPerfil = `
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn ${cliStep===1?'btn-p':'btn-g'} btn-sm" onclick="window.__cliStepSet(1)">1. Cliente</button>
+        <button class="btn ${cliStep===2?'btn-p':'btn-g'} btn-sm" onclick="window.__cliStepSet(2)">2. Perfil</button>
+      </div>
+      <div class="fsec">Perfil</div>
+      <div class="fgr">
+        ${fg('CrediScore','c_score',(c&&c.score_indexa)||'','0','number')}
+        ${fg('Trabajo / Ocupación','c_trab',(c&&c.trabajo)||'','Comerciante / delivery / empleado')}
+        ${fg('Empresa','c_empresa',(c&&c.empresa)||'','Empresa')}
+        ${fg('Cargo','c_cargo',(c&&c.cargo)||'','Cargo')}
+        ${fg('Antigüedad laboral','c_ant',(c&&c.antiguedad)||'','1 año / 3 años')}
+        ${fg('Ingreso mensual ($)','c_ing',(c&&c.ingreso)||'','0','number')}
+        ${fg('Ingreso familiar ($)','c_ifam',(c&&c.ingreso_familiar)||'','0','number')}
+        ${fg('Vivienda','c_viv',(c&&c.vivienda)||'','Propia / alquilada')}
+        ${fg('Tiempo en dirección','c_tdir',(c&&c.tiempo_dir)||'','2 años')}
+        ${fg('Estado','c_estado',(c&&c.estado_ubi)||'','Miranda')}
+        ${fg('Ciudad residencia','c_ciudad_res',(c&&c.ciudad)||'','Caracas')}
+        ${fg('Dirección detallada','c_dir',(c&&c.dir)||'','Dirección completa')}
+        ${fg('Remesas','c_rem',(c&&c.remesas)||'','Sí / No')}
+        ${fg('Dependientes','c_dep',(c&&c.dependientes)||'','0','number')}
+        ${fg('Historial crediticio','c_hist',(c&&c.historial)||'','Ninguno / Bueno')}
+        ${fg('Deudas actuales','c_deuda',(c&&c.deudas)||'','No / Sí')}
+        ${fg('Banco (estado)','c_banco',(c&&c.banco_estado)||'','Banco principal')}
+        ${fg('Banco (nombre)','c_banco_nm',(c&&c.banco_nombre)||'','Nombre del banco')}
+        ${fg('Banco de cobro','c_banco_cobro',(c&&c.banco_cobro)||'','Banco para cobrar')}
+        ${fg('Últimos 4 dígitos cuenta','c_cuenta',(c&&c.cuenta_digitos)||'','1234')}
+        ${fg('Ahorro estimado ($)','c_ahorro',(c&&c.ahorro)||'','0','number')}
+      </div>
+      <div class="fsec" style="margin-top:10px">Cashea</div>
+      ${radio('c_cashea',(c&&c.cashea)||'no')}
+      <div class="fgr">
+        ${fg('Nivel Cashea','c_cashea_nivel',(c&&c.cashea_nivel)||'','Nivel')}
+        ${fg('Pago de Cashea','c_cashea_pago',(c&&c.cashea_pago)||'','Al día / atrasado')}
+      </div>
+      <div class="fsec" style="margin-top:10px">Fiador</div>
+      ${radio('c_fiador',(c&&c.fiador)||'no')}
+      <div class="fgr">
+        ${fg('Nombre del fiador','c_fiador_nom',(c&&c.fiador_nom)||'','Nombre')}
+        ${fg('Teléfono fiador','c_fiador_tel',(c&&c.fiador_tel)||'','0412-0000000','tel')}
+        ${fg('Cédula fiador','c_fiador_ci',(c&&c.fiador_ci)||'','V-00000000')}
+        ${fg('Relación','c_fiador_rel',(c&&c.fiador_rel)||'','Hermano / amigo')}
+      </div>
+      <div class="fsec" style="margin-top:10px">Referencias</div>
+      <div class="fgr">
+        ${fg('Ref 1 nombre','c_r1n',(c&&c.ref1&&c.ref1.nom)||'','Nombre')}
+        ${fg('Ref 1 teléfono','c_r1t',(c&&c.ref1&&c.ref1.tel)||'','0412-0000000','tel')}
+        ${fg('Ref 1 relación','c_r1r',(c&&c.ref1&&c.ref1.rel)||'','Relación')}
+        ${fg('Ref 1 observación','c_r1obs',(c&&c.ref1&&c.ref1.obs)||'','Observación')}
+        ${fg('Ref 2 nombre','c_r2n',(c&&c.ref2&&c.ref2.nom)||'','Nombre')}
+        ${fg('Ref 2 teléfono','c_r2t',(c&&c.ref2&&c.ref2.tel)||'','0412-0000000','tel')}
+        ${fg('Ref 2 relación','c_r2r',(c&&c.ref2&&c.ref2.rel)||'','Relación')}
+        ${fg('Ref 2 observación','c_r2obs',(c&&c.ref2&&c.ref2.obs)||'','Observación')}
+      </div>
+      <div class="fgr c1" style="margin-top:8px">
+        <div class="fg"><label>Notas internas</label><textarea class="fta" id="c_notas" placeholder="Notas">${(c&&c.notas)||''}</textarea></div>
+      </div>
+    `;
+    $('mbd').innerHTML = cliStep===1 ? stepCliente : stepPerfil;
+    $('mft').innerHTML = `
+      <button class="btn btn-g" onclick="closeM()">Cancelar</button>
+      ${cliStep===1
+        ? `<button class="btn btn-p" onclick="window.__cliStepSet(2)">Siguiente →</button>`
+        : `<button class="btn btn-g" onclick="window.__cliStepSet(1)">← Cliente</button><button class="btn btn-p" onclick="saveM()">Guardar Cliente</button>`}
+    `;
+    $('ov').style.display='flex';
+  }
+  window.__cliStepSet = function(n){
+    cliStep = n;
+    render();
+  };
+  render();
+
+  S.saveFn=()=>{
+    const g=i=>{ var el=$(i); return el?el.value.trim():''; };
+    const radioVal=name=>{ var el=document.querySelector(`input[name="${name}"]:checked`); return el?el.value:'no'; };
+    if(!g('c_n')||!g('c_ced')||!g('c_tel')){ toast('Nombre, cédula y teléfono son obligatorios','error'); return false; }
+    if(!ed){
+      var cedNorm=g('c_ced').replace(/\s/g,'').toLowerCase();
+      var dup=S.clientes.find(function(x){ return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm; });
+      if(dup){ toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error'); return false; }
+    }
+    const obj = {
+      id:(c&&c.id)||(S.clientes.length?Math.max(...S.clientes.map(x=>parseInt(x.id)||0))+1:1),
+      nombre:g('c_n'),
+      cedula:g('c_ced'),
+      tel:g('c_tel'),
+      wa:g('c_wa')||g('c_tel'),
+      email:g('c_email'),
+      ciudad:g('c_ciudad_res')||g('c_ciudad'),
+      conocio:g('c_conocio'),
+      trabajo:g('c_trab'),
+      empresa:g('c_empresa'),
+      cargo:g('c_cargo'),
+      ingreso:parseFloat(g('c_ing'))||0,
+      ingreso_familiar:parseFloat(g('c_ifam'))||0,
+      antiguedad:g('c_ant'),
+      remesas:g('c_rem'),
+      dependientes:parseInt(g('c_dep'))||0,
+      vivienda:g('c_viv'),
+      tiempo_dir:g('c_tdir'),
+      estado_ubi:g('c_estado'),
+      dir:g('c_dir'),
+      historial:g('c_hist'),
+      deudas:g('c_deuda'),
+      banco_estado:g('c_banco'),
+      banco_nombre:g('c_banco_nm'),
+      banco_cobro:g('c_banco_cobro'),
+      cuenta_digitos:g('c_cuenta'),
+      ahorro:parseFloat(g('c_ahorro'))||0,
+      cashea:radioVal('c_cashea'),
+      cashea_nivel:g('c_cashea_nivel'),
+      cashea_pago:g('c_cashea_pago'),
+      fiador:radioVal('c_fiador'),
+      fiador_nom:g('c_fiador_nom'),
+      fiador_tel:g('c_fiador_tel'),
+      fiador_ci:g('c_fiador_ci'),
+      fiador_rel:g('c_fiador_rel'),
+      ref1:{nom:g('c_r1n'),tel:g('c_r1t'),rel:g('c_r1r'),obs:g('c_r1obs')},
+      ref2:{nom:g('c_r2n'),tel:g('c_r2t'),rel:g('c_r2r'),obs:g('c_r2obs')},
+      score_indexa:parseInt(g('c_score'))||0,
+      notas:g('c_notas'),
+      estado:(c&&c.estado)||'activo'
+    };
+    if(ed){ const i=S.clientes.findIndex(x=>x.id===c.id); S.clientes[i]=obj; }
+    else { S.clientes.push(obj); }
+    DB.saveCliente(obj);
+    closeM(); nav('clientes'); toast(ed?'Cliente actualizado':'Cliente registrado','success'); return true;
   };
 }
-function _cliCaptureCurrent(){
-  if(!_cliWizard.data) return;
-  Object.assign(_cliWizard.data, {
-    nombre:_cliVal('c_n'), cedula:_cliVal('c_ced'), tel:_cliVal('c_tel'), wa:_cliVal('c_wa'), email:_cliVal('c_email'), ciudad:_cliVal('c_ciudad'), notas:_cliVal('c_notas'), emergencia:_cliVal('c_emg'),
-    trabajo:_cliVal('c_trab'), ingreso:_cliNum('c_ing'), empresa:_cliVal('c_empresa'), cargo:_cliVal('c_cargo'), ingreso_familiar:_cliNum('c_ifam'), antiguedad:_cliVal('c_ant'), remesas:_cliVal('c_rem')||'no', dependientes:parseInt(_cliVal('c_dep')||0,10)||0,
-    vivienda:_cliVal('c_viv'), tiempo_dir:_cliVal('c_tdir'), estado_ubi:_cliVal('c_estado_ubi'), dir:_cliVal('c_dir'), historial:_cliVal('c_hist'), deudas:_cliVal('c_deuda'), banco_estado:_cliVal('c_banco_estado'), banco_nombre:_cliVal('c_banco_nombre'), banco_cobro:_cliVal('c_banco_cobro'), cuenta_digitos:_cliVal('c_cuenta'), ahorro:_cliVal('c_ahorro'), score_indexa:_cliNum('c_score')||''
-  });
-}
-function _cliRenderWizard(){
-  const c=_cliWizard.data||_cliWizardData(null), ed=!!_cliWizard.id;
-  $('mic').textContent='CLI'; $('mtt').textContent=ed?'Editar Cliente':'Nuevo Cliente'; $('msb').textContent=_cliWizard.step===1?'Paso 1 de 2 · Cliente':'Paso 2 de 2 · Perfil'; $('modal-box').className='modal';
-  var steps = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'
-    + '<div style="display:flex;align-items:center;gap:7px;color:'+(_cliWizard.step===1?'var(--p1)':'var(--green)')+';font-weight:800;font-size:12px"><div style="width:22px;height:22px;border-radius:50%;background:'+(_cliWizard.step===1?'var(--p1)':'var(--green)')+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px">'+(_cliWizard.step>1?'✓':'1')+'</div>Cliente</div>'
-    + '<div style="height:1px;flex:1;background:var(--rim)"></div>'
-    + '<div style="display:flex;align-items:center;gap:7px;color:'+(_cliWizard.step===2?'var(--p1)':'var(--ink3)')+';font-weight:800;font-size:12px"><div style="width:22px;height:22px;border-radius:50%;background:'+(_cliWizard.step===2?'var(--p1)':'var(--rim2)')+';color:'+(_cliWizard.step===2?'#fff':'var(--ink3)')+';display:flex;align-items:center;justify-content:center;font-size:11px">2</div>Perfil</div>'
-    + '</div>';
-  var body='';
-  if(_cliWizard.step===1){
-    body = '<div class="fgr">'
-      + '<div class="fg"><label>Nombre completo *</label><input class="fi" id="c_n" value="'+String(c.nombre||'').replace(/"/g,'&quot;')+'" placeholder="Nombre completo"></div>'
-      + '<div class="fg"><label>N° Cédula *</label><input class="fi" id="c_ced" value="'+String(c.cedula||'').replace(/"/g,'&quot;')+'" placeholder="V-00000000"></div>'
-      + '<div class="fg"><label>Teléfono</label><input class="fi" id="c_tel" value="'+String(c.tel||'').replace(/"/g,'&quot;')+'" placeholder="0412-000-0000"></div>'
-      + '<div class="fg"><label>WhatsApp</label><input class="fi" id="c_wa" value="'+String(c.wa||'').replace(/"/g,'&quot;')+'" placeholder="0412-000-0000"></div>'
-      + '<div class="fg"><label>Email</label><input class="fi" id="c_email" type="email" value="'+String(c.email||'').replace(/"/g,'&quot;')+'" placeholder="correo@ejemplo.com"></div>'
-      + '<div class="fg"><label>Ciudad</label><input class="fi" id="c_ciudad" value="'+String(c.ciudad||'').replace(/"/g,'&quot;')+'" placeholder="Caracas"></div>'
-      + '<div class="fg"><label>Contacto emergencia</label><input class="fi" id="c_emg" value="'+String(c.emergencia||'').replace(/"/g,'&quot;')+'" placeholder="Nombre y teléfono"></div>'
-      + '<div class="fg"><label>Notas internas</label><textarea class="fta" id="c_notas">'+String(c.notas||'')+'</textarea></div>'
-      + '</div>';
-  } else {
-    body = '<div class="fgr">'
-      + '<div class="fg"><label>CrediScore</label><input class="fi" id="c_score" type="number" value="'+String(c.score_indexa||'').replace(/"/g,'&quot;')+'" placeholder="0"></div>'
-      + '<div class="fg"><label>Trabajo / Ocupación</label><input class="fi" id="c_trab" value="'+String(c.trabajo||'').replace(/"/g,'&quot;')+'" placeholder="Comerciante, delivery..."></div>'
-      + '<div class="fg"><label>Empresa / Negocio</label><input class="fi" id="c_empresa" value="'+String(c.empresa||'').replace(/"/g,'&quot;')+'"></div>'
-      + '<div class="fg"><label>Cargo / Actividad</label><input class="fi" id="c_cargo" value="'+String(c.cargo||'').replace(/"/g,'&quot;')+'"></div>'
-      + '<div class="fg"><label>Ingreso mensual ($)</label><input class="fi" id="c_ing" type="number" value="'+String(c.ingreso||'').replace(/"/g,'&quot;')+'"></div>'
-      + '<div class="fg"><label>Ingreso familiar ($)</label><input class="fi" id="c_ifam" type="number" value="'+String(c.ingreso_familiar||'').replace(/"/g,'&quot;')+'"></div>'
-      + '<div class="fg"><label>Antigüedad laboral</label><select class="fs" id="c_ant"><option value="">Seleccionar...</option><option value="1" '+(String(c.antiguedad||'')==='1'?'selected':'')+'>Menos de 6 meses</option><option value="2" '+(String(c.antiguedad||'')==='2'?'selected':'')+'>6m – 1 año</option><option value="3" '+(String(c.antiguedad||'')==='3'?'selected':'')+'>1 a 3 años</option><option value="5" '+(String(c.antiguedad||'')==='5'?'selected':'')+'>Más de 3 años</option></select></div>'
-      + '<div class="fg"><label>¿Recibe remesas?</label><select class="fs" id="c_rem"><option value="no" '+((c.remesas||'no')==='no'?'selected':'')+'>No</option><option value="si" '+((c.remesas||'')==='si'?'selected':'')+'>Sí</option></select></div>'
-      + '<div class="fg"><label>Dependientes</label><select class="fs" id="c_dep"><option value="0" '+(String(c.dependientes||0)==='0'?'selected':'')+'>0</option><option value="1" '+(String(c.dependientes||0)==='1'?'selected':'')+'>1</option><option value="2" '+(String(c.dependientes||0)==='2'?'selected':'')+'>2</option><option value="3" '+(String(c.dependientes||0)==='3'?'selected':'')+'>3+</option></select></div>'
-      + '<div class="fg"><label>Tipo de vivienda</label><select class="fs" id="c_viv"><option value="">Seleccionar...</option><option value="propia" '+((c.vivienda||'')==='propia'?'selected':'')+'>Propia</option><option value="alquilada" '+((c.vivienda||'')==='alquilada'?'selected':'')+'>Alquilada</option><option value="familiar" '+((c.vivienda||'')==='familiar'?'selected':'')+'>Familiar / prestada</option><option value="otro" '+((c.vivienda||'')==='otro'?'selected':'')+'>Otro</option></select></div>'
-      + '<div class="fg"><label>Tiempo en dirección</label><select class="fs" id="c_tdir"><option value="">Seleccionar...</option><option value="1" '+(String(c.tiempo_dir||'')==='1'?'selected':'')+'>Menos de 1 año</option><option value="2" '+(String(c.tiempo_dir||'')==='2'?'selected':'')+'>1–3 años</option><option value="3" '+(String(c.tiempo_dir||'')==='3'?'selected':'')+'>3–5 años</option><option value="4" '+(String(c.tiempo_dir||'')==='4'?'selected':'')+'>Más de 5 años</option></select></div>'
-      + '<div class="fg"><label>Estado</label><input class="fi" id="c_estado_ubi" value="'+String(c.estado_ubi||'').replace(/"/g,'&quot;')+'"></div>'
-      + '<div class="fg"><label>Dirección</label><textarea class="fta" id="c_dir">'+String(c.dir||'')+'</textarea></div>'
-      + '<div class="fg"><label>Historial crediticio</label><select class="fs" id="c_hist"><option value="">Seleccionar...</option><option value="ninguno" '+((c.historial||'')==='ninguno'?'selected':'')+'>Sin historial</option><option value="bueno" '+((c.historial||'')==='bueno'?'selected':'')+'>Puntual</option><option value="mora_leve" '+((c.historial||'')==='mora_leve'?'selected':'')+'>Mora leve</option><option value="malo" '+((c.historial||'')==='malo'?'selected':'')+'>Mora grave</option></select></div>'
-      + '<div class="fg"><label>Deudas activas</label><select class="fs" id="c_deuda"><option value="">Seleccionar...</option><option value="no" '+((c.deudas||'')==='no'?'selected':'')+'>Sin deudas</option><option value="menores" '+((c.deudas||'')==='menores'?'selected':'')+'>Menores</option><option value="graves" '+((c.deudas||'')==='graves'?'selected':'')+'>Importantes</option></select></div>'
-      + '<div class="fg"><label>Cuenta bancaria</label><select class="fs" id="c_banco_estado"><option value="activa" '+((c.banco_estado||'activa')==='activa'?'selected':'')+'>Activa con movimientos</option><option value="poca" '+((c.banco_estado||'')==='poca'?'selected':'')+'>Poco movimiento</option><option value="no" '+((c.banco_estado||'')==='no'?'selected':'')+'>Sin cuenta</option></select></div>'
-      + '<div class="fg"><label>Banco(s)</label><input class="fi" id="c_banco_nombre" value="'+String(c.banco_nombre||'').replace(/"/g,'&quot;')+'"></div>'
-      + '<div class="fg"><label>Banco para cobro</label><input class="fi" id="c_banco_cobro" value="'+String(c.banco_cobro||'').replace(/"/g,'&quot;')+'"></div>'
-      + '<div class="fg"><label>Últimos 4 dígitos</label><input class="fi" id="c_cuenta" value="'+String(c.cuenta_digitos||'').replace(/"/g,'&quot;')+'" maxlength="4"></div>'
-      + '<div class="fg"><label>Ahorros</label><select class="fs" id="c_ahorro"><option value="no" '+((c.ahorro||'no')==='no'?'selected':'')+'>No</option><option value="usd" '+((c.ahorro||'')==='usd'?'selected':'')+'>Sí, USD</option><option value="bs" '+((c.ahorro||'')==='bs'?'selected':'')+'>Sí, Bs</option></select></div>'
-      + '</div>';
-  }
-  $('mbd').innerHTML = steps + body;
-  $('mft').innerHTML = _cliWizard.step===1 ? '<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="_cliWizardNext()">Siguiente</button>' : '<button class="btn btn-g" onclick="_cliWizardPrev()">Atrás</button><button class="btn btn-p" onclick="_cliWizardSave()">Guardar Cliente</button>';
-  $('ov').style.display='flex';
-}
-function _cliWizardNext(){ _cliCaptureCurrent(); if(!_cliWizard.data.nombre||!_cliWizard.data.cedula){toast('Nombre y cédula son obligatorios','error');return false;} _cliWizard.step=2; _cliRenderWizard(); }
-function _cliWizardPrev(){ _cliCaptureCurrent(); _cliWizard.step=1; _cliRenderWizard(); }
-function _cliWizardSave(){
-  _cliCaptureCurrent(); const c = _cliWizard.data, ed=!!_cliWizard.id;
-  if(!c.nombre||!c.cedula){toast('Nombre y cédula son obligatorios','error');return false;}
-  if(!ed){ var cedNorm=String(c.cedula).replace(/\s/g,'').toLowerCase(); var dup=S.clientes.find(function(x){return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm;}); if(dup){toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error');return false;} }
-  const obj={ id:c.id||(S.clientes.length?Math.max(...S.clientes.map(x=>x.id))+1:1), nombre:c.nombre, cedula:c.cedula, tel:c.tel||'N/A', wa:c.wa||c.tel||'', email:c.email||'', ciudad:c.ciudad||'', trabajo:c.trabajo||'', ingreso:parseFloat(c.ingreso)||0, empresa:c.empresa||'', cargo:c.cargo||'', ingreso_familiar:parseFloat(c.ingreso_familiar)||0, antiguedad:c.antiguedad||'', remesas:c.remesas||'no', dependientes:parseInt(c.dependientes||0,10)||0, vivienda:c.vivienda||'', tiempo_dir:c.tiempo_dir||'', estado_ubi:c.estado_ubi||'', dir:c.dir||'', historial:c.historial||'', deudas:c.deudas||'', banco_estado:c.banco_estado||'', banco_nombre:c.banco_nombre||'', banco_cobro:c.banco_cobro||'', cuenta_digitos:c.cuenta_digitos||'', ahorro:c.ahorro||'', score_indexa:parseFloat(c.score_indexa)||0, emergencia:c.emergencia||'', notas:c.notas||'', estado:c.estado||'activo' };
-  if(ed){const i=S.clientes.findIndex(x=>x.id===_cliWizard.id); S.clientes[i]=Object.assign({}, S.clientes[i], obj);} else S.clientes.push(obj);
-  DB.saveCliente(obj); closeM(); nav('clientes'); toast(ed?'Cliente actualizado':'Cliente registrado','success'); return true;
-}
-function openAddCliente(id=null){ const c=id?S.clientes.find(x=>x.id===id):null; _cliWizard = {step:1,id:id,data:_cliWizardData(c)}; _cliRenderWizard(); }
 function editCliente(id){openAddCliente(id);}
 function delCliente(id){
   if(!requireDeletePermission()) return;
@@ -5561,8 +5650,8 @@ function _wzRender(motoId){
   function _row2(a,b){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+a+b+'</div>'; }
   function _fg(label,inner){ return '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)">'+label+'</label>'+inner+'</div>'; }
   function _sel(id,opts,onch){ return '<select class="fs" id="'+id+'" onchange="'+(onch||'')+'">'+opts+'</select>'; }
-  function _inp(id,type,ph,extra){ var val=(WZ&&WZ[id]!=null)?String(WZ[id]).replace(/"/g,'&quot;'):''; return '<input class="fi" id="'+id+'" type="'+(type||'text')+'" placeholder="'+(ph||'')+'" value="'+val+'" '+(extra||'')+' style="width:100%">'; }
-  function _chip(label,group,val,onch){ var active=(WZ&&String(WZ['_chip_'+group]||'')===String(val)); return '<label data-group="'+group+'" data-val="'+val+'" style="flex:1;min-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:'+(active?'rgba(91,78,212,.12)':'var(--surf2)')+';border:1.5px solid '+(active?'var(--p1)':'var(--rim)')+';color:'+(active?'var(--p1)':'var(--ink)')+';border-radius:10px;padding:9px 6px;cursor:pointer;text-align:center;font-size:12px;font-weight:700;transition:.15s" onclick="_wzChip(this,\''+group+'\',\''+val+'\');'+(onch||'')+'">'+label+'</label>'; }
+  function _inp(id,type,ph,extra){ return '<input class="fi" id="'+id+'" type="'+(type||'text')+'" placeholder="'+(ph||'')+'" '+(extra||'')+' style="width:100%">'; }
+  function _chip(label,group,val,onch){ return '<label style="flex:1;min-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:9px 6px;cursor:pointer;text-align:center;font-size:12px;font-weight:700;transition:.15s" onclick="_wzChip(this,\''+group+'\',\''+val+'\')">'+label+'</label>'; }
 
   var step3 =
 
@@ -5577,7 +5666,7 @@ function _wzRender(motoId){
     _fg('Estado',_sel('wz_estado','<option value="">Seleccionar...</option><option>Caracas (D.C.)</option><option>Miranda</option><option>Carabobo</option><option>Aragua</option><option>Zulia</option><option>Lara</option><option>Bolívar</option><option>Anzoátegui</option><option>Mérida</option><option>Táchira</option><option>Monagas</option><option>Sucre</option><option>Falcón</option><option>Barinas</option><option>Apure</option><option>Otro</option>')),
     _fg('Ciudad / Municipio',_inp('wz_ciudad_res','text','Se completa al buscar'))
   )
-  +'<div style="margin-bottom:10px">'+_fg('Detalle (apto, piso, referencia)','<textarea class="fta" id="wz_dir_det" placeholder="Piso 3, apto 3-A, frente al Banco..." style="min-height:50px;width:100%">'+String(WZ.wz_dir_det||'')+'</textarea>')+'</div>'
+  +'<div style="margin-bottom:10px">'+_fg('Detalle (apto, piso, referencia)','<textarea class="fta" id="wz_dir_det" placeholder="Piso 3, apto 3-A, frente al Banco..." style="min-height:50px;width:100%"></textarea>')+'</div>'
   +_row2(
     _fg('Tiempo en esta dirección',_sel('wz_tdir','<option value="0">Seleccionar...</option><option value="1">Menos de 1 año</option><option value="2">1–3 años</option><option value="3">3–5 años</option><option value="4">Más de 5 años</option>','_wzScore()')),
     _fg('Tipo de vivienda',_sel('wz_viv','<option value="propia">Propia</option><option value="alquilada">Alquilada</option><option value="familiar">Familiar / prestada</option><option value="otro">Otro</option>','_wzScore()'))
@@ -5729,7 +5818,7 @@ function _wzRender(motoId){
     .map(function(x){ return _chip(x[0],'wz_impresion_g',x[1],''); }).join('')
     +'</div>'
   )+'</div>'
-  +'<div style="margin-bottom:6px">'+_fg('Observaciones adicionales','<textarea class="fta" id="wz_obs" rows="3" placeholder="Detalles de la visita, condiciones especiales, actitud del cliente..." style="min-height:80px;width:100%">'+String(WZ.wz_obs||WZ.obs||'')+'</textarea>')+'</div>';
+  +'<div style="margin-bottom:6px">'+_fg('Observaciones adicionales','<textarea class="fta" id="wz_obs" rows="3" placeholder="Detalles de la visita, condiciones especiales, actitud del cliente..." style="min-height:80px;width:100%"></textarea>')+'</div>';
 
   // ── PASO 4: Resultado ──
   var step4 = '<div id="wz-resultado-contenido">Calculando...</div>';
@@ -5772,10 +5861,6 @@ function _wzRender(motoId){
     + btnNext
     + '</div>';
 
-  if(WZ.step===2){
-    setTimeout(function(){ _wzHydratePerfil(); },40);
-  }
-
   // Inicializar preview financiero si hay precio (ahora en paso 3 = moto)
   if(WZ.step===3 && WZ.precio>0){
     setTimeout(function(){ _wzActualizarFinPreview(WZ.precio); }, 50);
@@ -5814,6 +5899,7 @@ function _wzPickCliente(sel){
     WZ.wz_nom = WZ.wz_ci = WZ.wz_tel = WZ.wz_wa = WZ.wz_email = WZ.wz_ciudad = '';
     WZ.wz_emp = WZ.wz_ant = WZ.wz_conocio = '';
     WZ.wz_ing = WZ.wz_ifam = '';
+    WZ.score = 0;
     return _wzRender();
   }
   var c = (S.clientes||[]).find(function(x){ return parseInt(x.id,10)===id; });
@@ -5863,26 +5949,11 @@ function _wzPickCliente(sel){
   WZ.r2obs = c.ref2&&c.ref2.obs || '';
   WZ.docsCount = c.docs_count || 0;
   WZ.impresion = c.impresion || '';
-  WZ.score = c.score_indexa || c.crediscore || WZ.score || 0;
-  WZ['_chip_wz_emp_g'] = WZ.emp || '';
-  WZ['_chip_wz_dep_g'] = String(c.dependientes || 0);
-  WZ['_chip_wz_hist_g'] = WZ.hist || '';
-  WZ['_chip_wz_deuda_g'] = WZ.deuda || '';
-  WZ['_chip_wz_impresion_g'] = WZ.impresion || '';
+  WZ.score = parseInt(c.score_indexa||0,10)||0;
   _wzRender();
 }
 
 // ── Selección de moto del inventario ──
-function _wzHydratePerfil(){
-  ['wz_estado','wz_ciudad_res','wz_dir_q','wz_dir_det','wz_empresa','wz_cargo','wz_ing','wz_ant','wz_rem','wz_ifam','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs','wz_tdir','wz_viv'].forEach(function(id){
-    var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!==undefined) el.value=WZ[id];
-  });
-  var rc=document.querySelector('input[name="wz_cashea"][value="'+((WZ.cashea||'no')==='si'?'si':'no')+'"]'); if(rc) rc.checked=true;
-  var rf=document.querySelector('input[name="wz_fiador"][value="'+((WZ.fiador_tiene||'no')==='si'?'si':'no')+'"]'); if(rf) rf.checked=true;
-  _wzToggleCashea((WZ.cashea||'no')==='si'?'si':'no');
-  _wzToggleFiador((WZ.fiador_tiene||'no')==='si'?'si':'no');
-}
-
 function _wzPickMotoInv(sel){
   if(!sel.value){ WZ.precio=0; _wzScore(); return; }
   var opt = sel.options[sel.selectedIndex];
@@ -8390,7 +8461,7 @@ function topAct(){
   var p=S.page;
   // Solicitud es el punto de entrada único para clientes + motos + financiamientos
   if(p==='dash')        openAddCred();
-  else if(p==='clientes')   openAddCred();
+  else if(p==='clientes')   openAddCliente();
   else if(p==='creditos')   openAddCred();
   // Inventario de motos: sí se pueden agregar unidades sueltas al stock
   else if(p==='motos')      openAddMoto();
@@ -8406,7 +8477,7 @@ function topAct(){
 // Map pages to button labels (empty = hide button)
 var TOP_BTN_LABELS = {
   dash:      'Nueva Solicitud',
-  clientes:  'Nueva Solicitud',
+  clientes:  'Nuevo Cliente',
   creditos:  'Nueva Solicitud',
   contratos: 'Nueva Solicitud',
   motos:     'Nueva Unidad al Inventario',
