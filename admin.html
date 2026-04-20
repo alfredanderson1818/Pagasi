@@ -3503,7 +3503,7 @@ clientes(){
   return`<div class="page">
   <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap">
     <div class="srch" style="flex:1"><span class="srch-i">◆</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
-    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nueva Solicitud</button></div>
+    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
   </div>
   <div id="clienteList">${renderClienteList()}</div>
   </div>`;
@@ -5298,32 +5298,192 @@ function cDel(id){
 // ══════════════════════════════════════════
 function openAddCliente(id=null){
   const c=id?S.clientes.find(x=>x.id===id):null,ed=!!c;
-  $('mic').textContent='CLI';$('mtt').textContent=ed?'Editar Cliente':'Registrar Cliente';$('msb').textContent=ed?c.nombre:'Datos del cliente';
-  $('modal-box').className='modal';
-  $('mbd').innerHTML=`<div class="fgr">
-    <div class="fg"><label>Nombre completo *</label><input class="fi" id="c_n" value="${(c&&c.nombre)||''}" placeholder="Nombre completo"></div>
-    <div class="fg"><label>N° Cédula *</label><input class="fi" id="c_ced" value="${(c&&c.cedula)||''}" placeholder="V-00000000"></div>
-    <div class="fg"><label>Teléfono</label><input class="fi" id="c_tel" value="${(c&&c.tel)||''}" placeholder="0412-000-0000"></div>
-    <div class="fg"><label>Email</label><input class="fi" id="c_email" type="email" value="${(c&&c.email)||''}" placeholder="correo@ejemplo.com"></div>
-    <div class="fg"><label>Ciudad</label><input class="fi" id="c_ciudad" value="${(c&&c.ciudad)||''}" placeholder="Caracas"></div>
-    <div class="fg"><label>Trabajo / Ocupación</label><input class="fi" id="c_trab" value="${(c&&c.trabajo)||''}" placeholder="Comerciante..."></div>
-    <div class="fg"><label>Ingreso mensual ($)</label><input class="fi" id="c_ing" type="number" value="${(c&&c.ingreso)||''}"></div>
-    <div class="fg"><label>Contacto emergencia</label><input class="fi" id="c_emg" value="${(c&&c.emergencia)||''}" placeholder="Nombre y teléfono"></div>
-  </div>
-  <div class="fgr c1" style="gap:8px;margin-top:4px">
-    <div class="fg"><label>Notas internas</label><textarea class="fta" id="c_notas">${(c&&c.notas)||''}</textarea></div>
-  </div>`;
+  $('mic').textContent='CLI';$('mtt').textContent=ed?'Editar Cliente':'Nuevo Cliente';$('msb').textContent=ed?(c.nombre||'Datos del cliente'):'Cliente + Perfil';
+  $('modal-box').className='modal modal-lg';
+
+  function v(key,def){ return (c && c[key]!=null) ? c[key] : (def||''); }
+  function refv(n,key,def){ return (c && c['ref'+n] && c['ref'+n][key]!=null) ? c['ref'+n][key] : (def||''); }
+  function sel(id,label,opts,val){
+    return '<div class="fg"><label>'+label+'</label><select class="fs" id="'+id+'">'+opts.replace('value="'+String(val||'')+'"','value="'+String(val||'')+'" selected')+'</select></div>';
+  }
+  function inp(id,label,val,type,ph,extra){
+    return '<div class="fg"><label>'+label+'</label><input class="fi" id="'+id+'" type="'+(type||'text')+'" value="'+String(val==null?'':val).replace(/"/g,'&quot;')+'" placeholder="'+(ph||'')+'" '+(extra||'')+'></div>';
+  }
+  function ta(id,label,val,ph){
+    return '<div class="fg"><label>'+label+'</label><textarea class="fta" id="'+id+'" placeholder="'+(ph||'')+'">'+String(val==null?'':val)+'</textarea></div>';
+  }
+
+  $('mbd').innerHTML=`
+    <div class="fsec">Datos del Cliente</div>
+    <div class="fgr">
+      ${inp('c_n','Nombre completo *',v('nombre'),'text','Nombre completo')}
+      ${inp('c_ced','N° Cédula *',v('cedula'),'text','V-00000000')}
+      ${inp('c_tel','Teléfono *',v('tel'),'tel','0412-000-0000')}
+      ${inp('c_wa','WhatsApp',v('wa')||v('tel'),'tel','0412-000-0000')}
+      ${inp('c_email','Correo',v('email'),'email','correo@ejemplo.com')}
+      ${inp('c_ciudad','Ciudad',v('ciudad'),'text','Caracas')}
+    </div>
+
+    <div class="fsec" style="margin-top:12px">Perfil</div>
+    <div class="fgr">
+      ${sel('c_emp','Tipo de empleo *',
+        '<option value="">Seleccionar...</option><option value="formal">Formal / Empleado</option><option value="publico">Empleado Público</option><option value="delivery">Delivery / Motorizado</option><option value="independiente">Independiente</option><option value="comerciante">Comercio / Negocio</option><option value="remesas">Remesas</option><option value="informal">Informal</option>',
+        v('trabajo')
+      )}
+      ${sel('c_ant','Antigüedad laboral',
+        '<option value="">Seleccionar...</option><option value="1">Menos de 6 meses</option><option value="2">6 meses – 1 año</option><option value="3">1 a 3 años</option><option value="5">Más de 3 años</option>',
+        v('antiguedad')
+      )}
+      ${inp('c_ing','Ingreso mensual propio (USD) *',v('ingreso'),'number','0','min="0" step="10"')}
+      ${inp('c_ifam','Ingreso familiar total (USD)',v('ingreso_familiar'),'number','0','min="0" step="10"')}
+      ${sel('c_conocio','¿Cómo nos conoció?',
+        '<option value="">Seleccionar...</option><option value="referido">Referido por cliente</option><option value="redes">Redes sociales</option><option value="vitrina">Vitrina / local</option><option value="google">Google / internet</option><option value="anterior">Cliente anterior</option><option value="otro">Otro</option>',
+        v('conocio')
+      )}
+      ${sel('c_viv','Tipo de vivienda',
+        '<option value="propia">Propia</option><option value="alquilada">Alquilada</option><option value="familiar">Familiar / prestada</option><option value="otro">Otro</option>',
+        v('vivienda','propia')
+      )}
+      ${sel('c_tdir','Tiempo en esta dirección',
+        '<option value="">Seleccionar...</option><option value="1">Menos de 1 año</option><option value="2">1–3 años</option><option value="3">3–5 años</option><option value="4">Más de 5 años</option>',
+        v('tiempo_dir')
+      )}
+      ${sel('c_estado','Estado',
+        '<option value="">Seleccionar...</option><option value="Caracas (D.C.)">Caracas (D.C.)</option><option value="Miranda">Miranda</option><option value="Carabobo">Carabobo</option><option value="Aragua">Aragua</option><option value="Zulia">Zulia</option><option value="Lara">Lara</option><option value="Bolívar">Bolívar</option><option value="Anzoátegui">Anzoátegui</option><option value="Mérida">Mérida</option><option value="Táchira">Táchira</option><option value="Monagas">Monagas</option><option value="Sucre">Sucre</option><option value="Falcón">Falcón</option><option value="Barinas">Barinas</option><option value="Apure">Apure</option><option value="Otro">Otro</option>',
+        v('estado_ubi')
+      )}
+      ${inp('c_ciudad_res','Ciudad / Municipio',v('ciudad'),'text','Ciudad / Municipio')}
+      ${ta('c_dir','Detalle dirección',v('dir'),'Piso, apto, referencia...')}
+      ${inp('c_empresa','Empresa / Negocio',v('empresa'),'text','Nombre del empleador')}
+      ${inp('c_cargo','Cargo / Actividad',v('cargo'),'text','Ej: Motorizado, Vendedor')}
+      ${sel('c_rem','¿Recibe remesas / otros ingresos?',
+        '<option value="no">No</option><option value="si">Sí (USD, criptos, etc.)</option>',
+        v('remesas','no')
+      )}
+      ${sel('c_dep','Dependientes',
+        '<option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3 o más</option>',
+        v('dependientes',0)
+      )}
+      ${sel('c_hist','Historial de pago',
+        '<option value="ninguno">Sin historial</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option>',
+        v('historial','ninguno')
+      )}
+      ${sel('c_deuda','¿Tiene deudas activas?',
+        '<option value="no">No</option><option value="si">Sí</option>',
+        v('deudas','no')
+      )}
+      ${sel('c_banco','Cuenta bancaria',
+        '<option value="activa">Activa con movimientos</option><option value="poca">Poco movimiento</option><option value="no">Sin cuenta bancaria</option>',
+        v('banco_estado','activa')
+      )}
+      ${inp('c_banco_nm','Banco(s)',v('banco_nombre'),'text','Ej: Banesco, Mercantil')}
+      ${sel('c_banco_cobro','Banco para cobro de cuotas',
+        '<option value="">Seleccionar...</option><option value="bdv">Banco de Venezuela</option><option value="banesco">Banesco</option><option value="mercantil">Mercantil</option><option value="provincial">BBVA Provincial</option><option value="bicentenario">Bicentenario</option><option value="venezolano">Venezolano de Crédito</option><option value="exterior">Banco Exterior</option><option value="otro">Otro</option>',
+        v('banco_cobro')
+      )}
+      ${inp('c_cuenta','Número de cuenta (últimos 4 dígitos)',v('cuenta_digitos'),'text','XXXX','maxlength="4"')}
+      ${sel('c_ahorro','¿Tiene ahorros?',
+        '<option value="no">No</option><option value="usd">Sí, en USD</option><option value="bs">Sí, en Bs</option>',
+        v('ahorro','no')
+      )}
+      ${sel('c_cashea','Cashea',
+        '<option value="no">Sin Cashea</option><option value="si">Tiene Cashea</option>',
+        v('cashea','no')
+      )}
+      ${sel('c_cashea_nivel','Nivel Cashea',
+        '<option value="">Seleccionar...</option><option value="1">Nivel 1 — Básico</option><option value="2">Nivel 2 — Bronce</option><option value="3">Nivel 3 — Plata</option><option value="4">Nivel 4 — Oro</option>',
+        v('cashea_nivel')
+      )}
+      ${inp('c_cashea_pago','Fecha último pago Cashea',v('cashea_pago'),'date','')}
+      ${sel('c_fiador','¿Tiene fiador?',
+        '<option value="no">Sin fiador</option><option value="si">Tiene fiador</option>',
+        v('fiador','no')
+      )}
+      ${inp('c_fiador_nom','Nombre del fiador',v('fiador_nom'),'text','Nombre y apellido')}
+      ${inp('c_fiador_tel','Teléfono fiador',v('fiador_tel'),'tel','0412-0000000')}
+      ${inp('c_fiador_ci','Cédula del fiador',v('fiador_ci'),'text','V-12345678')}
+      ${sel('c_fiador_rel','Relación fiador',
+        '<option value="familiar">Familiar directo</option><option value="conyuge">Cónyuge / pareja</option><option value="amigo">Amigo/a</option><option value="colega">Colega / socio</option>',
+        v('fiador_rel','familiar')
+      )}
+      ${inp('c_r1n','Referencia 1 · Nombre',refv(1,'nom'),'text','Nombre y apellido')}
+      ${inp('c_r1t','Referencia 1 · Teléfono',refv(1,'tel'),'tel','0412-0000000')}
+      ${sel('c_r1r','Referencia 1 · Relación',
+        '<option value="Familiar directo">Familiar directo</option><option value="Amigo/a">Amigo/a</option><option value="Colega">Colega</option><option value="Vecino/a">Vecino/a</option>',
+        refv(1,'rel','Familiar directo')
+      )}
+      ${inp('c_r1o','Referencia 1 · Observación',refv(1,'obs'),'text','Notas...')}
+      ${inp('c_r2n','Referencia 2 · Nombre',refv(2,'nom'),'text','Nombre y apellido')}
+      ${inp('c_r2t','Referencia 2 · Teléfono',refv(2,'tel'),'tel','0412-0000000')}
+      ${sel('c_r2r','Referencia 2 · Relación',
+        '<option value="Familiar directo">Familiar directo</option><option value="Amigo/a">Amigo/a</option><option value="Colega">Colega</option><option value="Vecino/a">Vecino/a</option>',
+        refv(2,'rel','Familiar directo')
+      )}
+      ${inp('c_r2o','Referencia 2 · Observación',refv(2,'obs'),'text','Notas...')}
+    </div>
+    <div class="fgr c1" style="gap:8px;margin-top:4px">
+      ${ta('c_notas','Observaciones internas',v('notas'),'Notas internas')}
+    </div>`;
+
   S.saveFn=()=>{
-    const g=i=>{ var el=$(i); return el?el.value.trim():null; };
+    const g=i=>{ var el=$(i); return el?el.value.trim():''; };
     if(!g('c_n')||!g('c_ced')){toast('Nombre y cédula son obligatorios','error');return false;}
-    // Validar cédula duplicada solo en nuevo registro
-    if(!ed){
-      var cedNorm=g('c_ced').replace(/\s/g,'').toLowerCase();
-      var dup=S.clientes.find(function(x){return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm;});
-      if(dup){toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error');return false;}
-    }
-    const obj={id:(c&&c.id)||(S.clientes.length?Math.max(...S.clientes.map(x=>x.id))+1:1),nombre:g('c_n'),cedula:g('c_ced'),tel:g('c_tel')||'N/A',email:g('c_email')||'',ciudad:g('c_ciudad')||'',trabajo:g('c_trab')||'',ingreso:parseFloat(($('c_ing')&&$('c_ing').value))||0,emergencia:g('c_emg')||'',notas:g('c_notas')||'',estado:(c&&c.estado)||'activo'};
-    if(ed){const i=S.clientes.findIndex(x=>x.id===c.id);S.clientes[i]=obj;}else S.clientes.push(obj);
+    if(!g('c_tel')){toast('El teléfono es obligatorio','error');return false;}
+    if(!g('c_emp')){toast('Selecciona el tipo de empleo','error');return false;}
+    var ing = parseFloat(( $('c_ing')&&$('c_ing').value ))||0;
+    if(ing<=0){toast('El ingreso mensual debe ser mayor a 0','error');return false;}
+
+    var cedNorm=g('c_ced').replace(/\s/g,'').toLowerCase();
+    var dup=S.clientes.find(function(x){return !x.eliminado && (!ed || x.id!==c.id) && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm;});
+    if(dup){toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error');return false;}
+
+    const obj={
+      id:(c&&c.id)||(S.clientes.length?Math.max(...S.clientes.map(x=>x.id||0))+1:1),
+      nombre:g('c_n'),
+      cedula:g('c_ced'),
+      tel:g('c_tel'),
+      wa:g('c_wa')||g('c_tel'),
+      email:g('c_email')||'',
+      ciudad:g('c_ciudad_res')||g('c_ciudad')||'',
+      estado_ubi:g('c_estado')||'',
+      dir:g('c_dir')||'',
+      trabajo:g('c_emp')||'',
+      empresa:g('c_empresa')||'',
+      cargo:g('c_cargo')||'',
+      ingreso:parseFloat(($('c_ing')&&$('c_ing').value))||0,
+      ingreso_familiar:parseFloat(($('c_ifam')&&$('c_ifam').value))||0,
+      antiguedad:g('c_ant')||'',
+      remesas:g('c_rem')||'no',
+      dependientes:parseInt(g('c_dep')||'0')||0,
+      vivienda:g('c_viv')||'',
+      tiempo_dir:g('c_tdir')||'',
+      historial:g('c_hist')||'ninguno',
+      deudas:g('c_deuda')||'no',
+      banco_estado:g('c_banco')||'',
+      banco_nombre:g('c_banco_nm')||'',
+      banco_cobro:g('c_banco_cobro')||'',
+      cuenta_digitos:g('c_cuenta')||'',
+      ahorro:g('c_ahorro')||'',
+      cashea:g('c_cashea')||'no',
+      cashea_nivel:g('c_cashea_nivel')||'',
+      cashea_pago:g('c_cashea_pago')||'',
+      fiador:g('c_fiador')||'no',
+      fiador_nom:g('c_fiador_nom')||'',
+      fiador_tel:g('c_fiador_tel')||'',
+      fiador_ci:g('c_fiador_ci')||'',
+      fiador_rel:g('c_fiador_rel')||'',
+      ref1:{nom:g('c_r1n')||'',tel:g('c_r1t')||'',rel:g('c_r1r')||'',obs:g('c_r1o')||''},
+      ref2:{nom:g('c_r2n')||'',tel:g('c_r2t')||'',rel:g('c_r2r')||'',obs:g('c_r2o')||''},
+      docs_count:(c&&c.docs_count)||0,
+      impresion:(c&&c.impresion)||'',
+      conocio:g('c_conocio')||'',
+      score_indexa:(c&&c.score_indexa)||0,
+      emergencia:(c&&c.emergencia)||'',
+      notas:g('c_notas')||'',
+      estado:(c&&c.estado)||'activo',
+      creado:(c&&c.creado)||new Date().toISOString()
+    };
+    if(ed){const i=S.clientes.findIndex(x=>x.id===c.id);S.clientes[i]=Object.assign({},S.clientes[i],obj);}else S.clientes.push(obj);
     DB.saveCliente(obj);
     closeM();nav('clientes');toast(ed?'Cliente actualizado':'Cliente registrado','success');return true;
   };
