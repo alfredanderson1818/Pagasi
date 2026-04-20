@@ -1952,6 +1952,39 @@ function clean(o){
   return r;
 }
 
+// Cache local específica para motos — evita perder unidades nuevas entre sesiones
+var MOTOS_CACHE_KEY='pagasi_motos_cache_v1';
+function loadMotosCache(){
+  try{
+    var raw=localStorage.getItem(MOTOS_CACHE_KEY);
+    var arr=raw?JSON.parse(raw):[];
+    return Array.isArray(arr)?arr:[];
+  }catch(e){ return []; }
+}
+function saveMotosCache(arr){
+  try{ localStorage.setItem(MOTOS_CACHE_KEY, JSON.stringify(Array.isArray(arr)?arr:[])); }catch(e){}
+}
+function upsertMotoCache(moto){
+  try{
+    var arr=loadMotosCache();
+    var i=arr.findIndex(function(x){ return String(x.id)===String(moto.id); });
+    if(i>=0) arr[i]=clean(moto); else arr.push(clean(moto));
+    saveMotosCache(arr);
+  }catch(e){}
+}
+function delMotoCache(id){
+  try{
+    var arr=loadMotosCache().filter(function(x){ return String(x.id)!==String(id); });
+    saveMotosCache(arr);
+  }catch(e){}
+}
+function mergeMotosPreferLocal(remote, local){
+  var map={};
+  (Array.isArray(remote)?remote:[]).forEach(function(x){ if(x&&x.id!=null) map[String(x.id)]=x; });
+  (Array.isArray(local)?local:[]).forEach(function(x){ if(x&&x.id!=null) map[String(x.id)]=x; });
+  return Object.keys(map).map(function(k){ return map[k]; });
+}
+
 // ── DB — persistencia con Firestore ──
 // Cola offline: guarda operaciones pendientes cuando no hay conexión
 var _dbQueue = [];
@@ -1979,7 +2012,11 @@ function _flushDbQueue(){
 
 var DB = {
   load: function(){
-    if(!db) return Promise.resolve();
+    var motosCacheLocal = loadMotosCache();
+    if(!db){
+      if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
+      return Promise.resolve();
+    }
     showLoader('Cargando datos...','Conectando con Firebase');
     return Promise.all([
       db.collection('motos').get(),
@@ -1993,7 +2030,8 @@ var DB = {
     ]).then(function(snaps){
       function read(snap){return snap.docs.map(function(d){return d.data();});}
       var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
-      S.motos       = m.map(mapMoto);
+      S.motos       = mergeMotosPreferLocal(m.map(mapMoto), motosCacheLocal);
+      saveMotosCache(S.motos);
       S.clientes    = cl;
       S.creds       = cr.map(mapCred);
       S.pagos       = p.map(mapPago);
@@ -2009,14 +2047,16 @@ var DB = {
       hideLoader();
       // Si es error de red, trabajar con datos locales sin avisar con error
       if(e.code==='unavailable'||( e.message&&e.message.includes('network'))){
+        if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
         toast('Sin conexión — modo offline activo','info');
       } else {
+        if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
         toast('Error al cargar datos: '+e.message,'error');
       }
     });
   },
-  saveMoto:    function(o){ if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(o.id)).set(clean(o)); }); },
-  delMoto:     function(id){ if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(id)).delete(); }); },
+  saveMoto:    function(o){ upsertMotoCache(o); if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(o.id)).set(clean(o)); }); },
+  delMoto:     function(id){ delMotoCache(id); if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(id)).delete(); }); },
   saveCliente: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('clientes').doc(String(o.id)).set(clean(o)); }); },
   delCliente:  function(id){ if(!db)return; _dbSilent(function(){ return db.collection('clientes').doc(String(id)).delete(); }); },
   saveCred:    function(o){ if(!db)return; _dbSilent(function(){ return db.collection('creditos').doc(o.id).set(clean(o)); }); },
@@ -3565,7 +3605,7 @@ creditos(){
       <div><div class="ct">Listado de créditos</div><div class="cs">${filtered.length} resultado${filtered.length!==1?'s':''} · ${tab==='todos'?'todos los estados':'filtrado por '+tab}</div></div>
     </div>
     <div class="tw"><table>
-    <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN</th><th>Cuota Quinc.</th><th>Progreso</th><th>Saldo</th><th>Mora</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN</th><th>Cuota Quinc.</th><th>Progreso</th><th>Saldo</th><th>Mora</th><th>APY</th><th>Estado</th><th></th></tr></thead>
     <tbody>${(()=>{const _cp=pgGet('creditos');return filtered.slice((_cp-1)*50,_cp*50).map(c=>{
       var totalCuotas = getCreditoTotalCuotas(c);
       var cuotaVal    = getCreditoCuotaBase(c);
@@ -3579,6 +3619,7 @@ creditos(){
       var moraCell = c.mora>0
         ? `<span class="bdg ${c.mora>60?'b-r':c.mora>30?'b-a':'b-b'}">${c.mora}d</span>`
         : `<span style="color:var(--ink3);font-size:11px">—</span>`;
+      var apyVal = Number.isFinite(parseFloat(c.apy)) ? parseFloat(c.apy) : (Number.isFinite(parseFloat((c.plan||{}).apy)) ? parseFloat((c.plan||{}).apy) : parseFloat(PLAN.apy||0));
       return`<tr style="cursor:pointer" onclick="openAmort('${c.id}')">
       <td class="tdm" style="font-family:var(--fd)">${c.id}</td>
       <td><span class="tdm">${c.cli}</span></td>
@@ -3588,6 +3629,7 @@ creditos(){
       <td style="min-width:110px"><div class="tds" style="margin-bottom:3px">${cuotasPagadasReal}/${totalCuotas}</div><div class="prog"><div class="pf ${c.mora>0?'p-r':'p-p'}" style="width:${pct}%"></div></div></td>
       <td style="font-weight:900;font-family:var(--fd);color:${saldoColor}">${saldoPendiente===0?'✓ $0':fmt(saldoPendiente)}</td>
       <td>${moraCell}</td>
+      <td><span style="font-weight:800;font-family:var(--fd);color:var(--ink)">${apyVal.toFixed(2)}%</span></td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap" onclick="event.stopPropagation()">
         <button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button>
@@ -3595,7 +3637,7 @@ creditos(){
         ${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar anticipadamente">Liquidar</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}
       </td>
     </tr>`;}).join('')})()}
-    ${filtered.length===0?`<tr><td colspan="10" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin resultados para este filtro</td></tr>`:''}
+    ${filtered.length===0?`<tr><td colspan="11" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin resultados para este filtro</td></tr>`:''}
     </tbody>
   </table></div>
   </div>
@@ -4918,8 +4960,9 @@ users(){
           +'<td class="tds" style="font-family:monospace;font-size:11.5px">'+u.email+'</td>'
           +'<td><span class="bdg '+rc+'">'+rolLabel+'</span></td>'
           +'<td class="tds">'+mods+' módulo'+(mods!==1?'s':'')+((u.permisos||[]).indexOf('perm_delete')>=0?' <span style="font-size:10px;color:var(--red);margin-left:4px">+ eliminar</span>':'')+'</td>'
-          +'<td style="display:flex;gap:5px;align-items:center">'
+          +'<td style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">'
             +'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'
+            +'<button class="btn btn-b btn-xs" data-uid="'+u.uid+'" onclick="copiarInvitacionUsuario(this.dataset.uid)">Link invitación</button>'
             +((!esMio&&canDeleteAction())?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email).replace(/"/g,'&quot;')+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">Eliminar</button>':'')
           +'</td>'
         +'</tr>';
@@ -11208,6 +11251,26 @@ function copiarLink(token){
     prompt('Copia este link de invitación:',url);
   }
 }
+function copiarInvitacionUsuario(uid){
+  if(!db){ toast('Requiere Firebase activo','error'); return; }
+  if(!uid){ toast('Usuario no válido','error'); return; }
+  db.collection('usuarios').doc(uid).get().then(function(doc){
+    if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
+    var data = doc.data() || {};
+    var token = data.inviteToken || ('INV-'+Date.now()+'-'+_randomToken(18));
+    var link = _buildInviteLink(token);
+    var payload = {};
+    if(!data.inviteToken) payload.inviteToken = token;
+    payload.inviteLink = link;
+    if(!data.inviteStatus || data.inviteStatus==='expirada') payload.inviteStatus = 'pendiente';
+    return db.collection('usuarios').doc(uid).set(payload,{merge:true}).then(function(){
+      copiarLink(link);
+    });
+  }).catch(function(e){
+    toast('Error: '+(e.message||e),'error');
+  });
+}
+
 
 function _getInviteToken(){
   try { return new URLSearchParams(window.location.search).get('invite') || ''; } catch(e) { return ''; }
