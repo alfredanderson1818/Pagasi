@@ -6777,19 +6777,72 @@ function _wzGuardar(){
   S.creds.push(newCred);
   DB.saveCred(newCred);
 
-  // Marcar moto como financiada
+  // Marcar moto como financiada o crearla desde catálogo
   if(WZ.motoInvId){
     var mi = S.motos.findIndex(function(m){ return m.id===WZ.motoInvId; });
-    if(mi>=0){ S.motos[mi].estado='financiada'; S.motos[mi].cliente=((existing&&existing.nombre)||WZ.nom); DB.saveMoto(S.motos[mi]); }
+    if(mi>=0){
+      S.motos[mi].estado='financiada';
+      S.motos[mi].cliente=((existing&&existing.nombre)||WZ.nom);
+      if(WZ.vin) S.motos[mi].vin=WZ.vin;
+      if(WZ.color) S.motos[mi].color=WZ.color;
+      if(WZ.placa) S.motos[mi].placa=WZ.placa;
+      DB.saveMoto(S.motos[mi]);
+    }
+  } else if(WZ.motoModelo){
+    var newMotoId = S.motos.length ? Math.max.apply(null, S.motos.map(function(x){ return x.id||0; })) + 1 : 1;
+    var motoInvNueva = {
+      id:newMotoId,
+      modelo:WZ.motoModelo||'',
+      precio:parseFloat(WZ.precio)||0,
+      color:WZ.color||'',
+      vin:WZ.vin||('VIN-'+Date.now().toString().slice(-6)),
+      placa:WZ.placa||'',
+      estado:'financiada',
+      cliente:((existing&&existing.nombre)||WZ.nom)||null,
+      gps:false,
+      notas:'Creada automáticamente desde catálogo al registrar financiamiento '+credId,
+      ini:r.ini,
+      fin:r.fin,
+      total:r.total,
+      cuotaQ:r.cuotaQ,
+      cuotaM:r.cuotaM||r.cuotaQ*2,
+      totalPagado:r.totalPagado||0
+    };
+    S.motos.push(motoInvNueva);
+    DB.saveMoto(motoInvNueva);
+    newCred.motoId = motoInvNueva.id;
+    DB.saveCred(newCred);
   }
 
-  // Movimiento de inicial
+  // Registrar la inicial también en Pagos
   var iniMetodo = ($('wz_ini_metodo')&&$('wz_ini_metodo').value) || (_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD');
   var iniRef = ($('wz_ini_ref')&&$('wz_ini_ref').value) || '';
+  var pagoIniId = 'PAG-'+Date.now();
+  var pagoIni = {
+    id:pagoIniId,
+    cli:newCred.cli,
+    cred:credId,
+    fecha:newCred.fecha,
+    monto:r.ini,
+    metodo:iniMetodo,
+    cuenta:iniMetodo,
+    cobrador:(S.currentUser&&S.currentUser.nombre)||'Admin',
+    referencia:iniRef,
+    estado:'confirmado',
+    tipoOperacion:'inicial_credito',
+    esInicial:true,
+    realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
+    tasaBs:window._tasaBsGlobal||1
+  };
+  S.pagos.push(pagoIni);
+  DB.savePago(pagoIni);
+
+  // Movimiento de inicial
   var movIni = {
     id:'MOV-'+Date.now(),
     tipo:'deposito',
     tipoOperacion:'inicial_credito',
+    conceptoPago:pagoIniId,
     creditoId:credId,
     conceptoCredito:credId,
     concepto:'Inicial · '+newCred.cli+' · '+credId+' ('+newCred.modelo+')',
