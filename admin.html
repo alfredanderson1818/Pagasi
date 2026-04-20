@@ -7004,61 +7004,113 @@ function cancelarCred(credId){
   if(!requireDeletePermission()) return;
   var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
   window._cancelCredId = credId;
-  $('mic').textContent='✕'; $('mtt').textContent='Cancelar Financiamiento'; $('msb').textContent=c.id+' · '+c.cli;
+  window._cancelCredModo = 'mantener';
+  $('mic').textContent='✕'; $('mtt').textContent='Eliminar Financiamiento'; $('msb').textContent='El registro quedará auditado';
   $('modal-box').className='modal';
-  $('mbd').innerHTML = '<div style="text-align:center;padding:12px 0">'
-    +'<div style="font-size:38px;margin-bottom:10px">≡</div>'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+c.cli+' — '+c.modelo+'</div>'
-    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:16px">'
-    +c.pagado+' cuotas pagadas de '+(c.totalCuotas||c.plazo*2)+' · Pagado: '+fmt((c.pagado||0)*(c.cuotaQ||c.cuota||0))
-    +'</div></div>'
-    +'<div class="fg"><label>Razón de cancelación *</label>'
-    +'<select class="fs" id="cc_razon">'
-    +'<option value="">— Seleccionar —</option>'
-    +'<option>Acuerdo entre las partes</option>'
-    +'<option>Cliente no puede pagar</option>'
-    +'<option>Moto recuperada</option>'
-    +'<option>Refinanciamiento</option>'
-    +'<option>Error administrativo</option>'
-    +'<option>Otro</option>'
-    +'</select></div>'
-    +'<div class="fg" style="margin-top:8px"><label>Notas adicionales</label>'
-    +'<textarea class="fta" id="cc_notas" placeholder="Detalles de la cancelación..."></textarea></div>'
-    +'<div style="margin-top:12px;padding:9px 11px;background:var(--ambers);border-radius:8px;font-size:12px">'
-    +'⚠ El crédito quedará como <strong>cancelado</strong>. La moto volverá al inventario como disponible.</div>';
-  S.saveFn = function(){
-    var razon = ($('cc_razon')&&$('cc_razon').value)||'';
-    if(!razon){ toast('Selecciona una razón de cancelación','error'); return false; }
-    var ci = S.creds.findIndex(function(x){return x.id===credId;});
-    if(ci>=0){
-      S.creds[ci].estado='cancelado';
-      S.creds[ci].canceladoPor  = (S.currentUser&&S.currentUser.nombre)||'Admin';
-      S.creds[ci].canceladoEn   = new Date().toISOString();
-      S.creds[ci].canceladoRazon= razon;
-      S.creds[ci].canceladoNotas= ($('cc_notas')&&$('cc_notas').value)||'';
-      DB.updateCred(credId,{
-        estado:'cancelado',
-        canceladoPor:S.creds[ci].canceladoPor,
-        canceladoEn:S.creds[ci].canceladoEn,
-        canceladoRazon:razon,
-        canceladoNotas:S.creds[ci].canceladoNotas
-      });
-      marcarInicialCreditoEliminada(credId, 'Financiamiento cancelado: '+razon);
-      // Return moto to inventory
-      var mi = S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
-      if(mi>=0&&S.motos[mi].estado==='financiada'){
-        S.motos[mi].estado='recuperada'; S.motos[mi].cliente=null;
-        DB.saveMoto(S.motos[mi]);
-      }
-    }
-    syncTodosEstadosClientes();
-    closeM(); nav('creditos');
-    toast('Crédito '+credId+' cancelado — moto liberada','info');
-    return true;
-  };
+  $('mbd').innerHTML = '<div style="text-align:left;padding:10px 0">'
+    +'<div style="text-align:center;font-size:42px;margin-bottom:10px">FIN</div>'
+    +'<div style="text-align:center;font-size:15px;font-weight:800">¿Cómo quieres eliminar el financiamiento '+c.id+'?</div>'
+    +'<div style="text-align:center;color:var(--ink3);font-size:13px;margin-top:6px">'+c.cli+' · '+c.modelo+' · '+fmt(getCreditoPagosConfirmados(c))+' cobrados</div>'
+    +'<div style="margin-top:14px;display:grid;gap:10px">'
+    +'<label style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer">'
+    +'<input type="radio" name="del_cred_modo" value="mantener" checked onchange="window._cancelCredModo=this.value">'
+    +'<div><div style="font-weight:800">Eliminar pero seguir contando pagos y cuentas</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">El financiamiento pasa a cancelado y la moto vuelve al inventario, pero los pagos y movimientos en Cuentas permanecen para trazabilidad operativa.</div></div></label>'
+    +'<label style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer">'
+    +'<input type="radio" name="del_cred_modo" value="completo" onchange="window._cancelCredModo=this.value">'
+    +'<div><div style="font-weight:800">Eliminar por completo</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">Además de cancelar el financiamiento, los pagos ligados a este crédito y sus movimientos en Cuentas también se marcan como eliminados. El registro queda auditado.</div></div></label>'
+    +'</div>'
+    +'<div style="margin-top:10px;padding:9px;background:var(--ambers);border-radius:8px;font-size:12px;color:var(--ink)">'
+    +'⚠ En ambos casos el financiamiento no se borra de la base: queda con trazabilidad de quién lo eliminó, cuándo y por qué.</div></div>';
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="saveM()">✕ Confirmar cancelación</button>';
+    +'<button class="btn btn-d" onclick="auditarYEliminarCred()">Confirmar eliminación</button>';
   $('ov').style.display='flex';
+}
+
+function auditarYEliminarCred(){
+  if(!requireDeletePermission()) return;
+  var credId = window._cancelCredId;
+  var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
+  closeM();
+  confirmarEliminacion({
+    titulo:'Eliminar Financiamiento',
+    descripcion:'Financiamiento '+c.id+' · '+c.cli+' · '+c.modelo,
+    onConfirm:function(audit){
+      ejecutarDelCred(audit);
+    }
+  });
+}
+
+function marcarPagosYCuentasCreditoEliminados(credId, motivo){
+  var ahora = new Date().toISOString();
+  var actor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+  (S.pagos||[]).forEach(function(p){
+    if(!p || p.eliminado || p.cred!==credId) return;
+    p.eliminado = true;
+    p.eliminadoModo = 'completo';
+    p.mantenerEnAmortizacion = false;
+    p.eliminadoPor = actor;
+    p.eliminadoPorUid = (S.currentUser&&S.currentUser.uid)||'';
+    p.eliminadoEn = ahora;
+    if(motivo) p.eliminadoRazon = motivo;
+    DB.savePago(p);
+  });
+  (S.movimientos||[]).forEach(function(m){
+    if(!m || m.eliminado) return;
+    var mismoCredito = m.creditoId===credId || m.conceptoCredito===credId || m.cred===credId || (m.concepto&&m.concepto.indexOf(credId)>=0);
+    if(!mismoCredito) return;
+    m.eliminado = true;
+    m.eliminadoPor = actor;
+    m.eliminadoEn = ahora;
+    if(motivo) m.eliminadoRazon = motivo;
+    DB.saveMovimiento(m);
+  });
+}
+
+function ejecutarDelCred(audit){
+  var credId = window._cancelCredId; if(!credId) return;
+  var modo = (window._cancelCredModo==='completo') ? 'completo' : 'mantener';
+  var ci = S.creds.findIndex(function(x){return x.id===credId;});
+  if(ci>=0){
+    S.creds[ci].estado='cancelado';
+    S.creds[ci].canceladoPor  = (S.currentUser&&S.currentUser.nombre)||'Admin';
+    S.creds[ci].canceladoEn   = new Date().toISOString();
+    S.creds[ci].canceladoRazon= (audit&&audit.eliminadoRazon)||'Sin especificar';
+    S.creds[ci].canceladoNotas= '';
+    S.creds[ci].eliminadoModo = modo;
+    if(audit) Object.assign(S.creds[ci], audit);
+    DB.updateCred(credId,{
+      estado:'cancelado',
+      canceladoPor:S.creds[ci].canceladoPor,
+      canceladoEn:S.creds[ci].canceladoEn,
+      canceladoRazon:S.creds[ci].canceladoRazon,
+      canceladoNotas:S.creds[ci].canceladoNotas,
+      eliminado: !!(audit&&audit.eliminado),
+      eliminadoPor: audit&&audit.eliminadoPor,
+      eliminadoPorUid: audit&&audit.eliminadoPorUid,
+      eliminadoEn: audit&&audit.eliminadoEn,
+      eliminadoRazon: audit&&audit.eliminadoRazon,
+      eliminadoModo: modo
+    });
+
+    if(modo==='completo'){
+      marcarPagosYCuentasCreditoEliminados(credId, 'Financiamiento eliminado por completo: '+S.creds[ci].canceladoRazon);
+    }
+
+    var mi = S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
+    if(mi>=0 && (S.motos[mi].estado==='financiada' || S.motos[mi].estado==='recuperada')){
+      S.motos[mi].estado='recuperada';
+      S.motos[mi].cliente=null;
+      S.motos[mi].creditoId=null;
+      DB.saveMoto(S.motos[mi]);
+    }
+  }
+  syncTodosEstadosClientes();
+  window._cancelCredId = null;
+  window._cancelCredModo = null;
+  closeM(); nav('creditos');
+  toast(modo==='completo' ? 'Financiamiento eliminado por completo: pagos y cuentas también fueron eliminados' : 'Financiamiento cancelado: pagos y cuentas se conservaron','info');
 }
 
 function openEditCred(credId){
