@@ -5296,172 +5296,421 @@ function cDel(id){
 // ══════════════════════════════════════════
 // CLIENTE CRUD
 // ══════════════════════════════════════════
-function openAddCliente(id=null){
-  const c=id?S.clientes.find(x=>x.id===id):null,ed=!!c;
-  let cliStep=1;
-  function v(x){ return x==null?'':String(x).replace(/"/g,'&quot;'); }
-  function radio(name,current,siLbl='Sí',noLbl='No'){
-    const val=current||'no';
-    return `<div style="display:flex;gap:12px;align-items:center;margin-top:6px">
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="radio" name="${name}" value="si" ${val==='si'?'checked':''}> ${siLbl}</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="radio" name="${name}" value="no" ${val!=='si'?'checked':''}> ${noLbl}</label>
-    </div>`;
-  }
-  function fg(label,idv,val='',ph='',type='text'){
-    return `<div class="fg"><label>${label}</label><input class="fi" id="${idv}" type="${type}" value="${v(val)}" placeholder="${ph}"></div>`;
-  }
-  function render(){
-    $('mic').textContent='CLI';
-    $('mtt').textContent=ed?'Editar Cliente':'Nuevo Cliente';
-    $('msb').textContent=ed?(c.nombre||'Cliente'):'Cliente y Perfil';
-    $('modal-box').className='modal modal-lg';
-    const stepCliente = `
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button class="btn ${cliStep===1?'btn-p':'btn-g'} btn-sm" onclick="window.__cliStepSet(1)">1. Cliente</button>
-        <button class="btn ${cliStep===2?'btn-p':'btn-g'} btn-sm" onclick="window.__cliStepSet(2)">2. Perfil</button>
-      </div>
-      <div class="fsec">Datos del Cliente</div>
-      <div class="fgr">
-        ${fg('Nombre completo *','c_n',(c&&c.nombre)||'','Nombre completo')}
-        ${fg('N° Cédula *','c_ced',(c&&c.cedula)||'','V-00000000')}
-        ${fg('Teléfono *','c_tel',(c&&c.tel)||'','0412-0000000','tel')}
-        ${fg('WhatsApp','c_wa',(c&&c.wa)||'','0412-0000000','tel')}
-        ${fg('Email','c_email',(c&&c.email)||'','correo@ejemplo.com','email')}
-        ${fg('Ciudad','c_ciudad',(c&&c.ciudad)||'','Caracas')}
-      </div>
-      <div class="fgr c1" style="margin-top:8px">
-        <div class="fg"><label>¿Cómo nos conoció?</label><input class="fi" id="c_conocio" value="${v((c&&c.conocio)||'')}" placeholder="Instagram, referido, tienda..."></div>
-      </div>
-    `;
-    const stepPerfil = `
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button class="btn ${cliStep===1?'btn-p':'btn-g'} btn-sm" onclick="window.__cliStepSet(1)">1. Cliente</button>
-        <button class="btn ${cliStep===2?'btn-p':'btn-g'} btn-sm" onclick="window.__cliStepSet(2)">2. Perfil</button>
-      </div>
-      <div class="fsec">Perfil</div>
-      <div class="fgr">
-        ${fg('CrediScore','c_score',(c&&c.score_indexa)||'','0','number')}
-        ${fg('Trabajo / Ocupación','c_trab',(c&&c.trabajo)||'','Comerciante / delivery / empleado')}
-        ${fg('Empresa','c_empresa',(c&&c.empresa)||'','Empresa')}
-        ${fg('Cargo','c_cargo',(c&&c.cargo)||'','Cargo')}
-        ${fg('Antigüedad laboral','c_ant',(c&&c.antiguedad)||'','1 año / 3 años')}
-        ${fg('Ingreso mensual ($)','c_ing',(c&&c.ingreso)||'','0','number')}
-        ${fg('Ingreso familiar ($)','c_ifam',(c&&c.ingreso_familiar)||'','0','number')}
-        ${fg('Vivienda','c_viv',(c&&c.vivienda)||'','Propia / alquilada')}
-        ${fg('Tiempo en dirección','c_tdir',(c&&c.tiempo_dir)||'','2 años')}
-        ${fg('Estado','c_estado',(c&&c.estado_ubi)||'','Miranda')}
-        ${fg('Ciudad residencia','c_ciudad_res',(c&&c.ciudad)||'','Caracas')}
-        ${fg('Dirección detallada','c_dir',(c&&c.dir)||'','Dirección completa')}
-        ${fg('Remesas','c_rem',(c&&c.remesas)||'','Sí / No')}
-        ${fg('Dependientes','c_dep',(c&&c.dependientes)||'','0','number')}
-        ${fg('Historial crediticio','c_hist',(c&&c.historial)||'','Ninguno / Bueno')}
-        ${fg('Deudas actuales','c_deuda',(c&&c.deudas)||'','No / Sí')}
-        ${fg('Banco (estado)','c_banco',(c&&c.banco_estado)||'','Banco principal')}
-        ${fg('Banco (nombre)','c_banco_nm',(c&&c.banco_nombre)||'','Nombre del banco')}
-        ${fg('Banco de cobro','c_banco_cobro',(c&&c.banco_cobro)||'','Banco para cobrar')}
-        ${fg('Últimos 4 dígitos cuenta','c_cuenta',(c&&c.cuenta_digitos)||'','1234')}
-        ${fg('Ahorro estimado ($)','c_ahorro',(c&&c.ahorro)||'','0','number')}
-      </div>
-      <div class="fsec" style="margin-top:10px">Cashea</div>
-      ${radio('c_cashea',(c&&c.cashea)||'no')}
-      <div class="fgr">
-        ${fg('Nivel Cashea','c_cashea_nivel',(c&&c.cashea_nivel)||'','Nivel')}
-        ${fg('Pago de Cashea','c_cashea_pago',(c&&c.cashea_pago)||'','Al día / atrasado')}
-      </div>
-      <div class="fsec" style="margin-top:10px">Fiador</div>
-      ${radio('c_fiador',(c&&c.fiador)||'no')}
-      <div class="fgr">
-        ${fg('Nombre del fiador','c_fiador_nom',(c&&c.fiador_nom)||'','Nombre')}
-        ${fg('Teléfono fiador','c_fiador_tel',(c&&c.fiador_tel)||'','0412-0000000','tel')}
-        ${fg('Cédula fiador','c_fiador_ci',(c&&c.fiador_ci)||'','V-00000000')}
-        ${fg('Relación','c_fiador_rel',(c&&c.fiador_rel)||'','Hermano / amigo')}
-      </div>
-      <div class="fsec" style="margin-top:10px">Referencias</div>
-      <div class="fgr">
-        ${fg('Ref 1 nombre','c_r1n',(c&&c.ref1&&c.ref1.nom)||'','Nombre')}
-        ${fg('Ref 1 teléfono','c_r1t',(c&&c.ref1&&c.ref1.tel)||'','0412-0000000','tel')}
-        ${fg('Ref 1 relación','c_r1r',(c&&c.ref1&&c.ref1.rel)||'','Relación')}
-        ${fg('Ref 1 observación','c_r1obs',(c&&c.ref1&&c.ref1.obs)||'','Observación')}
-        ${fg('Ref 2 nombre','c_r2n',(c&&c.ref2&&c.ref2.nom)||'','Nombre')}
-        ${fg('Ref 2 teléfono','c_r2t',(c&&c.ref2&&c.ref2.tel)||'','0412-0000000','tel')}
-        ${fg('Ref 2 relación','c_r2r',(c&&c.ref2&&c.ref2.rel)||'','Relación')}
-        ${fg('Ref 2 observación','c_r2obs',(c&&c.ref2&&c.ref2.obs)||'','Observación')}
-      </div>
-      <div class="fgr c1" style="margin-top:8px">
-        <div class="fg"><label>Notas internas</label><textarea class="fta" id="c_notas" placeholder="Notas">${(c&&c.notas)||''}</textarea></div>
-      </div>
-    `;
-    $('mbd').innerHTML = cliStep===1 ? stepCliente : stepPerfil;
-    $('mft').innerHTML = `
-      <button class="btn btn-g" onclick="closeM()">Cancelar</button>
-      ${cliStep===1
-        ? `<button class="btn btn-p" onclick="window.__cliStepSet(2)">Siguiente →</button>`
-        : `<button class="btn btn-g" onclick="window.__cliStepSet(1)">← Cliente</button><button class="btn btn-p" onclick="saveM()">Guardar Cliente</button>`}
-    `;
-    $('ov').style.display='flex';
-  }
-  window.__cliStepSet = function(n){
-    cliStep = n;
-    render();
-  };
-  render();
 
-  S.saveFn=()=>{
-    const g=i=>{ var el=$(i); return el?el.value.trim():''; };
-    const radioVal=name=>{ var el=document.querySelector(`input[name="${name}"]:checked`); return el?el.value:'no'; };
-    if(!g('c_n')||!g('c_ced')||!g('c_tel')){ toast('Nombre, cédula y teléfono son obligatorios','error'); return false; }
-    if(!ed){
-      var cedNorm=g('c_ced').replace(/\s/g,'').toLowerCase();
-      var dup=S.clientes.find(function(x){ return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm; });
-      if(dup){ toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error'); return false; }
-    }
-    const obj = {
-      id:(c&&c.id)||(S.clientes.length?Math.max(...S.clientes.map(x=>parseInt(x.id)||0))+1:1),
-      nombre:g('c_n'),
-      cedula:g('c_ced'),
-      tel:g('c_tel'),
-      wa:g('c_wa')||g('c_tel'),
-      email:g('c_email'),
-      ciudad:g('c_ciudad_res')||g('c_ciudad'),
-      conocio:g('c_conocio'),
-      trabajo:g('c_trab'),
-      empresa:g('c_empresa'),
-      cargo:g('c_cargo'),
-      ingreso:parseFloat(g('c_ing'))||0,
-      ingreso_familiar:parseFloat(g('c_ifam'))||0,
-      antiguedad:g('c_ant'),
-      remesas:g('c_rem'),
-      dependientes:parseInt(g('c_dep'))||0,
-      vivienda:g('c_viv'),
-      tiempo_dir:g('c_tdir'),
-      estado_ubi:g('c_estado'),
-      dir:g('c_dir'),
-      historial:g('c_hist'),
-      deudas:g('c_deuda'),
-      banco_estado:g('c_banco'),
-      banco_nombre:g('c_banco_nm'),
-      banco_cobro:g('c_banco_cobro'),
-      cuenta_digitos:g('c_cuenta'),
-      ahorro:parseFloat(g('c_ahorro'))||0,
-      cashea:radioVal('c_cashea'),
-      cashea_nivel:g('c_cashea_nivel'),
-      cashea_pago:g('c_cashea_pago'),
-      fiador:radioVal('c_fiador'),
-      fiador_nom:g('c_fiador_nom'),
-      fiador_tel:g('c_fiador_tel'),
-      fiador_ci:g('c_fiador_ci'),
-      fiador_rel:g('c_fiador_rel'),
-      ref1:{nom:g('c_r1n'),tel:g('c_r1t'),rel:g('c_r1r'),obs:g('c_r1obs')},
-      ref2:{nom:g('c_r2n'),tel:g('c_r2t'),rel:g('c_r2r'),obs:g('c_r2obs')},
-      score_indexa:parseInt(g('c_score'))||0,
-      notas:g('c_notas'),
-      estado:(c&&c.estado)||'activo'
-    };
-    if(ed){ const i=S.clientes.findIndex(x=>x.id===c.id); S.clientes[i]=obj; }
-    else { S.clientes.push(obj); }
-    DB.saveCliente(obj);
-    closeM(); nav('clientes'); toast(ed?'Cliente actualizado':'Cliente registrado','success'); return true;
+function _cliInitFromCliente(c){
+  WZ = { step:1, totalSteps:2, score:0, f1:0,f2:0,f3:0,f4:0,f5:0, cuota:0,ratio:0,monto:0,precio:0,plazo:0,ini:0,ing:0, mode:'cliente', clienteEditId:(c&&c.id)||null };
+  if(!c) return;
+  WZ.nom = WZ.wz_nom = c.nombre || '';
+  WZ.ci = WZ.wz_ci = c.cedula || '';
+  WZ.tel = WZ.wz_tel = c.tel || '';
+  WZ.wa = WZ.wz_wa = c.wa || c.tel || '';
+  WZ.email = WZ.wz_email = c.email || '';
+  WZ.ciudad = WZ.wz_ciudad = c.ciudad || '';
+  WZ.emp = WZ.wz_emp = c.trabajo || '';
+  WZ.ant = WZ.wz_ant = c.antiguedad || '';
+  WZ.ing = WZ.wz_ing = c.ingreso || '';
+  WZ.ifam = WZ.wz_ifam = c.ingreso_familiar || '';
+  WZ.conocio = WZ.wz_conocio = c.conocio || '';
+  WZ.viv = WZ.wz_viv = c.vivienda || '';
+  WZ.tdir = WZ.wz_tdir = c.tiempo_dir || '';
+  WZ.estado_ubi = WZ.wz_estado = c.estado_ubi || '';
+  WZ.ciudad_res = WZ.wz_ciudad_res = c.ciudad || '';
+  WZ.dir_det = WZ.wz_dir_det = c.dir || '';
+  WZ.empresa = WZ.wz_empresa = c.empresa || '';
+  WZ.cargo = WZ.wz_cargo = c.cargo || '';
+  WZ.rem = WZ.wz_rem = c.remesas || '';
+  WZ.dep = c.dependientes || 0;
+  WZ.hist = c.historial || '';
+  WZ.deuda = c.deudas || '';
+  WZ.banco = WZ.wz_banco = c.banco_estado || '';
+  WZ.banco_nm = WZ.wz_banco_nm = c.banco_nombre || '';
+  WZ.banco_cobro = WZ.wz_banco_cobro = c.banco_cobro || '';
+  WZ.cuenta = WZ.wz_cuenta = c.cuenta_digitos || '';
+  WZ.ahorro = WZ.wz_ahorro = c.ahorro || '';
+  WZ.cashea = c.cashea || 'no';
+  WZ.cashea_nivel = WZ.wz_cashea_nivel = c.cashea_nivel || '';
+  WZ.cashea_pago = WZ.wz_cashea_pago = c.cashea_pago || '';
+  WZ.fiador_tiene = c.fiador || 'no';
+  WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
+  WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
+  WZ.fiador_ci = WZ.wz_fiador_ci = c.fiador_ci || '';
+  WZ.fiador_rel = WZ.wz_fiador_rel = c.fiador_rel || '';
+  WZ.r1n = c.ref1&&c.ref1.nom || '';
+  WZ.r1t = c.ref1&&c.ref1.tel || '';
+  WZ.r1r = c.ref1&&c.ref1.rel || '';
+  WZ.r1obs = c.ref1&&c.ref1.obs || '';
+  WZ.r2n = c.ref2&&c.ref2.nom || '';
+  WZ.r2t = c.ref2&&c.ref2.tel || '';
+  WZ.r2r = c.ref2&&c.ref2.rel || '';
+  WZ.r2obs = c.ref2&&c.ref2.obs || '';
+  WZ.docsCount = c.docs_count || 0;
+  WZ.impresion = c.impresion || '';
+  WZ.score = c.score_indexa || 0;
+  WZ.f1 = c.f1 || 0; WZ.f2 = c.f2 || 0; WZ.f3 = c.f3 || 0; WZ.f4 = c.f4 || 0; WZ.f5 = c.f5 || 0;
+  WZ['_chip_wz_emp_g'] = WZ.emp || '';
+  WZ['_chip_wz_dep_g'] = String(WZ.dep || 0);
+  WZ['_chip_wz_hist_g'] = WZ.hist || '';
+  WZ['_chip_wz_deuda_g'] = WZ.deuda || '';
+  WZ['_chip_wz_impresion_g'] = WZ.impresion || '';
+}
+
+function _cliScorePill(){
+  function scoreCol(s){ return s>=625?'var(--green)':s>=450?'var(--amber)':'var(--red)'; }
+  function scoreLbl(s){ return s>=750?'Excelente':s>=625?'Bueno':s>=450?'Regular':'Bajo'; }
+  return WZ.score>0
+    ? '<div style="display:flex;align-items:center;gap:10px;background:var(--surf);border:1.5px solid var(--rim2);border-radius:50px;padding:7px 16px">'
+        +'<div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:'+scoreCol(WZ.score)+'">'+WZ.score+'</div>'
+        +'<div><div style="font-size:10px;font-weight:700;color:'+scoreCol(WZ.score)+'">'+scoreLbl(WZ.score)+'</div>'
+        +'<div style="font-size:9px;color:var(--ink3)">Score Indexa /850</div></div>'
+        +'</div>'
+    : '<div style="font-size:12px;color:var(--ink3);padding:7px 16px;background:var(--surf2);border-radius:50px;border:1px solid var(--rim)">CrediScore aparece al completar perfil</div>';
+}
+
+function _cliStep1(){
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    + _wzFg('Nombre completo *','wz_nom','text','Ej: Carlos Pérez','',true)
+    + _wzFg('N° Cédula *','wz_ci','text','V-12345678','',true)
+    + _wzFg('Teléfono *','wz_tel','tel','0412-0000000','',true)
+    + _wzFg('WhatsApp','wz_wa','tel','0412-0000000')
+    + _wzFg('Correo','wz_email','email','correo@ejemplo.com')
+    + _wzFg('Ciudad','wz_ciudad','text','Ej: Caracas')
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Tipo de empleo *</label>'
+    + '<select class="fs" id="wz_emp" onchange="_wzScore()">'
+    + '<option value="">Seleccionar...</option>'
+    + '<option value="formal">Formal / Empleado</option>'
+    + '<option value="publico">Empleado Público</option>'
+    + '<option value="delivery">Delivery / Motorizado</option>'
+    + '<option value="independiente">Independiente</option>'
+    + '<option value="comerciante">Comercio / Negocio</option>'
+    + '<option value="remesas">Remesas</option>'
+    + '<option value="informal">Informal</option>'
+    + '</select></div>'
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Antigüedad laboral</label>'
+    + '<select class="fs" id="wz_ant" onchange="_wzScore()">'
+    + '<option value="">Seleccionar...</option>'
+    + '<option value="1">Menos de 6 meses</option>'
+    + '<option value="2">6 meses – 1 año</option>'
+    + '<option value="3">1 a 3 años</option>'
+    + '<option value="5">Más de 3 años</option>'
+    + '</select></div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
+    + _wzFg('Ingreso mensual (USD) *','wz_ing','number','0','oninput="_wzScore()"',true)
+    + _wzFg('Ingreso familiar total (USD)','wz_ifam','number','0','oninput="_wzScore()"')
+    + '</div>'
+    + '<div style="margin-top:10px"><label class="fsec" style="display:block;margin-bottom:5px">¿Cómo nos conoció?</label>'
+    + '<select class="fs" id="wz_conocio" onchange="_wzScore()">'
+    + '<option value="">Seleccionar...</option>'
+    + '<option value="referido">Referido por cliente</option>'
+    + '<option value="redes">Redes sociales</option>'
+    + '<option value="vitrina">Vitrina / local</option>'
+    + '<option value="google">Google / internet</option>'
+    + '<option value="anterior">Cliente anterior</option>'
+    + '<option value="otro">Otro</option>'
+    + '</select></div>';
+}
+
+function _cliStep2(){
+  function _s(title){ return '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--p1);margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--rim)">'+title+'</div>'; }
+  function _row2(a,b){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+a+b+'</div>'; }
+  function _fg(label,inner){ return '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)">'+label+'</label>'+inner+'</div>'; }
+  function _sel(id,opts,onch){ return '<select class="fs" id="'+id+'" onchange="'+(onch||'')+'">'+opts+'</select>'; }
+  function _inp(id,type,ph,extra){ return '<input class="fi" id="'+id+'" type="'+(type||'text')+'" placeholder="'+(ph||'')+'" '+(extra||'')+' style="width:100%">'; }
+  function _chip(label,group,val,onch){ return '<label style="flex:1;min-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:9px 6px;cursor:pointer;text-align:center;font-size:12px;font-weight:700;transition:.15s" onclick="_wzChip(this,\''+group+'\',\''+val+'\')">'+label+'</label>'; }
+  return _s('Residencia')
+  +'<div class="fg" style="margin-bottom:10px"><label class="fsec" style="display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)">Dirección</label>'
+  +'<div style="position:relative">'
+  +'<input class="fi" id="wz_dir_q" type="text" placeholder="🔍 Busca tu dirección en Venezuela..." autocomplete="off" oninput="_wzAddrBuscar(this.value)" onblur="setTimeout(function(){var d=document.getElementById(\'wz_addr_drop\');if(d)d.style.display=\'none\';},220)" style="width:100%">'
+  +'<div id="wz_addr_drop" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 3px);background:var(--surf);border:1.5px solid var(--p1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:500;max-height:180px;overflow-y:auto"></div>'
+  +'</div></div>'
+  +_row2(
+    _fg('Estado',_sel('wz_estado','<option value="">Seleccionar...</option><option>Caracas (D.C.)</option><option>Miranda</option><option>Carabobo</option><option>Aragua</option><option>Zulia</option><option>Lara</option><option>Bolívar</option><option>Anzoátegui</option><option>Mérida</option><option>Táchira</option><option>Monagas</option><option>Sucre</option><option>Falcón</option><option>Barinas</option><option>Apure</option><option>Otro</option>')),
+    _fg('Ciudad / Municipio',_inp('wz_ciudad_res','text','Se completa al buscar'))
+  )
+  +'<div style="margin-bottom:10px">'+_fg('Detalle (apto, piso, referencia)','<textarea class="fta" id="wz_dir_det" placeholder="Piso 3, apto 3-A, frente al Banco..." style="min-height:50px;width:100%"></textarea>')+'</div>'
+  +_row2(
+    _fg('Tiempo en esta dirección',_sel('wz_tdir','<option value="0">Seleccionar...</option><option value="1">Menos de 1 año</option><option value="2">1–3 años</option><option value="3">3–5 años</option><option value="4">Más de 5 años</option>','_wzScore()')),
+    _fg('Tipo de vivienda',_sel('wz_viv','<option value="propia">Propia</option><option value="alquilada">Alquilada</option><option value="familiar">Familiar / prestada</option><option value="otro">Otro</option>','_wzScore()'))
+  )
+  +_s('Empleo e Ingresos')
+  +'<div style="margin-bottom:10px">'+_fg('Tipo de empleo *',
+    '<div style="display:flex;flex-wrap:wrap;gap:7px" id="wz_emp_g">'
+    +[['Formal / Empleado','formal'],['Público','publico'],['Delivery','delivery'],['Independiente','independiente'],['Comerciante','comerciante'],['Remesas','remesas'],['Informal','informal']]
+    .map(function(x){ return _chip(x[0],'wz_emp_g',x[1],'_wzScore()'); }).join('')
+    +'</div>'
+  )+'</div>'
+  +_row2(
+    _fg('Empresa',_inp('wz_empresa','text','Nombre de la empresa')),
+    _fg('Cargo / actividad',_inp('wz_cargo','text','Ej: vendedor, delivery, comerciante'))
+  )
+  +_row2(
+    _fg('Ingreso mensual propio (USD)',_inp('wz_ing','number','0','oninput="_wzScore()"')),
+    _fg('Ingreso familiar total (USD)',_inp('wz_ifam','number','0','oninput="_wzScore()"'))
+  )
+  +_row2(
+    _fg('Antigüedad laboral',_sel('wz_ant','<option value="">Seleccionar...</option><option value="1">Menos de 6 meses</option><option value="2">6 meses – 1 año</option><option value="3">1 a 3 años</option><option value="5">Más de 3 años</option>','_wzScore()')),
+    _fg('¿Recibe remesas?',_sel('wz_rem','<option value="no">No</option><option value="si">Sí</option>','_wzScore()'))
+  )
+  +'<div style="margin-bottom:10px">'+_fg('Dependientes económicos',
+    '<div style="display:flex;gap:7px">'
+    +[['0','0'],['1','1'],['2','2'],['3+','3']].map(function(x){ return _chip(x[0],'wz_dep_g',x[1],'_wzScore()'); }).join('')
+    +'</div>'
+  )+'</div>'
+  +_s('Historial Financiero')
+  +'<div style="margin-bottom:10px">'+_fg('Créditos anteriores *',
+    '<div style="display:flex;flex-wrap:wrap;gap:7px">'
+    +[['Sin historial','ninguno'],['Puntual ✅','bueno'],['Mora leve ⚠️','mora_leve'],['Mora grave ❌','malo']]
+    .map(function(x){ return _chip(x[0],'wz_hist_g',x[1],'_wzScore()'); }).join('')
+    +'</div>'
+  )+'</div>'
+  +'<div style="margin-bottom:10px">'+_fg('Deudas activas actualmente',
+    '<div style="display:flex;gap:7px">'
+    +[['Sin deudas','no'],['Menores','menores'],['Importantes','graves']]
+    .map(function(x){ return _chip(x[0],'wz_deuda_g',x[1],'_wzScore()'); }).join('')
+    +'</div>'
+  )+'</div>'
+  +_row2(
+    _fg('Cuenta bancaria',_sel('wz_banco','<option value="activa">Activa con movimientos</option><option value="poca">Poco movimiento</option><option value="no">Sin cuenta bancaria</option>','_wzScore()')),
+    _fg('Banco(s)',_inp('wz_banco_nm','text','Ej: Banesco, Mercantil'))
+  )
+  +'<div style="margin-bottom:10px">'+_fg('Banco para cobro de cuotas',_sel('wz_banco_cobro','<option value="">Seleccionar...</option><option value="bdv">Banco de Venezuela</option><option value="banesco">Banesco</option><option value="mercantil">Mercantil</option><option value="provincial">BBVA Provincial</option><option value="bicentenario">Bicentenario</option><option value="venezolano">Venezolano de Crédito</option><option value="exterior">Banco Exterior</option><option value="otro">Otro</option>'))+'</div>'
+  +_row2(
+    _fg('Número de cuenta (últimos 4 dígitos)',_inp('wz_cuenta','text','XXXX','maxlength="4"')),
+    _fg('¿Tiene ahorros?',_sel('wz_ahorro','<option value="no">No</option><option value="usd">Sí, en USD</option><option value="bs">Sí, en Bs</option>'))
+  )
+  +_s('Cashea')
+  +'<div style="margin-bottom:10px">'+_fg('¿Tiene cuenta Cashea?',
+    '<div style="display:flex;gap:8px">'
+    +'<label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:10px 12px;cursor:pointer">'
+    +'<input type="radio" name="wz_cashea" value="no" checked onchange="_wzToggleCashea(\'no\')" style="accent-color:var(--p1)"> Sin Cashea</label>'
+    +'<label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:10px 12px;cursor:pointer">'
+    +'<input type="radio" name="wz_cashea" value="si" onchange="_wzToggleCashea(\'si\')" style="accent-color:var(--p1)"> Tiene Cashea</label>'
+    +'</div>'
+  )+'</div>'
+  +'<div id="wz_cashea_det" style="display:none">'
+  +_row2(
+    _fg('Nivel Cashea',_sel('wz_cashea_nivel','<option value="">Seleccionar...</option><option value="1">Nivel 1 — Básico</option><option value="2">Nivel 2 — Bronce</option><option value="3">Nivel 3 — Plata</option><option value="4">Nivel 4 — Oro</option>','_wzScore()')),
+    _fg('Fecha último pago',_inp('wz_cashea_pago','date',''))
+  )+'</div>'
+  +_s('Referencias Personales')
+  +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px;margin-bottom:10px">'
+  +'<div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:10px">Referencia 1</div>'
+  +_row2(_fg('Nombre',_inp('wz_r1n','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_r1t','tel','0412-0000000')))
+  +_row2(_fg('Relación',_sel('wz_r1r','<option>Familiar directo</option><option>Amigo/a</option><option>Colega</option><option>Vecino/a</option>')),_fg('Observación',_inp('wz_r1obs','text','Notas...')))
+  +'</div>'
+  +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px;margin-bottom:10px">'
+  +'<div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:10px">Referencia 2</div>'
+  +_row2(_fg('Nombre',_inp('wz_r2n','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_r2t','tel','0412-0000000')))
+  +_row2(_fg('Relación',_sel('wz_r2r','<option>Familiar directo</option><option>Amigo/a</option><option>Colega</option><option>Vecino/a</option>')),_fg('Observación',_inp('wz_r2obs','text','Notas...')))
+  +'</div>'
+  +_s('Fiador / Garante')
+  +'<div style="margin-bottom:10px">'+_fg('¿Presenta fiador?',
+    '<div style="display:flex;gap:8px">'
+    +'<label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:10px 12px;cursor:pointer">'
+    +'<input type="radio" name="wz_fiador" value="no" checked onchange="_wzToggleFiador(\'no\');_wzScore()" style="accent-color:var(--p1)"> Sin fiador</label>'
+    +'<label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:10px 12px;cursor:pointer">'
+    +'<input type="radio" name="wz_fiador" value="si" onchange="_wzToggleFiador(\'si\');_wzScore()" style="accent-color:var(--p1)"> Tiene fiador</label>'
+    +'</div>'
+  )+'</div>'
+  +'<div id="wz_fiador_det" style="display:none">'
+  +_row2(_fg('Nombre del fiador',_inp('wz_fiador_nom','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_fiador_tel','tel','0412-0000000')))
+  +_row2(_fg('Cédula del fiador',_inp('wz_fiador_ci','text','V-12345678')),_fg('Relación',_sel('wz_fiador_rel','<option value="familiar">Familiar directo</option><option value="conyuge">Cónyuge / pareja</option><option value="amigo">Amigo/a</option><option value="colega">Colega / socio</option>')))
+  +'</div>'
+  +_s('Notas del Vendedor')
+  +'<div style="margin-bottom:10px">'+_fg('Impresión general',
+    '<div style="display:flex;gap:7px">'
+    +[['Positiva 😊','positiva'],['Neutral 😐','neutral'],['Dudosa 😟','dudosa']].map(function(x){ return _chip(x[0],'wz_impresion_g',x[1],''); }).join('')
+    +'</div>'
+  )+'</div>'
+  +'<div style="margin-bottom:6px">'+_fg('Observaciones adicionales','<textarea class="fta" id="wz_obs" rows="3" placeholder="Detalles de la visita, condiciones especiales, actitud del cliente..." style="min-height:80px;width:100%"></textarea>')+'</div>';
+}
+
+function _cliHydrate(){
+  var ids=['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
+  ids.forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null) el.value=WZ[id]; });
+  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
+  var cashea = WZ.cashea||'no';
+  var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; _wzToggleCashea(cashea);
+  var fiador = WZ.fiador_tiene||'no';
+  var fiadorRadio=document.querySelector('input[name="wz_fiador"][value="'+fiador+'"]'); if(fiadorRadio) fiadorRadio.checked=true; _wzToggleFiador(fiador);
+  function pick(group,val){ if(!val) return; var container=document.getElementById(group); if(container){ Array.from(container.children).forEach(function(el){ if((el.getAttribute('onclick')||'').indexOf("'"+val+"'")>=0) _wzChip(el,group,val); }); } }
+  pick('wz_emp_g', WZ.emp||WZ['_chip_wz_emp_g']);
+  pick('wz_hist_g', WZ.hist||WZ['_chip_wz_hist_g']);
+  pick('wz_deuda_g', WZ.deuda||WZ['_chip_wz_deuda_g']);
+  pick('wz_impresion_g', WZ.impresion||WZ['_chip_wz_impresion_g']);
+  pick('wz_dep_g', String(WZ.dep||WZ['_chip_wz_dep_g']||''));
+  _wzScore();
+}
+
+function _cliCollectStep(step){
+  var g=function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
+  if(step===1){
+    WZ.nom = WZ.wz_nom = g('wz_nom');
+    WZ.ci = WZ.wz_ci = g('wz_ci');
+    WZ.tel = WZ.wz_tel = g('wz_tel');
+    WZ.wa = WZ.wz_wa = g('wz_wa');
+    WZ.email = WZ.wz_email = g('wz_email');
+    WZ.ciudad = WZ.wz_ciudad = g('wz_ciudad');
+    WZ.emp = WZ.wz_emp = g('wz_emp');
+    WZ.ant = WZ.wz_ant = g('wz_ant');
+    WZ.ing = WZ.wz_ing = parseFloat((document.getElementById('wz_ing')||{}).value)||0;
+    WZ.ifam = WZ.wz_ifam = parseFloat((document.getElementById('wz_ifam')||{}).value)||0;
+    WZ.conocio = WZ.wz_conocio = g('wz_conocio');
+  }
+  if(step===2){
+    WZ.obs = WZ.wz_obs = g('wz_obs');
+    WZ.viv = WZ.wz_viv = g('wz_viv');
+    WZ.tdir = WZ.wz_tdir = g('wz_tdir');
+    WZ.estado_ubi = WZ.wz_estado = g('wz_estado');
+    WZ.ciudad_res = WZ.wz_ciudad_res = g('wz_ciudad_res');
+    WZ.dir_det = WZ.wz_dir_det = g('wz_dir_det');
+    WZ.dir_q = WZ.wz_dir_q = g('wz_dir_q');
+    WZ.emp = _wzChipVal('wz_emp_g')||g('wz_emp')||WZ.emp||'';
+    WZ.empresa = WZ.wz_empresa = g('wz_empresa');
+    WZ.cargo = WZ.wz_cargo = g('wz_cargo');
+    WZ.ing = parseFloat(g('wz_ing'))||WZ.ing||0;
+    WZ.ifam = parseFloat(g('wz_ifam'))||WZ.ifam||0;
+    WZ.ant = g('wz_ant')||WZ.ant||'';
+    WZ.rem = WZ.wz_rem = g('wz_rem');
+    WZ.dep = parseInt(_wzChipVal('wz_dep_g')||0);
+    WZ.hist = _wzChipVal('wz_hist_g')||'ninguno';
+    WZ.deuda = _wzChipVal('wz_deuda_g')||'no';
+    WZ.banco = WZ.wz_banco = g('wz_banco');
+    WZ.banco_nm = WZ.wz_banco_nm = g('wz_banco_nm');
+    WZ.banco_cobro = WZ.wz_banco_cobro = g('wz_banco_cobro');
+    WZ.cuenta = WZ.wz_cuenta = g('wz_cuenta');
+    WZ.ahorro = WZ.wz_ahorro = g('wz_ahorro');
+    WZ.cashea = (document.querySelector('input[name="wz_cashea"]:checked')||{value:'no'}).value;
+    WZ.cashea_nivel = WZ.wz_cashea_nivel = g('wz_cashea_nivel');
+    WZ.cashea_pago = WZ.wz_cashea_pago = g('wz_cashea_pago');
+    WZ.fiador_tiene = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value;
+    WZ.fiador_nom = WZ.wz_fiador_nom = g('wz_fiador_nom');
+    WZ.fiador_tel = WZ.wz_fiador_tel = g('wz_fiador_tel');
+    WZ.fiador_ci = WZ.wz_fiador_ci = g('wz_fiador_ci');
+    WZ.fiador_rel = WZ.wz_fiador_rel = g('wz_fiador_rel');
+    WZ.r1n = WZ.wz_r1n = g('wz_r1n'); WZ.r1t = WZ.wz_r1t = g('wz_r1t'); WZ.r1r = WZ.wz_r1r = g('wz_r1r'); WZ.r1obs = WZ.wz_r1obs = g('wz_r1obs');
+    WZ.r2n = WZ.wz_r2n = g('wz_r2n'); WZ.r2t = WZ.wz_r2t = g('wz_r2t'); WZ.r2r = WZ.wz_r2r = g('wz_r2r'); WZ.r2obs = WZ.wz_r2obs = g('wz_r2obs');
+    WZ.impresion = _wzChipVal('wz_impresion_g')||'';
+  }
+}
+
+function _cliValidar(step){
+  _cliCollectStep(step);
+  if(step===1){
+    if(!WZ.nom){ toast('El nombre es obligatorio','error'); return false; }
+    if(!WZ.ci){ toast('La cédula es obligatoria','error'); return false; }
+    if(!WZ.tel){ toast('El teléfono es obligatorio','error'); return false; }
+    if(!WZ.emp){ toast('Selecciona el tipo de empleo','error'); return false; }
+    if((parseFloat(WZ.ing)||0)<=0){ toast('El ingreso mensual es obligatorio','error'); return false; }
+  }
+  _wzScore();
+  return true;
+}
+
+function _cliRender(){
+  var overlay=document.getElementById('wz-overlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='wz-overlay'; overlay.style.cssText='position:fixed;inset:0;z-index:2000;background:var(--bg);overflow-y:auto;display:none'; document.body.appendChild(overlay); }
+  overlay.style.display='block';
+  document.body.style.overflow='hidden';
+  var stepsTpl = ['① Cliente','② Perfil'].map(function(l,i){
+    var on=WZ.step===i+1, done=WZ.step>i+1;
+    return '<div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:'+(on?'700':'500')+';color:'+(on?'var(--p1)':done?'var(--green)':'var(--ink3)')+'">'
+      +'<div style="width:20px;height:20px;border-radius:50%;background:'+(on?'var(--p1)':done?'var(--green)':'var(--rim2)')+';color:'+(on||done?'#fff':'var(--ink3)')+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">'+(done?'✓':(i+1))+'</div>'
+      +'<span style="white-space:nowrap">'+l.slice(2)+'</span></div>' + (i<1?'<div style="height:1px;background:var(--rim);flex:1;min-width:8px"></div>':'');
+  }).join('');
+  var current = WZ.step===1 ? _cliStep1() : _cliStep2();
+  var btnBack = WZ.step>1
+    ? '<button onclick="_cliPrev()" style="padding:11px 20px;border-radius:12px;border:1.5px solid var(--rim);background:var(--surf2);color:var(--ink2);font-family:var(--f);font-weight:700;font-size:13px;cursor:pointer">← Atrás</button>'
+    : '<button onclick="_wzClose()" style="padding:11px 20px;border-radius:12px;border:1.5px solid var(--rim);background:var(--surf2);color:var(--ink2);font-family:var(--f);font-weight:700;font-size:13px;cursor:pointer">Cancelar</button>';
+  var btnNext = WZ.step<2
+    ? '<button onclick="_cliNext()" style="padding:11px 24px;border-radius:12px;background:var(--p1);color:#fff;font-family:var(--f);font-weight:700;font-size:13px;border:none;cursor:pointer;box-shadow:0 2px 10px rgba(91,78,212,.25)">Siguiente →</button>'
+    : '<button onclick="_cliGuardar()" style="padding:11px 24px;border-radius:12px;background:var(--green);color:#fff;font-family:var(--f);font-weight:700;font-size:13px;border:none;cursor:pointer">💾 Guardar Cliente</button>';
+  overlay.innerHTML = '<div style="max-width:1180px;margin:0 auto;padding:26px 20px 34px">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:14px;flex-wrap:wrap">'
+    + '<div style="display:flex;align-items:center;gap:12px">'
+    + '<button onclick="_wzClose()" style="width:40px;height:40px;border-radius:12px;border:1.5px solid var(--rim);background:var(--surf2);cursor:pointer;font-size:18px">←</button>'
+    + '<div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-.3px">'+(WZ.clienteEditId?'Editar Cliente':'Nuevo Cliente')+'</div><div style="font-size:11px;color:var(--ink3)">Paso '+WZ.step+' de 2</div></div>'
+    + '</div>'
+    + '<div data-wz-header style="display:flex;align-items:center;justify-content:flex-end;min-height:44px">'+_cliScorePill()+'</div>'
+    + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">'+stepsTpl+'</div>'
+    + '<div style="background:var(--surf);border:1.5px solid var(--rim);border-radius:20px;padding:20px 18px 16px;box-shadow:0 2px 8px rgba(0,0,0,.04)">'
+    + '<div style="font-size:12px;color:var(--ink3);margin-bottom:18px">'+['Información personal y laboral','Perfil crediticio y CrediScore'][WZ.step-1]+'</div>'
+    + current
+    + '<div style="display:flex;justify-content:space-between;gap:10px;margin-top:22px">'+btnBack+btnNext+'</div>'
+    + '</div></div>';
+  _cliHydrate();
+}
+
+function _cliNext(){ if(!_cliValidar(WZ.step)) return; WZ.step=Math.min(2,WZ.step+1); _cliRender(); }
+function _cliPrev(){ _cliCollectStep(WZ.step); WZ.step=Math.max(1,WZ.step-1); _cliRender(); }
+
+function _cliGuardar(){
+  if(!_cliValidar(WZ.step)) return;
+  var edId=WZ.clienteEditId;
+  var cedNorm=(WZ.ci||'').replace(/\s/g,'').toLowerCase();
+  var dup=(S.clientes||[]).find(function(x){ return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm && String(x.id)!==String(edId||''); });
+  if(dup){ toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error'); return; }
+  var obj={
+    id: edId || ((S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1),
+    nombre: WZ.nom||'',
+    cedula: WZ.ci||'',
+    tel: WZ.tel||'',
+    wa: WZ.wa||WZ.tel||'',
+    email: WZ.email||'',
+    ciudad: WZ.ciudad_res||WZ.ciudad||'',
+    estado_ubi: WZ.estado_ubi||'',
+    dir: WZ.dir_det||'',
+    trabajo: WZ.emp||'',
+    empresa: WZ.empresa||'',
+    cargo: WZ.cargo||'',
+    ingreso: WZ.ing||0,
+    ingreso_familiar: WZ.ifam||0,
+    antiguedad: WZ.ant||'',
+    remesas: WZ.rem||'no',
+    dependientes: WZ.dep||0,
+    vivienda: WZ.viv||'',
+    tiempo_dir: WZ.tdir||'',
+    historial: WZ.hist||'',
+    deudas: WZ.deuda||'',
+    banco_estado: WZ.banco||'',
+    banco_nombre: WZ.banco_nm||'',
+    banco_cobro: WZ.banco_cobro||'',
+    cuenta_digitos: WZ.cuenta||'',
+    ahorro: WZ.ahorro||'',
+    cashea: WZ.cashea||'no',
+    cashea_nivel: WZ.cashea_nivel||'',
+    cashea_pago: WZ.cashea_pago||'',
+    fiador: WZ.fiador_tiene||'no',
+    fiador_nom: WZ.fiador_nom||'',
+    fiador_tel: WZ.fiador_tel||'',
+    fiador_ci: WZ.fiador_ci||'',
+    fiador_rel: WZ.fiador_rel||'',
+    ref1:{nom:WZ.r1n||'',tel:WZ.r1t||'',rel:WZ.r1r||'',obs:WZ.r1obs||''},
+    ref2:{nom:WZ.r2n||'',tel:WZ.r2t||'',rel:WZ.r2r||'',obs:WZ.r2obs||''},
+    docs_count: WZ.docsCount||0,
+    impresion: WZ.impresion||'',
+    conocio: WZ.conocio||'',
+    score_indexa: WZ.score||0,
+    f1:WZ.f1||0, f2:WZ.f2||0, f3:WZ.f3||0, f4:WZ.f4||0, f5:WZ.f5||0,
+    estado: 'activo',
+    creado: (edId && (S.clientes||[]).find(function(x){return String(x.id)===String(edId);}) && (S.clientes||[]).find(function(x){return String(x.id)===String(edId);}).creado) || new Date().toISOString()
   };
+  var idx=(S.clientes||[]).findIndex(function(x){ return String(x.id)===String(obj.id); });
+  if(idx>=0) S.clientes[idx]=Object.assign({}, S.clientes[idx], obj);
+  else S.clientes.push(obj);
+  DB.saveCliente(obj);
+  _wzClose();
+  nav('clientes');
+  toast(idx>=0?'Cliente actualizado':'Cliente registrado','success');
+}
+
+function openAddCliente(id=null){
+  var c=id?(S.clientes||[]).find(function(x){return String(x.id)===String(id);}):null;
+  _cliInitFromCliente(c||null);
+  _cliRender();
 }
 function editCliente(id){openAddCliente(id);}
 function delCliente(id){
@@ -5899,7 +6148,6 @@ function _wzPickCliente(sel){
     WZ.wz_nom = WZ.wz_ci = WZ.wz_tel = WZ.wz_wa = WZ.wz_email = WZ.wz_ciudad = '';
     WZ.wz_emp = WZ.wz_ant = WZ.wz_conocio = '';
     WZ.wz_ing = WZ.wz_ifam = '';
-    WZ.score = 0;
     return _wzRender();
   }
   var c = (S.clientes||[]).find(function(x){ return parseInt(x.id,10)===id; });
@@ -5949,7 +6197,6 @@ function _wzPickCliente(sel){
   WZ.r2obs = c.ref2&&c.ref2.obs || '';
   WZ.docsCount = c.docs_count || 0;
   WZ.impresion = c.impresion || '';
-  WZ.score = parseInt(c.score_indexa||0,10)||0;
   _wzRender();
 }
 
@@ -8461,7 +8708,7 @@ function topAct(){
   var p=S.page;
   // Solicitud es el punto de entrada único para clientes + motos + financiamientos
   if(p==='dash')        openAddCred();
-  else if(p==='clientes')   openAddCliente();
+  else if(p==='clientes')   openAddCred();
   else if(p==='creditos')   openAddCred();
   // Inventario de motos: sí se pueden agregar unidades sueltas al stock
   else if(p==='motos')      openAddMoto();
@@ -8477,7 +8724,7 @@ function topAct(){
 // Map pages to button labels (empty = hide button)
 var TOP_BTN_LABELS = {
   dash:      'Nueva Solicitud',
-  clientes:  'Nuevo Cliente',
+  clientes:  'Nueva Solicitud',
   creditos:  'Nueva Solicitud',
   contratos: 'Nueva Solicitud',
   motos:     'Nueva Unidad al Inventario',
