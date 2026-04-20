@@ -1864,7 +1864,9 @@ function getCreditoCuotaBase(c){
 function getCreditoPagosConfirmados(c){
   if(!c) return 0;
   var pagosDelCred = (S&&Array.isArray(S.pagos))
-    ? S.pagos.filter(function(p){ return p && !p.eliminado && p.estado==='confirmado' && p.cred===c.id; })
+    ? S.pagos.filter(function(p){
+        return p && !p.eliminado && p.estado==='confirmado' && p.cred===c.id && !p.esInicial && p.tipoOperacion!=='inicial_credito';
+      })
     : [];
   if(pagosDelCred.length){
     return pagosDelCred.reduce(function(a,p){ return a + (parseFloat(p.monto)||0); }, 0);
