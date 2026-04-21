@@ -544,18 +544,25 @@ var FIREBASE_CONFIG = {
   appId: '1:230117681047:web:53dc6a914fec4068f606d2'
 };
 var fbApp=null, fbAuth=null, db=null, FIREBASE_READY=false;
-(function(){
+function initFirebaseSolicitar(){
   try{
+    if(typeof firebase==='undefined'){ console.error('Firebase SDK no cargó'); FIREBASE_READY=false; return false; }
     var cfg={apiKey:'AIzaSyDrtg1AOD3nX1bnS3WW87g14ofa9_OPxDo',authDomain:'pagasi-b859b.firebaseapp.com',projectId:'pagasi-b859b',storageBucket:'pagasi-b859b.firebasestorage.app',messagingSenderId:'230117681047',appId:'1:230117681047:web:53dc6a914fec4068f606d2'};
-    fbApp  = firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg);
+    fbApp  = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(cfg);
+    if(typeof firebase.auth!=='function' || typeof firebase.firestore!=='function'){ FIREBASE_READY=false; return false; }
     fbAuth = firebase.auth(fbApp);
     db     = firebase.firestore(fbApp);
     FIREBASE_READY = true;
     console.log('Firebase OK');
+    return true;
   }catch(e){
     console.error('Firebase init failed:',e);
+    fbApp=null; fbAuth=null; db=null; FIREBASE_READY=false;
+    return false;
   }
-})();
+}
+initFirebaseSolicitar();
+window.addEventListener('load', function(){ if(!FIREBASE_READY){ initFirebaseSolicitar(); } });
 
 var cur=1;
 function goS(s){
@@ -680,6 +687,8 @@ function buildClientePayload(){
 }
 
 async function submitF(){
+  if(window.__submittingSolicitud) return;
+  window.__submittingSolicitud = true;
   var payload=buildClientePayload();
   if(!payload.nombre||!payload.cedula||!payload.tel||!payload.trabajo||!payload.ingreso){
     alert('Completa los campos obligatorios de Cliente.'); return;
@@ -689,7 +698,7 @@ async function submitF(){
   var btn=document.getElementById('btnGuardarSolicitud');
   if(btn) btn.textContent='Guardando...';
   try{
-    if(!FIREBASE_READY||!fbAuth||!db) throw new Error('Firebase no disponible');
+    if((!FIREBASE_READY||!fbAuth||!db) && !initFirebaseSolicitar()) throw new Error('Firebase no disponible');
     if(!fbAuth.currentUser) await fbAuth.signInAnonymously();
     var dup=await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
     if(!dup.empty){
@@ -700,10 +709,6 @@ async function submitF(){
     }else{
       await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
     }
-    await db.collection('solicitudes_publicas').doc(String(payload.id)).set(
-      {clienteId:payload.id,cedula:payload.cedula,nombre:payload.nombre,creado:payload.creado,origen:'solicitar_web',estado:'nuevo'},
-      {merge:true}
-    );
     document.getElementById('fs2').classList.remove('on');
     document.getElementById('fOK').style.display='block';
     document.getElementById('pd2').classList.remove('on');
@@ -713,6 +718,7 @@ async function submitF(){
     console.error('submitF:',err);
     alert('Error: '+(err.message||err));
   }finally{
+    window.__submittingSolicitud = false;
     btns.forEach(function(b){b.disabled=false;});
     if(btn) btn.textContent='Guardar en Pagasi';
   }
@@ -724,8 +730,7 @@ async function submitF(){
     if(b1) b1.addEventListener('click', function(ev){ ev.preventDefault(); goS(2); });
     var b2=document.getElementById('btnAtrasSolicitud');
     if(b2) b2.addEventListener('click', function(ev){ ev.preventDefault(); goS(1); });
-    var b3=document.getElementById('btnGuardarSolicitud');
-    if(b3) b3.addEventListener('click', function(ev){ ev.preventDefault(); submitF(); });
+
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindSolicitudButtons);
   else bindSolicitudButtons();
