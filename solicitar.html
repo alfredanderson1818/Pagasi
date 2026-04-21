@@ -681,7 +681,7 @@ function buildClientePayload(){
   };
 }
 
-/* ── REST API helper: escribe en Firestore sin autenticación ── */
+/* ── Helpers REST API Firestore ── */
 var FS_PROJECT = 'pagasi-b859b';
 var FS_APIKEY  = 'AIzaSyDrtg1AOD3nX1bnS3WW87g14ofa9_OPxDo';
 var FS_BASE    = 'https://firestore.googleapis.com/v1/projects/'+FS_PROJECT+'/databases/(default)/documents';
@@ -691,9 +691,7 @@ function toFV(v){
   if(typeof v==='boolean') return {booleanValue:v};
   if(typeof v==='number') return Number.isInteger(v)?{integerValue:''+v}:{doubleValue:v};
   if(typeof v==='string') return {stringValue:v};
-  if(Array.isArray(v)){
-    return {arrayValue:{values:v.map(toFV)}};
-  }
+  if(Array.isArray(v)){ return {arrayValue:{values:v.map(toFV)}}; }
   if(typeof v==='object'){
     var f={};
     Object.keys(v).forEach(function(k){ f[k]=toFV(v[k]); });
@@ -706,19 +704,40 @@ function toFields(obj){
   Object.keys(obj).forEach(function(k){ f[k]=toFV(obj[k]); });
   return f;
 }
+/* Obtiene token anónimo via Firebase Auth REST (no necesita SDK) */
+var _anonToken = null;
+async function getAnonToken(){
+  if(_anonToken) return _anonToken;
+  var resp = await fetch(
+    'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+FS_APIKEY,
+    {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({returnSecureToken:true})}
+  );
+  var d = await resp.json();
+  if(!resp.ok){
+    var msg = (d.error&&d.error.message)||('Auth HTTP '+resp.status);
+    throw new Error('No se pudo autenticar: '+msg+'. Verifica que Anonymous Auth esté habilitado en Firebase Console.');
+  }
+  _anonToken = d.idToken;
+  return _anonToken;
+}
 
 async function fsWrite(collection, docId, data){
-  var url = FS_BASE+'/'+collection+'/'+encodeURIComponent(docId)+'?key='+FS_APIKEY;
+  var token = await getAnonToken();
+  var url = FS_BASE+'/'+collection+'/'+docId;
   var resp = await fetch(url,{
     method:'PATCH',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
     body:JSON.stringify({fields:toFields(data)})
   });
+  var txt = await resp.text();
   if(!resp.ok){
-    var err=await resp.json().catch(function(){return {};});
-    throw new Error((err.error&&err.error.message)||('HTTP '+resp.status));
+    _anonToken = null; /* reset token on error */
+    var parsed = {};
+    try{ parsed = JSON.parse(txt); }catch(e){}
+    var msg = (parsed.error&&parsed.error.message) || txt.substring(0,300) || ('HTTP '+resp.status);
+    throw new Error('Firestore '+resp.status+': '+msg);
   }
-  return resp.json();
+  return JSON.parse(txt);
 }
 
 async function submitF(){
@@ -732,39 +751,14 @@ async function submitF(){
   if(btn) btn.textContent='Guardando…';
 
   try{
-    /* Intentar primero via SDK si está disponible, sino REST API */
-    var saved=false;
+    /* Usar Firebase Auth REST + Firestore REST (sin SDK, sin CDN) */
+    await fsWrite('clientes', String(payload.id), payload);
+    await fsWrite('solicitudes_publicas', String(payload.id), {
+      clienteId:payload.id, cedula:payload.cedula, nombre:payload.nombre,
+      creado:payload.creado, origen:'solicitar_web', estado:'nuevo'
+    });
 
-    if(FIREBASE_READY && db){
-      try{
-        var dup=await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
-        if(!dup.empty){
-          var old=dup.docs[0].data()||{};
-          payload.id=old.id||dup.docs[0].id;
-          payload.creado=old.creado||payload.creado;
-          await dup.docs[0].ref.set(payload,{merge:true});
-        }else{
-          await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
-        }
-        await db.collection('solicitudes_publicas').doc(String(payload.id)).set(
-          {clienteId:payload.id,cedula:payload.cedula,nombre:payload.nombre,creado:payload.creado,origen:'solicitar_web',estado:'nuevo'},
-          {merge:true}
-        );
-        saved=true;
-      }catch(sdkErr){
-        console.warn('SDK write failed, falling back to REST API:', sdkErr);
-      }
-    }
-
-    if(!saved){
-      /* Fallback: REST API directa (requiere reglas Firestore abiertas para solicitar_web) */
-      await fsWrite('clientes', String(payload.id), payload);
-      await fsWrite('solicitudes_publicas', String(payload.id), {
-        clienteId:payload.id,cedula:payload.cedula,nombre:payload.nombre,
-        creado:payload.creado,origen:'solicitar_web',estado:'nuevo'
-      });
-    }
-
+    /* Éxito */
     document.getElementById('fs2').classList.remove('on');
     document.getElementById('fOK').style.display='block';
     document.getElementById('pd2').classList.remove('on');
@@ -774,8 +768,8 @@ async function submitF(){
   }catch(err){
     console.error('submitF error:', err);
     var msg=err.message||'';
-    if(msg.indexOf('Missing or insufficient permissions')>=0||msg.indexOf('PERMISSION_DENIED')>=0){
-      alert('⚠️ Permiso denegado en Firestore.\nActualiza las reglas de seguridad para permitir escrituras públicas (ver instrucciones).');
+    if(msg.indexOf('PERMISSION_DENIED')>=0||msg.indexOf('Missing or insufficient')>=0||msg.indexOf('HTTP 403')>=0||msg.indexOf('HTTP 405')>=0){
+      alert('Permiso denegado en Firebase.\n\nActiva "Anonymous Auth" en Firebase Console → Authentication → Sign-in method → Anónimo → Habilitar.\n\nY actualiza las reglas de Firestore (ver instrucciones).');
     }else{
       alert('No se pudo guardar: '+msg);
     }
