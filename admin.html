@@ -1812,6 +1812,7 @@ tbody tr:hover td {
   </div>
 </div>
 <div class="toasts" id="toasts"></div>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <script>
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -1842,6 +1843,7 @@ var FIREBASE_CONFIG = {
 
 var db   = null;
 var auth = null;
+var storage = null;
 var FIREBASE_READY = false;
 
 // Credenciales locales (modo sin Firebase)
@@ -1926,6 +1928,7 @@ try {
     db   = firebase.firestore();
 
     if(typeof firebase.auth === 'function') auth = firebase.auth();
+    if(typeof firebase.storage === 'function') storage = firebase.storage();
     FIREBASE_READY = true;
     console.log('Firebase inicializado correctamente');
   } else {
@@ -2916,6 +2919,7 @@ function verCliente(id){
     </div>
     ${c.emergencia?`<div class="detail-item" style="margin-bottom:12px"><div class="detail-lbl">Contacto de emergencia</div><div class="detail-val" style="font-size:12.5px;margin-top:4px">${c.emergencia}</div></div>`:''}
     ${c.notas?`<div class="detail-item" style="margin-bottom:14px"><div class="detail-lbl">Notas</div><div style="font-size:12.5px;color:var(--ink2);margin-top:4px">${c.notas}</div></div>`:''}
+    ${Array.isArray(c.documentos)&&c.documentos.length?`<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin:14px 0 9px">Documentos (${c.documentos.length})</div><div class="lst">${c.documentos.map(function(d){return `<div class="li"><div class="li-ic" style="background:var(--gs)">${(_wzDocDefs[d.id]&&_wzDocDefs[d.id].icon)||'📎'}</div><div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">${d.label||_wzDocLabel(d.id)||'Documento'}</div><div class="tds" style="font-size:10px">${d.name||'Archivo'}${d.uploadedAt?` · ${fmtFechaHora(d.uploadedAt)}`:''}</div></div><div><a class="btn btn-xs btn-g" href="${d.url}" target="_blank" rel="noopener">Abrir</a></div></div>`;}).join('')}</div>`:''}
 
     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:9px">Historial de Financiamientos (${creditos.length})</div>
     ${creditos.length?`<div class="lst" style="max-height:none">${creditos.map(function(cr){
@@ -5440,7 +5444,8 @@ function _cliInitFromCliente(c){
   WZ.r2t = WZ.wz_r2t = c.ref2&&c.ref2.tel || '';
   WZ.r2r = WZ.wz_r2r = c.ref2&&c.ref2.rel || '';
   WZ.r2obs = WZ.wz_r2obs = c.ref2&&c.ref2.obs || '';
-  WZ.docsCount = WZ.wz_docsCount = c.docs_count || 0;
+  _wzLoadDocsUpFromCliente(c);
+  WZ.docsCount = WZ.wz_docsCount = (c.documentos&&c.documentos.length) || c.docs_count || 0;
   WZ.impresion = WZ.wz_impresion = c.impresion || '';
   WZ.score = c.score_indexa || 0;
   WZ.f1 = c.f1 || 0; WZ.f2 = c.f2 || 0; WZ.f3 = c.f3 || 0; WZ.f4 = c.f4 || 0; WZ.f5 = c.f5 || 0;
@@ -5788,6 +5793,7 @@ function _cliGuardar(){
     ref1:{nom:WZ.r1n||'',tel:WZ.r1t||'',rel:WZ.r1r||'',obs:WZ.r1obs||''},
     ref2:{nom:WZ.r2n||'',tel:WZ.r2t||'',rel:WZ.r2r||'',obs:WZ.r2obs||''},
     docs_count: WZ.docsCount||0,
+    documentos: _wzGetClientDocsArray(),
     impresion: WZ.impresion||'',
     conocio: WZ.conocio||'',
     score_indexa: WZ.score||0,
@@ -6226,7 +6232,7 @@ function _wzRender(motoId){
     + btnNext
     + '</div>';
 
-  setTimeout(function(){ _wzHydrate(); }, 0);
+  setTimeout(function(){ _wzHydrate(); _wzHydrateDocsUI(); }, 0);
   // Inicializar preview financiero si hay precio (ahora en paso 3 = moto)
   if(WZ.step===3 && WZ.precio>0){
     setTimeout(function(){ _wzActualizarFinPreview(WZ.precio); }, 50);
@@ -6288,6 +6294,7 @@ function _wzPickCliente(sel){
     WZ.wz_nom = WZ.wz_ci = WZ.wz_tel = WZ.wz_wa = WZ.wz_email = WZ.wz_ciudad = '';
     WZ.wz_emp = WZ.wz_ant = WZ.wz_conocio = '';
     WZ.wz_ing = WZ.wz_ifam = '';
+    _wzDocsUp={}; WZ.documentos=[]; WZ.docsCount=0;
     return _wzRender();
   }
   var c = (S.clientes||[]).find(function(x){ return String((x&&x.id)!=null ? x.id : '').trim()===id; });
@@ -6335,7 +6342,8 @@ function _wzPickCliente(sel){
   WZ.r2t = c.ref2&&c.ref2.tel || '';
   WZ.r2r = c.ref2&&c.ref2.rel || '';
   WZ.r2obs = c.ref2&&c.ref2.obs || '';
-  WZ.docsCount = c.docs_count || 0;
+  _wzLoadDocsUpFromCliente(c);
+  WZ.docsCount = (c.documentos&&c.documentos.length) || c.docs_count || 0;
   WZ.impresion = c.impresion || '';
   WZ.score = c.score_indexa || WZ.score || 0;
   WZ.f1 = c.f1 || WZ.f1 || 0;
@@ -6500,29 +6508,121 @@ function _wzAddrSelect(i){
 
 // ── Documento handler ──
 var _wzDocsUp={};
+var _wzDocDefs={
+  wz_doc_ci:{label:'Cédula de Identidad',icon:'🪪'},
+  wz_doc_lic:{label:'Licencia de Conducir',icon:'🚗'},
+  wz_doc_ing:{label:'Comprobante de Ingresos',icon:'💵'},
+  wz_doc_rec:{label:'Recibo de Servicio',icon:'💡'},
+  wz_doc_ref:{label:'Referencias firmadas',icon:'👥'},
+  wz_doc_sel:{label:'Selfie con Cédula',icon:'🤳'}
+};
+function _wzSafeFileName(name){
+  return String(name||'archivo').replace(/[^a-zA-Z0-9._-]+/g,'_');
+}
+function _wzDocLabel(id){ return (_wzDocDefs[id]&&_wzDocDefs[id].label)||id; }
+function _wzEnsureDocsTempKey(){
+  if(!WZ._docsTempKey) WZ._docsTempKey='TMP-'+Date.now()+'-'+Math.floor(Math.random()*100000);
+  return WZ._docsTempKey;
+}
+function _wzCurrentClienteKey(){
+  return String((WZ.id||WZ.ci||WZ._solClienteId||_wzEnsureDocsTempKey())||'').trim();
+}
+function _wzGetClientDocsArray(){
+  return Object.keys(_wzDocsUp).map(function(k){ return _wzDocsUp[k]; }).filter(function(x){ return x && x.url; });
+}
+function _wzSetDocVisual(id,meta){
+  var status=document.getElementById(id+'_status');
+  var ico=document.getElementById(id+'_ico');
+  var wrap=document.getElementById(id+'_wrap');
+  var prog=document.getElementById(id+'_prog');
+  if(wrap){wrap.style.background='var(--greens)';wrap.style.borderColor='rgba(6,176,106,.3)';}
+  if(status){status.textContent=(meta&&meta.name)?(meta.name.length>28?meta.name.slice(0,26)+'…':meta.name):'Subido';status.style.color='var(--green)';}
+  if(ico){ico.textContent='✅';}
+  if(prog){prog.style.width='100%';}
+}
+function _wzHydrateDocsUI(){
+  Object.keys(_wzDocsUp).forEach(function(id){ if(_wzDocsUp[id]&&_wzDocsUp[id].url) _wzSetDocVisual(id,_wzDocsUp[id]); });
+  _wzUpdateDocCount();
+}
+function _wzLoadDocsUpFromCliente(c){
+  _wzDocsUp={};
+  var arr=(c&&Array.isArray(c.documentos))?c.documentos:[];
+  arr.forEach(function(d){ if(d&&d.id) _wzDocsUp[d.id]=d; });
+  WZ.documentos=arr.slice();
+  WZ.docsCount=arr.length;
+}
+function _wzPersistDocsToClienteIfPossible(){
+  var cliId=_wzCurrentClienteKey();
+  var docs=_wzGetClientDocsArray();
+  WZ.documentos=docs;
+  WZ.docsCount=docs.length;
+  if(!db || !cliId || String(cliId).indexOf('TMP-')===0) return Promise.resolve(false);
+  return db.collection('clientes').doc(String(cliId)).set({
+    id:String(cliId),
+    documentos:docs,
+    docs_count:docs.length,
+    editadoEn:new Date().toISOString(),
+    editadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
+    editadoPorUid:(S.currentUser&&S.currentUser.uid)||''
+  }, {merge:true}).then(function(){ return true; }).catch(function(err){ console.warn('Persist docs:', err&&err.message?err.message:err); return false; });
+}
+
 function _wzHandleDoc(input,id){
-  var file=input.files[0]; if(!file)return;
+  var file=input&&input.files&&input.files[0]; if(!file)return;
   var prog=document.getElementById(id+'_prog');
   var status=document.getElementById(id+'_status');
   var ico=document.getElementById(id+'_ico');
   var wrap=document.getElementById(id+'_wrap');
-  if(status)status.textContent='Cargando...';
-  var pct=0;
-  var iv=setInterval(function(){
-    pct+=Math.random()*25+15;
-    if(pct>=100){
-      pct=100;clearInterval(iv);
-      _wzDocsUp[id]=true;
-      if(wrap){wrap.style.background='var(--greens)';wrap.style.borderColor='rgba(6,176,106,.3)';}
-      if(status){status.textContent=file.name.length>28?file.name.slice(0,26)+'…':file.name;status.style.color='var(--green)';}
-      if(ico)ico.textContent='✅';
-      _wzUpdateDocCount();
-    }
+  if(!storage || typeof storage.ref!=='function'){
+    toast('Firebase Storage no está disponible para guardar documentos','error');
+    return;
+  }
+  if(status){status.textContent='Subiendo...';status.style.color='var(--ink3)';}
+  if(ico)ico.textContent='⏳';
+  if(wrap){wrap.style.background='var(--surf2)';wrap.style.borderColor='var(--rim2)';}
+
+  var clienteKey=_wzCurrentClienteKey();
+  var safeName=_wzSafeFileName(file.name||('documento_'+id));
+  var filePath='clientes/'+clienteKey+'/documentos/'+id+'_'+Date.now()+'_'+safeName;
+  var ref=storage.ref().child(filePath);
+  var task=ref.put(file,{contentType:file.type||'application/octet-stream',customMetadata:{docId:id,docLabel:_wzDocLabel(id),clienteId:clienteKey}});
+
+  task.on('state_changed', function(snap){
+    var pct=snap.totalBytes?Math.round((snap.bytesTransferred/snap.totalBytes)*100):0;
     if(prog)prog.style.width=Math.min(100,pct)+'%';
-  },80);
+    if(status)status.textContent='Subiendo... '+pct+'%';
+  }, function(err){
+    console.warn('Upload doc error:', err);
+    if(status){status.textContent='Error al subir';status.style.color='var(--red)';}
+    if(ico)ico.textContent='⚠️';
+    if(wrap){wrap.style.background='rgba(232,75,75,.06)';wrap.style.borderColor='rgba(232,75,75,.25)';}
+    toast('No se pudo guardar el documento','error');
+  }, function(){
+    task.snapshot.ref.getDownloadURL().then(function(url){
+      var meta={
+        id:id,
+        label:_wzDocLabel(id),
+        name:file.name||safeName,
+        url:url,
+        path:filePath,
+        type:file.type||'',
+        size:file.size||0,
+        uploadedAt:new Date().toISOString()
+      };
+      _wzDocsUp[id]=meta;
+      _wzSetDocVisual(id,meta);
+      _wzUpdateDocCount();
+      return _wzPersistDocsToClienteIfPossible();
+    }).then(function(persisted){
+      toast(persisted?'Documento guardado':'Documento cargado. Se guardará con el cliente al finalizar','success');
+    }).catch(function(err){
+      console.warn('Doc URL/persist error:', err);
+      toast('Documento cargado, pero no se pudo vincular aún al cliente','error');
+    });
+  });
 }
 function _wzUpdateDocCount(){
-  var n=Object.keys(_wzDocsUp).length,total=6;
+  var n=_wzGetClientDocsArray().length,total=6;
   var cnt=document.getElementById('wz_doc_count');
   var tag=document.getElementById('wz_doc_tag');
   if(cnt)cnt.textContent=n+'/'+total;
@@ -6715,7 +6815,8 @@ function _wzValidar(){
     WZ.fiador_rel = g('wz_fiador_rel');
     WZ.r1n = g('wz_r1n'); WZ.r1t = g('wz_r1t'); WZ.r1r = g('wz_r1r'); WZ.r1obs = g('wz_r1obs');
     WZ.r2n = g('wz_r2n'); WZ.r2t = g('wz_r2t'); WZ.r2r = g('wz_r2r'); WZ.r2obs = g('wz_r2obs');
-    WZ.docsCount = Object.keys(_wzDocsUp).length;
+    WZ.documentos = _wzGetClientDocsArray();
+    WZ.docsCount = WZ.documentos.length;
     WZ.impresion = _wzChipVal('wz_impresion_g')||'';
   }
   return true;
@@ -6879,6 +6980,7 @@ function _wzGuardar(){
     ref1: {nom:WZ.r1n||'',tel:WZ.r1t||'',rel:WZ.r1r||'',obs:WZ.r1obs||''},
     ref2: {nom:WZ.r2n||'',tel:WZ.r2t||'',rel:WZ.r2r||'',obs:WZ.r2obs||''},
     docs_count: WZ.docsCount||0,
+    documentos: _wzGetClientDocsArray(),
     impresion: WZ.impresion||'',
     conocio: WZ.conocio||'',
     score_indexa: WZ.score||0,
