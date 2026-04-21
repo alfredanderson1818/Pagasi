@@ -530,11 +530,9 @@ function closeMob(){document.getElementById('mob').classList.remove('open');}
 var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)e.target.classList.add('v');});},{threshold:.1});
 document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el);});
 var fM=document.getElementById('fM');
-if(fM){
-  CATALOG.forEach(function(m,i){fM.add(new Option(m.name+' — $'+m.price.toLocaleString(),i));});
-  var urlMoto=new URLSearchParams(window.location.search).get('moto');
-  if(urlMoto!==null){fM.value=parseInt(urlMoto,10);}
-}
+CATALOG.forEach(function(m,i){fM.add(new Option(m.name+' — $'+m.price.toLocaleString(),i));});
+var urlMoto=new URLSearchParams(window.location.search).get('moto');
+if(urlMoto!==null){fM.value=parseInt(urlMoto);}
 var FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDrtg1AOD3nX1bnS3WW87g14ofa9_OPxDo',
   authDomain: 'pagasi-b859b.firebaseapp.com',
@@ -680,6 +678,8 @@ function buildClientePayload(){
 }
 
 async function submitF(){
+  if(window.__submittingSolicitud) return;
+  window.__submittingSolicitud = true;
   var payload=buildClientePayload();
   if(!payload.nombre||!payload.cedula||!payload.tel||!payload.trabajo||!payload.ingreso){
     alert('Completa los campos obligatorios de Cliente.'); return;
@@ -724,8 +724,6 @@ async function submitF(){
     if(b1) b1.addEventListener('click', function(ev){ ev.preventDefault(); goS(2); });
     var b2=document.getElementById('btnAtrasSolicitud');
     if(b2) b2.addEventListener('click', function(ev){ ev.preventDefault(); goS(1); });
-    var b3=document.getElementById('btnGuardarSolicitud');
-    if(b3) b3.addEventListener('click', function(ev){ ev.preventDefault(); submitF(); });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindSolicitudButtons);
   else bindSolicitudButtons();
