@@ -7436,7 +7436,7 @@ function openAmort(id){
   const tQ=tasaMensualAmort/100/2;
   const cuota=parseFloat(c.cuotaQ||c.cuota||0);
   const n=c.totalCuotas||(c.plazo*2);
-  const pagado=c.pagado||0;
+  const pagado=Math.max(0, Math.min(getCreditoCuotasPagadas(c), n));
   const startDate=new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
   const historial=c.pagosRegistrados||[];
   const saldoProxCuota=(c.saldoProxCuota||0)<0.10?0:(c.saldoProxCuota||0);
