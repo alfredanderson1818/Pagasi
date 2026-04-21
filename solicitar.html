@@ -704,38 +704,19 @@ function toFields(obj){
   Object.keys(obj).forEach(function(k){ f[k]=toFV(obj[k]); });
   return f;
 }
-/* Obtiene token anónimo via Firebase Auth REST (no necesita SDK) */
-var _anonToken = null;
-async function getAnonToken(){
-  if(_anonToken) return _anonToken;
-  var resp = await fetch(
-    'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+FS_APIKEY,
-    {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({returnSecureToken:true})}
-  );
-  var d = await resp.json();
-  if(!resp.ok){
-    var msg = (d.error&&d.error.message)||('Auth HTTP '+resp.status);
-    throw new Error('No se pudo autenticar: '+msg+'. Verifica que Anonymous Auth esté habilitado en Firebase Console.');
-  }
-  _anonToken = d.idToken;
-  return _anonToken;
-}
-
 async function fsWrite(collection, docId, data){
-  var token = await getAnonToken();
-  var url = FS_BASE+'/'+collection+'/'+docId;
+  var url = FS_BASE+'/'+collection+'/'+docId+'?key='+FS_APIKEY;
   var resp = await fetch(url,{
     method:'PATCH',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({fields:toFields(data)})
   });
   var txt = await resp.text();
   if(!resp.ok){
-    _anonToken = null; /* reset token on error */
-    var parsed = {};
-    try{ parsed = JSON.parse(txt); }catch(e){}
-    var msg = (parsed.error&&parsed.error.message) || txt.substring(0,300) || ('HTTP '+resp.status);
-    throw new Error('Firestore '+resp.status+': '+msg);
+    var parsed={};
+    try{parsed=JSON.parse(txt);}catch(e){}
+    var msg=(parsed.error&&parsed.error.message)||txt.substring(0,300)||('HTTP '+resp.status);
+    throw new Error(msg);
   }
   return JSON.parse(txt);
 }
