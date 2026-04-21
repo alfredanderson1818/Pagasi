@@ -542,34 +542,18 @@ var FIREBASE_CONFIG = {
   appId: '1:230117681047:web:53dc6a914fec4068f606d2'
 };
 var fbApp=null, fbAuth=null, db=null, FIREBASE_READY=false;
-function initFirebaseSolicitar(){
+(function(){
   try{
-    if(typeof firebase === 'undefined'){
-      console.error('Firebase SDK no cargó');
-      return false;
-    }
-    fbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
-    if(typeof firebase.auth !== 'function'){
-      console.error('Firebase Auth no está disponible');
-      return false;
-    }
-    if(typeof firebase.firestore !== 'function'){
-      console.error('Firestore no está disponible');
-      return false;
-    }
-    fbAuth = firebase.auth();
-    db = firebase.firestore();
+    var cfg={apiKey:'AIzaSyDrtg1AOD3nX1bnS3WW87g14ofa9_OPxDo',authDomain:'pagasi-b859b.firebaseapp.com',projectId:'pagasi-b859b',storageBucket:'pagasi-b859b.firebasestorage.app',messagingSenderId:'230117681047',appId:'1:230117681047:web:53dc6a914fec4068f606d2'};
+    fbApp  = firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg);
+    fbAuth = firebase.auth(fbApp);
+    db     = firebase.firestore(fbApp);
     FIREBASE_READY = true;
-    return true;
+    console.log('Firebase OK');
   }catch(e){
-    console.warn('Firebase init error', e);
-    FIREBASE_READY = false;
-    fbAuth = null;
-    db = null;
-    return false;
+    console.error('Firebase init failed:',e);
   }
-}
-initFirebaseSolicitar();
+})();
 
 var cur=1;
 function goS(s){
@@ -703,9 +687,8 @@ async function submitF(){
   var btn=document.getElementById('btnGuardarSolicitud');
   if(btn) btn.textContent='Guardando...';
   try{
-    if(!FIREBASE_READY||!fbAuth||!db){ initFirebaseSolicitar(); }
-    if(!FIREBASE_READY||!fbAuth||!db){ throw new Error('SDK no disponible'); }
-    if(!fbAuth.currentUser){ await fbAuth.signInAnonymously(); }
+    if(!FIREBASE_READY||!fbAuth||!db) throw new Error('Firebase no disponible');
+    if(!fbAuth.currentUser) await fbAuth.signInAnonymously();
     var dup=await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
     if(!dup.empty){
       var old2=dup.docs[0].data()||{};
