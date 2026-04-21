@@ -8008,7 +8008,11 @@ function recalcularCreditoDesdePagos(credId){
 
   var pagosAplicables=S.pagos
     .filter(function(p){
-      return p.cred===credId && (p.estado||'confirmado')==='confirmado' && (!p.eliminado || p.mantenerEnAmortizacion===true);
+      return p.cred===credId
+        && (p.estado||'confirmado')==='confirmado'
+        && (!p.eliminado || p.mantenerEnAmortizacion===true)
+        && !p.esInicial
+        && p.tipoOperacion!=='inicial_credito';
     })
     .slice()
     .sort(function(a,b){
