@@ -705,13 +705,24 @@ function toFields(obj){
   return f;
 }
 async function fsWrite(collection, docId, data){
-  var url = FS_BASE+'/'+collection+'/'+docId+'?key='+FS_APIKEY;
+  /* POST crea el documento con ID especifico */
+  var url = FS_BASE+'/'+collection+'?documentId='+encodeURIComponent(docId)+'&key='+FS_APIKEY;
   var resp = await fetch(url,{
-    method:'PATCH',
+    method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({fields:toFields(data)})
   });
   var txt = await resp.text();
+  /* 409 = ya existe, intentar con PUT via POST + override */
+  if(resp.status===409){
+    var url2 = FS_BASE+'/'+collection+'/'+encodeURIComponent(docId)+'?key='+FS_APIKEY;
+    resp = await fetch(url2,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-HTTP-Method-Override':'PATCH'},
+      body:JSON.stringify({fields:toFields(data)})
+    });
+    txt = await resp.text();
+  }
   if(!resp.ok){
     var parsed={};
     try{parsed=JSON.parse(txt);}catch(e){}
