@@ -2033,8 +2033,8 @@ var DB = {
       db.collection('config').doc('catalogo').get(),
       db.collection('config').doc('planes').get(),
     ]).then(function(snaps){
-      function read(snap, withId){return snap.docs.map(function(d){return withId ? Object.assign({id:d.id}, d.data()) : d.data();});}
-      var m=read(snaps[0]),cl=read(snaps[1], true),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
+      function read(snap){return snap.docs.map(function(d){return d.data();});}
+      var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
       var planDoc = snaps[8], catalogoDoc = snaps[9], planesDoc = snaps[10];
       if(planDoc && planDoc.exists){
         var pd = planDoc.data() || {};
@@ -2793,7 +2793,7 @@ function renderClienteList(q=''){
       const activo=credsCli.find(x=>x.estado==='activo');
       const sc=c.score_indexa;
       const scoreCol=sc>=625?'var(--green)':sc>=450?'var(--amber)':'var(--red)';
-      return`<tr onclick="verCliente(${c.id})" style="cursor:pointer">
+      return`<tr onclick="verCliente('${c.id}')" style="cursor:pointer">
       <td><div style="display:flex;align-items:center;gap:9px">
         <div style="width:31px;height:31px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${ini(c.nombre)}</div>
         <div><div class="tdm">${c.nombre}${c.premium?` <span style="color:var(--amber)" title="Premium">★</span>`:''}</div><div class="tds">${c.cedula}</div></div>
@@ -2804,11 +2804,11 @@ function renderClienteList(q=''){
       <td><div class="tdm">${credsCli.length} crédito${credsCli.length!==1?'s':''}</div><div class="tds">${activo?'Activo: '+activo.id:'Sin activo'}</div></td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
-        <button class="btn btn-g btn-xs" onclick="editCliente(${c.id})">Editar</button>
-        <button class="btn btn-d btn-xs" onclick="delCliente(${c.id})">✕</button>
+        <button class="btn btn-g btn-xs" onclick="editCliente('${c.id}')">Editar</button>
+        <button class="btn btn-d btn-xs" onclick="delCliente('${c.id}')">✕</button>
       </div></td>
     </tr>`}).join('')}</tbody>
-  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><button class='btn btn-g btn-xs' onclick='restaurarCliente(${c.id})'>↩ Restaurar</button></div>`).join('')}</div>`:''}</div>`+pgControls('clientes',filtered.length,50,'pgNav');
+  </table></div>${S.clientes.filter(c=>c.eliminado).length?`<div style='margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)'><div style='font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px'>Clientes eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>${S.clientes.filter(c=>c.eliminado).map(c=>`<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px'><span style='flex:1;font-weight:700;opacity:0.5;text-decoration:line-through'>${c.nombre}</span><span style='color:var(--ink3)'>${c.cedula}</span><span style='color:var(--red)'>por ${c.eliminadoPor||'Admin'}</span><button class='btn btn-g btn-xs' onclick='restaurarCliente(\'${c.id}\')'>↩ Restaurar</button></div>`).join('')}</div>`:''}</div>`+pgControls('clientes',filtered.length,50,'pgNav');
 }
 
 function verCliente(id){
