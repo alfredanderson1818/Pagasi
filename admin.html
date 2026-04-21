@@ -2133,9 +2133,9 @@ var MODULOS = [
 // (S.currentUser se inicializa después de declarar S)
 
 // ══════════════════════════════════════════
-// CATÁLOGO OFICIAL PAGASI — PLAN 10 MESES
+// CATÁLOGO OFICIAL PAGASI — PLAN GLOBAL CONFIGURABLE
 // ══════════════════════════════════════════
-const PLAN = {plazo:10, factor:1.90, inicial:0.40, tasaMensual:13.77, apy:370.28};
+const PLAN = {plazo:12, factor:1.935483870967742, inicial:0.45, tasaMensual:12.26, apy:413.34, diasGracia:5, moraPct:5};
 
 try {
   var _catLs = JSON.parse(localStorage.getItem('pagasi_catalogo_config')||'null');
@@ -2739,7 +2739,7 @@ function motoCard(m){
       </select>
     </div>
     <div class="mp-row"><span class="mp-l">Precio</span><span class="mp-v">${fmt(m.precio)}</span></div>
-    <div class="mp-row"><span class="mp-l">Inicial (40%)</span><span class="mp-v">${fmt(m.ini)}</span></div>
+    <div class="mp-row"><span class="mp-l">Inicial (${PLAN.inicial*100}%)</span><span class="mp-v">${fmt(m.ini)}</span></div>
     <div class="mp-row"><span class="mp-l">Cuota mensual</span><span class="mp-v accent">${fmt(m.cuotaM)}</span></div>
     <div class="mp-row"><span class="mp-l">Cuota quincenal</span><span class="mp-v">${fmt(m.cuotaQ)}</span></div>
     <div class="mp-row"><span class="mp-l">Total a pagar</span><span class="mp-v">${fmt(m.totalPagado)}</span></div>
@@ -4696,7 +4696,7 @@ conta(){
         <span class="bdg b-g">${fmt(totalIngresos)}</span>
       </div>
       ${[
-        ['Cuotas iniciales (40%)', totalIni],
+        ['Cuotas iniciales ('+((PLAN.inicial||0)*100)+'%)', totalIni],
         ['Pagos de cuotas cobrados', totalCuotas],
         ['Intereses por mora', S.creds.filter(c=>c.mora>0).reduce((a,c)=>a+(c.moraMonto||0),0)],
       ].map(([l,v])=>{
@@ -4806,6 +4806,9 @@ config(){
       var d=doc.data();
       if(Object.prototype.hasOwnProperty.call(d,'factor')){PLAN.factor=d.factor;if($('cfg_factor'))$('cfg_factor').value=d.factor;}
       if(Object.prototype.hasOwnProperty.call(d,'inicial')){PLAN.inicial=d.inicial;if($('cfg_ini'))$('cfg_ini').value=(d.inicial*100);}
+      if(Object.prototype.hasOwnProperty.call(d,'tasaMensual')){PLAN.tasaMensual=d.tasaMensual;if($('cfg_tasa_mensual'))$('cfg_tasa_mensual').value=d.tasaMensual;}
+      if(Object.prototype.hasOwnProperty.call(d,'plazo')){PLAN.plazo=d.plazo;if($('cfg_plazo'))$('cfg_plazo').value=d.plazo;}
+      if(Object.prototype.hasOwnProperty.call(d,'apy')){PLAN.apy=d.apy;}
       var graciaCfg=Object.prototype.hasOwnProperty.call(d,'diasGracia')?d.diasGracia:d.gracia;
       if(typeof graciaCfg!=='undefined'&&graciaCfg!==null){PLAN.diasGracia=graciaCfg;if($('cfg_gracia'))$('cfg_gracia').value=graciaCfg;}
       var moraCfg=Object.prototype.hasOwnProperty.call(d,'moraPct')?d.moraPct:d.mora_pct;
@@ -4857,7 +4860,7 @@ config(){
 
     <!-- Plan financiero -->
     <div class="card">
-      <div class="ch"><div><div class="ct">Plan Financiero</div><div class="cs">Parámetros del plan 10 meses</div></div></div>
+      <div class="ch"><div><div class="ct">Plan Financiero</div><div class="cs">Parámetros del plan global actual</div></div></div>
       <div style="background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:12px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
         ${[['Factor',PLAN.factor+'x'],['Inicial',PLAN.inicial*100+'%'],['Tasa mensual',PLAN.tasaMensual+'%'],['Plazo',PLAN.plazo+' meses']].map(([l,v])=>`
         <div style="background:var(--surf);border-radius:8px;padding:8px 10px;border:1px solid var(--rim)">
@@ -4866,8 +4869,10 @@ config(){
         </div>`).join('')}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="fg"><label>Factor (×)</label><input class="fi" id="cfg_factor" type="number" step="0.01" value="${PLAN.factor}"></div>
-        <div class="fg"><label>Inicial mínima (%)</label><input class="fi" id="cfg_ini" type="number" value="${PLAN.inicial*100}"></div>
+        <div class="fg"><label>Factor (×)</label><input class="fi" id="cfg_factor" type="number" step="0.0001" value="${PLAN.factor}"></div>
+        <div class="fg"><label>Inicial mínima (%)</label><input class="fi" id="cfg_ini" type="number" step="0.01" value="${PLAN.inicial*100}"></div>
+        <div class="fg"><label>Tasa mensual (%)</label><input class="fi" id="cfg_tasa_mensual" type="number" step="0.01" value="${PLAN.tasaMensual}"></div>
+        <div class="fg"><label>Plazo (meses)</label><input class="fi" id="cfg_plazo" type="number" min="1" step="1" value="${PLAN.plazo}"></div>
         <div class="fg"><label>Días de gracia</label><input class="fi" id="cfg_gracia" type="number" value="${PLAN.diasGracia||5}"></div>
         <div class="fg"><label>% mora mensual</label><input class="fi" id="cfg_mora" type="number" step="0.1" value="${PLAN.moraPct||5}"></div>
       </div>
@@ -5195,7 +5200,7 @@ function previewCalc(){
   if(!p) return;
   const r=calcMoto(p);
   const div=$('calc-preview');
-  if(div){div.style.display='grid';div.innerHTML=[['Inicial 40%','$'+r.ini.toFixed(2)],['Cuota mensual','$'+r.cuotaM.toFixed(2)],['Total a pagar','$'+r.totalPagado.toFixed(2)]].map(([l,v])=>`<div><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--p1);margin-bottom:2px">${l}</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--ink)">${v}</div></div>`).join('');}
+  if(div){div.style.display='grid';div.innerHTML=[['Inicial '+((PLAN.inicial||0)*100)+'%','$'+r.ini.toFixed(2)],['Cuota mensual','$'+r.cuotaM.toFixed(2)],['Total a pagar','$'+r.totalPagado.toFixed(2)]].map(([l,v])=>`<div><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--p1);margin-bottom:2px">${l}</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--ink)">${v}</div></div>`).join('');}
 }
 function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
@@ -6276,7 +6281,7 @@ function _wzActualizarFinPreview(precio){
   prev.style.display = 'block';
   cells.innerHTML = [
     ['Precio','$'+precio.toFixed(0)],
-    ['Inicial (40%)','$'+r.ini.toFixed(0)],
+    ['Inicial ('+((PLAN.inicial||0)*100)+'%)','$'+r.ini.toFixed(0)],
     ['Cuota quincenal','$'+r.cuotaQ.toFixed(2)],
     ['Total a pagar','$'+r.totalPagado.toFixed(0)],
   ].map(function(pair){
@@ -6651,7 +6656,7 @@ function _wzRenderResultado(){
       +[
         ['Modelo', WZ.motoModelo||'—'],
         ['Precio total', '$'+WZ.precio.toFixed(0)],
-        ['Inicial (40%)', '$'+r.ini.toFixed(0)],
+        ['Inicial ('+((PLAN.inicial||0)*100)+'%)', '$'+r.ini.toFixed(0)],
         ['Monto a financiar', '$'+r.fin.toFixed(0)],
         ['Cuota quincenal', '$'+r.cuotaQ.toFixed(2)],
         ['Cuota / Ingreso', WZ.ratio>0?(WZ.ratio*100).toFixed(0)+'%':'—'],
@@ -6762,6 +6767,10 @@ function _wzGuardar(){
     cuotaM: r.cuotaM||r.cuotaQ*2,
     plazo: PLAN.plazo,
     totalCuotas: PLAN.plazo*2,
+    factor: PLAN.factor,
+    inicialPct: PLAN.inicial,
+    tasaMensual: PLAN.tasaMensual,
+    plan: {plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy},
     frecuencia: 'quincenal',
     fecha: new Date().toISOString().split('T')[0],
     estado: 'activo',
@@ -6867,7 +6876,7 @@ function _wzGuardar(){
 // CRÉDITO MODAL (original — se mantiene para edición)
 // ══════════════════════════════════════════
 function openAddCredLegacy(motoId=null){
-  $('mic').textContent='≡';$('mtt').textContent='Nueva Solicitud';$('msb').textContent='Plan 10 meses · Pagos Quincenales · Factor 1.90x';
+  $('mic').textContent='≡';$('mtt').textContent='Nueva Solicitud';$('msb').textContent='Plan '+PLAN.plazo+' meses · Pagos quincenales · Factor '+PLAN.factor+'x';
   $('modal-box').className='modal modal-lg';
   // Solo motos realmente disponibles para nuevo financiamiento
   const motosDisp=S.motos.filter(m=>!m.eliminado&&m.estado==='disponible');
@@ -6891,7 +6900,7 @@ function openAddCredLegacy(motoId=null){
     </div>
 
     <div style="background:var(--gb);border:1px solid var(--rim2);border-radius:var(--r12);padding:16px;margin-top:14px">
-      <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:12px">Plan 10 Meses · 20 Cuotas Quincenales — Desglose automático</div>
+      <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:12px">Plan ${PLAN.plazo} Meses · ${PLAN.plazo*2} Cuotas Quincenales — Desglose automático</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="cred-preview"></div>
     </div>
 
@@ -6915,7 +6924,7 @@ function openAddCredLegacy(motoId=null){
         </div>
         <div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="k_ini_ref" placeholder="N° de referencia (opcional)"></div>
       </div>
-      <div style="font-size:11px;color:var(--ink3);margin-top:6px">i El monto de la inicial se calculará automáticamente (40% del precio) y se acreditará a la cuenta seleccionada.</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:6px">i El monto de la inicial se calculará automáticamente (${((PLAN.inicial||0)*100)}% del precio) y se acreditará a la cuenta seleccionada.</div>
     </div>
 
     <div class="fgr c1" style="margin-top:8px">
@@ -7186,10 +7195,10 @@ function updCredCalc(sel){
   if(!div) return;
   const items=[
     ['Precio de la moto', fmt(precio), false],
-    ['Inicial (40%)', fmt(r.ini), false],
+    ['Inicial ('+((PLAN.inicial||0)*100)+'%)', fmt(r.ini), false],
     ['Saldo financiado', fmt(r.fin), false],
-    ['Cuota quincenal ×20', fmt(r.cuotaQ), true],
-    ['Número de cuotas', '20 quincenas', false],
+    ['Cuota quincenal ×'+(PLAN.plazo*2), fmt(r.cuotaQ), true],
+    ['Número de cuotas', (PLAN.plazo*2)+' quincenas', false],
     ['Total a cancelar', fmt(r.totalPagado), false],
   ];
   div.innerHTML=items.map(([l,v,highlight])=>`<div style="background:var(--surf);border-radius:8px;padding:9px 11px;border:1px solid ${highlight?'var(--rim2)':'var(--rim)'};${highlight?'grid-column:span 1;box-shadow:0 0 0 2px rgba(124,92,246,0.15)':''}">
@@ -7199,7 +7208,7 @@ function updCredCalc(sel){
 }
 
 function openAddPago(){
-  $('mic').textContent='PAG';$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan 10 meses';
+  $('mic').textContent='PAG';$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan '+PLAN.plazo+' meses';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`
     <div class="fgr c1" style="gap:9px"><div class="fg"><label>Crédito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}">${c.id} — ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
@@ -7423,7 +7432,8 @@ function updPagoMonto(sel){
 function openAmort(id){
   const c=S.creds.find(x=>x.id===id);if(!c)return;
   window._currentAmortCredId = id;  // para que descargarAmortPDF sepa qué crédito exportar
-  const tQ=PLAN.tasaMensual/100/2;
+  const tasaMensualAmort = parseFloat((c&&((c.plan&&c.plan.tasaMensual)||c.tasaMensual))||PLAN.tasaMensual)||0;
+  const tQ=tasaMensualAmort/100/2;
   const cuota=parseFloat(c.cuotaQ||c.cuota||0);
   const n=c.totalCuotas||(c.plazo*2);
   const pagado=c.pagado||0;
@@ -8982,20 +8992,27 @@ function guardarEmpresa(){
 function guardarPlan(){
   var factorIn  = parseFloat(($('cfg_factor')&&$('cfg_factor').value));
   var inicialIn = parseFloat(($('cfg_ini')&&$('cfg_ini').value));
+  var tasaIn    = parseFloat(($('cfg_tasa_mensual')&&$('cfg_tasa_mensual').value));
+  var plazoIn   = parseInt(($('cfg_plazo')&&$('cfg_plazo').value),10);
   var graciaIn  = parseInt(($('cfg_gracia')&&$('cfg_gracia').value),10);
   var moraIn    = parseFloat(($('cfg_mora')&&$('cfg_mora').value));
   var factor  = Number.isFinite(factorIn)  ? factorIn  : PLAN.factor;
   var inicial = Number.isFinite(inicialIn) ? (inicialIn/100) : PLAN.inicial;
+  var tasa    = Number.isFinite(tasaIn)    ? tasaIn    : PLAN.tasaMensual;
+  var plazo   = Number.isFinite(plazoIn)   ? plazoIn   : PLAN.plazo;
   var gracia  = Number.isFinite(graciaIn)  ? graciaIn  : (PLAN.diasGracia||5);
   var mora    = Number.isFinite(moraIn)    ? moraIn    : (PLAN.moraPct||5);
   PLAN.factor      = factor;
   PLAN.inicial     = inicial;
+  PLAN.tasaMensual = tasa;
+  PLAN.plazo       = plazo;
   PLAN.diasGracia  = gracia;
   PLAN.moraPct     = mora;
-  var data = {factor, inicial, diasGracia:gracia, moraPct:mora, updated:new Date().toISOString()};
+  var data = {factor, inicial, tasaMensual:tasa, plazo:plazo, apy:PLAN.apy, diasGracia:gracia, moraPct:mora, updated:new Date().toISOString()};
+  try{ localStorage.setItem('pagasi_config_plan', JSON.stringify(data)); }catch(_e){}
   if(db){
     db.collection('config').doc('plan').set(data)
-      .then(function(){ try{ localStorage.setItem('pagasi_config_plan', JSON.stringify(data)); }catch(_e){} toast('Plan financiero guardado','success'); nav('config'); })
+      .then(function(){ toast('Plan financiero guardado','success'); nav('config'); })
       .catch(function(e){ toast('Error: '+e.message,'error'); });
   } else {
     toast('Plan guardado (local)','success'); nav('config');
@@ -9086,7 +9103,7 @@ function openEditCatalogo(id){
     if(!p){ $('cat_preview').innerHTML=''; return; }
     var r = calcMoto(p);
     $('cat_preview').innerHTML = '<div style="background:var(--surf2);border:1px solid var(--rim2);border-radius:8px;padding:11px;display:grid;grid-template-columns:1fr 1fr;gap:6px">'
-      + '<div style="font-size:11px;color:var(--ink3)">Inicial 40%</div><div style="font-weight:700;font-size:12px">'+fmt(r.ini)+'</div>'
+      + '<div style="font-size:11px;color:var(--ink3)">Inicial '+((PLAN.inicial||0)*100)+'%</div><div style="font-weight:700;font-size:12px">'+fmt(r.ini)+'</div>'
       + '<div style="font-size:11px;color:var(--ink3)">Cuota mensual</div><div style="font-weight:800;font-size:13px;color:var(--p1)">'+fmt(r.cuotaM)+'</div>'
       + '<div style="font-size:11px;color:var(--ink3)">Cuota quincenal</div><div style="font-weight:700;font-size:12px">'+fmt(r.cuotaQ)+'</div>'
       + '<div style="font-size:11px;color:var(--ink3)">Total pagado</div><div style="font-weight:700;font-size:12px">'+fmt(r.totalPagado)+'</div>'
@@ -9540,7 +9557,7 @@ function descargarContratoPDFById(credId){
     <h3>TERCERA: PLAN DE CUOTAS</h3>
     <table>
       <tr><td>Precio de venta</td><td><strong>${fmt(c.precio)}</strong></td></tr>
-      <tr><td>Inicial (40%)</td><td>${fmt(c.ini)}</td></tr>
+      <tr><td>Inicial (${(c.inicialPct||PLAN.inicial)*100}%)</td><td>${fmt(c.ini)}</td></tr>
       <tr><td>Monto financiado</td><td>${fmt(c.fin)}</td></tr>
       <tr><td>Total a pagar</td><td><strong>${fmt(c.total)}</strong></td></tr>
       <tr><td>Cuota quincenal</td><td><strong>${fmt(c.cuotaQ||c.cuota)}</strong></td></tr>
@@ -9854,7 +9871,7 @@ function generarReporte(tipo){
       +'<div class="stat-box"><div class="stat-v">'+(PLAN.inicial*100)+'%</div><div class="stat-l">Inicial mínima</div></div>'
       +'<div class="stat-box"><div class="stat-v">'+PLAN.tasaMensual+'%</div><div class="stat-l">Tasa mensual</div></div>'
       +'</div>'
-      +'<table><thead><tr><th>Modelo</th><th>Precio</th><th>Inicial 40%</th><th>Financiado</th><th>Cuota mensual</th><th>Cuota quincenal</th><th>Total pagado</th></tr></thead><tbody>'
+      +'<table><thead><tr><th>Modelo</th><th>Precio</th><th>Inicial ${PLAN.inicial*100}%</th><th>Financiado</th><th>Cuota mensual</th><th>Cuota quincenal</th><th>Total pagado</th></tr></thead><tbody>'
       +CATALOGO.map(function(c){
         var r = calcMoto(c.precio);
         return '<tr><td>'+c.modelo+'</td><td>$'+c.precio.toFixed(2)+'</td><td>$'+r.ini.toFixed(2)+'</td><td>$'+r.fin.toFixed(2)+'</td><td>$'+r.cuotaM.toFixed(2)+'</td><td>$'+r.cuotaQ.toFixed(2)+'</td><td>$'+r.totalPagado.toFixed(2)+'</td></tr>';
