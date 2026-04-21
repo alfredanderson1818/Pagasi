@@ -4711,7 +4711,7 @@ reportes(){
 
 conta(){
   const totalIni    = getTotalInicialesCobradas();
-  const totalCuotas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
+  const totalCuotas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado'&&!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
   const totalIngresos = totalIni + totalCuotas;
   const egresos     = S.egresos.filter(e=>!e.eliminado);
   const totalEgresos= egresos.reduce((a,e)=>a+(e.monto||0),0);
