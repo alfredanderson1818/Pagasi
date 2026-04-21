@@ -700,11 +700,7 @@ async function submitF(){
     }else{
       await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
     }
-    await db.collection('solicitudes_publicas').doc(String(payload.id)).set(
-      {clienteId:payload.id,cedula:payload.cedula,nombre:payload.nombre,creado:payload.creado,origen:'solicitar_web',estado:'nuevo'},
-      {merge:true}
-    );
-    document.getElementById('fs2').classList.remove('on');
+document.getElementById('fs2').classList.remove('on');
     document.getElementById('fOK').style.display='block';
     document.getElementById('pd2').classList.remove('on');
     document.getElementById('pd2').classList.add('done');
@@ -713,6 +709,7 @@ async function submitF(){
     console.error('submitF:',err);
     alert('Error: '+(err.message||err));
   }finally{
+    window.__submittingSolicitud = false;
     btns.forEach(function(b){b.disabled=false;});
     if(btn) btn.textContent='Guardar en Pagasi';
   }
