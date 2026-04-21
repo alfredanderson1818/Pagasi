@@ -530,27 +530,19 @@ var FIREBASE_CONFIG = {
   appId: '1:230117681047:web:53dc6a914fec4068f606d2'
 };
 var fbApp=null, fbAuth=null, db=null, FIREBASE_READY=false;
-
 function initFirebaseSolicitar(){
   try{
     if(typeof firebase === 'undefined'){
       console.error('Firebase SDK no cargó');
-      FIREBASE_READY = false;
       return false;
     }
-    if(!firebase.apps || !firebase.apps.length){
-      fbApp = firebase.initializeApp(FIREBASE_CONFIG);
-    }else{
-      fbApp = firebase.app();
-    }
+    fbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
     if(typeof firebase.auth !== 'function'){
       console.error('Firebase Auth no está disponible');
-      FIREBASE_READY = false;
       return false;
     }
     if(typeof firebase.firestore !== 'function'){
-      console.error('Firebase Firestore no está disponible');
-      FIREBASE_READY = false;
+      console.error('Firestore no está disponible');
       return false;
     }
     fbAuth = firebase.auth();
@@ -559,16 +551,13 @@ function initFirebaseSolicitar(){
     return true;
   }catch(e){
     console.warn('Firebase init error', e);
-    fbApp = null; fbAuth = null; db = null;
     FIREBASE_READY = false;
+    fbAuth = null;
+    db = null;
     return false;
   }
 }
-
 initFirebaseSolicitar();
-window.addEventListener('load', function(){
-  if(!FIREBASE_READY){ initFirebaseSolicitar(); }
-});
 
 var cur=1;
 function goS(s){
@@ -717,7 +706,6 @@ async function submitF(){
   var btns=document.querySelectorAll('#fs2 .btn'); btns.forEach(function(b){b.disabled=true;});
   try{
     await ensureAnonAuth();
-    if(!db) throw new Error('Firebase no disponible');
     var dup = await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
     if(!dup.empty){
       var ref=dup.docs[0].ref;
@@ -757,20 +745,4 @@ async function submitF(){
 function setR(on,off){var a=document.getElementById(on), b=document.getElementById(off); if(a)a.classList.add('on'); if(b)b.classList.remove('on');}
 function showUp(inp,zId){}
 </script>
-
-<script>
-// FIX CONTINUE BUTTON
-document.addEventListener("DOMContentLoaded", function(){
-  document.querySelectorAll("button").forEach(btn=>{
-    if(btn.innerText.toLowerCase().includes("continuar")){
-      btn.onclick = function(){
-        if(typeof nextStep === "function"){
-          nextStep();
-        }
-      }
-    }
-  });
-});
-</script>
-
 </body></html>
