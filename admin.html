@@ -2174,14 +2174,79 @@ const CATALOGO = [
   {id:15,modelo:'ATLAS 200HD',precio:4600.00},
 ];
 
-function calcMoto(precio){
-  const ini = precio * PLAN.inicial;
-  const fin = precio - ini;
-  const total = fin * PLAN.factor;
-  const cuotaM = total / PLAN.plazo;
+function calcMoto(precio, planOverride=null){
+  const plan = planOverride || PLAN;
+  const precioNum = parseFloat(precio)||0;
+  const inicialPct = parseFloat(plan&&plan.inicial)||0;
+  const factor = parseFloat(plan&&plan.factor)||0;
+  const plazo = parseInt(plan&&plan.plazo,10)||0;
+  const ini = precioNum * inicialPct;
+  const fin = precioNum - ini;
+  const total = fin * factor;
+  const cuotaM = plazo>0 ? (total / plazo) : 0;
   const cuotaQ = cuotaM / 2;
   const totalPagado = ini + total;
   return {ini,fin,total,cuotaM,cuotaQ,totalPagado};
+}
+function pmtRate(periodRate, nper, pv){
+  periodRate=parseFloat(periodRate)||0;
+  nper=parseInt(nper,10)||0;
+  pv=parseFloat(pv)||0;
+  if(nper<=0||pv<=0) return 0;
+  if(Math.abs(periodRate)<1e-9) return pv/nper;
+  return (pv*periodRate)/(1-Math.pow(1+periodRate,-nper));
+}
+function solveQuincenalRate(montoFinanciado, cuotaQ, totalCuotas){
+  var pv=parseFloat(montoFinanciado)||0;
+  var pmt=parseFloat(cuotaQ)||0;
+  var n=parseInt(totalCuotas,10)||0;
+  if(pv<=0||pmt<=0||n<=0) return 0;
+  var ratio=(pmt*n)/pv;
+  if(ratio<=1.000001) return 0;
+  var low=0, high=1;
+  for(var i=0;i<80;i++){ var test=pmtRate(high,n,pv); if(test>=pmt) break; high*=2; }
+  for(var j=0;j<80;j++){ var mid=(low+high)/2; var val=pmtRate(mid,n,pv); if(Math.abs(val-pmt)<1e-7) return mid; if(val>pmt) high=mid; else low=mid; }
+  return (low+high)/2;
+}
+function calcCustomPlan(precioBaseReal, inicialReal, cuotaQ, plazoMeses){
+  var precio=parseFloat(precioBaseReal)||0;
+  var ini=parseFloat(inicialReal)||0;
+  var cuota=parseFloat(cuotaQ)||0;
+  var plazo=parseInt(plazoMeses,10)||0;
+  var totalCuotas=Math.max(0,plazo*2);
+  var fin=Math.max(0, precio-ini);
+  var total=cuota*totalCuotas;
+  var totalPagado=ini+total;
+  var factor=fin>0 ? (total/fin) : 0;
+  var inicialPct=precio>0 ? (ini/precio) : 0;
+  var tasaQ=solveQuincenalRate(fin, cuota, totalCuotas);
+  var tasaMensual=tasaQ*2*100;
+  var apy=(Math.pow(1+tasaQ,24)-1)*100;
+  return {precioBaseReal:precio, ini:ini, fin:fin, total:total, cuotaQ:cuota, cuotaM:cuota*2, totalPagado:totalPagado, plazo:plazo, totalCuotas:totalCuotas, factor:factor, inicialPct:inicialPct, tasaQuincenal:tasaQ*100, tasaMensual:tasaMensual, apy:apy};
+}
+function getWzPlanConfig(){
+  var modo=((document.getElementById('wz_plan_mode')||{}).value)||WZ.planMode||'global';
+  var precioBase=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
+  if(modo!=='custom'){
+    var baseCalc=calcMoto(precioBase||WZ.precio||0);
+    return {mode:'global', precioBaseReal:precioBase||parseFloat(WZ.precio)||0, ini:baseCalc.ini, fin:baseCalc.fin, total:baseCalc.total, cuotaQ:baseCalc.cuotaQ, cuotaM:baseCalc.cuotaM, totalPagado:baseCalc.totalPagado, plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2, factor:PLAN.factor, inicialPct:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy, sourcePlan:{plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy}};
+  }
+  var inicialReal=parseFloat(((document.getElementById('wz_ini_real')||{}).value))||0;
+  var cuotaQ=parseFloat(((document.getElementById('wz_cuota_q_custom')||{}).value))||0;
+  var plazo=parseInt(((document.getElementById('wz_plazo_custom')||{}).value),10)||0;
+  var custom=calcCustomPlan(precioBase,inicialReal,cuotaQ,plazo);
+  custom.mode='custom';
+  custom.sourcePlan={plazo:custom.plazo, factor:custom.factor, inicial:custom.inicialPct, tasaMensual:custom.tasaMensual, apy:custom.apy};
+  return custom;
+}
+function _wzTogglePlanMode(v){
+  WZ.planMode=v||(((document.getElementById('wz_plan_mode')||{}).value)||'global');
+  var box=document.getElementById('wz_plan_custom_box');
+  if(box) box.style.display=WZ.planMode==='custom'?'block':'none';
+  var precioBase=document.getElementById('wz_precio_base_real');
+  if(precioBase && !precioBase.value && (WZ.precio||0)>0) precioBase.value=(parseFloat(WZ.precio)||0).toFixed(2);
+  _wzActualizarFinPreview((document.getElementById('wz_precio')||{}).value || WZ.precio || 0);
+  _wzScore();
 }
 
 // ══════════════════════════════════════════
@@ -5142,6 +5207,20 @@ function openAddMoto(id=null){
     <div id="m_custom_div" style="display:${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?'block':'none'};margin-bottom:8px">
       <div class="fg"><label>Nombre personalizado *</label><input class="fi" id="m_mod_custom" value="${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?m.modelo:''}" placeholder="Ej: MODELO ESPECIAL 200"></div>
     </div>
+    <div style="background:var(--surf);border:1px solid var(--rim);border-radius:var(--r8);padding:12px;margin:12px 0">
+      <div class="fsec" style="margin:0 0 8px 0">Plan sugerido</div>
+      <div class="fgr">
+        <div class="fg"><label>Tipo de plan</label><select class="fs" id="m_plan_mode" onchange="previewCalc()"><option value="global" ${!(m&&m.planModo==='custom')?'selected':''}>Principal</option><option value="custom" ${(m&&m.planModo==='custom')?'selected':''}>Personalizado</option></select></div>
+        <div class="fg"><label>Precio base real</label><input class="fi" id="m_precio_base" type="number" value="${(m&&(m.precioBaseReal||m.precio))||''}" placeholder="0.00" oninput="previewCalc()"></div>
+      </div>
+      <div id="m_plan_custom_box" style="display:${(m&&m.planModo==='custom')?'block':'none'};margin-top:8px">
+        <div class="fgr">
+          <div class="fg"><label>Inicial real</label><input class="fi" id="m_ini_real" type="number" value="${(m&&m.planModo==='custom'&&(m.ini||''))||''}" placeholder="0.00" oninput="previewCalc()"></div>
+          <div class="fg"><label>Cuota quincenal</label><input class="fi" id="m_cuota_q_custom" type="number" value="${(m&&m.planModo==='custom'&&(m.cuotaQ||''))||''}" placeholder="0.00" oninput="previewCalc()"></div>
+          <div class="fg"><label>Plazo (meses)</label><input class="fi" id="m_plazo_custom" type="number" min="1" step="1" value="${(m&&m.planModo==='custom'&&(m.plazo||''))||PLAN.plazo}" placeholder="12" oninput="previewCalc()"></div>
+        </div>
+      </div>
+    </div>
     <div id="calc-preview" style="background:var(--gs);border:1px solid var(--rim2);border-radius:var(--r8);padding:13px;margin:12px 0;display:${ed?'grid':'none'};grid-template-columns:repeat(3,1fr);gap:10px"></div>
     <div class="fsec">Identificación y estado</div>
     <div class="fgr">
@@ -5166,8 +5245,10 @@ function openAddMoto(id=null){
     if(!_modeloFinal){toast('Selecciona un modelo del catálogo','error');return false;}
     if(!($('m_pr')&&$('m_pr').value)){toast('El precio es obligatorio','error');return false;}
     const precio=parseFloat($('m_pr').value)||0;
-    const calc=calcMoto(precio);
-    const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,color:g('m_color')||'',vin:g('m_vin')||'VIN-'+Date.now().toString().slice(-4),estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',...calc};
+    const planMode=(($('m_plan_mode')&&$('m_plan_mode').value)||'global');
+    const precioBaseReal=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||precio))||precio;
+    const calc=planMode==='custom' ? calcCustomPlan(precioBaseReal, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo) : Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
+    const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,color:g('m_color')||'',vin:g('m_vin')||'VIN-'+Date.now().toString().slice(-4),estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
     if(ed){const i=S.motos.findIndex(x=>x.id===m.id);S.motos[i]=obj;}else S.motos.push(obj);
     DB.saveMoto(obj);
     closeM();nav('motos');toast(ed?'Moto actualizada':'✓ Moto agregada','success');return true;
@@ -5197,10 +5278,15 @@ function onCatalogoSelect(sel){
 
 function previewCalc(){
   const p=parseFloat(($('m_pr')&&$('m_pr').value))||0;
-  if(!p) return;
-  const r=calcMoto(p);
   const div=$('calc-preview');
-  if(div){div.style.display='grid';div.innerHTML=[['Inicial '+((PLAN.inicial||0)*100)+'%','$'+r.ini.toFixed(2)],['Cuota mensual','$'+r.cuotaM.toFixed(2)],['Total a pagar','$'+r.totalPagado.toFixed(2)]].map(([l,v])=>`<div><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--p1);margin-bottom:2px">${l}</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--ink)">${v}</div></div>`).join('');}
+  if($('m_plan_custom_box')) $('m_plan_custom_box').style.display=((($('m_plan_mode')&&$('m_plan_mode').value)||'global')==='custom')?'block':'none';
+  if($('m_precio_base') && (!($('m_precio_base').value) || parseFloat($('m_precio_base').value||0)<=0) && p>0){ $('m_precio_base').value=p.toFixed(2); }
+  if(!p||!div){ if(div) div.style.display='none'; return; }
+  const precioBase=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||p))||p;
+  const mode=(($('m_plan_mode')&&$('m_plan_mode').value)||'global');
+  const r=mode==='custom' ? calcCustomPlan(precioBase, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo) : Object.assign({precioBaseReal:precioBase, plazo:PLAN.plazo}, calcMoto(precioBase));
+  div.style.display='grid';
+  div.innerHTML=[['Modo',mode==='custom'?'Personalizado':'Principal'],['Precio base','$'+(r.precioBaseReal||precioBase).toFixed(2)],['Inicial','$'+r.ini.toFixed(2)],['Cuota Q','$'+r.cuotaQ.toFixed(2)],['Plazo',(r.plazo||PLAN.plazo)+' meses'],['Total a pagar','$'+r.totalPagado.toFixed(2)]].map(([l,v])=>`<div><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--p1);margin-bottom:2px">${l}</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--ink)">${v}</div></div>`).join('');
 }
 function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
@@ -5886,13 +5972,28 @@ function _wzRender(motoId){
     + catOptions
     + '</select></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
-    + _wzFg('Precio (USD)','wz_precio','number','0','oninput="_wzScore()"',true)
+    + _wzFg('Precio (USD)','wz_precio','number','0','oninput="_wzActualizarPrecioBaseDesdePrecio();_wzActualizarFinPreview(this.value);_wzScore()"',true)
     + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Uso de la moto *</label>'
     + '<select class="fs" id="wz_uso" onchange="_wzScore()">'
     + '<option value="personal">Personal</option>'
     + '<option value="delivery">Delivery / Trabajo</option>'
     + '<option value="negocio">Negocio</option>'
     + '</select></div>'
+    + '</div>'
+    + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px;margin-top:12px">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan del financiamiento</div>'
+    + '<div class="fgr">'
+    + '<div class="fg"><label>Tipo de plan</label><select class="fs" id="wz_plan_mode" onchange="_wzTogglePlanMode(this.value)"><option value="global">Plan principal</option><option value="custom">Plan personalizado</option></select></div>'
+    + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
+    + '</div>'
+    + '<div id="wz_plan_custom_box" style="display:none;margin-top:10px">'
+    + '<div class="fgr">'
+    + '<div class="fg"><label>Inicial real (USD)</label><input class="fi" id="wz_ini_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
+    + '<div class="fg"><label>Cuota quincenal (USD)</label><input class="fi" id="wz_cuota_q_custom" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
+    + '<div class="fg"><label>Plazo (meses)</label><input class="fi" id="wz_plazo_custom" type="number" min="1" step="1" placeholder="12" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Solo indicas precio base real, inicial real, cuota quincenal y plazo. El sistema calcula factor y tasa automáticamente.</div>'
+    + '</div>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">'
     + _wzFg('VIN / Serial','wz_vin','text','Ej: 8LBCF...')
@@ -6241,6 +6342,13 @@ function _wzPickCliente(sel){
   _wzRender();
 }
 
+function _wzActualizarPrecioBaseDesdePrecio(){
+  var pInp=document.getElementById('wz_precio');
+  var baseInp=document.getElementById('wz_precio_base_real');
+  if(!baseInp) return;
+  if((!baseInp.value || parseFloat(baseInp.value||0)<=0) && pInp && parseFloat(pInp.value||0)>0){ baseInp.value=parseFloat(pInp.value).toFixed(2); }
+}
+
 // ── Selección de moto del inventario ──
 function _wzPickMotoInv(sel){
   if(!sel.value){ WZ.precio=0; _wzScore(); return; }
@@ -6252,6 +6360,7 @@ function _wzPickMotoInv(sel){
   var pInp = document.getElementById('wz_precio');
   if(pInp){ pInp.value = precio; }
   WZ.precio = precio;
+  _wzActualizarPrecioBaseDesdePrecio();
   WZ.motoInvId = parseInt(sel.value);
   WZ.motoModelo = moto ? moto.modelo : opt.text.split(' —')[0].trim();
   _wzActualizarFinPreview(precio);
@@ -6268,6 +6377,7 @@ function _wzPickMotoCat(sel){
   var pInp = document.getElementById('wz_precio');
   if(pInp){ pInp.value = precio; }
   WZ.precio = precio;
+  _wzActualizarPrecioBaseDesdePrecio();
   WZ.motoInvId = null;
   WZ.motoModelo = opt.getAttribute('data-modelo')||opt.text.split(' —')[0].trim();
   _wzActualizarFinPreview(precio);
@@ -6277,26 +6387,36 @@ function _wzPickMotoCat(sel){
 // ── Preview financiero ──
 function _wzActualizarFinPreview(precio){
   precio = parseFloat(precio)||0;
-  if(!precio){ document.getElementById('wz-fin-preview').style.display='none'; return; }
-  var r = calcMoto(precio);
-  var cells = document.getElementById('wz-fin-cells');
   var prev = document.getElementById('wz-fin-preview');
+  var cells = document.getElementById('wz-fin-cells');
   if(!cells||!prev) return;
+  if(!precio){ prev.style.display='none'; return; }
+  _wzActualizarPrecioBaseDesdePrecio();
+  var planCfg=getWzPlanConfig();
   prev.style.display = 'block';
+  var titleEl=prev.querySelector('div');
+  if(titleEl) titleEl.textContent=planCfg.mode==='custom' ? 'Plan de financiamiento personalizado' : 'Plan de financiamiento automático';
+  var inicialLabel=planCfg.mode==='custom' ? 'Inicial real' : ('Inicial ('+((planCfg.inicialPct||0)*100).toFixed(0)+'%)');
   cells.innerHTML = [
-    ['Precio','$'+precio.toFixed(0)],
-    ['Inicial ('+((PLAN.inicial||0)*100)+'%)','$'+r.ini.toFixed(0)],
-    ['Cuota quincenal','$'+r.cuotaQ.toFixed(2)],
-    ['Total a pagar','$'+r.totalPagado.toFixed(0)],
+    ['Modo',planCfg.mode==='custom'?'Personalizado':'Principal'],
+    ['Precio catálogo','$'+precio.toFixed(2)],
+    ['Precio base real','$'+(parseFloat(planCfg.precioBaseReal)||0).toFixed(2)],
+    [inicialLabel,'$'+(parseFloat(planCfg.ini)||0).toFixed(2)],
+    ['Monto a financiar','$'+(parseFloat(planCfg.fin)||0).toFixed(2)],
+    ['Cuota quincenal','$'+(parseFloat(planCfg.cuotaQ)||0).toFixed(2)],
+    ['Plazo',(planCfg.plazo||0)+' meses'],
+    ['Total a pagar','$'+(parseFloat(planCfg.totalPagado)||0).toFixed(2)],
   ].map(function(pair){
     return '<div style="background:var(--surf);border-radius:10px;padding:10px 12px;border:1px solid var(--rim)">'
       +'<div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:700;margin-bottom:3px">'+pair[0]+'</div>'
       +'<div style="font-size:16px;font-weight:900;letter-spacing:-.5px;color:var(--p1)">'+pair[1]+'</div></div>';
   }).join('');
-  WZ.cuota = r.cuotaQ;
-  WZ.ini = r.ini;
-  WZ.monto = r.fin;
-  WZ.plazo = PLAN.plazo;
+  WZ.planMode=planCfg.mode;
+  WZ.precioBaseReal=planCfg.precioBaseReal;
+  WZ.cuota = planCfg.cuotaQ;
+  WZ.ini = planCfg.ini;
+  WZ.monto = planCfg.fin;
+  WZ.plazo = planCfg.plazo;
 }
 
 // ── Chip selector (pill buttons) ──
@@ -6428,7 +6548,8 @@ function _wzScore(){
   var casheaNivel = parseInt(g('wz_cashea_nivel'))||0;
   var fiador  = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value==='si';
   var precio  = WZ.precio||parseFloat(g('wz_precio'))||0;
-  var cuotaQ  = precio>0?calcMoto(precio).cuotaQ:0;
+  var planCfg = precio>0 ? getWzPlanConfig() : null;
+  var cuotaQ  = planCfg ? (parseFloat(planCfg.cuotaQ)||0) : 0;
   var ingEf   = Math.max(ing,ifam);
   var ratio   = (cuotaQ>0&&ingEf>0)?cuotaQ/ingEf:0;
 
@@ -6489,7 +6610,7 @@ function _wzScore(){
   WZ.score=score;WZ.f1=Math.round(f1);WZ.f2=Math.round(f2);
   WZ.f3=Math.round(f3);WZ.f4=Math.round(f4);WZ.f5=Math.round(f5);
   WZ.ratio=ratio;WZ.ing=ingEf;WZ.precio=precio;
-  if(cuotaQ>0){WZ.cuota=cuotaQ;WZ.monto=calcMoto(precio).fin;}
+  if(cuotaQ>0){WZ.cuota=cuotaQ;WZ.monto=planCfg ? (parseFloat(planCfg.fin)||0) : calcMoto(precio).fin; }
   _wzActualizarPill();
 }
 
@@ -6528,6 +6649,18 @@ function _wzValidar(){
     var precio = parseFloat((document.getElementById('wz_precio')||{}).value)||0;
     if(precio<=0){ toast('Selecciona una moto o ingresa el precio','error'); return false; }
     WZ.precio = precio;
+    var planMode=((document.getElementById('wz_plan_mode')||{}).value)||'global';
+    if(planMode==='custom'){
+      var iniReal=parseFloat((document.getElementById('wz_ini_real')||{}).value)||0;
+      var cuotaReal=parseFloat((document.getElementById('wz_cuota_q_custom')||{}).value)||0;
+      var plazoReal=parseInt((document.getElementById('wz_plazo_custom')||{}).value,10)||0;
+      if(iniReal<0){ toast('La inicial real no puede ser negativa','error'); return false; }
+      if(cuotaReal<=0){ toast('La cuota quincenal es obligatoria en plan personalizado','error'); return false; }
+      if(plazoReal<=0){ toast('El plazo es obligatorio en plan personalizado','error'); return false; }
+      var precioBase=parseFloat((document.getElementById('wz_precio_base_real')||{}).value)||precio;
+      if(precioBase<=0){ toast('El precio base real es obligatorio','error'); return false; }
+      if(iniReal>precioBase){ toast('La inicial real no puede ser mayor al precio base real','error'); return false; }
+    }
     _wzActualizarFinPreview(precio);
   }
   // Guardar valores antes de avanzar
@@ -6613,7 +6746,7 @@ function _wzRenderResultado(){
     :s>=450?'Perfil con factores de riesgo moderados. Verificar documentos y condiciones.'
     :'El perfil no cumple los requisitos mínimos.';
 
-  var r = WZ.precio>0 ? calcMoto(WZ.precio) : {ini:0,fin:0,total:0,cuotaQ:0,totalPagado:0};
+  var r = WZ.precio>0 ? getWzPlanConfig() : {mode:'global',precioBaseReal:0,ini:0,fin:0,total:0,cuotaQ:0,totalPagado:0,plazo:PLAN.plazo,inicialPct:PLAN.inicial};
   var ratioColor = WZ.ratio<=0.30?'var(--green)':WZ.ratio<=0.40?'var(--amber)':'var(--red)';
 
   el.innerHTML =
@@ -6659,11 +6792,13 @@ function _wzRenderResultado(){
       +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan de Financiamiento · Pagasi</div>'
       +[
         ['Modelo', WZ.motoModelo||'—'],
-        ['Precio total', '$'+WZ.precio.toFixed(0)],
-        ['Inicial ('+((PLAN.inicial||0)*100)+'%)', '$'+r.ini.toFixed(0)],
+        ['Precio catálogo', '$'+WZ.precio.toFixed(0)],
+        ['Precio base real', '$'+(parseFloat(r.precioBaseReal)||0).toFixed(0)],
+        [r.mode==='custom'?'Inicial real':'Inicial ('+((r.inicialPct||0)*100).toFixed(0)+'%)', '$'+r.ini.toFixed(0)],
         ['Monto a financiar', '$'+r.fin.toFixed(0)],
         ['Cuota quincenal', '$'+r.cuotaQ.toFixed(2)],
         ['Cuota / Ingreso', WZ.ratio>0?(WZ.ratio*100).toFixed(0)+'%':'—'],
+        ['Plazo', (r.plazo||0)+' meses'],
         ['Total a pagar', '$'+r.totalPagado.toFixed(0)],
       ].map(function(row){
         var col2color = (row[0]==='Cuota / Ingreso') ? ratioColor : 'var(--ink)';
@@ -6688,7 +6823,7 @@ function _wzGuardar(){
   var btn = document.querySelector('#wz-overlay button[onclick="_wzGuardar()"]');
   if(btn){ btn.textContent='Guardando...'; btn.disabled=true; }
 
-  var r = WZ.precio>0 ? calcMoto(WZ.precio) : {ini:0,fin:0,total:0,cuotaQ:0,totalPagado:0,cuotaM:0};
+  var r = WZ.precio>0 ? getWzPlanConfig() : {mode:'global',precioBaseReal:0,ini:0,fin:0,total:0,cuotaQ:0,totalPagado:0,cuotaM:0,plazo:PLAN.plazo,totalCuotas:PLAN.plazo*2,factor:PLAN.factor,inicialPct:PLAN.inicial,tasaMensual:PLAN.tasaMensual,apy:PLAN.apy,sourcePlan:{plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy}};
 
   // Crear cliente
   var cliId = S.clientes.length ? Math.max.apply(null,S.clientes.map(function(x){return x.id||0;}))+1 : 1;
@@ -6763,18 +6898,20 @@ function _wzGuardar(){
     color: WZ.color||'—',
     placa: WZ.placa||'—',
     precio: WZ.precio||0,
+    precioBaseReal: r.precioBaseReal||WZ.precio||0,
     ini: r.ini,
     fin: r.fin,
     total: r.total,
     cuota: r.cuotaQ,
     cuotaQ: r.cuotaQ,
     cuotaM: r.cuotaM||r.cuotaQ*2,
-    plazo: PLAN.plazo,
-    totalCuotas: PLAN.plazo*2,
-    factor: PLAN.factor,
-    inicialPct: PLAN.inicial,
-    tasaMensual: PLAN.tasaMensual,
-    plan: {plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy},
+    plazo: r.plazo||PLAN.plazo,
+    totalCuotas: r.totalCuotas||(PLAN.plazo*2),
+    factor: r.factor||PLAN.factor,
+    inicialPct: (typeof r.inicialPct==='number') ? r.inicialPct : PLAN.inicial,
+    tasaMensual: (typeof r.tasaMensual==='number') ? r.tasaMensual : PLAN.tasaMensual,
+    planModo: r.mode||'global',
+    plan: {plazo:r.plazo||PLAN.plazo, factor:r.factor||PLAN.factor, inicial:(typeof r.inicialPct==='number') ? r.inicialPct : PLAN.inicial, tasaMensual:(typeof r.tasaMensual==='number') ? r.tasaMensual : PLAN.tasaMensual, apy:(typeof r.apy==='number') ? r.apy : PLAN.apy, precioBaseReal:r.precioBaseReal||WZ.precio||0},
     frecuencia: 'quincenal',
     fecha: new Date().toISOString().split('T')[0],
     estado: 'activo',
@@ -6809,6 +6946,8 @@ function _wzGuardar(){
       id:newMotoId,
       modelo:WZ.motoModelo||'',
       precio:parseFloat(WZ.precio)||0,
+      precioBaseReal:r.precioBaseReal||parseFloat(WZ.precio)||0,
+      planModo:r.mode||'global',
       color:WZ.color||'',
       vin:WZ.vin||('VIN-'+Date.now().toString().slice(-6)),
       placa:WZ.placa||'',
