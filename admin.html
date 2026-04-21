@@ -6278,7 +6278,7 @@ function _wzHydrate(){
 }
 
 function _wzPickCliente(sel){
-  var id = parseInt((sel&&sel.value)||0,10);
+  var id = String((sel&&sel.value)!=null ? sel.value : '').trim();
   WZ.clienteSel = id || '';
   if(!id){
     WZ.wz_nom = WZ.wz_ci = WZ.wz_tel = WZ.wz_wa = WZ.wz_email = WZ.wz_ciudad = '';
@@ -6286,7 +6286,7 @@ function _wzPickCliente(sel){
     WZ.wz_ing = WZ.wz_ifam = '';
     return _wzRender();
   }
-  var c = (S.clientes||[]).find(function(x){ return parseInt(x.id,10)===id; });
+  var c = (S.clientes||[]).find(function(x){ return String((x&&x.id)!=null ? x.id : '').trim()===id; });
   if(!c) return;
   WZ.nom = WZ.wz_nom = c.nombre || '';
   WZ.ci = WZ.wz_ci = c.cedula || '';
