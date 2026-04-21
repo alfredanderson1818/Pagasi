@@ -3173,9 +3173,9 @@ dash(){
   // Cartera: suma del saldo pendiente REAL de cada crédito activo
   // (usa la función canónica que respeta pagos parciales)
   const cartera     = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
-  const cuotasCobradas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
+  const cuotasCobradas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado'&&!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
   const inicialesCobradas = getTotalInicialesCobradas();
-  const ingMes    = cuotasCobradas + inicialesCobradas; // Ingresos totales: cuotas confirmadas + iniciales
+  const ingMes    = cuotasCobradas; // Dashboard: solo cuotas cobradas, no incluye iniciales
   const egMes     = (S.egresos||[]).filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const utilidad  = ingMes - egMes;
   const pendPagos = S.pagos.filter(p=>p.estado==='pendiente').length;
