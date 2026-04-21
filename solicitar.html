@@ -681,21 +681,44 @@ function buildClientePayload(){
   };
 }
 
-async function ensureAnonAuth(){
-  if(!FIREBASE_READY || !fbAuth || !db){
-    var ok = initFirebaseSolicitar();
-    if(!ok || !fbAuth || !db){
-      throw new Error('Firebase no disponible');
-    }
+/* ── REST API helper: escribe en Firestore sin autenticación ── */
+var FS_PROJECT = 'pagasi-b859b';
+var FS_APIKEY  = 'AIzaSyDrtg1AOD3nX1bnS3WW87g14ofa9_OPxDo';
+var FS_BASE    = 'https://firestore.googleapis.com/v1/projects/'+FS_PROJECT+'/databases/(default)/documents';
+
+function toFV(v){
+  if(v===null||v===undefined) return {nullValue:null};
+  if(typeof v==='boolean') return {booleanValue:v};
+  if(typeof v==='number') return Number.isInteger(v)?{integerValue:''+v}:{doubleValue:v};
+  if(typeof v==='string') return {stringValue:v};
+  if(Array.isArray(v)){
+    return {arrayValue:{values:v.map(toFV)}};
   }
-  if(fbAuth.currentUser) return fbAuth.currentUser;
-  try{
-    var cred = await fbAuth.signInAnonymously();
-    return cred.user;
-  }catch(e){
-    console.error('Anonymous auth error', e);
-    throw new Error('Activa Anonymous Auth en Firebase para guardar solicitudes públicas.');
+  if(typeof v==='object'){
+    var f={};
+    Object.keys(v).forEach(function(k){ f[k]=toFV(v[k]); });
+    return {mapValue:{fields:f}};
   }
+  return {stringValue:''+v};
+}
+function toFields(obj){
+  var f={};
+  Object.keys(obj).forEach(function(k){ f[k]=toFV(obj[k]); });
+  return f;
+}
+
+async function fsWrite(collection, docId, data){
+  var url = FS_BASE+'/'+collection+'/'+encodeURIComponent(docId)+'?key='+FS_APIKEY;
+  var resp = await fetch(url,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({fields:toFields(data)})
+  });
+  if(!resp.ok){
+    var err=await resp.json().catch(function(){return {};});
+    throw new Error((err.error&&err.error.message)||('HTTP '+resp.status));
+  }
+  return resp.json();
 }
 
 async function submitF(){
@@ -703,29 +726,62 @@ async function submitF(){
   if(!payload.nombre||!payload.cedula||!payload.tel||!payload.trabajo||!payload.ingreso){
     alert('Completa los campos obligatorios de Cliente.'); return;
   }
-  var btns=document.querySelectorAll('#fs2 .btn'); btns.forEach(function(b){b.disabled=true;});
+  var btns=document.querySelectorAll('#fs2 .btn');
+  btns.forEach(function(b){b.disabled=true;});
+  var btn=document.getElementById('btnGuardarSolicitud');
+  if(btn) btn.textContent='Guardando…';
+
   try{
-    await ensureAnonAuth();
-    var dup = await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
-    if(!dup.empty){
-      var ref=dup.docs[0].ref;
-      var old=dup.docs[0].data()||{};
-      payload.id = old.id || dup.docs[0].id;
-      payload.creado = old.creado || payload.creado;
-      await ref.set(payload,{merge:true});
-    }else{
-      await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
+    /* Intentar primero via SDK si está disponible, sino REST API */
+    var saved=false;
+
+    if(FIREBASE_READY && db){
+      try{
+        var dup=await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
+        if(!dup.empty){
+          var old=dup.docs[0].data()||{};
+          payload.id=old.id||dup.docs[0].id;
+          payload.creado=old.creado||payload.creado;
+          await dup.docs[0].ref.set(payload,{merge:true});
+        }else{
+          await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
+        }
+        await db.collection('solicitudes_publicas').doc(String(payload.id)).set(
+          {clienteId:payload.id,cedula:payload.cedula,nombre:payload.nombre,creado:payload.creado,origen:'solicitar_web',estado:'nuevo'},
+          {merge:true}
+        );
+        saved=true;
+      }catch(sdkErr){
+        console.warn('SDK write failed, falling back to REST API:', sdkErr);
+      }
     }
-    await db.collection('solicitudes_publicas').doc(String(payload.id)).set({clienteId: payload.id, cedula: payload.cedula, nombre: payload.nombre, creado: payload.creado, origen:'solicitar_web', estado:'nuevo'} ,{merge:true});
+
+    if(!saved){
+      /* Fallback: REST API directa (requiere reglas Firestore abiertas para solicitar_web) */
+      await fsWrite('clientes', String(payload.id), payload);
+      await fsWrite('solicitudes_publicas', String(payload.id), {
+        clienteId:payload.id,cedula:payload.cedula,nombre:payload.nombre,
+        creado:payload.creado,origen:'solicitar_web',estado:'nuevo'
+      });
+    }
+
     document.getElementById('fs2').classList.remove('on');
     document.getElementById('fOK').style.display='block';
-    document.getElementById('pd2').classList.remove('on');document.getElementById('pd2').classList.add('done');
+    document.getElementById('pd2').classList.remove('on');
+    document.getElementById('pd2').classList.add('done');
     document.getElementById('okText').textContent='Tus datos fueron cargados en Pagasi como cliente nuevo.';
+
   }catch(err){
-    console.error(err);
-    alert(err.message || 'No se pudo guardar la solicitud en Pagasi.');
+    console.error('submitF error:', err);
+    var msg=err.message||'';
+    if(msg.indexOf('Missing or insufficient permissions')>=0||msg.indexOf('PERMISSION_DENIED')>=0){
+      alert('⚠️ Permiso denegado en Firestore.\nActualiza las reglas de seguridad para permitir escrituras públicas (ver instrucciones).');
+    }else{
+      alert('No se pudo guardar: '+msg);
+    }
   }finally{
     btns.forEach(function(b){b.disabled=false;});
+    if(btn) btn.textContent='Guardar en Pagasi';
   }
 }
 
