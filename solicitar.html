@@ -739,4 +739,31 @@ async function submitF(){
 function setR(on,off){var a=document.getElementById(on), b=document.getElementById(off); if(a)a.classList.add('on'); if(b)b.classList.remove('on');}
 function showUp(inp,zId){}
 </script>
+
+<script>
+let guardando = false;
+
+document.addEventListener("DOMContentLoaded", function(){
+  const form = document.querySelector("form");
+  if(!form) return;
+
+  form.addEventListener("submit", async function(e){
+    e.preventDefault();
+    if(guardando) return;
+    guardando = true;
+
+    try {
+      if (typeof guardar === "function") {
+        await guardar(e);
+      }
+    } catch(err){
+      console.error(err);
+      alert("Error Firebase");
+    }
+
+    guardando = false;
+  });
+});
+</script>
+
 </body></html>
