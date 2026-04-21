@@ -329,9 +329,9 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 
 </style>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/compat/app/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/compat/auth/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/compat/firestore/dist/index.js"></script>
 
 </head>
 <body><div id="mob">
@@ -743,12 +743,32 @@ async function submitF(){
   if(btn) btn.textContent='Guardando…';
 
   try{
-    /* Usar Firebase Auth REST + Firestore REST (sin SDK, sin CDN) */
-    await fsWrite('clientes', String(payload.id), payload);
-    await fsWrite('solicitudes_publicas', String(payload.id), {
-      clienteId:payload.id, cedula:payload.cedula, nombre:payload.nombre,
-      creado:payload.creado, origen:'solicitar_web', estado:'nuevo'
-    });
+    var saved = false;
+
+    /* 1. Intentar via SDK (jsDelivr CDN) + Anonymous Auth */
+    if(!FIREBASE_READY||!fbAuth||!db) initFirebaseSolicitar();
+    if(FIREBASE_READY && fbAuth && db){
+      try{
+        if(!fbAuth.currentUser) await fbAuth.signInAnonymously();
+        await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
+        await db.collection('solicitudes_publicas').doc(String(payload.id)).set(
+          {clienteId:payload.id,cedula:payload.cedula,nombre:payload.nombre,creado:payload.creado,origen:'solicitar_web',estado:'nuevo'},
+          {merge:true}
+        );
+        saved = true;
+      }catch(sdkErr){
+        console.warn('SDK fallo:', sdkErr.message||sdkErr);
+      }
+    }
+
+    /* 2. Fallback REST API */
+    if(!saved){
+      await fsWrite('clientes', String(payload.id), payload);
+      await fsWrite('solicitudes_publicas', String(payload.id), {
+        clienteId:payload.id, cedula:payload.cedula, nombre:payload.nombre,
+        creado:payload.creado, origen:'solicitar_web', estado:'nuevo'
+      });
+    }
 
     /* Éxito */
     document.getElementById('fs2').classList.remove('on');
