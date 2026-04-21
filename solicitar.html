@@ -529,6 +529,13 @@ var FIREBASE_CONFIG = {
   messagingSenderId: '230117681047',
   appId: '1:230117681047:web:53dc6a914fec4068f606d2'
 };
+// 🔥 INIT FIREBASE CORRECTO
+if (!firebase.apps.length) {
+  firebase.initializeApp(FIREBASE_CONFIG);
+}
+const fbAuth = firebase.auth();
+const db = firebase.firestore();
+
 var fbApp=null, fbAuth=null, db=null, FIREBASE_READY=false;
 
 function initFirebaseSolicitar(){
@@ -693,11 +700,17 @@ function buildClientePayload(){
 }
 
 async function ensureAnonAuth(){
-  if(!FIREBASE_READY || !fbAuth || !db){
-    var ok = initFirebaseSolicitar();
-    if(!ok || !fbAuth || !db){
-      throw new Error('Firebase no disponible');
+  try {
+    if (!firebase.auth().currentUser) {
+      const cred = await firebase.auth().signInAnonymously();
+      return cred.user;
     }
+    return firebase.auth().currentUser;
+  } catch (e) {
+    console.error("Auth error:", e);
+    throw new Error("Firebase no disponible");
+  }
+}
   }
   if(fbAuth.currentUser) return fbAuth.currentUser;
   try{
