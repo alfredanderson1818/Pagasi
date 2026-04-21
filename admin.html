@@ -1864,9 +1864,7 @@ function getCreditoCuotaBase(c){
 function getCreditoPagosConfirmados(c){
   if(!c) return 0;
   var pagosDelCred = (S&&Array.isArray(S.pagos))
-    ? S.pagos.filter(function(p){
-        return p && !p.eliminado && p.estado==='confirmado' && p.cred===c.id && !p.esInicial && p.tipoOperacion!=='inicial_credito';
-      })
+    ? S.pagos.filter(function(p){ return p && !p.eliminado && p.estado==='confirmado' && p.cred===c.id; })
     : [];
   if(pagosDelCred.length){
     return pagosDelCred.reduce(function(a,p){ return a + (parseFloat(p.monto)||0); }, 0);
@@ -1886,31 +1884,6 @@ function getCreditoCuotasPagadas(c){
 }
 function getCreditoSaldoPendiente(c){
   return Math.max(0, (parseFloat((c&&c.total) || 0)||0) - getCreditoPagosConfirmados(c));
-}
-function esMovimientoInicialCredito(m){
-  if(!m || m.eliminado) return false;
-  var concepto = (m.concepto||'');
-  return m.tipoOperacion==='inicial_credito' || concepto.indexOf('Inicial · ')===0;
-}
-function getTotalInicialesCobradas(){
-  return (S&&Array.isArray(S.movimientos) ? S.movimientos : []).filter(esMovimientoInicialCredito).reduce(function(a,m){
-    return a + (parseFloat(m.monto)||0);
-  }, 0);
-}
-function marcarInicialCreditoEliminada(credId, motivo){
-  if(!credId || !Array.isArray(S.movimientos)) return;
-  var ahora = new Date().toISOString();
-  var actor = (S.currentUser&&S.currentUser.nombre)||'Admin';
-  S.movimientos.forEach(function(m){
-    if(!m || m.eliminado) return;
-    var esDeEsteCredito = m.creditoId===credId || m.conceptoCredito===credId || ((m.concepto||'').indexOf('Inicial · ')===0 && (m.concepto||'').indexOf(credId)>=0);
-    if(!esDeEsteCredito) return;
-    m.eliminado = true;
-    m.eliminadoPor = actor;
-    m.eliminadoEn = ahora;
-    if(motivo) m.eliminadoRazon = motivo;
-    DB.saveMovimiento(m);
-  });
 }
 
 try {
@@ -1954,39 +1927,6 @@ function clean(o){
   return r;
 }
 
-// Cache local específica para motos — evita perder unidades nuevas entre sesiones
-var MOTOS_CACHE_KEY='pagasi_motos_cache_v1';
-function loadMotosCache(){
-  try{
-    var raw=localStorage.getItem(MOTOS_CACHE_KEY);
-    var arr=raw?JSON.parse(raw):[];
-    return Array.isArray(arr)?arr:[];
-  }catch(e){ return []; }
-}
-function saveMotosCache(arr){
-  try{ localStorage.setItem(MOTOS_CACHE_KEY, JSON.stringify(Array.isArray(arr)?arr:[])); }catch(e){}
-}
-function upsertMotoCache(moto){
-  try{
-    var arr=loadMotosCache();
-    var i=arr.findIndex(function(x){ return String(x.id)===String(moto.id); });
-    if(i>=0) arr[i]=clean(moto); else arr.push(clean(moto));
-    saveMotosCache(arr);
-  }catch(e){}
-}
-function delMotoCache(id){
-  try{
-    var arr=loadMotosCache().filter(function(x){ return String(x.id)!==String(id); });
-    saveMotosCache(arr);
-  }catch(e){}
-}
-function mergeMotosPreferLocal(remote, local){
-  var map={};
-  (Array.isArray(remote)?remote:[]).forEach(function(x){ if(x&&x.id!=null) map[String(x.id)]=x; });
-  (Array.isArray(local)?local:[]).forEach(function(x){ if(x&&x.id!=null) map[String(x.id)]=x; });
-  return Object.keys(map).map(function(k){ return map[k]; });
-}
-
 // ── DB — persistencia con Firestore ──
 // Cola offline: guarda operaciones pendientes cuando no hay conexión
 var _dbQueue = [];
@@ -2014,11 +1954,7 @@ function _flushDbQueue(){
 
 var DB = {
   load: function(){
-    var motosCacheLocal = loadMotosCache();
-    if(!db){
-      if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
-      return Promise.resolve();
-    }
+    if(!db) return Promise.resolve();
     showLoader('Cargando datos...','Conectando con Firebase');
     return Promise.all([
       db.collection('motos').get(),
@@ -2029,40 +1965,10 @@ var DB = {
       Promise.resolve({docs:[]}),
       db.collection('movimientos').get(),
       db.collection('cuentasPendientes').get(),
-      db.collection('config').doc('plan').get(),
-      db.collection('config').doc('catalogo').get(),
-      db.collection('config').doc('planes').get(),
     ]).then(function(snaps){
       function read(snap){return snap.docs.map(function(d){return d.data();});}
       var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
-      var planDoc = snaps[8], catalogoDoc = snaps[9], planesDoc = snaps[10];
-      if(planDoc && planDoc.exists){
-        var pd = planDoc.data() || {};
-        if(Object.prototype.hasOwnProperty.call(pd,'factor')) PLAN.factor = pd.factor;
-        if(Object.prototype.hasOwnProperty.call(pd,'inicial')) PLAN.inicial = pd.inicial;
-        if(Object.prototype.hasOwnProperty.call(pd,'tasaMensual')) PLAN.tasaMensual = pd.tasaMensual;
-        if(Object.prototype.hasOwnProperty.call(pd,'plazo')) PLAN.plazo = pd.plazo;
-        if(Object.prototype.hasOwnProperty.call(pd,'apy')) PLAN.apy = pd.apy;
-        var graciaCfg = Object.prototype.hasOwnProperty.call(pd,'diasGracia') ? pd.diasGracia : pd.gracia;
-        if(typeof graciaCfg !== 'undefined' && graciaCfg !== null) PLAN.diasGracia = graciaCfg;
-        var moraCfg = Object.prototype.hasOwnProperty.call(pd,'moraPct') ? pd.moraPct : pd.mora_pct;
-        if(typeof moraCfg !== 'undefined' && moraCfg !== null) PLAN.moraPct = moraCfg;
-      }
-      if(catalogoDoc && catalogoDoc.exists){
-        var catData = catalogoDoc.data() || {};
-        if(Array.isArray(catData.items) && catData.items.length){
-          CATALOGO.splice(0, CATALOGO.length);
-          catData.items.forEach(function(item){ CATALOGO.push(item); });
-        }
-      }
-      if(planesDoc && planesDoc.exists){
-        var extraData = planesDoc.data() || {};
-        window._planesExtra = Array.isArray(extraData.items) ? extraData.items : [];
-      } else {
-        window._planesExtra = window._planesExtra || [];
-      }
-      S.motos       = mergeMotosPreferLocal(m.map(mapMoto), motosCacheLocal);
-      saveMotosCache(S.motos);
+      S.motos       = m.map(mapMoto);
       S.clientes    = cl;
       S.creds       = cr.map(mapCred);
       S.pagos       = p.map(mapPago);
@@ -2078,16 +1984,14 @@ var DB = {
       hideLoader();
       // Si es error de red, trabajar con datos locales sin avisar con error
       if(e.code==='unavailable'||( e.message&&e.message.includes('network'))){
-        if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
         toast('Sin conexión — modo offline activo','info');
       } else {
-        if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
         toast('Error al cargar datos: '+e.message,'error');
       }
     });
   },
-  saveMoto:    function(o){ upsertMotoCache(o); if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(o.id)).set(clean(o)); }); },
-  delMoto:     function(id){ delMotoCache(id); if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(id)).delete(); }); },
+  saveMoto:    function(o){ if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(o.id)).set(clean(o)); }); },
+  delMoto:     function(id){ if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(id)).delete(); }); },
   saveCliente: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('clientes').doc(String(o.id)).set(clean(o)); }); },
   delCliente:  function(id){ if(!db)return; _dbSilent(function(){ return db.collection('clientes').doc(String(id)).delete(); }); },
   saveCred:    function(o){ if(!db)return; _dbSilent(function(){ return db.collection('creditos').doc(o.id).set(clean(o)); }); },
@@ -2099,7 +2003,7 @@ var DB = {
 
 // Usuarios e invitaciones en Firestore
 DB.getUsuarios    = function(){ if(!db) return Promise.resolve([]); return db.collection('usuarios').get().then(function(s){return s.docs.map(function(d){return Object.assign({uid:d.id},d.data());});}); };
-DB.saveUsuario    = function(uid,data){ if(!db) return Promise.resolve(); return db.collection('usuarios').doc(uid).set(data,{merge:true}); };
+DB.saveUsuario    = function(uid,data){ if(!db) return Promise.resolve(); return db.collection('usuarios').doc(uid).set(data); };
 DB.updateUsuario  = function(uid,data){ if(!db) return; _dbSilent(function(){ return db.collection('usuarios').doc(uid).update(data); }); };
 DB.deleteUsuario  = function(uid){ if(!db) return; _dbSilent(function(){ return db.collection('usuarios').doc(uid).delete(); }); };
 DB.saveInvitacion = function(token,data){ if(!db) return; return db.collection('invitaciones').doc(token).set(data); };
@@ -2136,25 +2040,6 @@ var MODULOS = [
 // CATÁLOGO OFICIAL PAGASI — PLAN 10 MESES
 // ══════════════════════════════════════════
 const PLAN = {plazo:10, factor:1.90, inicial:0.40, tasaMensual:13.77, apy:370.28};
-
-try {
-  var _catLs = JSON.parse(localStorage.getItem('pagasi_catalogo_config')||'null');
-  if(Array.isArray(_catLs) && _catLs.length){ CATALOGO.splice(0, CATALOGO.length); _catLs.forEach(function(item){ CATALOGO.push(item); }); }
-  var _planLs = JSON.parse(localStorage.getItem('pagasi_config_plan')||'null');
-  if(_planLs && typeof _planLs==='object'){
-    if(Object.prototype.hasOwnProperty.call(_planLs,'factor')) PLAN.factor = _planLs.factor;
-    if(Object.prototype.hasOwnProperty.call(_planLs,'inicial')) PLAN.inicial = _planLs.inicial;
-    if(Object.prototype.hasOwnProperty.call(_planLs,'tasaMensual')) PLAN.tasaMensual = _planLs.tasaMensual;
-    if(Object.prototype.hasOwnProperty.call(_planLs,'plazo')) PLAN.plazo = _planLs.plazo;
-    if(Object.prototype.hasOwnProperty.call(_planLs,'apy')) PLAN.apy = _planLs.apy;
-    var _gr = Object.prototype.hasOwnProperty.call(_planLs,'diasGracia') ? _planLs.diasGracia : _planLs.gracia;
-    if(typeof _gr!=='undefined' && _gr!==null) PLAN.diasGracia = _gr;
-    var _mp = Object.prototype.hasOwnProperty.call(_planLs,'moraPct') ? _planLs.moraPct : _planLs.mora_pct;
-    if(typeof _mp!=='undefined' && _mp!==null) PLAN.moraPct = _mp;
-  }
-  window._planesExtra = JSON.parse(localStorage.getItem('pagasi_planes_extra')||'[]') || [];
-} catch(_cfgErr) { window._planesExtra = window._planesExtra || []; }
-
 
 const CATALOGO = [
   {id:1,modelo:'NEW HORSE 150',precio:1320.00},
@@ -2818,7 +2703,7 @@ function verCliente(id){
   const creditosCompletados=creditos.filter(function(cr){return cr.estado==='completado';});
   const creditosActivos=creditos.filter(function(cr){return cr.estado==='activo'||cr.estado==='mora';});
   const totalPagadoReal=pagos.reduce(function(a,p){return a+p.monto;},0);
-  const tuvomora=creditos.some(function(cr){return cr.mora>0||cr.tuvoMoraHistorica===true||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});});
+  const tuvomora=creditos.some(function(cr){return cr.mora>0||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});});
   const esPremium=c.premium===true;
 
   $('mic').textContent=esPremium?'★':'CLI';
@@ -2855,7 +2740,7 @@ function verCliente(id){
       var abonado=Array.isArray(cr.pagosRegistrados)?cr.pagosRegistrados.reduce(function(a,h){return a+h.montoPagado;},0):(cr.pagado||0)*cuotaV;
       var saldo=Math.max(0,parseFloat((cuotaV*totalCr-abonado).toFixed(2)));
       var pct=cuotaV*totalCr>0?Math.round(abonado/(cuotaV*totalCr)*100):0;
-      var tuvoMoraCr=(cr.tuvoMoraHistorica===true)||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});
+      var tuvoMoraCr=S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});
       return `<div class="li" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer" onclick="openAmort('${cr.id}')">
         <div style="display:flex;width:100%;align-items:center;gap:8px">
           <div class="li-ic" style="background:var(--gs)">${cr.estado==='completado'?'✓':'≡'}</div>
@@ -3105,7 +2990,7 @@ dash(){
   // (usa la función canónica que respeta pagos parciales)
   const cartera     = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
   const cuotasCobradas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
-  const inicialesCobradas = getTotalInicialesCobradas();
+  const inicialesCobradas = S.creds.filter(c=>!c.eliminado).reduce((a,c)=>a+(parseFloat(c.ini)||0),0);
   const ingMes    = cuotasCobradas + inicialesCobradas; // Ingresos totales: cuotas confirmadas + iniciales
   const egMes     = (S.egresos||[]).filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const utilidad  = ingMes - egMes;
@@ -3505,7 +3390,7 @@ clientes(){
   return`<div class="page">
   <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap">
     <div class="srch" style="flex:1"><span class="srch-i">◆</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
-    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
+    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Nueva Solicitud</button></div>
   </div>
   <div id="clienteList">${renderClienteList()}</div>
   </div>`;
@@ -3545,7 +3430,6 @@ motos(){
 creditos(){
   // ─── Métricas canónicas ───
   const allCreds   = S.creds.filter(c=>!c.eliminado);
-  const registradosCreds = allCreds.filter(c=>c.estado!=='cancelado');
   const activos    = allCreds.filter(c=>c.estado==='activo');
   const enMora     = allCreds.filter(c=>c.mora>0 && c.estado==='activo');
   const completados= allCreds.filter(c=>c.estado==='completado');
@@ -3554,9 +3438,9 @@ creditos(){
 
   const carteraViva= activos.reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
   const cuotaEsp   = activos.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
-  const valorTotal = registradosCreds.reduce((a,c)=>a+parseFloat(c.total||0),0);
+  const valorTotal = allCreds.reduce((a,c)=>a+parseFloat(c.total||0),0);
   const cobradoAll = allCreds.reduce((a,c)=>a+getCreditoPagosConfirmados(c),0);
-  const inicialAll = getTotalInicialesCobradas();
+  const inicialAll = allCreds.reduce((a,c)=>a+parseFloat(c.ini||0),0);
   const pctRecaudado = valorTotal>0 ? Math.round(((cobradoAll+inicialAll)/(valorTotal+inicialAll))*100) : 0;
 
   // ─── Filtro por tab ───
@@ -3584,7 +3468,7 @@ creditos(){
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
     <div>
       <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.1">Financiamientos</div>
-      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">${registradosCreds.length} créditos registrados · ${fmt(valorTotal)} valor total financiado</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">${allCreds.length} créditos registrados · ${fmt(valorTotal)} valor total financiado</div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ CSV</button>
@@ -3655,7 +3539,7 @@ creditos(){
       <div><div class="ct">Listado de créditos</div><div class="cs">${filtered.length} resultado${filtered.length!==1?'s':''} · ${tab==='todos'?'todos los estados':'filtrado por '+tab}</div></div>
     </div>
     <div class="tw"><table>
-    <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN</th><th>Cuota Quinc.</th><th>Progreso</th><th>Saldo</th><th>Mora</th><th>APY</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>VIN</th><th>Cuota Quinc.</th><th>Progreso</th><th>Saldo</th><th>Mora</th><th>Estado</th><th></th></tr></thead>
     <tbody>${(()=>{const _cp=pgGet('creditos');return filtered.slice((_cp-1)*50,_cp*50).map(c=>{
       var totalCuotas = getCreditoTotalCuotas(c);
       var cuotaVal    = getCreditoCuotaBase(c);
@@ -3669,7 +3553,6 @@ creditos(){
       var moraCell = c.mora>0
         ? `<span class="bdg ${c.mora>60?'b-r':c.mora>30?'b-a':'b-b'}">${c.mora}d</span>`
         : `<span style="color:var(--ink3);font-size:11px">—</span>`;
-      var apyVal = Number.isFinite(parseFloat(c.apy)) ? parseFloat(c.apy) : (Number.isFinite(parseFloat((c.plan||{}).apy)) ? parseFloat((c.plan||{}).apy) : parseFloat(PLAN.apy||0));
       return`<tr style="cursor:pointer" onclick="openAmort('${c.id}')">
       <td class="tdm" style="font-family:var(--fd)">${c.id}</td>
       <td><span class="tdm">${c.cli}</span></td>
@@ -3679,7 +3562,6 @@ creditos(){
       <td style="min-width:110px"><div class="tds" style="margin-bottom:3px">${cuotasPagadasReal}/${totalCuotas}</div><div class="prog"><div class="pf ${c.mora>0?'p-r':'p-p'}" style="width:${pct}%"></div></div></td>
       <td style="font-weight:900;font-family:var(--fd);color:${saldoColor}">${saldoPendiente===0?'✓ $0':fmt(saldoPendiente)}</td>
       <td>${moraCell}</td>
-      <td><span style="font-weight:800;font-family:var(--fd);color:var(--ink)">${apyVal.toFixed(2)}%</span></td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap" onclick="event.stopPropagation()">
         <button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button>
@@ -3687,7 +3569,7 @@ creditos(){
         ${c.estado!=="completado"&&c.estado!=="cancelado"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar anticipadamente">Liquidar</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}
       </td>
     </tr>`;}).join('')})()}
-    ${filtered.length===0?`<tr><td colspan="11" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin resultados para este filtro</td></tr>`:''}
+    ${filtered.length===0?`<tr><td colspan="10" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin resultados para este filtro</td></tr>`:''}
     </tbody>
   </table></div>
   </div>
@@ -4427,7 +4309,7 @@ reportes(){
   const credsComp   = S.creds.filter(c=>!c.eliminado&&c.estado==='completado');
   const credsRec    = S.creds.filter(c=>!c.eliminado&&(c.estado==='recuperada'||c.estado==='recuperado'));
   const totalCobrado= pagosConf.reduce((a,p)=>a+p.monto,0);
-  const totalIniciales= getTotalInicialesCobradas();
+  const totalIniciales= S.creds.filter(c=>!c.eliminado).reduce((a,c)=>a+(c.ini||0),0);
   const totalEgresos= S.egresos.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const totalIngresos=totalCobrado+totalIniciales;
   const utilidad    = totalIngresos-totalEgresos;
@@ -4641,7 +4523,7 @@ reportes(){
   </div>`;},
 
 conta(){
-  const totalIni    = getTotalInicialesCobradas();
+  const totalIni    = S.creds.filter(c=>!c.eliminado).reduce((a,c)=>a+(c.ini||0),0);
   const totalCuotas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
   const totalIngresos = totalIni + totalCuotas;
   const egresos     = S.egresos.filter(e=>!e.eliminado);
@@ -4806,6 +4688,8 @@ config(){
       var d=doc.data();
       if(Object.prototype.hasOwnProperty.call(d,'factor')){PLAN.factor=d.factor;if($('cfg_factor'))$('cfg_factor').value=d.factor;}
       if(Object.prototype.hasOwnProperty.call(d,'inicial')){PLAN.inicial=d.inicial;if($('cfg_ini'))$('cfg_ini').value=(d.inicial*100);}
+      if(Object.prototype.hasOwnProperty.call(d,'tasaMensual')){PLAN.tasaMensual=d.tasaMensual;if($('cfg_tasa_mensual'))$('cfg_tasa_mensual').value=d.tasaMensual;}
+      if(Object.prototype.hasOwnProperty.call(d,'plazo')){PLAN.plazo=d.plazo;if($('cfg_plazo'))$('cfg_plazo').value=d.plazo;}
       var graciaCfg=Object.prototype.hasOwnProperty.call(d,'diasGracia')?d.diasGracia:d.gracia;
       if(typeof graciaCfg!=='undefined'&&graciaCfg!==null){PLAN.diasGracia=graciaCfg;if($('cfg_gracia'))$('cfg_gracia').value=graciaCfg;}
       var moraCfg=Object.prototype.hasOwnProperty.call(d,'moraPct')?d.moraPct:d.mora_pct;
@@ -4857,7 +4741,7 @@ config(){
 
     <!-- Plan financiero -->
     <div class="card">
-      <div class="ch"><div><div class="ct">Plan Financiero</div><div class="cs">Parámetros del plan 10 meses</div></div></div>
+      <div class="ch"><div><div class="ct">Plan Financiero</div><div class="cs">Parámetros del plan actual</div></div></div>
       <div style="background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:12px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
         ${[['Factor',PLAN.factor+'x'],['Inicial',PLAN.inicial*100+'%'],['Tasa mensual',PLAN.tasaMensual+'%'],['Plazo',PLAN.plazo+' meses']].map(([l,v])=>`
         <div style="background:var(--surf);border-radius:8px;padding:8px 10px;border:1px solid var(--rim)">
@@ -4866,8 +4750,10 @@ config(){
         </div>`).join('')}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="fg"><label>Factor (×)</label><input class="fi" id="cfg_factor" type="number" step="0.01" value="${PLAN.factor}"></div>
-        <div class="fg"><label>Inicial mínima (%)</label><input class="fi" id="cfg_ini" type="number" value="${PLAN.inicial*100}"></div>
+        <div class="fg"><label>Factor (×)</label><input class="fi" id="cfg_factor" type="number" step="0.000001" value="${PLAN.factor}"></div>
+        <div class="fg"><label>Inicial mínima (%)</label><input class="fi" id="cfg_ini" type="number" step="0.01" value="${PLAN.inicial*100}"></div>
+        <div class="fg"><label>Tasa mensual (%)</label><input class="fi" id="cfg_tasa_mensual" type="number" step="0.01" value="${PLAN.tasaMensual||0}"></div>
+        <div class="fg"><label>Plazo (meses)</label><input class="fi" id="cfg_plazo" type="number" min="1" max="60" value="${PLAN.plazo}"></div>
         <div class="fg"><label>Días de gracia</label><input class="fi" id="cfg_gracia" type="number" value="${PLAN.diasGracia||5}"></div>
         <div class="fg"><label>% mora mensual</label><input class="fi" id="cfg_mora" type="number" step="0.1" value="${PLAN.moraPct||5}"></div>
       </div>
@@ -5010,9 +4896,8 @@ users(){
           +'<td class="tds" style="font-family:monospace;font-size:11.5px">'+u.email+'</td>'
           +'<td><span class="bdg '+rc+'">'+rolLabel+'</span></td>'
           +'<td class="tds">'+mods+' módulo'+(mods!==1?'s':'')+((u.permisos||[]).indexOf('perm_delete')>=0?' <span style="font-size:10px;color:var(--red);margin-left:4px">+ eliminar</span>':'')+'</td>'
-          +'<td style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">'
+          +'<td style="display:flex;gap:5px;align-items:center">'
             +'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'
-            +'<button class="btn btn-b btn-xs" data-uid="'+u.uid+'" onclick="copiarInvitacionUsuario(this.dataset.uid)">Link invitación</button>'
             +((!esMio&&canDeleteAction())?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email).replace(/"/g,'&quot;')+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">Eliminar</button>':'')
           +'</td>'
         +'</tr>';
@@ -5298,421 +5183,39 @@ function cDel(id){
 // ══════════════════════════════════════════
 // CLIENTE CRUD
 // ══════════════════════════════════════════
-
-function _cliInitFromCliente(c){
-  WZ = { step:1, totalSteps:2, score:0, f1:0,f2:0,f3:0,f4:0,f5:0, cuota:0,ratio:0,monto:0,precio:0,plazo:0,ini:0,ing:0, mode:'cliente', clienteEditId:(c&&c.id)||null };
-  if(!c) return;
-  WZ.nom = WZ.wz_nom = c.nombre || '';
-  WZ.ci = WZ.wz_ci = c.cedula || '';
-  WZ.tel = WZ.wz_tel = c.tel || '';
-  WZ.wa = WZ.wz_wa = c.wa || c.tel || '';
-  WZ.email = WZ.wz_email = c.email || '';
-  WZ.ciudad = WZ.wz_ciudad = c.ciudad || '';
-  WZ.emp = WZ.wz_emp = c.trabajo || '';
-  WZ.ant = WZ.wz_ant = c.antiguedad || '';
-  WZ.ing = WZ.wz_ing = c.ingreso || '';
-  WZ.ifam = WZ.wz_ifam = c.ingreso_familiar || '';
-  WZ.conocio = WZ.wz_conocio = c.conocio || '';
-  WZ.viv = WZ.wz_viv = c.vivienda || '';
-  WZ.tdir = WZ.wz_tdir = c.tiempo_dir || '';
-  WZ.estado_ubi = WZ.wz_estado = c.estado_ubi || '';
-  WZ.ciudad_res = WZ.wz_ciudad_res = c.ciudad || '';
-  WZ.dir_det = WZ.wz_dir_det = c.dir || '';
-  WZ.empresa = WZ.wz_empresa = c.empresa || '';
-  WZ.cargo = WZ.wz_cargo = c.cargo || '';
-  WZ.rem = WZ.wz_rem = c.remesas || '';
-  WZ.dep = c.dependientes || 0;
-  WZ.hist = c.historial || '';
-  WZ.deuda = c.deudas || '';
-  WZ.banco = WZ.wz_banco = c.banco_estado || '';
-  WZ.banco_nm = WZ.wz_banco_nm = c.banco_nombre || '';
-  WZ.banco_cobro = WZ.wz_banco_cobro = c.banco_cobro || '';
-  WZ.cuenta = WZ.wz_cuenta = c.cuenta_digitos || '';
-  WZ.ahorro = WZ.wz_ahorro = c.ahorro || '';
-  WZ.cashea = c.cashea || 'no';
-  WZ.cashea_nivel = WZ.wz_cashea_nivel = c.cashea_nivel || '';
-  WZ.cashea_pago = WZ.wz_cashea_pago = c.cashea_pago || '';
-  WZ.fiador_tiene = c.fiador || 'no';
-  WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
-  WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
-  WZ.fiador_ci = WZ.wz_fiador_ci = c.fiador_ci || '';
-  WZ.fiador_rel = WZ.wz_fiador_rel = c.fiador_rel || '';
-  WZ.r1n = WZ.wz_r1n = c.ref1&&c.ref1.nom || '';
-  WZ.r1t = WZ.wz_r1t = c.ref1&&c.ref1.tel || '';
-  WZ.r1r = WZ.wz_r1r = c.ref1&&c.ref1.rel || '';
-  WZ.r1obs = WZ.wz_r1obs = c.ref1&&c.ref1.obs || '';
-  WZ.r2n = WZ.wz_r2n = c.ref2&&c.ref2.nom || '';
-  WZ.r2t = WZ.wz_r2t = c.ref2&&c.ref2.tel || '';
-  WZ.r2r = WZ.wz_r2r = c.ref2&&c.ref2.rel || '';
-  WZ.r2obs = WZ.wz_r2obs = c.ref2&&c.ref2.obs || '';
-  WZ.docsCount = WZ.wz_docsCount = c.docs_count || 0;
-  WZ.impresion = WZ.wz_impresion = c.impresion || '';
-  WZ.score = c.score_indexa || 0;
-  WZ.f1 = c.f1 || 0; WZ.f2 = c.f2 || 0; WZ.f3 = c.f3 || 0; WZ.f4 = c.f4 || 0; WZ.f5 = c.f5 || 0;
-  WZ['_chip_wz_emp_g'] = WZ.emp || '';
-  WZ['_chip_wz_dep_g'] = String(WZ.dep || 0);
-  WZ['_chip_wz_hist_g'] = WZ.hist || '';
-  WZ['_chip_wz_deuda_g'] = WZ.deuda || '';
-  WZ['_chip_wz_impresion_g'] = WZ.impresion || '';
-}
-
-function _cliScorePill(){
-  function scoreCol(s){ return s>=625?'var(--green)':s>=450?'var(--amber)':'var(--red)'; }
-  function scoreLbl(s){ return s>=750?'Excelente':s>=625?'Bueno':s>=450?'Regular':'Bajo'; }
-  return WZ.score>0
-    ? '<div style="display:flex;align-items:center;gap:10px;background:var(--surf);border:1.5px solid var(--rim2);border-radius:50px;padding:7px 16px">'
-        +'<div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:'+scoreCol(WZ.score)+'">'+WZ.score+'</div>'
-        +'<div><div style="font-size:10px;font-weight:700;color:'+scoreCol(WZ.score)+'">'+scoreLbl(WZ.score)+'</div>'
-        +'<div style="font-size:9px;color:var(--ink3)">Score Indexa /850</div></div>'
-        +'</div>'
-    : '<div style="font-size:12px;color:var(--ink3);padding:7px 16px;background:var(--surf2);border-radius:50px;border:1px solid var(--rim)">CrediScore aparece al completar perfil</div>';
-}
-
-function _cliStep1(){
-  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
-    + _wzFg('Nombre completo *','wz_nom','text','Ej: Carlos Pérez','',true)
-    + _wzFg('N° Cédula *','wz_ci','text','V-12345678','',true)
-    + _wzFg('Teléfono *','wz_tel','tel','0412-0000000','',true)
-    + _wzFg('WhatsApp','wz_wa','tel','0412-0000000')
-    + _wzFg('Correo','wz_email','email','correo@ejemplo.com')
-    + _wzFg('Ciudad','wz_ciudad','text','Ej: Caracas')
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
-    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Tipo de empleo *</label>'
-    + '<select class="fs" id="wz_emp" onchange="_wzScore()">'
-    + '<option value="">Seleccionar...</option>'
-    + '<option value="formal">Formal / Empleado</option>'
-    + '<option value="publico">Empleado Público</option>'
-    + '<option value="delivery">Delivery / Motorizado</option>'
-    + '<option value="independiente">Independiente</option>'
-    + '<option value="comerciante">Comercio / Negocio</option>'
-    + '<option value="remesas">Remesas</option>'
-    + '<option value="informal">Informal</option>'
-    + '</select></div>'
-    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Antigüedad laboral</label>'
-    + '<select class="fs" id="wz_ant" onchange="_wzScore()">'
-    + '<option value="">Seleccionar...</option>'
-    + '<option value="1">Menos de 6 meses</option>'
-    + '<option value="2">6 meses – 1 año</option>'
-    + '<option value="3">1 a 3 años</option>'
-    + '<option value="5">Más de 3 años</option>'
-    + '</select></div>'
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
-    + _wzFg('Ingreso mensual (USD) *','wz_ing','number','0','oninput="_wzScore()"',true)
-    + _wzFg('Ingreso familiar total (USD)','wz_ifam','number','0','oninput="_wzScore()"')
-    + '</div>'
-    + '<div style="margin-top:10px"><label class="fsec" style="display:block;margin-bottom:5px">¿Cómo nos conoció?</label>'
-    + '<select class="fs" id="wz_conocio" onchange="_wzScore()">'
-    + '<option value="">Seleccionar...</option>'
-    + '<option value="referido">Referido por cliente</option>'
-    + '<option value="redes">Redes sociales</option>'
-    + '<option value="vitrina">Vitrina / local</option>'
-    + '<option value="google">Google / internet</option>'
-    + '<option value="anterior">Cliente anterior</option>'
-    + '<option value="otro">Otro</option>'
-    + '</select></div>';
-}
-
-function _cliStep2(){
-  function _s(title){ return '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--p1);margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--rim)">'+title+'</div>'; }
-  function _row2(a,b){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+a+b+'</div>'; }
-  function _fg(label,inner){ return '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)">'+label+'</label>'+inner+'</div>'; }
-  function _sel(id,opts,onch){ return '<select class="fs" id="'+id+'" onchange="'+(onch||'')+'">'+opts+'</select>'; }
-  function _inp(id,type,ph,extra){ return '<input class="fi" id="'+id+'" type="'+(type||'text')+'" placeholder="'+(ph||'')+'" '+(extra||'')+' style="width:100%">'; }
-  function _chip(label,group,val,onch){ return '<label style="flex:1;min-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:9px 6px;cursor:pointer;text-align:center;font-size:12px;font-weight:700;transition:.15s" onclick="_wzChip(this,\''+group+'\',\''+val+'\')">'+label+'</label>'; }
-  return _s('Residencia')
-  +'<div class="fg" style="margin-bottom:10px"><label class="fsec" style="display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)">Dirección</label>'
-  +'<div style="position:relative">'
-  +'<input class="fi" id="wz_dir_q" type="text" placeholder="🔍 Busca tu dirección en Venezuela..." autocomplete="off" oninput="_wzAddrBuscar(this.value)" onblur="setTimeout(function(){var d=document.getElementById(\'wz_addr_drop\');if(d)d.style.display=\'none\';},220)" style="width:100%">'
-  +'<div id="wz_addr_drop" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 3px);background:var(--surf);border:1.5px solid var(--p1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:500;max-height:180px;overflow-y:auto"></div>'
-  +'</div></div>'
-  +_row2(
-    _fg('Estado',_sel('wz_estado','<option value="">Seleccionar...</option><option>Caracas (D.C.)</option><option>Miranda</option><option>Carabobo</option><option>Aragua</option><option>Zulia</option><option>Lara</option><option>Bolívar</option><option>Anzoátegui</option><option>Mérida</option><option>Táchira</option><option>Monagas</option><option>Sucre</option><option>Falcón</option><option>Barinas</option><option>Apure</option><option>Otro</option>')),
-    _fg('Ciudad / Municipio',_inp('wz_ciudad_res','text','Se completa al buscar'))
-  )
-  +'<div style="margin-bottom:10px">'+_fg('Detalle (apto, piso, referencia)','<textarea class="fta" id="wz_dir_det" placeholder="Piso 3, apto 3-A, frente al Banco..." style="min-height:50px;width:100%"></textarea>')+'</div>'
-  +_row2(
-    _fg('Tiempo en esta dirección',_sel('wz_tdir','<option value="0">Seleccionar...</option><option value="1">Menos de 1 año</option><option value="2">1–3 años</option><option value="3">3–5 años</option><option value="4">Más de 5 años</option>','_wzScore()')),
-    _fg('Tipo de vivienda',_sel('wz_viv','<option value="propia">Propia</option><option value="alquilada">Alquilada</option><option value="familiar">Familiar / prestada</option><option value="otro">Otro</option>','_wzScore()'))
-  )
-  +_s('Empleo e Ingresos')
-  +'<div style="margin-bottom:10px">'+_fg('Tipo de empleo *',
-    '<div style="display:flex;flex-wrap:wrap;gap:7px" id="wz_emp_g">'
-    +[['Formal / Empleado','formal'],['Público','publico'],['Delivery','delivery'],['Independiente','independiente'],['Comerciante','comerciante'],['Remesas','remesas'],['Informal','informal']]
-    .map(function(x){ return _chip(x[0],'wz_emp_g',x[1],'_wzScore()'); }).join('')
-    +'</div>'
-  )+'</div>'
-  +_row2(
-    _fg('Empresa',_inp('wz_empresa','text','Nombre de la empresa')),
-    _fg('Cargo / actividad',_inp('wz_cargo','text','Ej: vendedor, delivery, comerciante'))
-  )
-  +_row2(
-    _fg('Ingreso mensual propio (USD)',_inp('wz_ing','number','0','oninput="_wzScore()"')),
-    _fg('Ingreso familiar total (USD)',_inp('wz_ifam','number','0','oninput="_wzScore()"'))
-  )
-  +_row2(
-    _fg('Antigüedad laboral',_sel('wz_ant','<option value="">Seleccionar...</option><option value="1">Menos de 6 meses</option><option value="2">6 meses – 1 año</option><option value="3">1 a 3 años</option><option value="5">Más de 3 años</option>','_wzScore()')),
-    _fg('¿Recibe remesas?',_sel('wz_rem','<option value="no">No</option><option value="si">Sí</option>','_wzScore()'))
-  )
-  +'<div style="margin-bottom:10px">'+_fg('Dependientes económicos',
-    '<div style="display:flex;gap:7px">'
-    +[['0','0'],['1','1'],['2','2'],['3+','3']].map(function(x){ return _chip(x[0],'wz_dep_g',x[1],'_wzScore()'); }).join('')
-    +'</div>'
-  )+'</div>'
-  +_s('Historial Financiero')
-  +'<div style="margin-bottom:10px">'+_fg('Créditos anteriores *',
-    '<div style="display:flex;flex-wrap:wrap;gap:7px">'
-    +[['Sin historial','ninguno'],['Puntual ✅','bueno'],['Mora leve ⚠️','mora_leve'],['Mora grave ❌','malo']]
-    .map(function(x){ return _chip(x[0],'wz_hist_g',x[1],'_wzScore()'); }).join('')
-    +'</div>'
-  )+'</div>'
-  +'<div style="margin-bottom:10px">'+_fg('Deudas activas actualmente',
-    '<div style="display:flex;gap:7px">'
-    +[['Sin deudas','no'],['Menores','menores'],['Importantes','graves']]
-    .map(function(x){ return _chip(x[0],'wz_deuda_g',x[1],'_wzScore()'); }).join('')
-    +'</div>'
-  )+'</div>'
-  +_row2(
-    _fg('Cuenta bancaria',_sel('wz_banco','<option value="activa">Activa con movimientos</option><option value="poca">Poco movimiento</option><option value="no">Sin cuenta bancaria</option>','_wzScore()')),
-    _fg('Banco(s)',_inp('wz_banco_nm','text','Ej: Banesco, Mercantil'))
-  )
-  +'<div style="margin-bottom:10px">'+_fg('Banco para cobro de cuotas',_sel('wz_banco_cobro','<option value="">Seleccionar...</option><option value="bdv">Banco de Venezuela</option><option value="banesco">Banesco</option><option value="mercantil">Mercantil</option><option value="provincial">BBVA Provincial</option><option value="bicentenario">Bicentenario</option><option value="venezolano">Venezolano de Crédito</option><option value="exterior">Banco Exterior</option><option value="otro">Otro</option>'))+'</div>'
-  +_row2(
-    _fg('Número de cuenta (últimos 4 dígitos)',_inp('wz_cuenta','text','XXXX','maxlength="4"')),
-    _fg('¿Tiene ahorros?',_sel('wz_ahorro','<option value="no">No</option><option value="usd">Sí, en USD</option><option value="bs">Sí, en Bs</option>'))
-  )
-  +_s('Cashea')
-  +'<div style="margin-bottom:10px">'+_fg('¿Tiene cuenta Cashea?',
-    '<div style="display:flex;gap:8px">'
-    +'<label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:10px 12px;cursor:pointer">'
-    +'<input type="radio" name="wz_cashea" value="no" checked onchange="_wzToggleCashea(\'no\')" style="accent-color:var(--p1)"> Sin Cashea</label>'
-    +'<label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:10px 12px;cursor:pointer">'
-    +'<input type="radio" name="wz_cashea" value="si" onchange="_wzToggleCashea(\'si\')" style="accent-color:var(--p1)"> Tiene Cashea</label>'
-    +'</div>'
-  )+'</div>'
-  +'<div id="wz_cashea_det" style="display:none">'
-  +_row2(
-    _fg('Nivel Cashea',_sel('wz_cashea_nivel','<option value="">Seleccionar...</option><option value="1">Nivel 1 — Básico</option><option value="2">Nivel 2 — Bronce</option><option value="3">Nivel 3 — Plata</option><option value="4">Nivel 4 — Oro</option>','_wzScore()')),
-    _fg('Fecha último pago',_inp('wz_cashea_pago','date',''))
-  )+'</div>'
-  +_s('Referencias Personales')
-  +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px;margin-bottom:10px">'
-  +'<div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:10px">Referencia 1</div>'
-  +_row2(_fg('Nombre',_inp('wz_r1n','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_r1t','tel','0412-0000000')))
-  +_row2(_fg('Relación',_sel('wz_r1r','<option>Familiar directo</option><option>Amigo/a</option><option>Colega</option><option>Vecino/a</option>')),_fg('Observación',_inp('wz_r1obs','text','Notas...')))
-  +'</div>'
-  +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px;margin-bottom:10px">'
-  +'<div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:10px">Referencia 2</div>'
-  +_row2(_fg('Nombre',_inp('wz_r2n','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_r2t','tel','0412-0000000')))
-  +_row2(_fg('Relación',_sel('wz_r2r','<option>Familiar directo</option><option>Amigo/a</option><option>Colega</option><option>Vecino/a</option>')),_fg('Observación',_inp('wz_r2obs','text','Notas...')))
-  +'</div>'
-  +_s('Fiador / Garante')
-  +'<div style="margin-bottom:10px">'+_fg('¿Presenta fiador?',
-    '<div style="display:flex;gap:8px">'
-    +'<label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:10px 12px;cursor:pointer">'
-    +'<input type="radio" name="wz_fiador" value="no" checked onchange="_wzToggleFiador(\'no\');_wzScore()" style="accent-color:var(--p1)"> Sin fiador</label>'
-    +'<label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--rim);border-radius:10px;padding:10px 12px;cursor:pointer">'
-    +'<input type="radio" name="wz_fiador" value="si" onchange="_wzToggleFiador(\'si\');_wzScore()" style="accent-color:var(--p1)"> Tiene fiador</label>'
-    +'</div>'
-  )+'</div>'
-  +'<div id="wz_fiador_det" style="display:none">'
-  +_row2(_fg('Nombre del fiador',_inp('wz_fiador_nom','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_fiador_tel','tel','0412-0000000')))
-  +_row2(_fg('Cédula del fiador',_inp('wz_fiador_ci','text','V-12345678')),_fg('Relación',_sel('wz_fiador_rel','<option value="familiar">Familiar directo</option><option value="conyuge">Cónyuge / pareja</option><option value="amigo">Amigo/a</option><option value="colega">Colega / socio</option>')))
-  +'</div>'
-  +_s('Notas del Vendedor')
-  +'<div style="margin-bottom:10px">'+_fg('Impresión general',
-    '<div style="display:flex;gap:7px">'
-    +[['Positiva 😊','positiva'],['Neutral 😐','neutral'],['Dudosa 😟','dudosa']].map(function(x){ return _chip(x[0],'wz_impresion_g',x[1],''); }).join('')
-    +'</div>'
-  )+'</div>'
-  +'<div style="margin-bottom:6px">'+_fg('Observaciones adicionales','<textarea class="fta" id="wz_obs" rows="3" placeholder="Detalles de la visita, condiciones especiales, actitud del cliente..." style="min-height:80px;width:100%"></textarea>')+'</div>';
-}
-
-function _cliHydrate(){
-  var ids=['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
-  ids.forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null) el.value=WZ[id]; });
-  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
-  var cashea = WZ.cashea||'no';
-  var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; _wzToggleCashea(cashea);
-  var fiador = WZ.fiador_tiene||'no';
-  var fiadorRadio=document.querySelector('input[name="wz_fiador"][value="'+fiador+'"]'); if(fiadorRadio) fiadorRadio.checked=true; _wzToggleFiador(fiador);
-  function pick(group,val){ if(!val) return; var container=document.getElementById(group); if(container){ Array.from(container.children).forEach(function(el){ if((el.getAttribute('onclick')||'').indexOf("'"+val+"'")>=0) _wzChip(el,group,val); }); } }
-  pick('wz_emp_g', WZ.emp||WZ['_chip_wz_emp_g']);
-  pick('wz_hist_g', WZ.hist||WZ['_chip_wz_hist_g']);
-  pick('wz_deuda_g', WZ.deuda||WZ['_chip_wz_deuda_g']);
-  pick('wz_impresion_g', WZ.impresion||WZ['_chip_wz_impresion_g']);
-  pick('wz_dep_g', String(WZ.dep||WZ['_chip_wz_dep_g']||''));
-  _wzScore();
-}
-
-function _cliCollectStep(step){
-  var g=function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
-  if(step===1){
-    WZ.nom = WZ.wz_nom = g('wz_nom');
-    WZ.ci = WZ.wz_ci = g('wz_ci');
-    WZ.tel = WZ.wz_tel = g('wz_tel');
-    WZ.wa = WZ.wz_wa = g('wz_wa');
-    WZ.email = WZ.wz_email = g('wz_email');
-    WZ.ciudad = WZ.wz_ciudad = g('wz_ciudad');
-    WZ.emp = WZ.wz_emp = g('wz_emp');
-    WZ.ant = WZ.wz_ant = g('wz_ant');
-    WZ.ing = WZ.wz_ing = parseFloat((document.getElementById('wz_ing')||{}).value)||0;
-    WZ.ifam = WZ.wz_ifam = parseFloat((document.getElementById('wz_ifam')||{}).value)||0;
-    WZ.conocio = WZ.wz_conocio = g('wz_conocio');
-  }
-  if(step===2){
-    WZ.obs = WZ.wz_obs = g('wz_obs');
-    WZ.viv = WZ.wz_viv = g('wz_viv');
-    WZ.tdir = WZ.wz_tdir = g('wz_tdir');
-    WZ.estado_ubi = WZ.wz_estado = g('wz_estado');
-    WZ.ciudad_res = WZ.wz_ciudad_res = g('wz_ciudad_res');
-    WZ.dir_det = WZ.wz_dir_det = g('wz_dir_det');
-    WZ.dir_q = WZ.wz_dir_q = g('wz_dir_q');
-    WZ.emp = _wzChipVal('wz_emp_g')||g('wz_emp')||WZ.emp||'';
-    WZ.empresa = WZ.wz_empresa = g('wz_empresa');
-    WZ.cargo = WZ.wz_cargo = g('wz_cargo');
-    WZ.ing = parseFloat(g('wz_ing'))||WZ.ing||0;
-    WZ.ifam = parseFloat(g('wz_ifam'))||WZ.ifam||0;
-    WZ.ant = g('wz_ant')||WZ.ant||'';
-    WZ.rem = WZ.wz_rem = g('wz_rem');
-    WZ.dep = parseInt(_wzChipVal('wz_dep_g')||0);
-    WZ.hist = _wzChipVal('wz_hist_g')||'ninguno';
-    WZ.deuda = _wzChipVal('wz_deuda_g')||'no';
-    WZ.banco = WZ.wz_banco = g('wz_banco');
-    WZ.banco_nm = WZ.wz_banco_nm = g('wz_banco_nm');
-    WZ.banco_cobro = WZ.wz_banco_cobro = g('wz_banco_cobro');
-    WZ.cuenta = WZ.wz_cuenta = g('wz_cuenta');
-    WZ.ahorro = WZ.wz_ahorro = g('wz_ahorro');
-    WZ.cashea = (document.querySelector('input[name="wz_cashea"]:checked')||{value:'no'}).value;
-    WZ.cashea_nivel = WZ.wz_cashea_nivel = g('wz_cashea_nivel');
-    WZ.cashea_pago = WZ.wz_cashea_pago = g('wz_cashea_pago');
-    WZ.fiador_tiene = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value;
-    WZ.fiador_nom = WZ.wz_fiador_nom = g('wz_fiador_nom');
-    WZ.fiador_tel = WZ.wz_fiador_tel = g('wz_fiador_tel');
-    WZ.fiador_ci = WZ.wz_fiador_ci = g('wz_fiador_ci');
-    WZ.fiador_rel = WZ.wz_fiador_rel = g('wz_fiador_rel');
-    WZ.r1n = WZ.wz_r1n = g('wz_r1n'); WZ.r1t = WZ.wz_r1t = g('wz_r1t'); WZ.r1r = WZ.wz_r1r = g('wz_r1r'); WZ.r1obs = WZ.wz_r1obs = g('wz_r1obs');
-    WZ.r2n = WZ.wz_r2n = g('wz_r2n'); WZ.r2t = WZ.wz_r2t = g('wz_r2t'); WZ.r2r = WZ.wz_r2r = g('wz_r2r'); WZ.r2obs = WZ.wz_r2obs = g('wz_r2obs');
-    WZ.impresion = _wzChipVal('wz_impresion_g')||'';
-  }
-}
-
-function _cliValidar(step){
-  _cliCollectStep(step);
-  if(step===1){
-    if(!WZ.nom){ toast('El nombre es obligatorio','error'); return false; }
-    if(!WZ.ci){ toast('La cédula es obligatoria','error'); return false; }
-    if(!WZ.tel){ toast('El teléfono es obligatorio','error'); return false; }
-    if(!WZ.emp){ toast('Selecciona el tipo de empleo','error'); return false; }
-    if((parseFloat(WZ.ing)||0)<=0){ toast('El ingreso mensual es obligatorio','error'); return false; }
-  }
-  _wzScore();
-  return true;
-}
-
-function _cliRender(){
-  var overlay=document.getElementById('wz-overlay');
-  if(!overlay){ overlay=document.createElement('div'); overlay.id='wz-overlay'; overlay.style.cssText='position:fixed;inset:0;z-index:2000;background:var(--bg);overflow-y:auto;display:none'; document.body.appendChild(overlay); }
-  overlay.style.display='block';
-  document.body.style.overflow='hidden';
-  var stepsTpl = ['① Cliente','② Perfil'].map(function(l,i){
-    var on=WZ.step===i+1, done=WZ.step>i+1;
-    return '<div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:'+(on?'700':'500')+';color:'+(on?'var(--p1)':done?'var(--green)':'var(--ink3)')+'">'
-      +'<div style="width:20px;height:20px;border-radius:50%;background:'+(on?'var(--p1)':done?'var(--green)':'var(--rim2)')+';color:'+(on||done?'#fff':'var(--ink3)')+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">'+(done?'✓':(i+1))+'</div>'
-      +'<span style="white-space:nowrap">'+l.slice(2)+'</span></div>' + (i<1?'<div style="height:1px;background:var(--rim);flex:1;min-width:8px"></div>':'');
-  }).join('');
-  var current = WZ.step===1 ? _cliStep1() : _cliStep2();
-  var btnBack = WZ.step>1
-    ? '<button onclick="_cliPrev()" style="padding:11px 20px;border-radius:12px;border:1.5px solid var(--rim);background:var(--surf2);color:var(--ink2);font-family:var(--f);font-weight:700;font-size:13px;cursor:pointer">← Atrás</button>'
-    : '<button onclick="_wzClose()" style="padding:11px 20px;border-radius:12px;border:1.5px solid var(--rim);background:var(--surf2);color:var(--ink2);font-family:var(--f);font-weight:700;font-size:13px;cursor:pointer">Cancelar</button>';
-  var btnNext = WZ.step<2
-    ? '<button onclick="_cliNext()" style="padding:11px 24px;border-radius:12px;background:var(--p1);color:#fff;font-family:var(--f);font-weight:700;font-size:13px;border:none;cursor:pointer;box-shadow:0 2px 10px rgba(91,78,212,.25)">Siguiente →</button>'
-    : '<button onclick="_cliGuardar()" style="padding:11px 24px;border-radius:12px;background:var(--green);color:#fff;font-family:var(--f);font-weight:700;font-size:13px;border:none;cursor:pointer">💾 Guardar Cliente</button>';
-  overlay.innerHTML = '<div style="max-width:1180px;margin:0 auto;padding:26px 20px 34px">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:14px;flex-wrap:wrap">'
-    + '<div style="display:flex;align-items:center;gap:12px">'
-    + '<button onclick="_wzClose()" style="width:40px;height:40px;border-radius:12px;border:1.5px solid var(--rim);background:var(--surf2);cursor:pointer;font-size:18px">←</button>'
-    + '<div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-.3px">'+(WZ.clienteEditId?'Editar Cliente':'Nuevo Cliente')+'</div><div style="font-size:11px;color:var(--ink3)">Paso '+WZ.step+' de 2</div></div>'
-    + '</div>'
-    + '<div data-wz-header style="display:flex;align-items:center;justify-content:flex-end;min-height:44px">'+_cliScorePill()+'</div>'
-    + '</div>'
-    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">'+stepsTpl+'</div>'
-    + '<div style="background:var(--surf);border:1.5px solid var(--rim);border-radius:20px;padding:20px 18px 16px;box-shadow:0 2px 8px rgba(0,0,0,.04)">'
-    + '<div style="font-size:12px;color:var(--ink3);margin-bottom:18px">'+['Información personal y laboral','Perfil crediticio y CrediScore'][WZ.step-1]+'</div>'
-    + current
-    + '<div style="display:flex;justify-content:space-between;gap:10px;margin-top:22px">'+btnBack+btnNext+'</div>'
-    + '</div></div>';
-  _cliHydrate();
-}
-
-function _cliNext(){ if(!_cliValidar(WZ.step)) return; WZ.step=Math.min(2,WZ.step+1); _cliRender(); }
-function _cliPrev(){ _cliCollectStep(WZ.step); WZ.step=Math.max(1,WZ.step-1); _cliRender(); }
-
-function _cliGuardar(){
-  if(!_cliValidar(WZ.step)) return;
-  var edId=WZ.clienteEditId;
-  var cedNorm=(WZ.ci||'').replace(/\s/g,'').toLowerCase();
-  var dup=(S.clientes||[]).find(function(x){ return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm && String(x.id)!==String(edId||''); });
-  if(dup){ toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error'); return; }
-  var obj={
-    id: edId || ((S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1),
-    nombre: WZ.nom||'',
-    cedula: WZ.ci||'',
-    tel: WZ.tel||'',
-    wa: WZ.wa||WZ.tel||'',
-    email: WZ.email||'',
-    ciudad: WZ.ciudad_res||WZ.ciudad||'',
-    estado_ubi: WZ.estado_ubi||'',
-    dir: WZ.dir_det||'',
-    trabajo: WZ.emp||'',
-    empresa: WZ.empresa||'',
-    cargo: WZ.cargo||'',
-    ingreso: WZ.ing||0,
-    ingreso_familiar: WZ.ifam||0,
-    antiguedad: WZ.ant||'',
-    remesas: WZ.rem||'no',
-    dependientes: WZ.dep||0,
-    vivienda: WZ.viv||'',
-    tiempo_dir: WZ.tdir||'',
-    historial: WZ.hist||'',
-    deudas: WZ.deuda||'',
-    banco_estado: WZ.banco||'',
-    banco_nombre: WZ.banco_nm||'',
-    banco_cobro: WZ.banco_cobro||'',
-    cuenta_digitos: WZ.cuenta||'',
-    ahorro: WZ.ahorro||'',
-    cashea: WZ.cashea||'no',
-    cashea_nivel: WZ.cashea_nivel||'',
-    cashea_pago: WZ.cashea_pago||'',
-    fiador: WZ.fiador_tiene||'no',
-    fiador_nom: WZ.fiador_nom||'',
-    fiador_tel: WZ.fiador_tel||'',
-    fiador_ci: WZ.fiador_ci||'',
-    fiador_rel: WZ.fiador_rel||'',
-    ref1:{nom:WZ.r1n||'',tel:WZ.r1t||'',rel:WZ.r1r||'',obs:WZ.r1obs||''},
-    ref2:{nom:WZ.r2n||'',tel:WZ.r2t||'',rel:WZ.r2r||'',obs:WZ.r2obs||''},
-    docs_count: WZ.docsCount||0,
-    impresion: WZ.impresion||'',
-    conocio: WZ.conocio||'',
-    score_indexa: WZ.score||0,
-    f1:WZ.f1||0, f2:WZ.f2||0, f3:WZ.f3||0, f4:WZ.f4||0, f5:WZ.f5||0,
-    estado: 'activo',
-    creado: (edId && (S.clientes||[]).find(function(x){return String(x.id)===String(edId);}) && (S.clientes||[]).find(function(x){return String(x.id)===String(edId);}).creado) || new Date().toISOString()
-  };
-  var idx=(S.clientes||[]).findIndex(function(x){ return String(x.id)===String(obj.id); });
-  if(idx>=0) S.clientes[idx]=Object.assign({}, S.clientes[idx], obj);
-  else S.clientes.push(obj);
-  DB.saveCliente(obj);
-  _wzClose();
-  nav('clientes');
-  toast(idx>=0?'Cliente actualizado':'Cliente registrado','success');
-}
-
 function openAddCliente(id=null){
-  var c=id?(S.clientes||[]).find(function(x){return String(x.id)===String(id);}):null;
-  _cliInitFromCliente(c||null);
-  _cliRender();
+  const c=id?S.clientes.find(x=>x.id===id):null,ed=!!c;
+  $('mic').textContent='CLI';$('mtt').textContent=ed?'Editar Cliente':'Registrar Cliente';$('msb').textContent=ed?c.nombre:'Datos del cliente';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML=`<div class="fgr">
+    <div class="fg"><label>Nombre completo *</label><input class="fi" id="c_n" value="${(c&&c.nombre)||''}" placeholder="Nombre completo"></div>
+    <div class="fg"><label>N° Cédula *</label><input class="fi" id="c_ced" value="${(c&&c.cedula)||''}" placeholder="V-00000000"></div>
+    <div class="fg"><label>Teléfono</label><input class="fi" id="c_tel" value="${(c&&c.tel)||''}" placeholder="0412-000-0000"></div>
+    <div class="fg"><label>Email</label><input class="fi" id="c_email" type="email" value="${(c&&c.email)||''}" placeholder="correo@ejemplo.com"></div>
+    <div class="fg"><label>Ciudad</label><input class="fi" id="c_ciudad" value="${(c&&c.ciudad)||''}" placeholder="Caracas"></div>
+    <div class="fg"><label>Trabajo / Ocupación</label><input class="fi" id="c_trab" value="${(c&&c.trabajo)||''}" placeholder="Comerciante..."></div>
+    <div class="fg"><label>Ingreso mensual ($)</label><input class="fi" id="c_ing" type="number" value="${(c&&c.ingreso)||''}"></div>
+    <div class="fg"><label>Contacto emergencia</label><input class="fi" id="c_emg" value="${(c&&c.emergencia)||''}" placeholder="Nombre y teléfono"></div>
+  </div>
+  <div class="fgr c1" style="gap:8px;margin-top:4px">
+    <div class="fg"><label>Notas internas</label><textarea class="fta" id="c_notas">${(c&&c.notas)||''}</textarea></div>
+  </div>`;
+  S.saveFn=()=>{
+    const g=i=>{ var el=$(i); return el?el.value.trim():null; };
+    if(!g('c_n')||!g('c_ced')){toast('Nombre y cédula son obligatorios','error');return false;}
+    // Validar cédula duplicada solo en nuevo registro
+    if(!ed){
+      var cedNorm=g('c_ced').replace(/\s/g,'').toLowerCase();
+      var dup=S.clientes.find(function(x){return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm;});
+      if(dup){toast('⚠ Ya existe un cliente con esa cédula: '+dup.nombre,'error');return false;}
+    }
+    const obj={id:(c&&c.id)||(S.clientes.length?Math.max(...S.clientes.map(x=>x.id))+1:1),nombre:g('c_n'),cedula:g('c_ced'),tel:g('c_tel')||'N/A',email:g('c_email')||'',ciudad:g('c_ciudad')||'',trabajo:g('c_trab')||'',ingreso:parseFloat(($('c_ing')&&$('c_ing').value))||0,emergencia:g('c_emg')||'',notas:g('c_notas')||'',estado:(c&&c.estado)||'activo'};
+    if(ed){const i=S.clientes.findIndex(x=>x.id===c.id);S.clientes[i]=obj;}else S.clientes.push(obj);
+    DB.saveCliente(obj);
+    closeM();nav('clientes');toast(ed?'Cliente actualizado':'Cliente registrado','success');return true;
+  };
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar Cliente</button>`;
+  $('ov').style.display='flex';
 }
 function editCliente(id){openAddCliente(id);}
 function delCliente(id){
@@ -5806,10 +5309,7 @@ function _wzRender(motoId){
     : '<div style="font-size:12px;color:var(--ink3);padding:7px 16px;background:var(--surf2);border-radius:50px;border:1px solid var(--rim)">Score aparece al completar datos</div>';
 
   // ── PASO 1: Datos del cliente ──
-  var step1 = '<div class="fg" style="margin-bottom:10px"><label class="fsec" style="display:block;margin-bottom:5px">Cliente registrado</label>'
-    + '<select class="fs" id="wz_cliente_sel" onchange="_wzPickCliente(this)">'+_wzClienteOptions()+'</select>'
-    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Puedes elegir un cliente ya registrado o dejarlo en nuevo cliente y escribir los datos manualmente.</div></div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+  var step1 = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     + _wzFg('Nombre completo *','wz_nom','text','Ej: Carlos Pérez','',true)
     + _wzFg('N° Cédula *','wz_ci','text','V-12345678','',true)
     + _wzFg('Teléfono *','wz_tel','tel','0412-0000000','',true)
@@ -6112,7 +5612,6 @@ function _wzRender(motoId){
     + btnNext
     + '</div>';
 
-  setTimeout(function(){ _wzHydrate(); }, 0);
   // Inicializar preview financiero si hay precio (ahora en paso 3 = moto)
   if(WZ.step===3 && WZ.precio>0){
     setTimeout(function(){ _wzActualizarFinPreview(WZ.precio); }, 50);
@@ -6132,104 +5631,8 @@ function _wzRender(motoId){
 
 // ── Helper: campo de formulario ──
 function _wzFg(label, id, type, placeholder, extra, required){
-  var val = (WZ && WZ[id] != null) ? String(WZ[id]).replace(/"/g,'&quot;') : '';
   return '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">'+label+'</label>'
-    +'<input class="fi" id="'+id+'" type="'+type+'" placeholder="'+placeholder+'" value="'+val+'" '+(extra||'')+' '+(required?'required':'')+' style="width:100%"></div>';
-}
-
-function _wzClienteOptions(){
-  var list = (S.clientes||[]).filter(function(c){ return c && !c.eliminado; });
-  return '<option value="">Nuevo cliente</option>' + list.map(function(c){
-    return '<option value="'+c.id+'">'+(c.nombre||'Sin nombre')+' — C.I. '+(c.cedula||'—')+'</option>';
-  }).join('');
-}
-
-function _wzHydrate(){
-  var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
-  ids.forEach(function(id){
-    var el=document.getElementById(id);
-    if(!el) return;
-    if(id==='wz_cliente_sel' && WZ.clienteSel!=null && WZ.clienteSel!==''){ el.value=String(WZ.clienteSel); return; }
-    if(WZ[id]!=null && WZ[id]!=='') el.value=WZ[id];
-  });
-  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
-  var cashea = WZ.cashea||'no';
-  var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; if(document.getElementById('wz_cashea_det')) _wzToggleCashea(cashea);
-  var fiador = WZ.fiador_tiene||'no';
-  var fiadorRadio=document.querySelector('input[name="wz_fiador"][value="'+fiador+'"]'); if(fiadorRadio) fiadorRadio.checked=true; if(document.getElementById('wz_fiador_det')) _wzToggleFiador(fiador);
-  function pick(group,val){ if(val==null || val==='') return; var container=document.getElementById(group); if(container){ Array.from(container.children).forEach(function(el){ if((el.getAttribute('onclick')||'').indexOf("'"+String(val)+"'")>=0) _wzChip(el,group,String(val)); }); } }
-  pick('wz_emp_g', WZ.emp||WZ['_chip_wz_emp_g']);
-  pick('wz_hist_g', WZ.hist||WZ['_chip_wz_hist_g']);
-  pick('wz_deuda_g', WZ.deuda||WZ['_chip_wz_deuda_g']);
-  pick('wz_impresion_g', WZ.impresion||WZ['_chip_wz_impresion_g']);
-  pick('wz_dep_g', String(WZ.dep||WZ['_chip_wz_dep_g']||''));
-  if(WZ.step===3 && WZ.precio){ var pInp=document.getElementById('wz_precio'); if(pInp) pInp.value=WZ.precio; }
-  _wzScore();
-}
-
-function _wzPickCliente(sel){
-  var id = parseInt((sel&&sel.value)||0,10);
-  WZ.clienteSel = id || '';
-  if(!id){
-    WZ.wz_nom = WZ.wz_ci = WZ.wz_tel = WZ.wz_wa = WZ.wz_email = WZ.wz_ciudad = '';
-    WZ.wz_emp = WZ.wz_ant = WZ.wz_conocio = '';
-    WZ.wz_ing = WZ.wz_ifam = '';
-    return _wzRender();
-  }
-  var c = (S.clientes||[]).find(function(x){ return parseInt(x.id,10)===id; });
-  if(!c) return;
-  WZ.nom = WZ.wz_nom = c.nombre || '';
-  WZ.ci = WZ.wz_ci = c.cedula || '';
-  WZ.tel = WZ.wz_tel = c.tel || '';
-  WZ.wa = WZ.wz_wa = c.wa || c.tel || '';
-  WZ.email = WZ.wz_email = c.email || '';
-  WZ.ciudad = WZ.wz_ciudad = c.ciudad || '';
-  WZ.emp = WZ.wz_emp = c.trabajo || '';
-  WZ.ant = WZ.wz_ant = c.antiguedad || '';
-  WZ.ing = WZ.wz_ing = c.ingreso || '';
-  WZ.ifam = WZ.wz_ifam = c.ingreso_familiar || '';
-  WZ.conocio = WZ.wz_conocio = c.conocio || '';
-  WZ.viv = WZ.wz_viv = c.vivienda || '';
-  WZ.tdir = WZ.wz_tdir = c.tiempo_dir || '';
-  WZ.estado_ubi = WZ.wz_estado = c.estado_ubi || '';
-  WZ.ciudad_res = WZ.wz_ciudad_res = c.ciudad || '';
-  WZ.dir_det = WZ.wz_dir_det = c.dir || '';
-  WZ.empresa = WZ.wz_empresa = c.empresa || '';
-  WZ.cargo = WZ.wz_cargo = c.cargo || '';
-  WZ.rem = WZ.wz_rem = c.remesas || '';
-  WZ.dep = c.dependientes || 0;
-  WZ.hist = c.historial || '';
-  WZ.deuda = c.deudas || '';
-  WZ.banco = WZ.wz_banco = c.banco_estado || '';
-  WZ.banco_nm = WZ.wz_banco_nm = c.banco_nombre || '';
-  WZ.banco_cobro = WZ.wz_banco_cobro = c.banco_cobro || '';
-  WZ.cuenta = WZ.wz_cuenta = c.cuenta_digitos || '';
-  WZ.ahorro = WZ.wz_ahorro = c.ahorro || '';
-  WZ.cashea = c.cashea || 'no';
-  WZ.cashea_nivel = WZ.wz_cashea_nivel = c.cashea_nivel || '';
-  WZ.cashea_pago = WZ.wz_cashea_pago = c.cashea_pago || '';
-  WZ.fiador_tiene = c.fiador || 'no';
-  WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
-  WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
-  WZ.fiador_ci = WZ.wz_fiador_ci = c.fiador_ci || '';
-  WZ.fiador_rel = WZ.wz_fiador_rel = c.fiador_rel || '';
-  WZ.r1n = c.ref1&&c.ref1.nom || '';
-  WZ.r1t = c.ref1&&c.ref1.tel || '';
-  WZ.r1r = c.ref1&&c.ref1.rel || '';
-  WZ.r1obs = c.ref1&&c.ref1.obs || '';
-  WZ.r2n = c.ref2&&c.ref2.nom || '';
-  WZ.r2t = c.ref2&&c.ref2.tel || '';
-  WZ.r2r = c.ref2&&c.ref2.rel || '';
-  WZ.r2obs = c.ref2&&c.ref2.obs || '';
-  WZ.docsCount = c.docs_count || 0;
-  WZ.impresion = c.impresion || '';
-  WZ.score = c.score_indexa || WZ.score || 0;
-  WZ.f1 = c.f1 || WZ.f1 || 0;
-  WZ.f2 = c.f2 || WZ.f2 || 0;
-  WZ.f3 = c.f3 || WZ.f3 || 0;
-  WZ.f4 = c.f4 || WZ.f4 || 0;
-  WZ.f5 = c.f5 || WZ.f5 || 0;
-  _wzRender();
+    +'<input class="fi" id="'+id+'" type="'+type+'" placeholder="'+placeholder+'" '+(extra||'')+' '+(required?'required':'')+' style="width:100%"></div>';
 }
 
 // ── Selección de moto del inventario ──
@@ -6523,30 +5926,27 @@ function _wzValidar(){
   }
   // Guardar valores antes de avanzar
   if(s===1){
-    WZ.clienteSel = g('wz_cliente_sel');
     WZ.nom = g('wz_nom'); WZ.ci = g('wz_ci'); WZ.tel = g('wz_tel');
     WZ.wa = g('wz_wa'); WZ.email = g('wz_email'); WZ.ciudad = g('wz_ciudad');
     WZ.emp = g('wz_emp'); WZ.ant = g('wz_ant');
     WZ.ing = parseFloat((document.getElementById('wz_ing')||{}).value)||0;
     WZ.conocio = g('wz_conocio');
-    WZ.wz_nom = WZ.nom; WZ.wz_ci = WZ.ci; WZ.wz_tel = WZ.tel; WZ.wz_wa = WZ.wa; WZ.wz_email = WZ.email; WZ.wz_ciudad = WZ.ciudad;
-    WZ.wz_emp = WZ.emp; WZ.wz_ant = WZ.ant; WZ.wz_ing = WZ.ing; WZ.wz_conocio = WZ.conocio;
   }
   if(s===3){
     WZ.uso = g('wz_uso');
     WZ.vin = g('wz_vin'); WZ.color = g('wz_color'); WZ.placa = g('wz_placa');
   }
   if(s===2){
-    WZ.obs = g('wz_obs'); WZ.wz_obs = WZ.obs;
-    WZ.viv = g('wz_viv'); WZ.wz_viv = WZ.viv;
-    WZ.tdir = g('wz_tdir'); WZ.wz_tdir = WZ.tdir;
-    WZ.estado_ubi = g('wz_estado'); WZ.wz_estado = WZ.estado_ubi;
-    WZ.ciudad_res = g('wz_ciudad_res'); WZ.wz_ciudad_res = WZ.ciudad_res;
-    WZ.dir_det = g('wz_dir_det'); WZ.wz_dir_det = WZ.dir_det;
-    WZ.dir_q = g('wz_dir_q'); WZ.wz_dir_q = WZ.dir_q;
+    WZ.obs = g('wz_obs');
+    WZ.viv = g('wz_viv');
+    WZ.tdir = g('wz_tdir');
+    WZ.estado_ubi = g('wz_estado');
+    WZ.ciudad_res = g('wz_ciudad_res');
+    WZ.dir_det = g('wz_dir_det');
+    WZ.dir_q = g('wz_dir_q');
     WZ.emp = _wzChipVal('wz_emp_g')||g('wz_emp')||'';
-    WZ.empresa = g('wz_empresa'); WZ.wz_empresa = WZ.empresa;
-    WZ.cargo = g('wz_cargo'); WZ.wz_cargo = WZ.cargo;
+    WZ.empresa = g('wz_empresa');
+    WZ.cargo = g('wz_cargo');
     WZ.ing = parseFloat(g('wz_ing'))||0;
     WZ.ifam = parseFloat(g('wz_ifam'))||0;
     WZ.ant = g('wz_ant');
@@ -6661,16 +6061,6 @@ function _wzRenderResultado(){
         return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rim2);font-size:12.5px"><span style="color:var(--ink3)">'+row[0]+'</span><span style="font-weight:700;color:'+col2color+'">'+row[1]+'</span></div>';
       }).join('')
       +'</div>'
-      +'<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
-      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Cobro de Inicial</div>'
-      +'<div class="fgr">'
-      +'<div class="fg"><label>Método de pago inicial *</label><select class="fs" id="wz_ini_metodo">'
-      +(((_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(function(c){ return '<option value="'+c.nombre+'">'+c.nombre+'</option>'; }).join('')) || '<option value="Efectivo USD">Efectivo USD</option>')
-      +'</select></div>'
-      +'<div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="wz_ini_ref" placeholder="N° de referencia (opcional)"></div>'
-      +'</div>'
-      +'<div style="font-size:11px;color:var(--ink3);margin-top:6px">La inicial se acreditará a la cuenta seleccionada al guardar el financiamiento.</div>'
-      +'</div>'
     :'');
 }
 
@@ -6683,15 +6073,9 @@ function _wzGuardar(){
 
   // Crear cliente
   var cliId = S.clientes.length ? Math.max.apply(null,S.clientes.map(function(x){return x.id||0;}))+1 : 1;
-  // Verificar si ya existe por selector o por cédula
-  var existing = null;
-  if(WZ.clienteSel){
-    existing = S.clientes.find(function(c){ return !c.eliminado && String(c.id)===String(WZ.clienteSel); }) || null;
-  }
-  if(!existing){
-    existing = S.clientes.find(function(c){ return !c.eliminado && c.cedula && c.cedula.replace(/\s/g,'').toLowerCase()===(WZ.ci||'').replace(/\s/g,'').toLowerCase(); }) || null;
-  }
-  if(existing){ cliId = existing.id; WZ.nom = existing.nombre || WZ.nom; }
+  // Verificar si ya existe por cédula
+  var existing = S.clientes.find(function(c){ return !c.eliminado && c.cedula && c.cedula.replace(/\s/g,'').toLowerCase()===(WZ.ci||'').replace(/\s/g,'').toLowerCase(); });
+  if(existing){ cliId = existing.id; }
 
   var cliente = existing || {
     id: cliId,
@@ -6746,7 +6130,7 @@ function _wzGuardar(){
   var credId = 'CRED-'+String(S.creds.length+1).padStart(3,'0');
   var newCred = {
     id: credId,
-    cli: (existing&&existing.nombre)||WZ.nom||'',
+    cli: WZ.nom||'',
     clienteId: cliId,
     modelo: WZ.motoModelo||'',
     motoId: WZ.motoInvId||null,
@@ -6779,79 +6163,20 @@ function _wzGuardar(){
   S.creds.push(newCred);
   DB.saveCred(newCred);
 
-  // Marcar moto como financiada o crearla desde catálogo
+  // Marcar moto como financiada
   if(WZ.motoInvId){
     var mi = S.motos.findIndex(function(m){ return m.id===WZ.motoInvId; });
-    if(mi>=0){
-      S.motos[mi].estado='financiada';
-      S.motos[mi].cliente=((existing&&existing.nombre)||WZ.nom);
-      if(WZ.vin) S.motos[mi].vin=WZ.vin;
-      if(WZ.color) S.motos[mi].color=WZ.color;
-      if(WZ.placa) S.motos[mi].placa=WZ.placa;
-      DB.saveMoto(S.motos[mi]);
-    }
-  } else if(WZ.motoModelo){
-    var newMotoId = S.motos.length ? Math.max.apply(null, S.motos.map(function(x){ return x.id||0; })) + 1 : 1;
-    var motoInvNueva = {
-      id:newMotoId,
-      modelo:WZ.motoModelo||'',
-      precio:parseFloat(WZ.precio)||0,
-      color:WZ.color||'',
-      vin:WZ.vin||('VIN-'+Date.now().toString().slice(-6)),
-      placa:WZ.placa||'',
-      estado:'financiada',
-      cliente:((existing&&existing.nombre)||WZ.nom)||null,
-      gps:false,
-      notas:'Creada automáticamente desde catálogo al registrar financiamiento '+credId,
-      ini:r.ini,
-      fin:r.fin,
-      total:r.total,
-      cuotaQ:r.cuotaQ,
-      cuotaM:r.cuotaM||r.cuotaQ*2,
-      totalPagado:r.totalPagado||0
-    };
-    S.motos.push(motoInvNueva);
-    DB.saveMoto(motoInvNueva);
-    newCred.motoId = motoInvNueva.id;
-    DB.saveCred(newCred);
+    if(mi>=0){ S.motos[mi].estado='financiada'; S.motos[mi].cliente=WZ.nom; DB.saveMoto(S.motos[mi]); }
   }
-
-  // Registrar la inicial también en Pagos
-  var iniMetodo = ($('wz_ini_metodo')&&$('wz_ini_metodo').value) || (_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD');
-  var iniRef = ($('wz_ini_ref')&&$('wz_ini_ref').value) || '';
-  var pagoIniId = 'PAG-'+Date.now();
-  var pagoIni = {
-    id:pagoIniId,
-    cli:newCred.cli,
-    cred:credId,
-    fecha:newCred.fecha,
-    monto:r.ini,
-    metodo:iniMetodo,
-    cuenta:iniMetodo,
-    cobrador:(S.currentUser&&S.currentUser.nombre)||'Admin',
-    referencia:iniRef,
-    estado:'confirmado',
-    tipoOperacion:'inicial_credito',
-    esInicial:true,
-    realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
-    tasaBs:window._tasaBsGlobal||1
-  };
-  S.pagos.push(pagoIni);
-  DB.savePago(pagoIni);
 
   // Movimiento de inicial
   var movIni = {
     id:'MOV-'+Date.now(),
     tipo:'deposito',
-    tipoOperacion:'inicial_credito',
-    conceptoPago:pagoIniId,
-    creditoId:credId,
-    conceptoCredito:credId,
     concepto:'Inicial · '+newCred.cli+' · '+credId+' ('+newCred.modelo+')',
     monto:r.ini,
-    cuentaDestino:iniMetodo,
+    cuentaDestino:(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD'),
     fecha:newCred.fecha,
-    referencia:iniRef,
     realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
     hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
   };
@@ -6860,7 +6185,7 @@ function _wzGuardar(){
 
   _wzClose();
   nav('creditos');
-  toast('✅ Solicitud creada · '+credId+' · Inicial '+fmt(r.ini)+' → '+iniMetodo,'success');
+  toast('✅ Solicitud creada · '+credId+' · Score Indexa: '+WZ.score,'success');
 }
 
 // ══════════════════════════════════════════
@@ -6978,9 +6303,6 @@ function openAddCredLegacy(motoId=null){
     var movIni={
       id:'MOV-'+Date.now(),
       tipo:'deposito',
-      tipoOperacion:'inicial_credito',
-      creditoId:newCred.id,
-      conceptoCredito:newCred.id,
       concepto:'Inicial · '+newCred.cli+' · '+newCred.id+' ('+newCred.modelo+')',
       monto:r.ini,
       cuentaOrigen:null,
@@ -7006,117 +6328,60 @@ function cancelarCred(credId){
   if(!requireDeletePermission()) return;
   var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
   window._cancelCredId = credId;
-  window._cancelCredModo = 'mantener';
-  $('mic').textContent='✕'; $('mtt').textContent='Eliminar Financiamiento'; $('msb').textContent='El registro quedará auditado';
+  $('mic').textContent='✕'; $('mtt').textContent='Cancelar Financiamiento'; $('msb').textContent=c.id+' · '+c.cli;
   $('modal-box').className='modal';
-  $('mbd').innerHTML = '<div style="text-align:left;padding:10px 0">'
-    +'<div style="text-align:center;font-size:42px;margin-bottom:10px">FIN</div>'
-    +'<div style="text-align:center;font-size:15px;font-weight:800">¿Cómo quieres eliminar el financiamiento '+c.id+'?</div>'
-    +'<div style="text-align:center;color:var(--ink3);font-size:13px;margin-top:6px">'+c.cli+' · '+c.modelo+' · '+fmt(getCreditoPagosConfirmados(c))+' cobrados</div>'
-    +'<div style="margin-top:14px;display:grid;gap:10px">'
-    +'<label style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer">'
-    +'<input type="radio" name="del_cred_modo" value="mantener" checked onchange="window._cancelCredModo=this.value">'
-    +'<div><div style="font-weight:800">Eliminar pero seguir contando pagos y cuentas</div>'
-    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">El financiamiento pasa a cancelado y la moto vuelve al inventario, pero los pagos y movimientos en Cuentas permanecen para trazabilidad operativa.</div></div></label>'
-    +'<label style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer">'
-    +'<input type="radio" name="del_cred_modo" value="completo" onchange="window._cancelCredModo=this.value">'
-    +'<div><div style="font-weight:800">Eliminar por completo</div>'
-    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">Además de cancelar el financiamiento, los pagos ligados a este crédito y sus movimientos en Cuentas también se marcan como eliminados. El registro queda auditado.</div></div></label>'
-    +'</div>'
-    +'<div style="margin-top:10px;padding:9px;background:var(--ambers);border-radius:8px;font-size:12px;color:var(--ink)">'
-    +'⚠ En ambos casos el financiamiento no se borra de la base: queda con trazabilidad de quién lo eliminó, cuándo y por qué.</div></div>';
+  $('mbd').innerHTML = '<div style="text-align:center;padding:12px 0">'
+    +'<div style="font-size:38px;margin-bottom:10px">≡</div>'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+c.cli+' — '+c.modelo+'</div>'
+    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:16px">'
+    +c.pagado+' cuotas pagadas de '+(c.totalCuotas||c.plazo*2)+' · Pagado: '+fmt((c.pagado||0)*(c.cuotaQ||c.cuota||0))
+    +'</div></div>'
+    +'<div class="fg"><label>Razón de cancelación *</label>'
+    +'<select class="fs" id="cc_razon">'
+    +'<option value="">— Seleccionar —</option>'
+    +'<option>Acuerdo entre las partes</option>'
+    +'<option>Cliente no puede pagar</option>'
+    +'<option>Moto recuperada</option>'
+    +'<option>Refinanciamiento</option>'
+    +'<option>Error administrativo</option>'
+    +'<option>Otro</option>'
+    +'</select></div>'
+    +'<div class="fg" style="margin-top:8px"><label>Notas adicionales</label>'
+    +'<textarea class="fta" id="cc_notas" placeholder="Detalles de la cancelación..."></textarea></div>'
+    +'<div style="margin-top:12px;padding:9px 11px;background:var(--ambers);border-radius:8px;font-size:12px">'
+    +'⚠ El crédito quedará como <strong>cancelado</strong>. La moto volverá al inventario como disponible.</div>';
+  S.saveFn = function(){
+    var razon = ($('cc_razon')&&$('cc_razon').value)||'';
+    if(!razon){ toast('Selecciona una razón de cancelación','error'); return false; }
+    var ci = S.creds.findIndex(function(x){return x.id===credId;});
+    if(ci>=0){
+      S.creds[ci].estado='cancelado';
+      S.creds[ci].canceladoPor  = (S.currentUser&&S.currentUser.nombre)||'Admin';
+      S.creds[ci].canceladoEn   = new Date().toISOString();
+      S.creds[ci].canceladoRazon= razon;
+      S.creds[ci].canceladoNotas= ($('cc_notas')&&$('cc_notas').value)||'';
+      DB.updateCred(credId,{
+        estado:'cancelado',
+        canceladoPor:S.creds[ci].canceladoPor,
+        canceladoEn:S.creds[ci].canceladoEn,
+        canceladoRazon:razon,
+        canceladoNotas:S.creds[ci].canceladoNotas
+      });
+      // Return moto to inventory
+      var mi = S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
+      if(mi>=0&&S.motos[mi].estado==='financiada'){
+        S.motos[mi].estado='recuperada'; S.motos[mi].cliente=null;
+        DB.saveMoto(S.motos[mi]);
+      }
+    }
+    syncTodosEstadosClientes();
+    closeM(); nav('creditos');
+    toast('Crédito '+credId+' cancelado — moto liberada','info');
+    return true;
+  };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="auditarYEliminarCred()">Confirmar eliminación</button>';
+    +'<button class="btn btn-d" onclick="saveM()">✕ Confirmar cancelación</button>';
   $('ov').style.display='flex';
-}
-
-function auditarYEliminarCred(){
-  if(!requireDeletePermission()) return;
-  var credId = window._cancelCredId;
-  var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
-  closeM();
-  confirmarEliminacion({
-    titulo:'Eliminar Financiamiento',
-    descripcion:'Financiamiento '+c.id+' · '+c.cli+' · '+c.modelo,
-    onConfirm:function(audit){
-      ejecutarDelCred(audit);
-    }
-  });
-}
-
-function marcarPagosYCuentasCreditoEliminados(credId, motivo){
-  var ahora = new Date().toISOString();
-  var actor = (S.currentUser&&S.currentUser.nombre)||'Admin';
-  (S.pagos||[]).forEach(function(p){
-    if(!p || p.eliminado || p.cred!==credId) return;
-    p.eliminado = true;
-    p.eliminadoModo = 'completo';
-    p.mantenerEnAmortizacion = false;
-    p.eliminadoPor = actor;
-    p.eliminadoPorUid = (S.currentUser&&S.currentUser.uid)||'';
-    p.eliminadoEn = ahora;
-    if(motivo) p.eliminadoRazon = motivo;
-    DB.savePago(p);
-  });
-  (S.movimientos||[]).forEach(function(m){
-    if(!m || m.eliminado) return;
-    var mismoCredito = m.creditoId===credId || m.conceptoCredito===credId || m.cred===credId || (m.concepto&&m.concepto.indexOf(credId)>=0);
-    if(!mismoCredito) return;
-    m.eliminado = true;
-    m.eliminadoPor = actor;
-    m.eliminadoEn = ahora;
-    if(motivo) m.eliminadoRazon = motivo;
-    DB.saveMovimiento(m);
-  });
-}
-
-function ejecutarDelCred(audit){
-  var credId = window._cancelCredId; if(!credId) return;
-  var modo = (window._cancelCredModo==='completo') ? 'completo' : 'mantener';
-  var ci = S.creds.findIndex(function(x){return x.id===credId;});
-  if(ci>=0){
-    S.creds[ci].estado='cancelado';
-    S.creds[ci].canceladoPor  = (S.currentUser&&S.currentUser.nombre)||'Admin';
-    S.creds[ci].canceladoEn   = new Date().toISOString();
-    S.creds[ci].canceladoRazon= (audit&&audit.eliminadoRazon)||'Sin especificar';
-    S.creds[ci].canceladoNotas= '';
-    S.creds[ci].eliminadoModo = modo;
-    if(audit) Object.assign(S.creds[ci], audit);
-    // El financiamiento debe seguir visible como cancelado en la tabla.
-    // Aunque se audite la eliminación y se borren pagos/cuentas en modo completo,
-    // el crédito NO debe marcarse como eliminado lógico para no desaparecer del listado.
-    S.creds[ci].eliminado = false;
-    DB.updateCred(credId,{
-      estado:'cancelado',
-      canceladoPor:S.creds[ci].canceladoPor,
-      canceladoEn:S.creds[ci].canceladoEn,
-      canceladoRazon:S.creds[ci].canceladoRazon,
-      canceladoNotas:S.creds[ci].canceladoNotas,
-      eliminado: false,
-      eliminadoPor: audit&&audit.eliminadoPor,
-      eliminadoPorUid: audit&&audit.eliminadoPorUid,
-      eliminadoEn: audit&&audit.eliminadoEn,
-      eliminadoRazon: audit&&audit.eliminadoRazon,
-      eliminadoModo: modo
-    });
-
-    if(modo==='completo'){
-      marcarPagosYCuentasCreditoEliminados(credId, 'Financiamiento eliminado por completo: '+S.creds[ci].canceladoRazon);
-    }
-
-    var mi = S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
-    if(mi>=0 && (S.motos[mi].estado==='financiada' || S.motos[mi].estado==='recuperada')){
-      S.motos[mi].estado='recuperada';
-      S.motos[mi].cliente=null;
-      S.motos[mi].creditoId=null;
-      DB.saveMoto(S.motos[mi]);
-    }
-  }
-  syncTodosEstadosClientes();
-  window._cancelCredId = null;
-  window._cancelCredModo = null;
-  closeM(); nav('creditos');
-  toast(modo==='completo' ? 'Financiamiento eliminado por completo: pagos y cuentas también fueron eliminados' : 'Financiamiento cancelado: pagos y cuentas se conservaron','info');
 }
 
 function openEditCred(credId){
@@ -7318,7 +6583,7 @@ function openAddPago(){
       S.creds[ci].saldoProxCuota=saldoProxCuota;
       if(S.creds[ci].mora>0){S.creds[ci].mora=0;S.creds[ci].estado='activo';}
 
-      var recienCompletado = S.creds[ci].estado!=='completado' && cuotasPagadas>=totalCuotas;
+      var recienCompletado = !S.creds[ci].estado==='completado' && cuotasPagadas>=totalCuotas;
       if(cuotasPagadas>=totalCuotas && S.creds[ci].estado!=='completado'){
         recienCompletado = true;
         S.creds[ci].estado='completado';
@@ -7335,7 +6600,7 @@ function openAddPago(){
         // ── Punto 5: Marcar cliente como premium si pagó sin mora ──
         var cliIdx=S.clientes.findIndex(function(cl){return cl.nombre===S.creds[ci].cli;});
         if(cliIdx>=0){
-          var tuvomora=(S.creds[ci].tuvoMoraHistorica===true)||S.pagos.some(function(p){return p.cred===credId&&p.mora>0;});
+          var tuvomora=S.pagos.some(function(p){return p.cred===credId&&p.mora>0;});
           if(!tuvomora && !(S.creds[ci].mora>0)){
             S.clientes[cliIdx].premium=true;
             S.clientes[cliIdx].premioPor=credId;
@@ -7360,13 +6625,6 @@ function openAddPago(){
         pagosRegistrados:historial,
         saldoProxCuota:saldoProxCuota
       });
-      recalcularCreditoDesdePagos(credId);
-      calcularMoraAuto();
-      c2=S.creds[ci];
-      cuotaVal=parseFloat(c2.cuotaQ||c2.cuota||0);
-      saldoProxCuota=parseFloat(c2.saldoProxCuota||0)||0;
-      cuotasPagadas=parseInt(c2.pagado||0,10)||0;
-      recienCompletado = c2.estado==='completado' && !!c2.fechaCompletado;
 
       var msg='✓ Pago de '+fmt(monto)+' registrado';
       if(cuotasAfectadas.length>1) msg+=' · Cuotas '+cuotasAfectadas[0]+' a '+cuotasAfectadas[cuotasAfectadas.length-1]+' cubiertas';
@@ -7682,9 +6940,7 @@ function ejecutarDelPago(){
   // Si es eliminación completa, recalcular el crédito y eliminar el movimiento asociado.
   if(modo==='completo'){
     recalcularCreditoDesdePagos(p.cred);
-    var mi=S.movimientos.findIndex(function(m){
-      return !m.eliminado && (m.conceptoPago===p.id || (m.concepto&&m.concepto.includes(p.cred)&&m.monto===p.monto&&m.fecha===p.fecha));
-    });
+    var mi=S.movimientos.findIndex(function(m){return m.concepto&&m.concepto.includes(p.cred)&&m.monto===p.monto&&m.fecha===p.fecha&&!m.eliminado;});
     if(mi>=0){
       S.movimientos[mi].eliminado=true;
       S.movimientos[mi].eliminadoPor=(S.currentUser&&S.currentUser.nombre)||'Admin';
@@ -8061,8 +7317,6 @@ function recalcularCreditoDesdePagos(credId){
   S.creds[ci].pagosRegistrados=historial;
   S.creds[ci].saldoProxCuota=saldoProxCuota;
   S.creds[ci].estado=nuevoEstado;
-  if(nuevoEstado==='completado' && !S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=new Date().toISOString().split('T')[0];
-  if(nuevoEstado!=='completado' && S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=null;
 
   // Si el crédito era liquidación anticipada pero ya no hay pago de liquidación activo,
   // limpiar los metadatos de liquidación para que el saldo vuelva al real original
@@ -8085,8 +7339,7 @@ function recalcularCreditoDesdePagos(credId){
     pagado:cuotasPagadas,
     pagosRegistrados:historial,
     saldoProxCuota:saldoProxCuota,
-    estado:nuevoEstado,
-    fechaCompletado:S.creds[ci].fechaCompletado||null
+    estado:nuevoEstado
   },extraClear));
   syncEstadoClientePorCredito(credId);
   syncTodosEstadosClientes();
@@ -8151,38 +7404,24 @@ function openEditPago(pagoId){
     +'<div class="fg"><label>Cobrador</label>'
     +'<select class="fs" id="ep_cobrador">'+(cobrOpts||'<option>'+p.cobrador+'</option>')+'</select></div>'
     +'</div>'
-    +'<div style="margin-top:10px;padding:8px 11px;background:var(--okbg);border:1px solid var(--okbd);border-radius:8px;font-size:11.5px;color:var(--green)">'
-    +'✓ El crédito se recalculará automáticamente al guardar cualquier cambio en el pago.</div>';
+    +'<div style="margin-top:10px;padding:8px 11px;background:var(--ambers);border-radius:8px;font-size:11.5px">'
+    +'⚠ Editar el monto NO recalcula el crédito automáticamente. Si cambias el monto por un error, verifica el progreso del crédito.</div>';
   S.saveFn = function(){
     var nuevoMonto = parseFloat(($('ep_monto')&&$('ep_monto').value))||0;
     if(nuevoMonto<=0){ toast('El monto debe ser mayor a 0','error'); return false; }
     var pi = S.pagos.findIndex(function(x){return x.id===pagoId;});
     if(pi<0){ toast('Pago no encontrado','error'); return false; }
-    var credId = S.pagos[pi].cred;
     // Save who edited and when for audit trail
     S.pagos[pi].monto      = nuevoMonto;
     S.pagos[pi].fecha      = ($('ep_fecha')&&$('ep_fecha').value)||p.fecha;
     S.pagos[pi].metodo     = ($('ep_metodo')&&$('ep_metodo').value)||p.metodo;
-    S.pagos[pi].cuenta     = S.pagos[pi].metodo;
     S.pagos[pi].estado     = ($('ep_estado')&&$('ep_estado').value)||p.estado;
     S.pagos[pi].referencia = ($('ep_ref')&&$('ep_ref').value)||'';
     S.pagos[pi].cobrador   = ($('ep_cobrador')&&$('ep_cobrador').value)||p.cobrador;
     S.pagos[pi].editadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
     S.pagos[pi].editadoEn  = new Date().toISOString();
     DB.savePago(S.pagos[pi]);
-
-    var mi = (S.movimientos||[]).findIndex(function(m){ return !m.eliminado && m.conceptoPago===pagoId; });
-    if(mi>=0){
-      S.movimientos[mi].monto = nuevoMonto;
-      S.movimientos[mi].fecha = S.pagos[pi].fecha;
-      S.movimientos[mi].cuentaDestino = S.pagos[pi].metodo || S.movimientos[mi].cuentaDestino;
-      S.movimientos[mi].referencia = S.pagos[pi].referencia || '';
-      DB.saveMovimiento(S.movimientos[mi]);
-    }
-
-    recalcularCreditoDesdePagos(credId);
-    calcularMoraAuto();
-    closeM(); nav('pagos'); toast('Pago actualizado y crédito recalculado ✓','success'); return true;
+    closeM(); nav('pagos'); toast('Pago actualizado ✓','success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     +'<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
@@ -8196,7 +7435,8 @@ function confirmarPago(pagoId){
   pago.estado='confirmado';
   DB.savePago(pago);
 
-  // Crear o actualizar movimiento bancario vinculado al pago
+  // ── BUG FIX: crear movimiento en Cuentas si no existe uno para este pago ──
+  // Esto asegura que los saldos bancarios coincidan con los pagos confirmados
   var movExistente = (S.movimientos||[]).find(function(m){
     return !m.eliminado && m.conceptoPago === pago.id;
   });
@@ -8208,7 +7448,7 @@ function confirmarPago(pagoId){
         id: 'MOV-'+Date.now(),
         tipo: 'deposito',
         concepto: 'Pago cuota · '+pago.cli+' · '+pago.cred,
-        conceptoPago: pago.id,
+        conceptoPago: pago.id,  // referencia para evitar duplicados
         monto: pago.monto,
         cuentaOrigen: null,
         cuentaDestino: cuentaDest,
@@ -8222,19 +7462,17 @@ function confirmarPago(pagoId){
       S.movimientos.push(mov);
       DB.saveMovimiento(mov);
     }
-  }else{
-    movExistente.monto = pago.monto;
-    movExistente.fecha = pago.fecha;
-    movExistente.cuentaDestino = pago.cuenta || pago.metodo || movExistente.cuentaDestino;
-    movExistente.referencia = pago.referencia || '';
-    DB.saveMovimiento(movExistente);
   }
 
-  if(pago.cred){
-    recalcularCreditoDesdePagos(pago.cred);
-    calcularMoraAuto();
-    syncEstadoClientePorCredito(pago.cred);
+  var ci=S.creds.findIndex(function(x){return x.id===pago.cred;});
+  if(ci>=0){
+    S.creds[ci].pagado=Math.min(S.creds[ci].pagado+1,S.creds[ci].totalCuotas||S.creds[ci].plazo*2);
+    if(S.creds[ci].mora>0) S.creds[ci].mora=0;
+    if(S.creds[ci].pagado>=(S.creds[ci].totalCuotas||S.creds[ci].plazo*2)) S.creds[ci].estado='completado';
+    DB.updateCred(S.creds[ci].id,{pagado:S.creds[ci].pagado,mora:S.creds[ci].mora,estado:S.creds[ci].estado});
+    syncEstadoClientePorCredito(S.creds[ci].id);
   }
+  calcularMoraAuto();
   toast('✓ Pago confirmado · '+pagoId,'success');
   nav('pagos');
 }
@@ -8242,45 +7480,21 @@ function confirmarPago(pagoId){
 // ── MORA: CALCULAR DÍAS AUTOMÁTICAMENTE AL CARGAR ──
 function calcularMoraAuto(){
   var hoy=new Date(); hoy.setHours(0,0,0,0);
-  (S.creds||[]).forEach(function(c){
-    if(!c || c.eliminado || !c.fecha) return;
-    if(c.estado==='completado' || c.estado==='cancelado'){
-      if(c.mora!==0){
-        c.mora=0;
-        DB.updateCred(c.id,{mora:0});
-      } else {
-        c.mora=0;
-      }
-      return;
-    }
-    var cuotasPagadas=parseInt(c.pagado||0,10)||0;
-    var totalCuotas=getCreditoTotalCuotas(c);
-    if(cuotasPagadas>=totalCuotas && totalCuotas>0){
-      if(c.estado!=='completado' || c.mora!==0){
-        c.estado='completado';
-        c.mora=0;
-        DB.updateCred(c.id,{mora:0,estado:'completado'});
-      }else{
-        c.mora=0;
-      }
-      return;
-    }
+  S.creds.forEach(function(c){
+    if(c.estado!=='activo'||!c.fecha) return;
     var inicio=new Date(c.fecha);
-    inicio.setHours(0,0,0,0);
-    var cuotaSiguiente=cuotasPagadas+1;
+    var cuotaSiguiente=c.pagado+1;
     var fechaVence=new Date(inicio.getTime()+(cuotaSiguiente*15*24*60*60*1000));
     fechaVence.setHours(0,0,0,0);
     var diasAtraso=Math.floor((hoy-fechaVence)/(24*60*60*1000));
     var gracia=PLAN.diasGracia||5;
     var nuevaMora=diasAtraso>gracia?diasAtraso:0;
-    var nuevoEstado=nuevaMora>0?'mora':'activo';
-    if(c.estado==='mora' || nuevaMora>0) c.tuvoMoraHistorica=true;
-    var cambio=(nuevaMora!==parseInt(c.mora||0,10)) || (c.estado!==nuevoEstado) || ((nuevaMora>0) && c.tuvoMoraHistorica!==true);
-    c.mora=nuevaMora;
-    c.estado=nuevoEstado;
-    if(cambio){
-      DB.updateCred(c.id,{mora:c.mora,estado:c.estado,tuvoMoraHistorica:!!c.tuvoMoraHistorica});
-    }
+    if(nuevaMora!==c.mora){
+      c.mora=nuevaMora;
+      if(nuevaMora>0&&c.estado==='activo') c.estado='mora';
+      if(nuevaMora===0&&c.estado==='mora') c.estado='activo';
+      DB.updateCred(c.id,{mora:c.mora,estado:c.estado});
+    } else { c.mora=nuevaMora; }
   });
 }
 
@@ -8383,7 +7597,7 @@ function renderContrato(){
   const tel       = emp.tel;
   const cli=S.clientes.find(x=>x.nombre===c.cli)||{cedula:'—',tel:'—',ciudad:'Venezuela'};
   const hoy=new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
-  const cuotasRestantes=Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c));
+  const cuotasRestantes=c.plazo-c.pagado;
   $('cz').innerHTML=`<div class="cdoc">
     <div style="text-align:center;margin-bottom:4px"><img src="${logoSrc}" style="height:42px;object-fit:contain"></div>
     <div style="text-align:center;font-size:10px;color:#777;margin-bottom:2px;font-weight:600;letter-spacing:0.5px">${empresaUp} — VENTA DE MOTOCICLETAS EN CUOTAS</div>
@@ -8406,18 +7620,18 @@ function renderContrato(){
     <p>Las partes acuerdan el siguiente plan de cuotas para la cancelación de la motocicleta descrita:</p>
     <table style="width:100%;font-size:11.5px;border-collapse:collapse;margin-top:8px">
       ${[
-        ['Número de cuotas', getCreditoTotalCuotas(c)+' cuotas quincenales'],
-        ['Monto de cada cuota quincenal', fmt(c.cuotaQ||c.cuota)],
-        ['Equivalente mensual referencial', fmt(c.cuotaM||((c.cuotaQ||c.cuota||0)*2))],
+        ['Número de cuotas', c.plazo+' cuotas mensuales'],
+        ['Monto de cada cuota mensual', fmt(c.cuota)],
+        ['Monto de cada cuota quincenal', fmt(c.cuotaQ)+' (opción quincenal)'],
         ['Cuotas ya canceladas', getCreditoCuotasPagadas(c)+' de '+getCreditoTotalCuotas(c)],
         ['Cuotas pendientes', Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c))+' restantes'],
         ['Fecha de inicio del plan', c.fecha],
       ].map(([k,v])=>`<tr><td style="padding:5px 0;border-bottom:1px solid #f0f0f0;color:#555;width:55%">${k}</td><td style="padding:5px 0;border-bottom:1px solid #f0f0f0;font-weight:700;color:#111">${v}</td></tr>`).join('')}
     </table>
-    <p style="margin-top:10px;font-size:10.5px;color:#888">EL COMPRADOR declara conocer y aceptar que el plan operativo del crédito se maneja en cuotas quincenales sucesivas de quince (15) días, contadas desde la fecha de inicio indicada, sin necesidad de cobro o requerimiento previo por parte de EL VENDEDOR.</p>
+    <p style="margin-top:10px;font-size:10.5px;color:#888">EL COMPRADOR declara conocer y aceptar el monto de cada cuota como condición de la venta en cuotas. Las cuotas deberán cancelarse puntualmente en las fechas acordadas, sin necesidad de cobro o requerimiento previo por parte de EL VENDEDOR.</p>
 
     <h3>CUARTA: FORMA DE PAGO</h3>
-    <p>EL COMPRADOR se obliga a cancelar cada cuota en la fecha acordada mediante cualquiera de los siguientes métodos: transferencia bancaria, pago móvil, Zelle, PayPal o efectivo en USD. El pago se considerará efectuado únicamente cuando EL VENDEDOR confirme la recepción del monto correspondiente. Los pagos parciales se aplicarán primero a la cuota quincenal más antigua pendiente y solo detendrán la mora cuando la cuota vencida quede totalmente cubierta según el sistema de amortización del crédito.</p>
+    <p>EL COMPRADOR se obliga a cancelar cada cuota en la fecha acordada mediante cualquiera de los siguientes métodos: transferencia bancaria, pago móvil, Zelle, PayPal o efectivo en USD. El pago se considerará efectuado únicamente cuando EL VENDEDOR confirme la recepción del monto completo. Pagos parciales no interrumpen el cómputo de mora.</p>
 
     <h3>QUINTA: RESERVA DE DOMINIO</h3>
     <p>De conformidad con la Ley de Venta con Reserva de Dominio vigente en Venezuela, EL VENDEDOR se reserva el dominio y la propiedad de la motocicleta hasta tanto EL COMPRADOR cancele la <strong>totalidad del precio pactado</strong>. El incumplimiento de <strong>tres (3) cuotas consecutivas</strong> o <strong>cinco (5) cuotas alternadas</strong> faculta a EL VENDEDOR a recuperar la unidad de forma inmediata y sin necesidad de intervención judicial, renunciando EL COMPRADOR expresamente a cualquier recurso de oposición por esta causa. EL COMPRADOR no podrá oponer derechos de retención ni reclamar mejoras realizadas sobre la unidad.</p>
@@ -8982,20 +8196,27 @@ function guardarEmpresa(){
 function guardarPlan(){
   var factorIn  = parseFloat(($('cfg_factor')&&$('cfg_factor').value));
   var inicialIn = parseFloat(($('cfg_ini')&&$('cfg_ini').value));
+  var tasaIn    = parseFloat(($('cfg_tasa_mensual')&&$('cfg_tasa_mensual').value));
+  var plazoIn   = parseInt(($('cfg_plazo')&&$('cfg_plazo').value),10);
   var graciaIn  = parseInt(($('cfg_gracia')&&$('cfg_gracia').value),10);
   var moraIn    = parseFloat(($('cfg_mora')&&$('cfg_mora').value));
   var factor  = Number.isFinite(factorIn)  ? factorIn  : PLAN.factor;
   var inicial = Number.isFinite(inicialIn) ? (inicialIn/100) : PLAN.inicial;
+  var tasa    = Number.isFinite(tasaIn)    ? tasaIn    : (PLAN.tasaMensual||0);
+  var plazo   = Number.isFinite(plazoIn) && plazoIn>0 ? plazoIn : PLAN.plazo;
   var gracia  = Number.isFinite(graciaIn)  ? graciaIn  : (PLAN.diasGracia||5);
   var mora    = Number.isFinite(moraIn)    ? moraIn    : (PLAN.moraPct||5);
   PLAN.factor      = factor;
   PLAN.inicial     = inicial;
+  PLAN.tasaMensual = tasa;
+  PLAN.plazo       = plazo;
   PLAN.diasGracia  = gracia;
   PLAN.moraPct     = mora;
-  var data = {factor, inicial, diasGracia:gracia, moraPct:mora, updated:new Date().toISOString()};
+  var data = {factor, inicial, tasaMensual:tasa, plazo:plazo, diasGracia:gracia, moraPct:mora, apy:PLAN.apy, updated:new Date().toISOString()};
+  try{ localStorage.setItem('pagasi_config_plan', JSON.stringify(data)); }catch(_e){}
   if(db){
     db.collection('config').doc('plan').set(data)
-      .then(function(){ try{ localStorage.setItem('pagasi_config_plan', JSON.stringify(data)); }catch(_e){} toast('Plan financiero guardado','success'); nav('config'); })
+      .then(function(){ toast('Plan financiero guardado','success'); nav('config'); })
       .catch(function(e){ toast('Error: '+e.message,'error'); });
   } else {
     toast('Plan guardado (local)','success'); nav('config');
@@ -9109,7 +8330,6 @@ function openEditCatalogo(id){
     // Save to Firestore
     if(db){
       db.collection('config').doc('catalogo').set({items: CATALOGO})
-        .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); }catch(_e){} })
         .catch(function(){});
     }
     closeM(); nav('plan'); return true;
@@ -9138,7 +8358,6 @@ function cDelCatalogo(id){
   if(i>=0) CATALOGO.splice(i,1);
   if(db){
     db.collection('config').doc('catalogo').set({items:CATALOGO})
-      .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); }catch(_e){} })
       .catch(function(){});
   }
   closeM(); nav('plan'); toast('Modelo eliminado','success');
@@ -9154,7 +8373,6 @@ function delPlanExtra(idx){
   window._planesExtra.splice(idx,1);
   if(db){
     db.collection('config').doc('planes').set({items:window._planesExtra})
-      .then(function(){ try{ localStorage.setItem('pagasi_planes_extra', JSON.stringify(window._planesExtra)); }catch(_e){} })
       .catch(function(){});
   }
   nav('plan'); toast('Plan eliminado','success');
@@ -9700,7 +8918,6 @@ function pgControls(key, total, perPage, navFn){
 function pgNav(key, n){ pgSet(key,n); nav(S.page); }
 
 function generarReporte(tipo){
-  try{
   var titulo, html_content;
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
   var fecha = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
@@ -9711,7 +8928,7 @@ function generarReporte(tipo){
     var pagosConf = S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';});
     var pagosElim = S.pagos.filter(function(p){return p.eliminado&&p.estado==='confirmado';});
     var totalCobrado = pagosConf.reduce(function(a,p){return a+p.monto;},0);
-    var totalIni = getTotalInicialesCobradas();
+    var totalIni = S.creds.filter(function(c){return !c.eliminado;}).reduce(function(a,c){return a+(c.ini||0);},0);
     // Group by month
     var byMonth = {};
     pagosConf.forEach(function(p){
@@ -9755,13 +8972,13 @@ function generarReporte(tipo){
 
   } else if(tipo==='creditos'){
     titulo = 'Reporte de Créditos Activos';
-    var activos = S.creds.filter(function(c){return !c.eliminado&&c.estado==='activo';});
+    var activos = S.creds.filter(function(c){return c.estado==='activo';});
     var totalCartera = activos.reduce(function(a,c){return a+getCreditoSaldoPendiente(c);},0);
     html_content = '<div class="stat-grid">'
       +'<div class="stat-box"><div class="stat-v">'+activos.length+'</div><div class="stat-l">Créditos activos</div></div>'
       +'<div class="stat-box"><div class="stat-v">$'+totalCartera.toFixed(2)+'</div><div class="stat-l">Cartera vigente</div></div>'
-      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return !c.eliminado&&c.estado==='completado';}).length+'</div><div class="stat-l">Completados</div></div>'
-      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return !c.eliminado&&c.mora>0;}).length+'</div><div class="stat-l">En mora</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return c.estado==='completado';}).length+'</div><div class="stat-l">Completados</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.creds.filter(function(c){return c.mora>0;}).length+'</div><div class="stat-l">En mora</div></div>'
       +'</div>'
       +'<table><thead><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Fecha</th><th>Cuota Q.</th><th>Pagadas</th><th>Estado</th></tr></thead><tbody>'
       +activos.map(function(c){
@@ -9772,7 +8989,7 @@ function generarReporte(tipo){
 
   } else if(tipo==='mora'){
     titulo = 'Reporte de Mora';
-    var enMora = S.creds.filter(function(c){return !c.eliminado&&(c.mora>0||c.estado==='vencido');});
+    var enMora = S.creds.filter(function(c){return c.mora>0||c.estado==='vencido';});
     html_content = '<div class="stat-grid">'
       +'<div class="stat-box"><div class="stat-v">'+enMora.length+'</div><div class="stat-l">Clientes en mora</div></div>'
       +'<div class="stat-box"><div class="stat-v">$'+enMora.reduce(function(a,c){return a+(c.cuotaQ||c.cuota||0);},0).toFixed(2)+'</div><div class="stat-l">Cuotas pendientes</div></div>'
@@ -9789,18 +9006,18 @@ function generarReporte(tipo){
       +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return !m.eliminado&&m.estado==='disponible';}).length+'</div><div class="stat-l">Disponibles</div></div>'
       +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return !m.eliminado&&m.estado==='financiada';}).length+'</div><div class="stat-l">Financiadas</div></div>'
       +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return !m.eliminado&&m.estado==='recuperada';}).length+'</div><div class="stat-l">Recuperadas</div></div>'
-      +'<div class="stat-box"><div class="stat-v">'+S.motos.filter(function(m){return !m.eliminado;}).length+'</div><div class="stat-l">Total</div></div>'
+      +'<div class="stat-box"><div class="stat-v">'+S.motos.length+'</div><div class="stat-l">Total</div></div>'
       +'</div>'
       +'<table><thead><tr><th>ID</th><th>Modelo</th><th>VIN</th><th>Color</th><th>Precio</th><th>Estado</th><th>Cliente</th><th>GPS</th></tr></thead><tbody>'
-      +S.motos.filter(function(m){return !m.eliminado;}).map(function(m){
+      +S.motos.map(function(m){
         var est={'disponible':'<span class="badge green">Disponible</span>','financiada':'<span class="badge blue">Financiada</span>','recuperada':'<span class="badge red">Recuperada</span>','inventario':'<span class="badge gray">Inventario</span>'}[m.estado]||m.estado;
-        return '<tr><td>'+m.id+'</td><td>'+m.modelo+'</td><td>'+(m.vin||'—')+'</td><td>'+(m.color||'—')+'</td><td>$'+Number(m.precio||0).toFixed(2)+'</td><td>'+est+'</td><td>'+(m.cliente||'—')+'</td><td>'+(m.gps?'✓':'—')+'</td></tr>';
+        return '<tr><td>'+m.id+'</td><td>'+m.modelo+'</td><td>'+(m.vin||'—')+'</td><td>'+(m.color||'—')+'</td><td>$'+m.precio.toFixed(2)+'</td><td>'+est+'</td><td>'+(m.cliente||'—')+'</td><td>'+(m.gps?'✓':'—')+'</td></tr>';
       }).join('')
       +'</tbody></table>';
 
   } else if(tipo==='pyl'){
     titulo = 'Estado de Resultados (P&L)';
-    var tIni = getTotalInicialesCobradas();
+    var tIni = S.creds.filter(function(c){return !c.eliminado;}).reduce(function(a,c){return a+(c.ini||0);},0);
     var tPagos = S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0);
     var tIngresos = tIni + tPagos;
     var egresosActPyl = S.egresos.filter(function(e){return !e.eliminado;});
@@ -9854,7 +9071,7 @@ function generarReporte(tipo){
       +'<div class="stat-box"><div class="stat-v">'+(PLAN.inicial*100)+'%</div><div class="stat-l">Inicial mínima</div></div>'
       +'<div class="stat-box"><div class="stat-v">'+PLAN.tasaMensual+'%</div><div class="stat-l">Tasa mensual</div></div>'
       +'</div>'
-      +'<table><thead><tr><th>Modelo</th><th>Precio</th><th>Inicial 40%</th><th>Financiado</th><th>Cuota mensual</th><th>Cuota quincenal</th><th>Total pagado</th></tr></thead><tbody>'
+      +'<table><thead><tr><th>Modelo</th><th>Precio</th><th>Inicial</th><th>Financiado</th><th>Cuota mensual</th><th>Cuota quincenal</th><th>Total pagado</th></tr></thead><tbody>'
       +CATALOGO.map(function(c){
         var r = calcMoto(c.precio);
         return '<tr><td>'+c.modelo+'</td><td>$'+c.precio.toFixed(2)+'</td><td>$'+r.ini.toFixed(2)+'</td><td>$'+r.fin.toFixed(2)+'</td><td>$'+r.cuotaM.toFixed(2)+'</td><td>$'+r.cuotaQ.toFixed(2)+'</td><td>$'+r.totalPagado.toFixed(2)+'</td></tr>';
@@ -9864,18 +9081,12 @@ function generarReporte(tipo){
     toast('Reporte no implementado aún','info'); return;
   }
 
-  var doc = window.open('about:blank','_blank');
-  if(!doc){ toast('No se pudo abrir el reporte. Permite ventanas emergentes para pagasi.io','error'); return; }
-  doc.document.open();
+  var doc = window.open('','_blank','width=900,height=700');
   doc.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+' — '+empresa+'</title>'+estilos+'</head><body>'
     +'<div class="header"><div class="logo-area"><h1>'+empresa+'</h1><h2>'+titulo+'</h2></div>'
     +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#6C5CE7;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px">Imprimir / Guardar PDF</button></div>'
     +'</div>'+html_content+'</body></html>');
   doc.document.close();
-  }catch(err){
-    console.error('Error generando reporte', err);
-    toast('No se pudo generar el reporte','error');
-  }
 }
 
 
@@ -11192,11 +10403,6 @@ function enviarNotificaciones(){
 
 
 
-
-function iniciarListenerSolicitudes(){
-  return;
-}
-
 // ── INIT — arranca la app después del login ─────────────────
 function init() {
   // Mostrar el contenedor principal
@@ -11600,10 +10806,6 @@ function cambiarPasswordPerfil() {
 }
 
 function doLogout() {
-  // Cerrar perfil overlay si está abierto
-  var overlay = document.getElementById('profile-overlay');
-  if (overlay) overlay.style.display = 'none';
-  document.body.style.overflow = '';
   if (auth) {
     auth.signOut();
   } else {
@@ -11611,39 +10813,6 @@ function doLogout() {
   }
 }
 
-function _buildInviteLink(token, email){
-  var base = window.location.href.split('?')[0];
-  var qs = '?invite=' + encodeURIComponent(token);
-  if(email) qs += '&ie=' + encodeURIComponent(email);
-  return base + qs;
-}
-function _randomToken(len){
-  len = len || 32;
-  var chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  var out='';
-  for(var i=0;i<len;i++) out += chars.charAt(Math.floor(Math.random()*chars.length));
-  return out;
-}
-function _randomTempPass(){
-  return 'Pg!' + _randomToken(10) + '9a';
-}
-function _secondaryInviteAuth(){
-  if(typeof firebase==='undefined' || !FIREBASE_CONFIG || FIREBASE_CONFIG.apiKey==='TU_API_KEY') return null;
-  var name='__invite_creator__';
-  try { return firebase.app(name).auth(); } catch(e) {}
-  try {
-    var app = firebase.initializeApp(FIREBASE_CONFIG, name);
-    return app.auth();
-  } catch(e) {
-    try { return firebase.app(name).auth(); } catch(ex) { return null; }
-  }
-}
-function _cleanupSecondaryInviteAuth(){
-  try {
-    var app = firebase.app('__invite_creator__');
-    app.delete();
-  } catch(e) {}
-}
 // ══════════════════════════════════════════
 // GESTIÓN DE USUARIOS
 // ══════════════════════════════════════════
@@ -11662,10 +10831,10 @@ function openInviteUser(){
   }
 
   $('mbd').innerHTML=''
-    +'<div class="fg" style="margin-bottom:10px"><label>Email del usuario *</label><input class="fi" id="invu_email" type="email" placeholder="empleado@pagasi.com" autofocus></div>'
-    +'<div class="fg" style="margin-bottom:12px"><label>Nombre</label><input class="fi" id="invu_nombre" placeholder="Nombre completo"></div>'
+    +'<div class="fg" style="margin-bottom:10px"><label>Email del usuario *</label><input class="fi" id="inv_email" type="email" placeholder="empleado@pagasi.com" autofocus></div>'
+    +'<div class="fg" style="margin-bottom:12px"><label>Nombre</label><input class="fi" id="inv_nombre" placeholder="Nombre completo"></div>'
     +'<div class="fg" style="margin-bottom:12px"><label>Rol</label>'
-    +'<select class="fs" id="invu_rol" onchange="(function(v){'
+    +'<select class="fs" id="inv_rol" onchange="(function(v){'
     +  'var preset=({Administrador:'+JSON.stringify((ROL_PERMISOS.Administrador||[]))+','
     +  'Gerente:'+JSON.stringify((ROL_PERMISOS.Gerente||[]))+','
     +  'Empleado:'+JSON.stringify((ROL_PERMISOS.Empleado||[]))+','
@@ -11685,40 +10854,46 @@ function openInviteUser(){
     +'</div>';
 
   S.saveFn=function(){
-    var email=(($('invu_email')&&$('invu_email').value)||'').trim();
-    var nombre=(($('invu_nombre')&&$('invu_nombre').value)||'').trim();
+    var email=(($('inv_email')&&$('inv_email').value)||'').trim();
+    var nombre=(($('inv_nombre')&&$('inv_nombre').value)||'').trim();
     if(!email||!email.includes('@')){ toast('Ingresa un email válido','error'); return false; }
-    var rol=($('invu_rol')&&$('invu_rol').value)||'Empleado';
+    var rol=($('inv_rol')&&$('inv_rol').value)||'Empleado';
     var permisos=[];
     document.querySelectorAll('#mbd input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
 
-    var inviteToken = 'INV-'+Date.now()+'-'+_randomToken(18);
-    var inviteLink = _buildInviteLink(inviteToken, email);
-
-    showLoader('Guardando invitación...','');
-    DB.saveInvitacion(inviteToken, {
-      token: inviteToken,
-      email: email,
-      nombre: nombre || email,
-      rol: rol,
-      permisos: permisos,
-      creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
-      creadoEn: new Date().toISOString(),
-      usado: false,
-      inviteLink: inviteLink
-    }).then(function(){
-      hideLoader();
-      closeM();
-      nav('users');
-      // Mostrar modal con link inmediatamente
-      setTimeout(function(){ mostrarLinkInvitacion(inviteLink, email); }, 250);
-    }).catch(function(e){
-      hideLoader();
-      toast('Error guardando invitación: '+(e.message||e),'error');
-    });
+    showLoader('Creando usuario...','');
+    auth.createUserWithEmailAndPassword(email, 'Pagasi2024!Temp')
+      .then(function(userCred){
+        var uid=userCred.user.uid;
+        if(nombre) return userCred.user.updateProfile({displayName:nombre}).then(function(){ return uid; });
+        return uid;
+      })
+      .then(function(uid){
+        return DB.saveUsuario(uid,{
+          uid:uid, email:email, nombre:nombre||email, rol:rol, permisos:permisos,
+          creadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
+          creadoEn:new Date().toISOString(), debeActualizar:true
+        });
+      })
+      .then(function(){
+        hideLoader(); closeM(); nav('users');
+        toast('✓ '+email+' creado · Contraseña temporal: Pagasi2024!Temp','success');
+      })
+      .catch(function(e){
+        hideLoader();
+        if(e.code==='auth/email-already-in-use'){
+          db.collection('usuarios').where('email','==',email).get().then(function(snap){
+            if(!snap.empty){
+              var uid=snap.docs[0].id;
+              return DB.updateUsuario(uid,{rol:rol,permisos:permisos,nombre:nombre||snap.docs[0].data().nombre});
+            }
+          }).then(function(){ closeM(); nav('users'); toast('Permisos actualizados para '+email,'success'); })
+          .catch(function(e2){ toast('Error: '+e2.message,'error'); });
+        } else { toast('Error: '+e.message,'error'); }
+      });
     return true;
   };
-  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear invitación →</button>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear Usuario</button>';
   $('ov').style.display='flex';
 }
 
@@ -11786,175 +10961,23 @@ function confirmarEliminarUsuario(uid,nombre){
 }
 
 function copiarLink(token){
-  var url = (token&&String(token).indexOf('http')===0) ? token : window.location.href.split('?')[0]+'?invite='+token;
+  var url=window.location.href.split('?')[0]+'?invite='+token;
   if(navigator.clipboard){
     navigator.clipboard.writeText(url).then(function(){ toast('Link copiado al portapapeles','success'); });
   } else {
     prompt('Copia este link de invitación:',url);
   }
 }
-function mostrarLinkInvitacion(link, email){
-  $('mic').textContent='🔗'; $('mtt').textContent='Link de invitación'; $('msb').textContent='Envíalo a '+email;
-  $('modal-box').className='modal';
-  $('mbd').innerHTML=''
-    +'<div style="text-align:center;margin-bottom:16px">'
-    +'<div style="font-size:32px;margin-bottom:6px">🎉</div>'
-    +'<div style="font-size:13px;font-weight:800;color:var(--ink1);margin-bottom:4px">Invitación lista para <span style="color:var(--p1)">'+email+'</span></div>'
-    +'<div style="font-size:11.5px;color:var(--ink3)">El usuario abre este link, elige su contraseña y activa su cuenta</div>'
-    +'</div>'
-    +'<div style="background:var(--surf2);border:2px solid var(--p1);border-radius:10px;padding:12px 14px;margin-bottom:14px">'
-    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--p1);margin-bottom:7px">🔗 Link de activación</div>'
-    +'<input id="invite-link-field" type="text" value="'+link+'" readonly onclick="this.select()" style="width:100%;background:var(--bg);border:1px solid var(--rim);border-radius:6px;padding:8px 10px;font-size:11px;font-family:monospace;color:var(--ink1);outline:none;cursor:text;box-sizing:border-box">'
-    +'</div>'
-    +'<button id="inv-copy-btn" class="btn btn-p" style="width:100%;font-size:13.5px;font-weight:800;padding:11px" onclick="(function(){'
-    +'var inp=document.getElementById(\'invite-link-field\');'
-    +'inp.select();'
-    +'var copyDone=function(){'
-    +'var b=document.getElementById(\'inv-copy-btn\');'
-    +'if(b){b.textContent=\'✓ ¡Copiado!\';b.style.background=\'var(--green)\';}  '
-    +'setTimeout(function(){if(b){b.textContent=\'📋 Copiar link\';b.style.background=\'\';}},2500);'
-    +'};'
-    +'if(navigator.clipboard&&navigator.clipboard.writeText){'
-    +'navigator.clipboard.writeText(inp.value).then(copyDone).catch(function(){try{document.execCommand(\'copy\');copyDone();}catch(ex){}});'
-    +'} else {try{document.execCommand(\'copy\');copyDone();}catch(ex){toast(\'Selecciona el link y cópialo manualmente\',\'info\');}}'
-    +'})()">📋 Copiar link</button>';
-  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()" style="min-width:90px">Cerrar</button>';
-  $('ov').style.display='flex';
-  setTimeout(function(){ var f=$('invite-link-field'); if(f){f.focus();f.select();} }, 200);
-}
-
-function copiarInvitacionUsuario(uid){
-  if(!db){ toast('Requiere Firebase activo','error'); return; }
-  if(!uid){ toast('Usuario no válido','error'); return; }
-  db.collection('usuarios').doc(uid).get().then(function(doc){
-    if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
-    var data = doc.data() || {};
-    if(!data.email){ toast('El usuario no tiene email válido','error'); return; }
-    // Si tiene token activo, reconstruir link y mostrarlo
-    if(data.inviteToken){
-      var link = _buildInviteLink(data.inviteToken);
-      mostrarLinkInvitacion(link, data.email);
-      return;
-    }
-    // Si no hay inviteToken, regenerar una nueva invitación
-    var nuevoToken = 'INV-'+Date.now()+'-'+_randomToken(18);
-    var nuevoLink = _buildInviteLink(nuevoToken, data.email);
-    // Buscar rol y permisos del usuario para guardarlos en la nueva invitación
-    var rol = data.rol || 'Empleado';
-    var permisos = data.permisos || [];
-    var payload = { token: nuevoToken, email: data.email, nombre: data.nombre||data.email,
-      rol: rol, permisos: permisos, creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
-      creadoEn: new Date().toISOString(), usado: false, inviteLink: nuevoLink };
-    DB.saveInvitacion(nuevoToken, payload).then(function(){
-      mostrarLinkInvitacion(nuevoLink, data.email);
-    }).catch(function(e){ toast('Error: '+(e.message||e),'error'); });
-  }).catch(function(e){
-    toast('Error: '+(e.message||e),'error');
-  });
-}
-
-
-function _getInviteToken(){
-  try { return new URLSearchParams(window.location.search).get('invite') || ''; } catch(e) { return ''; }
-}
-function _clearInviteParams(){
-  try {
-    var url = window.location.href.split('?')[0];
-    window.history.replaceState({}, document.title, url);
-  } catch(e) {}
-}
-function _showInviteScreenForDoc(docData){
-  var invSc = $('invite-screen');
-  var loginSc = $('login-screen');
-  if(loginSc) loginSc.style.display = 'none';
-  if(invSc) invSc.style.display = 'flex';
-  S.pendingInvite = docData || null;
-  if($('inv_nombre')) $('inv_nombre').value = docData && docData.nombre && docData.nombre!==docData.email ? docData.nombre : '';
-  if($('inv_pass')) $('inv_pass').value = '';
-  if($('inv_pass2')) $('inv_pass2').value = '';
-  if($('invite-err')) $('invite-err').style.display = 'none';
-  if($('inv-footer')) $('inv-footer').innerHTML = 'Invitación para <b>' + ((docData&&docData.email)||'') + '</b><br>Elige tu nombre y tu clave para activar la cuenta.';
-}
-function _resolverInvitacionPendiente(){
-  if(!auth) return;
-  var token = _getInviteToken();
-  if(!token) return;
-
-  // Extraer email del parámetro &ie= embebido en el link
-  var emailFromUrl = '';
-  try { emailFromUrl = decodeURIComponent(new URLSearchParams(window.location.search).get('ie') || ''); } catch(e){}
-
-  // Si tenemos el email desde el URL, mostrar el formulario INMEDIATAMENTE sin esperar Firestore
-  // (evita el problema de reglas de seguridad para usuarios no autenticados)
-  if(emailFromUrl){
-    var quickData = { token: token, email: emailFromUrl, nombre: '', rol: 'Empleado', permisos: [] };
-    _showInviteScreenForDoc(quickData);
-    // Luego intentar cargar datos completos de Firestore para pre-rellenar nombre/rol si es posible
-    if(db){
-      db.collection('invitaciones').doc(token).get().then(function(doc){
-        if(doc.exists){
-          var d = doc.data()||{};
-          if(d.usado){ return; } // ya usada, pero no forzamos salida (el usuario ya ve el form)
-          d.token = token;
-          _showInviteScreenForDoc(d); // actualizar con datos completos
-        }
-      }).catch(function(){}); // ignorar errores de permisos
-    }
-    return;
-  }
-
-  // Fallback: sin email en URL, intentar Firestore (flujo legacy)
-  if(!db){ if($('login-err')){ $('login-err').textContent='No se puede verificar la invitación sin conexión.'; $('login-err').style.display='block'; } return; }
-  db.collection('invitaciones').doc(token).get().then(function(doc){
-    if(doc.exists){
-      var data = doc.data() || {};
-      if(data.usado){
-        if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
-        _clearInviteParams(); return;
-      }
-      data.token = token;
-      _showInviteScreenForDoc(data);
-      return;
-    }
-    // Flujo legacy: buscar en 'usuarios' por inviteToken
-    db.collection('usuarios').where('inviteToken','==',token).limit(1).get().then(function(snap){
-      if(snap.empty){
-        if($('login-err')){ $('login-err').textContent='El link de invitación no es válido o ya fue usado.'; $('login-err').style.display='block'; }
-        _clearInviteParams(); return;
-      }
-      var d = snap.docs[0]; var data = d.data()||{}; data.uid = d.id; data._legacy = true;
-      if(data.inviteStatus==='aceptada'){
-        if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
-        _clearInviteParams(); return;
-      }
-      _showInviteScreenForDoc(data);
-    }).catch(function(e){
-      if($('login-err')){ $('login-err').textContent='Error al abrir la invitación: '+(e.message||e); $('login-err').style.display='block'; }
-    });
-  }).catch(function(e){
-    // Reglas de Firestore bloquean la lectura - mostrar form vacío igual
-    if(emailFromUrl){
-      _showInviteScreenForDoc({ token: token, email: emailFromUrl, nombre: '', rol: 'Empleado', permisos: [] });
-    } else {
-      if($('login-err')){ $('login-err').textContent='No se pudo verificar la invitación. Por favor intenta de nuevo.'; $('login-err').style.display='block'; }
-    }
-  });
-}
 
 function aceptarInvitacion() {
-  var nombre = (($('inv_nombre') || {}).value || '').trim();
-  var pass   = (($('inv_pass')   || {}).value || '');
-  var pass2  = (($('inv_pass2')  || {}).value || '');
+  var nombre = ($('inv_nombre') || {}).value || '';
+  var pass   = ($('inv_pass')   || {}).value || '';
+  var pass2  = ($('inv_pass2')  || {}).value || '';
   var errEl  = $('invite-err');
   if (errEl) errEl.style.display = 'none';
 
-  var pending = S.pendingInvite || null;
-  if (!pending || !pending.email) {
-    if (errEl) { errEl.textContent = '⛔ Esta invitación no es válida o ya expiró'; errEl.style.display = 'block'; }
-    return;
-  }
-  if (!nombre) {
-    if (errEl) { errEl.textContent = '⛔ Ingresa tu nombre completo'; errEl.style.display = 'block'; }
+  if (!nombre.trim()) {
+    if (errEl) { errEl.textContent = '⛔ Ingresa tu nombre'; errEl.style.display = 'block'; }
     return;
   }
   if (pass.length < 6) {
@@ -11962,90 +10985,41 @@ function aceptarInvitacion() {
     return;
   }
   if (pass !== pass2) {
-    if (errEl) { errEl.textContent = '⛔ Las contraseñas no coinciden'; errEl.style.display = 'block'; }
+    if (errEl) { errEl.textContent = 'Las contraseñas no coinciden'; errEl.style.display = 'block'; }
     return;
   }
 
   var btn = $('inv-btn');
   if (btn) btn.disabled = true;
-  showLoader('Activando cuenta...', '');
+  showLoader('Creando cuenta...', '');
 
-  var token = pending.token || pending.inviteToken || null;
-  var isLegacy = !!(pending._legacy && pending.inviteTempPass);
-
-  function finalizarActivacion(user) {
-    return user.updateProfile({ displayName: nombre })
-      .then(function(){
-        var updateData = {
-          uid: user.uid,
-          nombre: nombre,
-          email: user.email,
-          rol: pending.rol || 'Empleado',
-          permisos: pending.permisos || [],
-          inviteStatus: 'aceptada',
-          inviteAcceptedAt: new Date().toISOString(),
-          debeActualizar: false
-        };
-        // Limpiar campos temporales del flujo legacy
-        if(pending.inviteTempPass !== undefined){
-          updateData.inviteTempPass = firebase.firestore.FieldValue.delete();
-          updateData.inviteToken = firebase.firestore.FieldValue.delete();
-          updateData.inviteLink = firebase.firestore.FieldValue.delete();
-        }
-        return db.collection('usuarios').doc(user.uid).set(updateData, { merge: true });
-      })
-      .then(function(){
-        if(token){ try{ DB.usarInvitacion(token, user.uid); }catch(_e){} }
-        hideLoader();
-        _clearInviteParams();
-        S.pendingInvite = null;
-        $('invite-screen').style.display = 'none';
-        init();
-      });
-  }
-
-  var p;
-  if (isLegacy) {
-    // Flujo legacy: iniciar sesión con contraseña temporal y actualizarla
-    var doAuth = Promise.resolve();
-    if(auth.currentUser && auth.currentUser.email !== pending.email) doAuth = auth.signOut();
-    p = doAuth
-      .then(function(){
-        if(auth.currentUser && auth.currentUser.email === pending.email) return auth.currentUser;
-        return auth.signInWithEmailAndPassword(pending.email, pending.inviteTempPass).then(function(r){ return r.user; });
-      })
-      .then(function(user){ return user.updatePassword(pass).then(function(){ return user; }); })
-      .then(finalizarActivacion);
-  } else {
-    // Nuevo flujo: crear el usuario directamente con la contraseña elegida
-    var doSignOut = auth.currentUser ? auth.signOut() : Promise.resolve();
-    p = doSignOut
-      .then(function(){ return auth.createUserWithEmailAndPassword(pending.email, pass); })
-      .then(function(r){ return r.user; })
-      .then(finalizarActivacion);
-  }
-
-  p.catch(function(e) {
-    hideLoader();
-    if (btn) btn.disabled = false;
-    var msg = e.message || 'Error al activar la cuenta';
-    if(e.code === 'auth/email-already-in-use') msg = 'Este email ya tiene una cuenta activa. Inicia sesión normalmente.';
-    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
-  });
+  auth.currentUser.updatePassword(pass)
+    .then(function() {
+      return db.collection('usuarios').doc(auth.currentUser.uid).set({
+        nombre: nombre,
+        email: auth.currentUser.email,
+        rol: 'admin'
+      }, { merge: true });
+    })
+    .then(function() {
+      hideLoader();
+      $('invite-screen').style.display = 'none';
+      init();
+    })
+    .catch(function(e) {
+      hideLoader();
+      if (btn) btn.disabled = false;
+      if (errEl) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    });
 }
 
 // ── Arranque con Firebase Auth ──────────────────────────────
 if (auth) {
   auth.onAuthStateChanged(function(user) {
-    var inviteToken = _getInviteToken();
-    if (inviteToken && (!user || (S.pendingInvite && user.email===S.pendingInvite.email))) {
-      _resolverInvitacionPendiente();
-      if (!user) return;
-    }
     if (user) {
       $('login-screen').style.display = 'none';
       var invSc = $('invite-screen');
-      if (invSc && !inviteToken) invSc.style.display = 'none';
+      if (invSc) invSc.style.display = 'none';
       // Cargar datos del usuario desde Firestore
       if (db) {
         db.collection('usuarios').doc(user.uid).get().then(function(doc) {
@@ -12105,20 +11079,11 @@ if (auth) {
       }
     } else {
       window._appInited = false;
-      var inviteToken = _getInviteToken();
-      if (inviteToken) {
-        var appRoot = $('app-root');
-        if (appRoot) appRoot.style.display = 'none';
-        _resolverInvitacionPendiente();
-      } else {
-        $('login-screen').style.display = 'flex';
-        var invSc = $('invite-screen');
-        if (invSc) invSc.style.display = 'none';
-        var appRoot = $('app-root');
-        if (appRoot) appRoot.style.display = 'none';
-        var mEl = $('login-mode');
-        if (mEl) mEl.textContent = 'Firebase Auth activo';
-      }
+      $('login-screen').style.display = 'flex';
+      var appRoot = $('app-root');
+      if (appRoot) appRoot.style.display = 'none';
+      var mEl = $('login-mode');
+      if (mEl) mEl.textContent = 'Firebase Auth activo';
     }
   });
 } else {
