@@ -703,17 +703,14 @@ async function submitF(){
   var btn=document.getElementById('btnGuardarSolicitud');
   if(btn) btn.textContent='Guardando...';
   try{
-    /* Reintentar init si es necesario */
     if(!FIREBASE_READY||!fbAuth||!db){ initFirebaseSolicitar(); }
-    if(!FIREBASE_READY||!fbAuth||!db){ throw new Error('SDK no cargó. Recarga la página e intenta de nuevo.'); }
-    /* Login anónimo */
+    if(!FIREBASE_READY||!fbAuth||!db){ throw new Error('SDK no disponible'); }
     if(!fbAuth.currentUser){ await fbAuth.signInAnonymously(); }
-    /* Guardar cliente */
-    var dup = await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
+    var dup=await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
     if(!dup.empty){
-      var old=dup.docs[0].data()||{};
-      payload.id=old.id||dup.docs[0].id;
-      payload.creado=old.creado||payload.creado;
+      var old2=dup.docs[0].data()||{};
+      payload.id=old2.id||dup.docs[0].id;
+      payload.creado=old2.creado||payload.creado;
       await dup.docs[0].ref.set(payload,{merge:true});
     }else{
       await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
@@ -728,7 +725,7 @@ async function submitF(){
     document.getElementById('pd2').classList.add('done');
     document.getElementById('okText').textContent='Tus datos fueron cargados en Pagasi como cliente nuevo.';
   }catch(err){
-    console.error('submitF error:',err);
+    console.error('submitF:',err);
     alert('Error: '+(err.message||err));
   }finally{
     btns.forEach(function(b){b.disabled=false;});
