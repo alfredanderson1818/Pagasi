@@ -2226,14 +2226,18 @@ function calcCustomPlan(precioBaseReal, inicialReal, cuotaQ, plazoMeses){
 }
 function getWzPlanConfig(){
   var modo=((document.getElementById('wz_plan_mode')||{}).value)||WZ.planMode||'global';
-  var precioBase=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
+  var precioBase=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value));
+  if(!(precioBase>0)) precioBase=parseFloat(WZ.precioBaseReal||WZ.precio)||0;
   if(modo!=='custom'){
     var baseCalc=calcMoto(precioBase||WZ.precio||0);
     return {mode:'global', precioBaseReal:precioBase||parseFloat(WZ.precio)||0, ini:baseCalc.ini, fin:baseCalc.fin, total:baseCalc.total, cuotaQ:baseCalc.cuotaQ, cuotaM:baseCalc.cuotaM, totalPagado:baseCalc.totalPagado, plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2, factor:PLAN.factor, inicialPct:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy, sourcePlan:{plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy}};
   }
-  var inicialReal=parseFloat(((document.getElementById('wz_ini_real')||{}).value))||0;
-  var cuotaQ=parseFloat(((document.getElementById('wz_cuota_q_custom')||{}).value))||0;
-  var plazo=parseInt(((document.getElementById('wz_plazo_custom')||{}).value),10)||0;
+  var inicialReal=parseFloat(((document.getElementById('wz_ini_real')||{}).value));
+  if(!(inicialReal>=0)) inicialReal=parseFloat(WZ.ini)||0;
+  var cuotaQ=parseFloat(((document.getElementById('wz_cuota_q_custom')||{}).value));
+  if(!(cuotaQ>0)) cuotaQ=parseFloat(WZ.cuota)||0;
+  var plazo=parseInt(((document.getElementById('wz_plazo_custom')||{}).value),10);
+  if(!(plazo>0)) plazo=parseInt(WZ.plazo,10)||0;
   var custom=calcCustomPlan(precioBase,inicialReal,cuotaQ,plazo);
   custom.mode='custom';
   custom.sourcePlan={plazo:custom.plazo, factor:custom.factor, inicial:custom.inicialPct, tasaMensual:custom.tasaMensual, apy:custom.apy};
