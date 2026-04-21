@@ -2033,8 +2033,8 @@ var DB = {
       db.collection('config').doc('catalogo').get(),
       db.collection('config').doc('planes').get(),
     ]).then(function(snaps){
-      function read(snap){return snap.docs.map(function(d){return d.data();});}
-      var m=read(snaps[0]),cl=read(snaps[1]),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
+      function read(snap, withId){return snap.docs.map(function(d){return withId ? Object.assign({id:d.id}, d.data()) : d.data();});}
+      var m=read(snaps[0]),cl=read(snaps[1], true),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
       var planDoc = snaps[8], catalogoDoc = snaps[9], planesDoc = snaps[10];
       if(planDoc && planDoc.exists){
         var pd = planDoc.data() || {};
