@@ -693,51 +693,46 @@ function buildClientePayload(){
   };
 }
 
-async function ensureAnonAuth(){
-  if(!FIREBASE_READY || !fbAuth || !db){
-    var ok = initFirebaseSolicitar();
-    if(!ok || !fbAuth || !db){
-      throw new Error('Firebase no disponible');
-    }
-  }
-  if(fbAuth.currentUser) return fbAuth.currentUser;
-  try{
-    var cred = await fbAuth.signInAnonymously();
-    return cred.user;
-  }catch(e){
-    console.error('Anonymous auth error', e);
-    throw new Error('Activa Anonymous Auth en Firebase para guardar solicitudes públicas.');
-  }
-}
-
 async function submitF(){
   var payload=buildClientePayload();
   if(!payload.nombre||!payload.cedula||!payload.tel||!payload.trabajo||!payload.ingreso){
     alert('Completa los campos obligatorios de Cliente.'); return;
   }
-  var btns=document.querySelectorAll('#fs2 .btn'); btns.forEach(function(b){b.disabled=true;});
+  var btns=document.querySelectorAll('#fs2 .btn');
+  btns.forEach(function(b){b.disabled=true;});
+  var btn=document.getElementById('btnGuardarSolicitud');
+  if(btn) btn.textContent='Guardando...';
   try{
-    await ensureAnonAuth();
+    /* Reintentar init si es necesario */
+    if(!FIREBASE_READY||!fbAuth||!db){ initFirebaseSolicitar(); }
+    if(!FIREBASE_READY||!fbAuth||!db){ throw new Error('SDK no cargó. Recarga la página e intenta de nuevo.'); }
+    /* Login anónimo */
+    if(!fbAuth.currentUser){ await fbAuth.signInAnonymously(); }
+    /* Guardar cliente */
     var dup = await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
     if(!dup.empty){
-      var ref=dup.docs[0].ref;
       var old=dup.docs[0].data()||{};
-      payload.id = old.id || dup.docs[0].id;
-      payload.creado = old.creado || payload.creado;
-      await ref.set(payload,{merge:true});
+      payload.id=old.id||dup.docs[0].id;
+      payload.creado=old.creado||payload.creado;
+      await dup.docs[0].ref.set(payload,{merge:true});
     }else{
       await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
     }
-    await db.collection('solicitudes_publicas').doc(String(payload.id)).set({clienteId: payload.id, cedula: payload.cedula, nombre: payload.nombre, creado: payload.creado, origen:'solicitar_web', estado:'nuevo'} ,{merge:true});
+    await db.collection('solicitudes_publicas').doc(String(payload.id)).set(
+      {clienteId:payload.id,cedula:payload.cedula,nombre:payload.nombre,creado:payload.creado,origen:'solicitar_web',estado:'nuevo'},
+      {merge:true}
+    );
     document.getElementById('fs2').classList.remove('on');
     document.getElementById('fOK').style.display='block';
-    document.getElementById('pd2').classList.remove('on');document.getElementById('pd2').classList.add('done');
+    document.getElementById('pd2').classList.remove('on');
+    document.getElementById('pd2').classList.add('done');
     document.getElementById('okText').textContent='Tus datos fueron cargados en Pagasi como cliente nuevo.';
   }catch(err){
-    console.error(err);
-    alert(err.message || 'No se pudo guardar la solicitud en Pagasi.');
+    console.error('submitF error:',err);
+    alert('Error: '+(err.message||err));
   }finally{
     btns.forEach(function(b){b.disabled=false;});
+    if(btn) btn.textContent='Guardar en Pagasi';
   }
 }
 
