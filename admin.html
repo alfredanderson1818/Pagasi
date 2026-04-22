@@ -2515,6 +2515,102 @@ tbody tr:hover td {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* ══════════  PÁGINA USUARIOS · estilos profesionales  ════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+/* Tabs de usuarios (al estilo iOS/moderno) */
+.us-tab {
+  flex: 1;
+  min-width: 100px;
+  background: transparent;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--f);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+.us-tab:hover { color: var(--ink2); background: rgba(255,255,255,.04); }
+.us-tab.is-active {
+  background: var(--surf);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 0 0 1px var(--rim);
+}
+
+/* Rows de usuarios — hover suave */
+.us-row:hover { background: var(--surf2) !important; }
+.us-row:last-child { border-bottom: none !important; }
+
+/* Panel lateral slide-in (tipo Notion/Linear) */
+.user-panel {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 420px;
+  max-width: 100%;
+  background: var(--base);
+  border-left: 1px solid var(--rim);
+  box-shadow: -12px 0 48px rgba(0,0,0,.2);
+  z-index: 2000;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.user-panel.open { transform: translateX(0); }
+
+.user-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.user-panel-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Mobile: panel full-width */
+@media (max-width: 820px) {
+  .user-panel {
+    width: 100%;
+    max-width: 100%;
+    border-left: none;
+  }
+  .us-tab {
+    font-size: 11.5px !important;
+    padding: 9px 10px !important;
+    min-width: auto !important;
+  }
+  .us-tab > span:first-child { display: none; } /* ocultar emojis en mobile para que entre */
+  .us-meta { min-width: auto !important; font-size: 10px !important; }
+  .us-row { padding: 10px 12px !important; gap: 9px !important; }
+  .us-row > div:nth-child(3) { /* role badge */
+    font-size: 10px !important;
+    padding: 3px 7px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .us-tab { font-size: 10.5px !important; padding: 8px 6px !important; }
+  .us-row .us-meta { display: none !important; }
+  .us-row > div:nth-child(3) { /* role badge queda solo el ícono */
+    font-size: 9px !important;
+  }
+}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -3239,13 +3335,28 @@ function isAdminUser(){ return !!(S.currentUser && S.currentUser.rol==='Administ
 // PERMISOS POR ROL — presets automáticos
 // ══════════════════════════════════════════
 var ROL_PERMISOS = {
+  // Acceso total: dueño del sistema
   Administrador: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'],
+  // Supervisa operaciones, ve reportes, NO toca config ni usuarios
   Gerente:       ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta'],
-  Empleado:      ['dash','cobranza','creditos'],   // dashboard especializado + cobranza + solicitudes
-  Contador:      ['reportes','cuentas','conta','pagos'],
-  // Roles legacy — se tratan como Empleado internamente:
-  Vendedor:      ['dash','cobranza','creditos'],
-  Cobrador:      ['dash','cobranza','creditos'],
+  // Cobra en la oficina: ve todos los clientes, registra pagos, ve cobranza y deudores
+  Cobrador:      ['dash','clientes','cobranza','pagos','creditos'],
+  // Capta clientes, hace solicitudes, NO toca pagos ni cobranza
+  Vendedor:      ['dash','clientes','creditos','motos'],
+  // Solo finanzas: reportes, pagos, cuentas y contabilidad
+  Contador:      ['dash','pagos','reportes','cuentas','conta'],
+  // Empleado general: hace casi todo excepto config/users
+  Empleado:      ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif'],
+};
+
+// Roles disponibles para invitar (el nombre visible y su descripción)
+var ROLES_INFO = {
+  Administrador: { desc:'Control total. Puede gestionar usuarios, configuración y todos los módulos.', color:'#5b4ed4', icon:'ADM' },
+  Gerente:       { desc:'Supervisa operaciones y ve reportes. No puede cambiar configuración del sistema.', color:'#e8980a', icon:'GER' },
+  Cobrador:      { desc:'Cobra y registra pagos. Ve todos los clientes y la cartera de cobranza.',        color:'#06b06a', icon:'COB' },
+  Vendedor:      { desc:'Capta clientes y crea solicitudes de financiamiento. No ve cobranza ni pagos.',  color:'#2194ff', icon:'VEN' },
+  Contador:      { desc:'Acceso exclusivo a pagos, reportes financieros, cuentas y contabilidad.',        color:'#9c64ff', icon:'CNT' },
+  Empleado:      { desc:'Empleado general. Hace casi todo menos configuración y gestión de usuarios.',    color:'#ff6b6b', icon:'EMP' }
 };
 
 // Helper: devuelve true si el usuario es un Empleado (o legacy Cobrador/Vendedor)
@@ -6752,143 +6863,458 @@ service cloud.firestore {
   </div>`;},cuentas(){ return renderCuentas(); },
 
 users(){
-  const rolBadge = {Administrador:'b-p',Gerente:'b-b',Empleado:'b-g',Cobrador:'b-r',Vendedor:'b-g',Contador:'b-a'};
+  // Estado inicial de tab (defaults a 'usuarios')
+  if(!S.usersTab) S.usersTab = 'usuarios';
+
   // Iniciar carga real desde Firestore
-  setTimeout(function(){
-    DB.getUsuarios().then(function(lista){
-      var tb = $('users-tbody');
-      if(!tb) return;
-      // Actualizar KPIs
-      var total = lista.length;
-      var admins = lista.filter(function(u){return (u.rol||'').toLowerCase()==='administrador';}).length;
-      var empleados = lista.filter(function(u){
-        var r = (u.rol||'').toLowerCase();
-        return r==='empleado'||r==='cobrador'||r==='vendedor';
-      }).length;
-      var gerentes = lista.filter(function(u){return (u.rol||'').toLowerCase()==='gerente';}).length;
-      if($('users-kpi-total'))    $('users-kpi-total').textContent=total;
-      if($('users-kpi-admins'))   $('users-kpi-admins').textContent=admins;
-      if($('users-kpi-empleados'))$('users-kpi-empleados').textContent=empleados;
-      if($('users-kpi-gerentes')) $('users-kpi-gerentes').textContent=gerentes;
+  setTimeout(function(){ usersReload(); }, 80);
 
-      if(!lista.length){
-        tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--ink3);padding:30px 0"><div style="font-size:13px;font-weight:700;margin-bottom:4px">Sin usuarios registrados</div><div style="font-size:11.5px">Usa el botón "Invitar Usuario" para agregar el primero</div></td></tr>';
-        return;
-      }
-      // Ordenar: admin primero, luego alfabético por nombre
-      lista.sort(function(a,b){
-        var ra=(a.rol||'').toLowerCase(), rb=(b.rol||'').toLowerCase();
-        if(ra==='administrador' && rb!=='administrador') return -1;
-        if(rb==='administrador' && ra!=='administrador') return 1;
-        return (a.nombre||a.email||'').localeCompare(b.nombre||b.email||'');
-      });
-      tb.innerHTML = lista.map(function(u){
-        var nombre = u.nombre||u.email||'?';
-        var initials = nombre.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
-        var rc = rolBadge[u.rol]||'b-x';
-        var mods = (u.permisos||[]).filter(function(p){return p!=='perm_delete';}).length;
-        var esMio = S.currentUser && S.currentUser.uid === u.uid;
-        var rolLabel = u.rol || 'Sin rol';
-        return '<tr style="transition:background .15s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
-          +'<td><div style="display:flex;align-items:center;gap:10px">'
-          +'<div style="width:34px;height:34px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(91,78,212,.2)">'+initials+'</div>'
-          +'<div style="min-width:0"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nombre+(esMio?' <span style="color:var(--p1);font-size:9.5px;background:var(--gs);padding:2px 6px;border-radius:6px;font-weight:700;margin-left:4px">TÚ</span>':'')+'</div></div></div></td>'
-          +'<td class="tds" style="font-family:monospace;font-size:11.5px">'+u.email+'</td>'
-          +'<td><span class="bdg '+rc+'">'+rolLabel+'</span></td>'
-          +'<td class="tds">'+mods+' módulo'+(mods!==1?'s':'')+((u.permisos||[]).indexOf('perm_delete')>=0?' <span style="font-size:10px;color:var(--red);margin-left:4px">+ eliminar</span>':'')+'</td>'
-          +'<td style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">'
-            +'<button class="btn btn-g btn-xs" data-uid="'+u.uid+'" onclick="editarUsuario(this.dataset.uid)">Permisos</button>'
-            +'<button class="btn btn-b btn-xs" data-uid="'+u.uid+'" onclick="copiarInvitacionUsuario(this.dataset.uid)">Link invitación</button>'
-            +((!esMio&&canDeleteAction())?'<button class="btn btn-d btn-xs" data-uid="'+u.uid+'" data-nombre="'+(u.nombre||u.email).replace(/"/g,'&quot;')+'" onclick="confirmarEliminarUsuario(this.dataset.uid,this.dataset.nombre)">Eliminar</button>':'')
-          +'</td>'
-        +'</tr>';
-      }).join('');
-    }).catch(function(e){
-      var tb = $('users-tbody');
-      if(tb) tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--red);padding:20px;font-size:12px">Error cargando usuarios: '+(e.message||'sin conexión Firebase')+'</td></tr>';
-    });
-    // Cargar invitaciones pendientes
-    if(db){
-      db.collection('invitaciones').where('usado','==',false).get().then(function(snap){
-        var pi = $('pending-invites');
-        if(!pi) return;
-        if(snap.empty){ pi.style.display='none'; return; }
-        pi.style.display='';
-        var cnt = $('pending-invites-count');
-        if(cnt) cnt.textContent = snap.size;
-        var listEl = pi.querySelector('.lst');
-        if(listEl){
-          listEl.innerHTML = snap.docs.map(function(d){
-            var inv = d.data();
-            return '<div class="li"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+inv.email+'</div>'
-              +'<div class="tds">'+inv.rol+' · '+inv.permisos.length+' módulos · <span style="color:var(--amber)">Pendiente de aceptar</span></div></div>'
-              +'<button class="btn btn-g btn-xs" data-token="'+d.id+'" onclick="copiarLink(this.dataset.token)">Copiar link</button>'
-              +'</div>';
-          }).join('');
-        }
-      }).catch(function(){});
-    }
-  }, 80);
   return`<div class="page">
-
   <!-- Header -->
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:12px;flex-wrap:wrap">
     <div>
-      <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.1">Usuarios</div>
-      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">Gestiona accesos y permisos del sistema</div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.1">Usuarios y Permisos</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-top:3px">Gestiona los accesos de tu equipo</div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-g btn-sm" onclick="nav('users')" title="Refrescar lista">↻ Refrescar</button>
+      <button class="btn btn-g btn-sm" onclick="usersReload()" title="Refrescar lista">↻</button>
       <button class="btn btn-p btn-sm" onclick="openInviteUser()" style="gap:6px">＋ Invitar Usuario</button>
     </div>
   </div>
 
-  <!-- KPIs -->
-  <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">
+  <!-- KPIs compactos -->
+  <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:14px">
     <div class="stat" style="border-left:3px solid var(--p1)">
-      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">USR</div>
       <div class="st-v" style="color:var(--p1)" id="users-kpi-total">...</div>
-      <div class="st-l">Usuarios totales</div>
-    </div>
-    <div class="stat" style="border-left:3px solid var(--p1)">
-      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">ADM</div>
-      <div class="st-v" style="color:var(--p1)" id="users-kpi-admins">...</div>
-      <div class="st-l">Administradores</div>
+      <div class="st-l">Usuarios activos</div>
     </div>
     <div class="stat" style="border-left:3px solid var(--amber)">
-      <div class="st-ic" style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:800">GER</div>
-      <div class="st-v" style="color:var(--amber)" id="users-kpi-gerentes">...</div>
-      <div class="st-l">Gerentes</div>
+      <div class="st-v" style="color:var(--amber)" id="users-kpi-pending">...</div>
+      <div class="st-l">Invitaciones pendientes</div>
     </div>
     <div class="stat" style="border-left:3px solid var(--green)">
-      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">EMP</div>
-      <div class="st-v" style="color:var(--green)" id="users-kpi-empleados">...</div>
-      <div class="st-l">Empleados</div>
+      <div class="st-v" style="color:var(--green)" id="users-kpi-online">...</div>
+      <div class="st-l">Conectados hoy</div>
+    </div>
+    <div class="stat" style="border-left:3px solid var(--blue)">
+      <div class="st-v" style="color:var(--blue)" id="users-kpi-roles">6</div>
+      <div class="st-l">Roles configurados</div>
     </div>
   </div>
 
-  <!-- Tabla de usuarios -->
-  <div class="card" style="margin-bottom:12px">
-    <div class="ch">
-      <div><div class="ct">Lista de usuarios</div><div class="cs">Incluye a todos los que han iniciado sesión al menos una vez</div></div>
-    </div>
-    <div class="tw"><table>
-      <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Accesos</th><th></th></tr></thead>
-      <tbody id="users-tbody"><tr><td colspan="5" style="text-align:center;color:var(--ink3);padding:16px">Cargando...</td></tr></tbody>
-    </table></div>
+  <!-- Tabs -->
+  <div style="display:flex;gap:3px;background:var(--surf2);padding:4px;border-radius:11px;margin-bottom:14px;border:1px solid var(--rim);flex-wrap:wrap">
+    <button class="us-tab ${S.usersTab==='usuarios'?'is-active':''}" onclick="setUsersTab('usuarios')">
+      <span style="font-size:14px">👥</span> Usuarios
+    </button>
+    <button class="us-tab ${S.usersTab==='roles'?'is-active':''}" onclick="setUsersTab('roles')">
+      <span style="font-size:14px">🛡️</span> Roles y Permisos
+    </button>
+    <button class="us-tab ${S.usersTab==='invitaciones'?'is-active':''}" onclick="setUsersTab('invitaciones')">
+      <span style="font-size:14px">✉️</span> Invitaciones <span id="tab-inv-badge" style="background:var(--ambers);color:var(--amber);font-size:9.5px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:4px;display:none">0</span>
+    </button>
   </div>
 
-  <!-- Invitaciones pendientes -->
-  <div class="card" id="pending-invites" style="display:none">
-    <div class="ch">
-      <div><div class="ct">Invitaciones pendientes <span style="background:var(--ambers);color:var(--amber);font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:6px" id="pending-invites-count">0</span></div>
-      <div class="cs">Usuarios que aún no han aceptado su invitación</div></div>
-    </div>
-    <div class="lst"></div>
+  <!-- Contenido del tab activo -->
+  <div id="users-tab-content">
+    ${S.usersTab==='usuarios' ? _usersTabUsuariosHTML() :
+      S.usersTab==='roles' ? _usersTabRolesHTML() :
+      _usersTabInvitacionesHTML()}
   </div>
-
   </div>`;},
 };
+
+// ══════════════════════════════════════════
+// USUARIOS — TAB CONTENT HELPERS
+// ══════════════════════════════════════════
+function setUsersTab(tab){
+  S.usersTab = tab;
+  var host = $('users-tab-content');
+  if(!host) return;
+  // Update tab buttons
+  document.querySelectorAll('.us-tab').forEach(function(b){ b.classList.remove('is-active'); });
+  var activeBtn = document.querySelector('.us-tab[onclick*="setUsersTab(\''+tab+'\')"]');
+  if(activeBtn) activeBtn.classList.add('is-active');
+  // Render content
+  if(tab==='usuarios') host.innerHTML = _usersTabUsuariosHTML();
+  else if(tab==='roles') host.innerHTML = _usersTabRolesHTML();
+  else host.innerHTML = _usersTabInvitacionesHTML();
+  // Reload data
+  setTimeout(usersReload, 50);
+}
+
+// TAB 1: Lista de usuarios
+function _usersTabUsuariosHTML(){
+  return '<div class="card" style="margin-bottom:12px">'
+    +'<div style="padding:10px 14px;border-bottom:1px solid var(--rim);display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    +  '<div class="srch" style="flex:1;min-width:200px"><span class="srch-i">🔍</span><input type="text" id="users-search" placeholder="Buscar por nombre, email o rol..." oninput="_usersFiltroUpdate()"></div>'
+    +  '<select class="fs" id="users-filter-rol" onchange="_usersFiltroUpdate()" style="width:auto;min-width:140px">'
+    +    '<option value="">Todos los roles</option>'
+    +    Object.keys(ROLES_INFO).map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('')
+    +  '</select>'
+    +'</div>'
+    +'<div style="padding:0">'
+    +  '<div id="users-list"><div style="padding:40px 20px;text-align:center;color:var(--ink3);font-size:12px">Cargando...</div></div>'
+    +'</div>'
+    +'</div>';
+}
+
+// TAB 2: Matriz de roles y permisos
+function _usersTabRolesHTML(){
+  var roles = Object.keys(ROLES_INFO);
+  var grupos = {};
+  MODULOS.forEach(function(m){
+    if(!grupos[m.grupo]) grupos[m.grupo] = [];
+    grupos[m.grupo].push(m);
+  });
+
+  var html = '<div class="card" style="margin-bottom:12px">'
+    +'<div class="ch"><div><div class="ct">Matriz de Roles y Permisos</div><div class="cs">Define qué puede hacer cada rol en el sistema</div></div></div>'
+    +'<div style="padding:14px 6px;overflow-x:auto"><table style="width:100%;border-collapse:separate;border-spacing:0">'
+    // HEADER: roles con íconos y descripción
+    +'<thead><tr>'
+    +  '<th style="text-align:left;padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);border-bottom:1px solid var(--rim);position:sticky;left:0;background:var(--surf);z-index:2;min-width:140px">Módulo</th>'
+    +  roles.map(function(r){
+         var info = ROLES_INFO[r];
+         var count = ROL_PERMISOS[r] ? ROL_PERMISOS[r].filter(function(p){return p!=='perm_delete';}).length : 0;
+         return '<th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--rim);min-width:100px">'
+           +'<div style="display:flex;flex-direction:column;align-items:center;gap:3px">'
+           +  '<div style="width:32px;height:32px;border-radius:9px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">'+info.icon+'</div>'
+           +  '<div style="font-size:11px;font-weight:800;color:var(--ink)">'+r+'</div>'
+           +  '<div style="font-size:9.5px;color:var(--ink3);font-weight:600">'+count+' módulos</div>'
+           +'</div></th>';
+       }).join('')
+    +'</tr></thead>'
+    +'<tbody>'
+    // Una fila por grupo seguida por sus módulos
+    +Object.keys(grupos).map(function(grupo){
+       return '<tr><td colspan="'+(roles.length+1)+'" style="padding:14px 14px 6px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);background:var(--surf2)">'+grupo+'</td></tr>'
+         +grupos[grupo].map(function(m){
+           return '<tr style="transition:background .12s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
+             +'<td style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--ink);position:sticky;left:0;background:inherit;border-right:1px solid var(--rim)">'+m.label+'</td>'
+             +roles.map(function(r){
+               var hasAccess = (ROL_PERMISOS[r]||[]).indexOf(m.id)>=0;
+               var isAdmin = r==='Administrador';
+               return '<td style="text-align:center;padding:8px">'
+                 +(hasAccess
+                   ? '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:'+ROLES_INFO[r].color+';color:#fff;align-items:center;justify-content:center;font-size:13px;font-weight:900" title="Con acceso">✓</div>'
+                   : '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--surf2);color:var(--ink3);align-items:center;justify-content:center;font-size:12px;border:1px solid var(--rim)" title="Sin acceso">–</div>')
+                 +'</td>';
+             }).join('')
+             +'</tr>';
+         }).join('');
+     }).join('')
+    // Fila especial: acciones destructivas (perm_delete)
+    +'<tr><td colspan="'+(roles.length+1)+'" style="padding:14px 14px 6px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--red);background:var(--surf2)">⚠ Acciones críticas</td></tr>'
+    +'<tr>'
+    +  '<td style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--ink);position:sticky;left:0;background:inherit;border-right:1px solid var(--rim)">Eliminar registros</td>'
+    +  roles.map(function(r){
+        var hasDelete = (ROL_PERMISOS[r]||[]).indexOf('perm_delete')>=0;
+        return '<td style="text-align:center;padding:8px">'
+          +(hasDelete
+             ? '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--red);color:#fff;align-items:center;justify-content:center;font-size:13px;font-weight:900">✓</div>'
+             : '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--surf2);color:var(--ink3);align-items:center;justify-content:center;font-size:12px;border:1px solid var(--rim)">–</div>')
+          +'</td>';
+      }).join('')
+    +'</tr>'
+    +'</tbody></table></div>'
+    +'</div>'
+    // Tarjetas descriptivas de cada rol
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">'
+    +roles.map(function(r){
+        var info = ROLES_INFO[r];
+        var count = ROL_PERMISOS[r] ? ROL_PERMISOS[r].filter(function(p){return p!=='perm_delete';}).length : 0;
+        return '<div style="background:var(--surf);border:1px solid var(--rim);border-left:4px solid '+info.color+';border-radius:10px;padding:14px">'
+          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+          +  '<div style="width:36px;height:36px;border-radius:9px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">'+info.icon+'</div>'
+          +  '<div><div style="font-weight:800;font-size:14px">'+r+'</div><div style="font-size:10px;color:var(--ink3);font-weight:600">'+count+' módulos · <span id="role-count-'+r+'">0</span> usuarios</div></div>'
+          +'</div>'
+          +'<div style="font-size:11.5px;color:var(--ink2);line-height:1.5">'+info.desc+'</div>'
+          +'</div>';
+      }).join('')
+    +'</div>';
+
+  return html;
+}
+
+// TAB 3: Invitaciones pendientes
+function _usersTabInvitacionesHTML(){
+  return '<div class="card">'
+    +'<div class="ch"><div><div class="ct">Invitaciones Pendientes</div><div class="cs">Usuarios invitados que aún no han aceptado</div></div></div>'
+    +'<div id="invites-list" style="padding:0">'
+    +  '<div style="padding:40px 20px;text-align:center;color:var(--ink3);font-size:12px">Cargando...</div>'
+    +'</div>'
+    +'</div>';
+}
+
+// Global cache de usuarios para filtrado local
+var _usersCache = [];
+
+// Recargar datos de Firestore y actualizar UI
+function usersReload(){
+  if(typeof DB==='undefined' || !DB.getUsuarios){
+    var ul=$('users-list'); if(ul) ul.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:12px">Sin conexión a Firebase</div>';
+    return;
+  }
+  DB.getUsuarios().then(function(lista){
+    _usersCache = lista || [];
+    // KPIs
+    var total = _usersCache.length;
+    var online = _usersCache.filter(function(u){
+      if(!u.lastLogin) return false;
+      var h = (Date.now() - new Date(u.lastLogin).getTime()) / 3600000;
+      return h < 24;
+    }).length;
+    if($('users-kpi-total')) $('users-kpi-total').textContent = total;
+    if($('users-kpi-online')) $('users-kpi-online').textContent = online;
+    // Role counts (para las tarjetas de roles)
+    Object.keys(ROLES_INFO).forEach(function(r){
+      var count = _usersCache.filter(function(u){return u.rol===r;}).length;
+      var el = $('role-count-'+r);
+      if(el) el.textContent = count;
+    });
+    // Render según tab activo
+    if(S.usersTab==='usuarios') _usersRenderList();
+  }).catch(function(e){
+    var ul = $('users-list');
+    if(ul) ul.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:12px">Error: '+(e.message||'sin conexión')+'</div>';
+  });
+  // Invitaciones
+  if(typeof db!=='undefined' && db){
+    db.collection('invitaciones').where('usado','==',false).get().then(function(snap){
+      var count = snap.size;
+      if($('users-kpi-pending')) $('users-kpi-pending').textContent = count;
+      var badge = $('tab-inv-badge');
+      if(badge){ badge.textContent = count; badge.style.display = count>0?'inline-block':'none'; }
+      // Render invites tab si está activo
+      if(S.usersTab==='invitaciones') _usersRenderInvites(snap);
+    }).catch(function(){
+      if($('users-kpi-pending')) $('users-kpi-pending').textContent = '0';
+    });
+  }
+}
+
+function _usersFiltroUpdate(){
+  _usersRenderList();
+}
+
+function _usersRenderList(){
+  var host = $('users-list');
+  if(!host) return;
+  var q = ($('users-search') && $('users-search').value || '').toLowerCase().trim();
+  var rolFilter = ($('users-filter-rol') && $('users-filter-rol').value) || '';
+
+  var list = _usersCache.filter(function(u){
+    if(rolFilter && u.rol!==rolFilter) return false;
+    if(!q) return true;
+    var blob = ((u.nombre||'')+' '+(u.email||'')+' '+(u.rol||'')).toLowerCase();
+    return blob.indexOf(q)>=0;
+  });
+
+  if(!list.length){
+    host.innerHTML = '<div style="padding:50px 20px;text-align:center"><div style="font-size:32px;margin-bottom:10px;opacity:.4">👥</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:4px">Sin usuarios</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:14px">'+(q||rolFilter?'No se encontraron usuarios con esos criterios':'Usa "Invitar Usuario" para agregar el primero')+'</div>'
+      +(!q && !rolFilter ? '<button class="btn btn-p btn-sm" onclick="openInviteUser()">＋ Invitar al primero</button>':'')
+      +'</div>';
+    return;
+  }
+
+  // Ordenar: admin primero, luego por último login
+  list.sort(function(a,b){
+    if(a.rol==='Administrador' && b.rol!=='Administrador') return -1;
+    if(b.rol==='Administrador' && a.rol!=='Administrador') return 1;
+    var la = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
+    var lb = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
+    if(la !== lb) return lb - la;
+    return (a.nombre||a.email||'').localeCompare(b.nombre||b.email||'');
+  });
+
+  host.innerHTML = list.map(function(u){
+    var nombre = u.nombre || u.email || '?';
+    var initials = nombre.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+    var info = ROLES_INFO[u.rol] || {color:'#888', icon:'?'};
+    var esMio = S.currentUser && S.currentUser.uid === u.uid;
+    var mods = (u.permisos||[]).filter(function(p){return p!=='perm_delete';}).length;
+    // Última conexión
+    var lastTxt = 'Nunca';
+    var lastColor = 'var(--ink3)';
+    if(u.lastLogin){
+      var mins = Math.floor((Date.now() - new Date(u.lastLogin).getTime())/60000);
+      if(mins < 5){ lastTxt='En línea'; lastColor='var(--green)'; }
+      else if(mins < 60){ lastTxt='hace '+mins+'m'; lastColor='var(--green)'; }
+      else if(mins < 1440){ lastTxt='hace '+Math.floor(mins/60)+'h'; lastColor='var(--ink2)'; }
+      else if(mins < 10080){ lastTxt='hace '+Math.floor(mins/1440)+'d'; lastColor='var(--ink3)'; }
+      else lastTxt = new Date(u.lastLogin).toLocaleDateString('es-VE');
+    }
+
+    return '<div class="us-row" onclick="openUserPanel(\''+u.uid+'\')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--rim);cursor:pointer;transition:background .12s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
+      // Avatar
+      +'<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,'+info.color+','+info.color+'cc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px '+info.color+'40">'+initials+'</div>'
+      // Info principal
+      +'<div style="flex:1;min-width:0">'
+      +  '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><div style="font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nombre+'</div>'
+      +  (esMio?'<span style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800;padding:2px 6px;border-radius:5px">TÚ</span>':'')+'</div>'
+      +  '<div style="font-size:11px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+u.email+'</div>'
+      +'</div>'
+      // Role badge
+      +'<div style="flex-shrink:0;display:flex;align-items:center;gap:4px;background:'+info.color+'18;color:'+info.color+';padding:5px 10px;border-radius:20px;font-size:11px;font-weight:800">'
+      +  '<span style="font-size:9px;font-weight:900">'+info.icon+'</span>'+u.rol+'</div>'
+      // Modules count
+      +'<div class="us-meta" style="flex-shrink:0;font-size:11px;color:var(--ink3);text-align:right;min-width:64px">'
+      +  '<div style="font-weight:700;color:var(--ink2)">'+mods+' módulo'+(mods!==1?'s':'')+'</div>'
+      +  '<div style="font-size:10px;color:'+lastColor+'">'+lastTxt+'</div>'
+      +'</div>'
+      // Arrow
+      +'<div style="flex-shrink:0;color:var(--ink3);font-size:18px">›</div>'
+      +'</div>';
+  }).join('');
+}
+
+function _usersRenderInvites(snap){
+  var host = $('invites-list');
+  if(!host) return;
+  if(!snap || snap.empty){
+    host.innerHTML = '<div style="padding:50px 20px;text-align:center"><div style="font-size:32px;margin-bottom:10px;opacity:.4">✉️</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:4px">Sin invitaciones pendientes</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:14px">Todas las invitaciones que envíes aparecerán aquí hasta que sean aceptadas</div>'
+      +'<button class="btn btn-p btn-sm" onclick="openInviteUser()">＋ Enviar nueva invitación</button>'
+      +'</div>';
+    return;
+  }
+
+  host.innerHTML = snap.docs.map(function(d){
+    var inv = d.data();
+    var info = ROLES_INFO[inv.rol] || {color:'#888',icon:'?'};
+    var age = inv.createdAt ? Math.floor((Date.now()-new Date(inv.createdAt).getTime())/86400000) : 0;
+    var ageTxt = age===0 ? 'hoy' : age===1 ? 'ayer' : 'hace '+age+' días';
+    var isOld = age >= 7;
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--rim)">'
+      +'<div style="width:38px;height:38px;border-radius:50%;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">'+info.icon+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +  '<div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+inv.email+'</div>'
+      +  '<div style="font-size:11px;color:var(--ink3)">Invitado como <b style="color:'+info.color+'">'+inv.rol+'</b> · '+(inv.permisos||[]).length+' módulos · <span style="color:'+(isOld?'var(--amber)':'var(--ink3)')+'">'+ageTxt+'</span></div>'
+      +'</div>'
+      +'<button class="btn btn-g btn-xs" onclick="copiarLink(\''+d.id+'\')">Copiar link</button>'
+      +'<button class="btn btn-d btn-xs" onclick="revocarInvitacion(\''+d.id+'\')">Revocar</button>'
+      +'</div>';
+  }).join('');
+}
+
+function revocarInvitacion(token){
+  if(!confirm('¿Revocar esta invitación? El link dejará de funcionar.')) return;
+  if(!db) return;
+  db.collection('invitaciones').doc(token).delete()
+    .then(function(){ toast('Invitación revocada','info'); usersReload(); })
+    .catch(function(e){ toast('Error: '+e.message,'error'); });
+}
+
+// ── Panel lateral de detalle del usuario ──
+function openUserPanel(uid){
+  var u = _usersCache.find(function(x){return x.uid===uid;});
+  if(!u) return;
+  var info = ROLES_INFO[u.rol] || {color:'#888',icon:'?'};
+  var esMio = S.currentUser && S.currentUser.uid === uid;
+  var nombre = u.nombre || u.email || '?';
+  var initials = nombre.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+
+  // Crear o reusar panel lateral
+  var panel = $('user-side-panel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id = 'user-side-panel';
+    panel.className = 'user-panel';
+    document.body.appendChild(panel);
+  }
+
+  // Última conexión detallada
+  var lastTxt = 'Nunca ha iniciado sesión';
+  if(u.lastLogin){
+    var d = new Date(u.lastLogin);
+    var mins = Math.floor((Date.now()-d.getTime())/60000);
+    if(mins < 5) lastTxt='En línea ahora';
+    else if(mins < 60) lastTxt='Hace '+mins+' minutos';
+    else if(mins < 1440) lastTxt='Hace '+Math.floor(mins/60)+' horas';
+    else lastTxt = d.toLocaleString('es-VE');
+  }
+
+  // Permisos agrupados
+  var perms = u.permisos || [];
+  var grupos = {};
+  MODULOS.forEach(function(m){
+    if(!grupos[m.grupo]) grupos[m.grupo] = [];
+    grupos[m.grupo].push({m:m, has: perms.indexOf(m.id)>=0});
+  });
+
+  panel.innerHTML =
+    // Header con gradient
+    '<div style="background:linear-gradient(135deg,'+info.color+','+info.color+'cc);padding:22px 20px;color:#fff;position:relative">'
+    + '<button onclick="closeUserPanel()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.18);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px">✕</button>'
+    + '<div style="display:flex;align-items:center;gap:14px">'
+    +   '<div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;border:2px solid rgba(255,255,255,.3)">'+initials+'</div>'
+    +   '<div><div style="font-size:18px;font-weight:900;line-height:1.1">'+nombre+'</div>'
+    +   '<div style="font-size:12px;opacity:.85;margin-top:3px">'+u.email+'</div>'
+    +   '<div style="display:inline-block;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;margin-top:6px"><span style="font-weight:900">'+info.icon+'</span> '+u.rol+(esMio?' · TÚ':'')+'</div></div>'
+    + '</div></div>'
+
+    // Body scrolleable
+    + '<div style="padding:18px;flex:1;overflow-y:auto">'
+    +   // Metadata
+    +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'
+    +     '<div style="background:var(--surf2);padding:10px 12px;border-radius:9px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--ink3);letter-spacing:.5px">Último acceso</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-top:3px">'+lastTxt+'</div></div>'
+    +     '<div style="background:var(--surf2);padding:10px 12px;border-radius:9px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--ink3);letter-spacing:.5px">Módulos con acceso</div><div style="font-size:14px;font-weight:900;color:'+info.color+';margin-top:3px">'+perms.filter(function(p){return p!=='perm_delete';}).length+' / '+MODULOS.length+'</div></div>'
+    +   '</div>'
+
+    +   // Info del rol
+    +   '<div style="padding:12px 14px;background:'+info.color+'0c;border-left:3px solid '+info.color+';border-radius:8px;margin-bottom:16px">'
+    +     '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:'+info.color+';margin-bottom:4px">SOBRE EL ROL '+u.rol.toUpperCase()+'</div>'
+    +     '<div style="font-size:12px;color:var(--ink2);line-height:1.5">'+info.desc+'</div>'
+    +   '</div>'
+
+    +   // Permisos detallados
+    +   '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px">Permisos por módulo</div>'
+    +   Object.keys(grupos).map(function(g){
+        return '<div style="margin-bottom:12px">'
+          + '<div style="font-size:10.5px;font-weight:700;color:var(--ink3);margin-bottom:5px">'+g+'</div>'
+          + grupos[g].map(function(item){
+              return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surf2);border-radius:7px;margin-bottom:4px">'
+                + '<span style="font-size:12px;color:var(--ink)">'+item.m.label+'</span>'
+                + (item.has ? '<span style="color:'+info.color+';font-weight:900;font-size:14px">✓</span>' : '<span style="color:var(--ink3);font-size:12px">–</span>')
+                + '</div>';
+            }).join('')
+          + '</div>';
+      }).join('')
+    + '</div>'
+
+    // Footer con acciones
+    + '<div style="padding:12px 16px;border-top:1px solid var(--rim);background:var(--surf2);display:flex;gap:6px;flex-wrap:wrap">'
+    +   '<button class="btn btn-g btn-sm" onclick="closeUserPanel();copiarInvitacionUsuario(\''+uid+'\')" style="flex:1">Resetear acceso</button>'
+    +   '<button class="btn btn-p btn-sm" onclick="closeUserPanel();editarUsuario(\''+uid+'\')" style="flex:1">Editar permisos</button>'
+    +   (!esMio && (typeof canDeleteAction==='function' && canDeleteAction())?'<button class="btn btn-d btn-sm" onclick="closeUserPanel();confirmarEliminarUsuario(\''+uid+'\',\''+(nombre.replace(/\'/g,"\\'"))+'\')" title="Eliminar usuario">🗑</button>':'')
+    + '</div>';
+
+  panel.classList.add('open');
+
+  // Backdrop
+  var bd = $('user-panel-backdrop');
+  if(!bd){
+    bd = document.createElement('div');
+    bd.id = 'user-panel-backdrop';
+    bd.className = 'user-panel-backdrop';
+    bd.onclick = closeUserPanel;
+    document.body.appendChild(bd);
+  }
+  bd.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeUserPanel(){
+  var panel = $('user-side-panel');
+  var bd = $('user-panel-backdrop');
+  if(panel) panel.classList.remove('open');
+  if(bd) bd.classList.remove('open');
+  document.body.style.overflow='';
+}
 
 // ══════════════════════════════════════════
 // LIVE SEARCH CLIENTES
@@ -15044,40 +15470,79 @@ function _cleanupSecondaryInviteAuth(){
 // ══════════════════════════════════════════
 function openInviteUser(){
   if(!db||!auth){ toast('Requiere Firebase activo para invitar usuarios','error'); return; }
-  $('mic').textContent='USR'; $('mtt').textContent='Invitar Nuevo Usuario'; $('msb').textContent='Crea acceso con permisos por rol';
+  $('mic').textContent='USR'; $('mtt').textContent='Invitar Nuevo Usuario'; $('msb').textContent='Elige un rol y envía la invitación';
   $('modal-box').className='modal modal-lg';
 
   function buildCheckboxes(presetPerms){
-    return Object.keys(PGL).map(function(key){
-      var checked = presetPerms ? presetPerms.includes(key) : true;
-      return '<label style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 8px;cursor:pointer;border-radius:6px;transition:background .1s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
-        +'<input type="checkbox" value="'+key+'" '+(checked?'checked':'')+' style="accent-color:var(--p1);width:14px;height:14px"> '+PGL[key]+'</label>';
-    }).join('') + '<label style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 8px;cursor:pointer;border-radius:6px" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
-      +'<input type="checkbox" value="perm_delete" style="accent-color:var(--p1);width:14px;height:14px"> Permiso para eliminar</label>';
+    // Agrupar por categoría
+    var grupos = {};
+    MODULOS.forEach(function(m){
+      if(!grupos[m.grupo]) grupos[m.grupo] = [];
+      grupos[m.grupo].push(m);
+    });
+    var html = '';
+    Object.keys(grupos).forEach(function(g){
+      html += '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--ink3);padding:0 8px 4px;letter-spacing:.5px">'+g+'</div>';
+      html += grupos[g].map(function(m){
+        var checked = presetPerms ? presetPerms.indexOf(m.id)>=0 : true;
+        return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;cursor:pointer;border-radius:6px;transition:background .1s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
+          +'<input type="checkbox" value="'+m.id+'" '+(checked?'checked':'')+' style="accent-color:var(--p1);width:14px;height:14px"> '+m.label+'</label>';
+      }).join('');
+      html += '</div>';
+    });
+    // Extra: permiso destructivo
+    html += '<div style="border-top:1px dashed var(--rim);padding-top:8px;margin-top:6px"><label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;cursor:pointer;border-radius:6px;color:var(--red)" onmouseover="this.style.background=\'var(--reds)\'" onmouseout="this.style.background=\'\'">'
+      +'<input type="checkbox" value="perm_delete" style="accent-color:var(--red);width:14px;height:14px"> ⚠ Puede eliminar registros</label></div>';
+    return html;
   }
 
+  // Tarjetas de roles (selección visual)
+  var rolesHtml = Object.keys(ROLES_INFO).map(function(r){
+    var info = ROLES_INFO[r];
+    var count = (ROL_PERMISOS[r]||[]).filter(function(p){return p!=='perm_delete';}).length;
+    return '<label data-rol="'+r+'" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:2px solid var(--rim);border-radius:10px;cursor:pointer;background:var(--surf);transition:all .15s" onclick="_invSelectRol(\''+r+'\')">'
+      +'<input type="radio" name="invu_rol_pick" value="'+r+'" style="margin-top:4px;accent-color:'+info.color+';flex-shrink:0">'
+      +'<div style="width:32px;height:32px;border-radius:8px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">'+info.icon+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +  '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><span style="font-size:13px;font-weight:800;color:var(--ink)">'+r+'</span><span style="font-size:9.5px;font-weight:700;color:var(--ink3);background:var(--surf2);padding:1px 6px;border-radius:5px">'+count+' mód.</span></div>'
+      +  '<div style="font-size:11px;color:var(--ink3);line-height:1.4">'+info.desc+'</div>'
+      +'</div></label>';
+  }).join('');
+
   $('mbd').innerHTML=''
-    +'<div class="fg" style="margin-bottom:10px"><label>Email del usuario *</label><input class="fi" id="invu_email" type="email" placeholder="empleado@pagasi.com" autofocus></div>'
-    +'<div class="fg" style="margin-bottom:12px"><label>Nombre</label><input class="fi" id="invu_nombre" placeholder="Nombre completo"></div>'
-    +'<div class="fg" style="margin-bottom:12px"><label>Rol</label>'
-    +'<select class="fs" id="invu_rol" onchange="(function(v){'
-    +  'var preset=({Administrador:'+JSON.stringify((ROL_PERMISOS.Administrador||[]))+','
-    +  'Gerente:'+JSON.stringify((ROL_PERMISOS.Gerente||[]))+','
-    +  'Empleado:'+JSON.stringify((ROL_PERMISOS.Empleado||[]))+','
-    +  'Contador:'+JSON.stringify((ROL_PERMISOS.Contador||[]))+'})[v]||[];'
-    +  'document.querySelectorAll(\'#mbd input[type=checkbox]\').forEach(function(cb){'
-    +    'cb.checked=preset.includes(cb.value);'
-    +  '});'
-    +'})(this.value)">'
-    +'<option value="Empleado">Empleado — dashboard, cobranza y solicitudes</option>'
-    +'<option value="Contador">Contador — reportes y contabilidad</option>'
-    +'<option value="Gerente">Gerente — gestión operativa</option>'
-    +'<option value="Administrador">Administrador — acceso total</option>'
-    +'</select></div>'
-    +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 4px">'
-    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);padding:0 8px;margin-bottom:4px">Módulos con acceso</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;max-height:200px;overflow-y:auto" id="inv_mod_list">'+buildCheckboxes(ROL_PERMISOS.Empleado||[])+'</div>'
+    // Sección 1: Datos
+    +'<div style="margin-bottom:16px">'
+    +  '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px">① Datos del usuario</div>'
+    +  '<div class="fg" style="margin-bottom:10px"><label>Email *</label><input class="fi" id="invu_email" type="email" placeholder="empleado@pagasi.com" autofocus></div>'
+    +  '<div class="fg"><label>Nombre</label><input class="fi" id="invu_nombre" placeholder="Nombre completo"></div>'
+    +'</div>'
+
+    // Sección 2: Rol (tarjetas)
+    +'<div style="margin-bottom:16px">'
+    +  '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px">② Rol del usuario</div>'
+    +  '<div id="invu_roles_cards" style="display:grid;grid-template-columns:1fr;gap:6px">'+rolesHtml+'</div>'
+    +  '<input type="hidden" id="invu_rol" value="Empleado">'
+    +'</div>'
+
+    // Sección 3: Permisos (personalizables)
+    +'<div>'
+    +  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +    '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3)">③ Permisos específicos</div>'
+    +    '<button type="button" class="btn btn-g btn-xs" onclick="_invTogglePerms()">Personalizar</button>'
+    +  '</div>'
+    +  '<div id="invu_perms_preview" style="background:var(--surf2);border-radius:10px;padding:10px 14px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
+    +    'Al usuario se le asignarán automáticamente los permisos del rol <b id="invu_perms_role_name" style="color:var(--p1)">Empleado</b>. Toca "Personalizar" para ajustar módulo por módulo.'
+    +  '</div>'
+    +  '<div id="invu_perms_detail" style="display:none;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px;margin-top:6px">'
+    +    '<div id="inv_mod_list">'+buildCheckboxes(ROL_PERMISOS.Empleado||[])+'</div>'
+    +  '</div>'
     +'</div>';
+
+  // Preseleccionar "Empleado" por defecto
+  setTimeout(function(){
+    var def = document.querySelector('label[data-rol="Empleado"]');
+    if(def) _invSelectRol('Empleado');
+  }, 60);
 
   S.saveFn=function(){
     var email=(($('invu_email')&&$('invu_email').value)||'').trim();
@@ -15085,7 +15550,13 @@ function openInviteUser(){
     if(!email||!email.includes('@')){ toast('Ingresa un email válido','error'); return false; }
     var rol=($('invu_rol')&&$('invu_rol').value)||'Empleado';
     var permisos=[];
-    document.querySelectorAll('#mbd input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
+    // Si el panel de personalización está abierto, leer checkboxes; sino usar preset del rol
+    var detailOpen = $('invu_perms_detail') && $('invu_perms_detail').style.display !== 'none';
+    if(detailOpen){
+      document.querySelectorAll('#inv_mod_list input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
+    } else {
+      permisos = (ROL_PERMISOS[rol]||[]).slice();
+    }
 
     var inviteToken = 'INV-'+Date.now()+'-'+_randomToken(18);
     var inviteLink = _buildInviteLink(inviteToken, email);
@@ -15099,12 +15570,13 @@ function openInviteUser(){
       permisos: permisos,
       creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
       creadoEn: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
       usado: false,
       inviteLink: inviteLink
     }).then(function(){
       hideLoader();
       closeM();
-      nav('users');
+      if(typeof usersReload==='function') setTimeout(usersReload, 300);
       // Mostrar modal con link inmediatamente
       setTimeout(function(){ mostrarLinkInvitacion(inviteLink, email); }, 250);
     }).catch(function(e){
@@ -15115,6 +15587,49 @@ function openInviteUser(){
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear invitación →</button>';
   $('ov').style.display='flex';
+}
+
+// Seleccionar rol en el modal de invitar (tarjeta activa)
+function _invSelectRol(rol){
+  var hidden = $('invu_rol');
+  if(hidden) hidden.value = rol;
+  // Marcar radio
+  var r = document.querySelector('input[name="invu_rol_pick"][value="'+rol+'"]');
+  if(r) r.checked = true;
+  // Resaltar tarjeta activa
+  document.querySelectorAll('#invu_roles_cards label').forEach(function(lbl){
+    var isActive = lbl.getAttribute('data-rol') === rol;
+    var info = ROLES_INFO[lbl.getAttribute('data-rol')] || {color:'#888'};
+    lbl.style.borderColor = isActive ? info.color : 'var(--rim)';
+    lbl.style.background = isActive ? info.color+'0a' : 'var(--surf)';
+    lbl.style.boxShadow = isActive ? '0 2px 12px '+info.color+'20' : 'none';
+  });
+  // Actualizar descripción en preview
+  var pRole = $('invu_perms_role_name');
+  if(pRole) pRole.textContent = rol;
+  // Actualizar checkboxes del detail (por si usuario lo abre después)
+  var modList = $('inv_mod_list');
+  if(modList){
+    var preset = (ROL_PERMISOS[rol] || []);
+    modList.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+      cb.checked = preset.indexOf(cb.value) >= 0;
+    });
+  }
+}
+
+// Toggle entre preview de permisos y detalle editable
+function _invTogglePerms(){
+  var preview = $('invu_perms_preview');
+  var detail = $('invu_perms_detail');
+  if(!preview || !detail) return;
+  var isOpen = detail.style.display !== 'none';
+  if(isOpen){
+    detail.style.display = 'none';
+    preview.style.display = '';
+  } else {
+    detail.style.display = '';
+    preview.style.display = 'none';
+  }
 }
 
 function editarUsuario(uid){
