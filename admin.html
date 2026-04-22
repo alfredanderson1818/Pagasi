@@ -1610,9 +1610,173 @@ tbody tr:hover td {
 
 
 .notif-quick-dest{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-.notif-quick-btn{border:none;border-radius:12px;padding:10px 14px;background:var(--gs);color:var(--ink2);font-weight:800;cursor:pointer;transition:.18s ease;box-shadow:inset 0 0 0 1px var(--rim)}
+.notif-quick-btn{border:none;border-radius:12px;padding:10px 14px;background:var(--gs);color:var(--ink2);font-weight:800;cursor:pointer;transition:.18s ease;box-shadow:inset 0 0 0 1px var(--rim);font-size:12px}
 .notif-quick-btn:hover{transform:translateY(-1px);box-shadow:inset 0 0 0 1px rgba(91,78,212,.25),0 6px 18px rgba(15,23,42,.08)}
 .notif-quick-btn.is-active{background:var(--p1);color:#fff;box-shadow:0 10px 22px rgba(91,78,212,.24)}
+
+.notif-tipo-groups{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.notif-tipo-group{display:flex;flex-direction:column;gap:6px}
+.notif-tipo-group-label{font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;padding-left:2px}
+.notif-tipo-group-btns{display:flex;gap:6px;flex-wrap:wrap}
+.notif-tipo-btn{border:none;border-radius:10px;padding:8px 12px;background:var(--gs);color:var(--ink2);font-weight:700;cursor:pointer;transition:.18s ease;box-shadow:inset 0 0 0 1px var(--rim);font-size:11.5px}
+.notif-tipo-btn:hover{transform:translateY(-1px);box-shadow:inset 0 0 0 1px rgba(91,78,212,.25),0 6px 18px rgba(15,23,42,.08)}
+.notif-tipo-btn.is-active{background:var(--p1);color:#fff;box-shadow:0 8px 18px rgba(91,78,212,.22)}
+
+/* ── Notificaciones v2 · diseño profesional ── */
+.nx-step{margin-bottom:18px}
+.nx-step-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.nx-step-num{width:22px;height:22px;border-radius:50%;background:var(--p1);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;flex-shrink:0}
+.nx-step-title{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.1px}
+.nx-step-sub{font-size:11px;color:var(--ink3);margin-left:auto;font-weight:600}
+
+.nx-cat-tabs{display:flex;gap:4px;margin-bottom:10px;padding:4px;background:var(--surf2);border-radius:10px;overflow-x:auto;scrollbar-width:none}
+.nx-cat-tabs::-webkit-scrollbar{display:none}
+.nx-cat-tab{flex-shrink:0;border:none;background:transparent;color:var(--ink3);font-weight:700;font-size:11.5px;padding:7px 12px;border-radius:7px;cursor:pointer;transition:.15s ease;white-space:nowrap}
+.nx-cat-tab:hover{color:var(--ink2)}
+.nx-cat-tab.is-active{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.08)}
+
+.nx-tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.nx-tpl-card{position:relative;padding:11px;background:var(--surf);border:1.5px solid var(--rim);border-radius:11px;cursor:pointer;transition:.18s ease;text-align:left;display:flex;flex-direction:column;gap:5px;min-height:72px}
+.nx-tpl-card:hover{border-color:rgba(91,78,212,.35);transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,23,42,.06)}
+.nx-tpl-card.is-active{border-color:var(--p1);background:var(--gs);box-shadow:0 0 0 3px rgba(91,78,212,.12)}
+.nx-tpl-card.is-active::after{content:'✓';position:absolute;top:6px;right:8px;width:17px;height:17px;border-radius:50%;background:var(--p1);color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.nx-tpl-head{display:flex;align-items:center;gap:7px}
+.nx-tpl-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.nx-tpl-name{font-size:12px;font-weight:800;color:var(--ink);line-height:1.25;letter-spacing:-.1px}
+.nx-tpl-desc{font-size:10.5px;color:var(--ink3);line-height:1.35}
+
+.nx-seg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin-bottom:10px}
+.nx-seg{padding:10px 12px;background:var(--surf);border:1.5px solid var(--rim);border-radius:10px;cursor:pointer;transition:.18s ease;display:flex;align-items:center;gap:10px;text-align:left}
+.nx-seg:hover{border-color:rgba(91,78,212,.35)}
+.nx-seg.is-active{border-color:var(--p1);background:var(--gs)}
+.nx-seg-count{width:30px;height:30px;border-radius:8px;background:var(--p1);color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nx-seg-info{flex:1;min-width:0}
+.nx-seg-lbl{font-size:12px;font-weight:800;color:var(--ink);line-height:1.2}
+.nx-seg-hint{font-size:10px;color:var(--ink3);margin-top:1px}
+
+.nx-ac-wrap{position:relative;margin-top:6px}
+.nx-ac-input{width:100%;padding:10px 36px 10px 34px;background:var(--surf);border:1.5px solid var(--rim);border-radius:10px;font-size:13px;color:var(--ink);font-family:inherit;outline:none;transition:.15s ease;box-sizing:border-box}
+.nx-ac-input:focus{border-color:var(--p1);box-shadow:0 0 0 3px rgba(91,78,212,.12)}
+.nx-ac-input::placeholder{color:var(--ink3)}
+.nx-ac-icon{position:absolute;left:10px;top:10px;color:var(--ink3);font-size:14px;pointer-events:none}
+.nx-ac-clear{position:absolute;right:8px;top:8px;border:none;background:var(--rim);color:var(--ink2);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;display:none;align-items:center;justify-content:center;padding:0;line-height:1}
+.nx-ac-clear.is-visible{display:flex}
+.nx-ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surf);border:1px solid var(--rim);border-radius:10px;box-shadow:0 12px 32px rgba(15,23,42,.14);max-height:280px;overflow-y:auto;z-index:50;display:none}
+.nx-ac-list.is-open{display:block}
+.nx-ac-group{padding:6px 12px 4px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;background:var(--surf2);border-bottom:1px solid var(--rim);position:sticky;top:0}
+.nx-ac-item{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--rim);transition:.12s}
+.nx-ac-item:last-child{border-bottom:none}
+.nx-ac-item:hover,.nx-ac-item.is-focus{background:var(--gs)}
+.nx-ac-avatar{width:28px;height:28px;border-radius:50%;background:var(--p1);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10.5px;flex-shrink:0}
+.nx-ac-body{flex:1;min-width:0}
+.nx-ac-name{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-ac-meta{font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-ac-empty{padding:18px;text-align:center;color:var(--ink3);font-size:12px}
+.nx-ac-selected{margin-top:8px;padding:10px 12px;background:var(--gs);border:1.5px solid var(--p1);border-radius:10px;display:flex;align-items:center;gap:10px}
+.nx-ac-selected-x{border:none;background:transparent;color:var(--ink3);cursor:pointer;font-size:18px;margin-left:auto;padding:0 4px;line-height:1}
+
+.nx-wa-preview{background:#E5DDD5;padding:14px;border-radius:12px;border:1px solid var(--rim);min-height:120px}
+[data-theme="dark"] .nx-wa-preview{background:#0b141a}
+.nx-wa-bubble{background:#DCF8C6;border-radius:8px 8px 8px 2px;padding:8px 10px 16px;max-width:95%;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;font-family:-apple-system,"Segoe UI",Roboto,sans-serif;font-size:13px;line-height:1.42;color:#111b21;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word}
+[data-theme="dark"] .nx-wa-bubble{background:#005c4b;color:#e9edef}
+.nx-wa-bubble::before{content:'';position:absolute;top:0;left:-6px;width:0;height:0;border-style:solid;border-width:0 8px 8px 0;border-color:transparent #DCF8C6 transparent transparent}
+[data-theme="dark"] .nx-wa-bubble::before{border-color:transparent #005c4b transparent transparent}
+.nx-wa-time{position:absolute;bottom:3px;right:8px;font-size:10px;color:#667781;font-weight:500}
+[data-theme="dark"] .nx-wa-time{color:#8696a0}
+.nx-wa-empty{text-align:center;color:var(--ink3);font-size:12px;padding:30px 10px;font-style:italic}
+
+.nx-send-bar{margin-top:14px;padding:12px;background:var(--gs);border:1px solid var(--rim);border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.nx-send-count{flex:1;font-size:12px;color:var(--ink2);min-width:140px}
+.nx-send-count b{font-size:17px;color:var(--p1);font-weight:900;display:block;line-height:1.1}
+.nx-send-btn{border:none;background:#25D366;color:#fff;font-weight:800;font-size:13px;padding:11px 20px;border-radius:10px;cursor:pointer;transition:.18s ease;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(37,211,102,.28)}
+.nx-send-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 18px rgba(37,211,102,.38)}
+.nx-send-btn:disabled{background:var(--rim);color:var(--ink3);cursor:not-allowed;box-shadow:none}
+
+/* ── Ficha de cliente v2: profesional ── */
+.cf-hero{position:relative;padding:18px 20px;background:linear-gradient(135deg,var(--p1) 0%,#8b7ef5 100%);color:#fff;border-radius:14px;margin-bottom:14px;overflow:hidden}
+.cf-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%);pointer-events:none}
+.cf-hero-row{display:flex;align-items:center;gap:16px;position:relative;z-index:1}
+.cf-avatar{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;border:2px solid rgba(255,255,255,.3);flex-shrink:0}
+.cf-hero-info{flex:1;min-width:0}
+.cf-hero-name{font-size:20px;font-weight:900;letter-spacing:-.4px;line-height:1.15;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cf-hero-sub{font-size:12px;opacity:.85;margin-top:3px;font-weight:600}
+.cf-hero-badges{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.cf-hero-badge{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.2px;backdrop-filter:blur(10px)}
+.cf-hero-badge.is-amber{background:rgba(255,200,90,.3);border-color:rgba(255,200,90,.5)}
+.cf-hero-badge.is-red{background:rgba(255,120,130,.3);border-color:rgba(255,120,130,.5)}
+.cf-hero-badge.is-green{background:rgba(80,220,150,.3);border-color:rgba(80,220,150,.5)}
+
+.cf-score{position:relative;z-index:1;text-align:center;padding:0 10px;border-left:1px solid rgba(255,255,255,.25);align-self:stretch;display:flex;flex-direction:column;justify-content:center;min-width:90px}
+.cf-score-v{font-size:28px;font-weight:900;line-height:1;letter-spacing:-.5px}
+.cf-score-l{font-size:10px;opacity:.85;text-transform:uppercase;letter-spacing:.6px;margin-top:2px;font-weight:700}
+.cf-score-max{font-size:11px;opacity:.65;font-weight:600}
+
+.cf-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px}
+.cf-kpi{padding:11px 13px;background:var(--surf);border:1px solid var(--rim);border-radius:11px;position:relative;overflow:hidden}
+.cf-kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--p1)}
+.cf-kpi.is-g::before{background:var(--green)}
+.cf-kpi.is-r::before{background:var(--red)}
+.cf-kpi.is-a::before{background:var(--amber)}
+.cf-kpi-v{font-size:19px;font-weight:900;letter-spacing:-.5px;line-height:1.1;color:var(--ink)}
+.cf-kpi-l{font-size:10px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.cf-kpi-s{font-size:10.5px;color:var(--ink3);margin-top:1px;font-weight:600}
+.cf-kpi.is-g .cf-kpi-v{color:var(--green)}
+.cf-kpi.is-r .cf-kpi-v{color:var(--red)}
+.cf-kpi.is-a .cf-kpi-v{color:var(--amber)}
+
+.cf-tabs{display:flex;gap:2px;padding:4px;background:var(--surf2);border-radius:10px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
+.cf-tabs::-webkit-scrollbar{display:none}
+.cf-tab{flex-shrink:0;border:none;background:transparent;color:var(--ink3);font-weight:700;font-size:12px;padding:8px 14px;border-radius:7px;cursor:pointer;transition:.15s ease;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.cf-tab:hover{color:var(--ink2)}
+.cf-tab.is-active{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.cf-tab-count{background:var(--ink3);color:var(--surf);font-size:9.5px;font-weight:900;padding:1px 6px;border-radius:999px;min-width:16px;text-align:center}
+.cf-tab.is-active .cf-tab-count{background:var(--p1);color:#fff}
+
+.cf-panel{display:none}
+.cf-panel.is-active{display:block;animation:cfFadeIn .2s ease}
+@keyframes cfFadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+.cf-section{background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.cf-section-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px}
+.cf-section-t{font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:6px}
+.cf-section-a{font-size:11px;color:var(--p1);cursor:pointer;font-weight:700;border:none;background:transparent;padding:0}
+
+.cf-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.cf-grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 14px}
+.cf-field{min-width:0}
+.cf-field-l{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:2px}
+.cf-field-v{font-size:13px;color:var(--ink);font-weight:600;word-break:break-word}
+.cf-field-v.is-em{font-size:15px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.cf-field-v.is-mono{font-family:var(--fd)}
+.cf-field-v.is-empty{color:var(--ink3);font-style:italic;font-weight:500}
+
+.cf-chart-wrap{height:180px;position:relative}
+.cf-chart-wrap.is-sm{height:140px}
+
+.cf-timeline{position:relative;padding-left:22px}
+.cf-timeline::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--rim)}
+.cf-tl-item{position:relative;padding-bottom:14px}
+.cf-tl-item:last-child{padding-bottom:0}
+.cf-tl-dot{position:absolute;left:-22px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--p1);border:3px solid var(--surf);box-shadow:0 0 0 1px var(--rim)}
+.cf-tl-dot.is-g{background:var(--green)}
+.cf-tl-dot.is-r{background:var(--red)}
+.cf-tl-dot.is-a{background:var(--amber)}
+.cf-tl-d{font-size:10px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.cf-tl-t{font-size:12.5px;color:var(--ink);font-weight:700;margin-top:1px}
+.cf-tl-s{font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.4}
+
+.cf-ref-card{padding:10px 12px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;display:flex;gap:10px;align-items:flex-start}
+.cf-ref-av{width:34px;height:34px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0}
+.cf-ref-body{flex:1;min-width:0}
+.cf-ref-n{font-size:12.5px;font-weight:800;color:var(--ink)}
+.cf-ref-r{font-size:10.5px;color:var(--p1);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.cf-ref-m{font-size:11.5px;color:var(--ink2);margin-top:3px}
+
+.cf-action-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.cf-action{border:1px solid var(--rim);background:var(--surf);color:var(--ink2);padding:6px 11px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:.15s}
+.cf-action:hover{border-color:var(--p1);color:var(--p1);transform:translateY(-1px)}
+.cf-action.is-wa{background:#25D366;color:#fff;border-color:#25D366}
+.cf-action.is-wa:hover{background:#1da851;color:#fff}
 
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -2145,6 +2309,53 @@ var MODULOS = [
 // CATÁLOGO OFICIAL PAGASI — PLAN GLOBAL CONFIGURABLE
 // ══════════════════════════════════════════
 const PLAN = {plazo:12, factor:1.935483870967742, inicial:0.45, tasaMensual:12.26, apy:413.34, diasGracia:5, moraPct:5};
+
+// ══════════════════════════════════════════
+// SCORE CFG — Política de riesgo configurable
+// ══════════════════════════════════════════
+const SCORE_CFG_DEFAULT = {
+  // Pesos de los factores (deben sumar 100)
+  pesos: { f1:30, f2:30, f3:20, f4:15, f5:5 },
+  // Umbrales de aprobación
+  umbrales: {
+    excelente:700,   // ≥ → aprobación automática
+    bueno:   600,    // ≥ → aprobar
+    regular: 500,    // ≥ → revisar manualmente
+    // < regular → rechazar
+  },
+  // Hard rejects: condiciones que fuerzan rechazo sin importar el resto
+  hardReject: {
+    ingresoMinimo: 250,       // rechazar si ingreso efectivo < este valor (USD/mes)
+    ratioCuotaMax: 0.35,      // rechazar si cuota/ingreso > 35%
+    historialMaloConDeuda:true,// rechazar si hist=malo y deuda=graves
+    sinTelefono: false,       // rechazar si no tiene teléfono
+    sinReferencias: false,    // rechazar si no tiene referencia alguna
+  },
+  // Ratio cuota/ingreso: políticas
+  ratios: {
+    ideal: 0.20,   // ≤ → bonus
+    aceptable: 0.30,
+    alto: 0.40,
+    muyAlto: 0.50,
+  },
+  // Ingreso base (para normalizar f2)
+  ingreso: {
+    minBase: 250,     // ingresos por debajo de este valor reciben 0 puntos de base
+    maxBase: 3000,    // ingresos desde este valor reciben el máximo de base
+  }
+};
+var SCORE_CFG = JSON.parse(JSON.stringify(SCORE_CFG_DEFAULT));
+try{
+  var _scLs = JSON.parse(localStorage.getItem('pagasi_config_score')||'null');
+  if(_scLs && typeof _scLs==='object'){
+    if(_scLs.pesos) Object.assign(SCORE_CFG.pesos, _scLs.pesos);
+    if(_scLs.umbrales) Object.assign(SCORE_CFG.umbrales, _scLs.umbrales);
+    if(_scLs.hardReject) Object.assign(SCORE_CFG.hardReject, _scLs.hardReject);
+    if(_scLs.ratios) Object.assign(SCORE_CFG.ratios, _scLs.ratios);
+    if(_scLs.ingreso) Object.assign(SCORE_CFG.ingreso, _scLs.ingreso);
+  }
+}catch(_e){}
+
 
 try {
   var _catLs = JSON.parse(localStorage.getItem('pagasi_catalogo_config')||'null');
@@ -2860,10 +3071,18 @@ if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join(
 // CLIENTE DETAIL + SEARCH
 // ══════════════════════════════════════════
 function getCreditosCliente(c){
+  if(!c) return [];
   return (S.creds||[]).filter(function(x){
     if(x.eliminado) return false;
-    if(c && x.cliId!=null && String(x.cliId)===String(c.id)) return true;
-    return (x.cli||'')===((c&&c.nombre)||'');
+    // Match prioritario por cliId: si el crédito tiene cliId, SOLO matchea si coincide con el id del cliente
+    if(x.cliId!=null && String(x.cliId)!==''){
+      return String(x.cliId)===String(c.id);
+    }
+    // Fallback por nombre: solo si ambos lados tienen nombre no vacío
+    var xnom=(x.cli||'').trim();
+    var cnom=(c.nombre||'').trim();
+    if(!xnom || !cnom) return false;
+    return xnom===cnom;
   });
 }
 function getClienteEstados(c){
@@ -2918,7 +3137,7 @@ function renderClienteList(q=''){
       <td><div class="tdm">${c.trabajo||'—'}</div><div class="tds" style="color:var(--green);font-weight:700">${fmt(c.ingreso)}/mes</div></td>
       <td>${sc?`<span style="font-weight:900;font-size:14px;color:${scoreCol}">${sc}</span><div class="tds">/850</div>`:'<span style="color:var(--ink3)">—</span>'}</td>
       <td><div class="tdm">${credsCli.length} crédito${credsCli.length!==1?'s':''}</div><div class="tds">${activo?'Activo: '+activo.id:'Sin activo'}</div></td>
-      <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
+      <td>${clienteBadgesHTML(c)}</td>
       <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
         <button class="btn btn-g btn-xs" onclick="editCliente(\'${c.id}\')">Editar</button>
         <button class="btn btn-d btn-xs" onclick="delCliente(\'${c.id}\')">✕</button>
@@ -2929,77 +3148,501 @@ function renderClienteList(q=''){
 
 function verCliente(id){
   const c = S.clientes.find(x=>x.id===id);if(!c)return;
-  const creditos = S.creds.filter(x=>x.cli===c.nombre);
-  const pagos = S.pagos.filter(x=>x.cli===c.nombre&&!x.eliminado);
+  // Fusionar documentos locales con los remotos (por si hubo fallback)
+  if(typeof _cliDocMergeInto === 'function') _cliDocMergeInto(c);
+  const creditos = getCreditosCliente(c);
+  const pagos = S.pagos.filter(function(x){
+    if(x.eliminado) return false;
+    // Match por cred asociado al cliente
+    var credIds = creditos.map(function(cr){return cr.id;});
+    if(credIds.indexOf(x.cred)>=0) return true;
+    // Fallback por nombre
+    return (x.cli||'')===(c.nombre||'') && c.nombre;
+  });
   const creditosCompletados=creditos.filter(function(cr){return cr.estado==='completado';});
   const creditosActivos=creditos.filter(function(cr){return cr.estado==='activo'||cr.estado==='mora';});
-  const totalPagadoReal=pagos.reduce(function(a,p){return a+p.monto;},0);
-  const tuvomora=creditos.some(function(cr){return cr.mora>0||cr.tuvoMoraHistorica===true||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});});
+  const totalPagadoReal=pagos.reduce(function(a,p){return a+(p.monto||0);},0);
+  const tuvomora=creditos.some(function(cr){return (cr.mora||0)>0||cr.tuvoMoraHistorica===true||pagos.some(function(p){return p.cred===cr.id&&(p.mora||0)>0;});});
   const esPremium=c.premium===true;
 
-  $('mic').textContent=esPremium?'★':'CLI';
-  $('mtt').textContent=c.nombre+(esPremium?' ★ Premium':'');
-  $('msb').textContent=c.cedula+' · '+c.ciudad;
-  $('modal-box').className='modal modal-lg';
-  $('mbd').innerHTML=`
-    ${esPremium?`<div style="background:linear-gradient(135deg,rgba(245,166,35,0.15),rgba(253,203,110,0.1));border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:18px;font-weight:800;color:var(--amber)">★</span>
-      <div><div style="font-weight:800;font-size:13px;color:var(--amber)">Cliente Premium</div>
-      <div style="font-size:11px;color:var(--ink3)">Pagó su financiamiento sin mora — elegible para condiciones preferenciales en el próximo crédito</div></div>
-    </div>`:''}
-    <div class="sg" style="margin-bottom:12px">
-      <div class="stat"><div class="st-v" style="font-size:16px">${creditos.length}</div><div class="st-l">Créditos totales</div></div>
-      <div class="stat"><div class="st-v" style="font-size:16px;color:var(--green)">${fmt(totalPagadoReal)}</div><div class="st-l">Total pagado</div></div>
-      <div class="stat"><div class="st-v" style="font-size:16px;color:var(--p1)">${creditosCompletados.length}</div><div class="st-l">Completados</div></div>
-      <div class="stat"><div class="st-v" style="font-size:16px;color:${tuvomora?'var(--red)':'var(--green)'}">${tuvomora?'⚠ Sí':'✓ No'}</div><div class="st-l">Tuvo mora</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
-      <div class="detail-item"><div class="detail-lbl">Teléfono</div><div class="detail-val">${c.tel}</div></div>
-      <div class="detail-item"><div class="detail-lbl">Email</div><div class="detail-val" style="font-size:12px">${c.email||'—'}</div></div>
-      <div class="detail-item"><div class="detail-lbl">Estado</div><div class="detail-val"><span class="bdg ${sbg(c.estado)}">${c.estado}</span></div></div>
-      <div class="detail-item"><div class="detail-lbl">Trabajo</div><div class="detail-val">${c.trabajo}</div></div>
-      <div class="detail-item"><div class="detail-lbl">Ingreso mensual</div><div class="detail-val" style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmt(c.ingreso)}</div></div>
-      <div class="detail-item"><div class="detail-lbl">Ciudad</div><div class="detail-val">${c.ciudad}</div></div>
-    </div>
-    ${c.emergencia?`<div class="detail-item" style="margin-bottom:12px"><div class="detail-lbl">Contacto de emergencia</div><div class="detail-val" style="font-size:12.5px;margin-top:4px">${c.emergencia}</div></div>`:''}
-    ${c.notas?`<div class="detail-item" style="margin-bottom:14px"><div class="detail-lbl">Notas</div><div style="font-size:12.5px;color:var(--ink2);margin-top:4px">${c.notas}</div></div>`:''}
-    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin:14px 0 9px">Documentos del Expediente (${Array.isArray(c.documentos)?c.documentos.length:0})</div>
-    ${_renderCliDocManager(c)}
+  // Cálculos extras
+  var saldoTotal = creditos.reduce(function(a,cr){
+    if(cr.estado==='completado') return a;
+    var totalCr=cr.totalCuotas||cr.plazo*2;
+    var cuotaV=parseFloat(cr.cuotaQ||cr.cuota||0);
+    var abonado=Array.isArray(cr.pagosRegistrados)?cr.pagosRegistrados.reduce(function(s,h){return s+(h.montoPagado||0);},0):(cr.pagado||0)*cuotaV;
+    return a + Math.max(0, cuotaV*totalCr-abonado);
+  },0);
+  var montoFinanciadoTotal = creditos.reduce(function(a,cr){
+    var totalCr=cr.totalCuotas||cr.plazo*2;
+    var cuotaV=parseFloat(cr.cuotaQ||cr.cuota||0);
+    return a + (cuotaV*totalCr);
+  },0);
+  var cuotasTotales = creditos.reduce(function(a,cr){return a+(cr.totalCuotas||cr.plazo*2||0);},0);
+  var cuotasPagadasTotales = creditos.reduce(function(a,cr){return a+(cr.pagado||0);},0);
+  var ingreso = parseFloat(c.ingreso||0);
+  var ingresoFam = parseFloat(c.ingreso_familiar||0);
+  var cuotaActivaTotal = creditosActivos.reduce(function(a,cr){return a+parseFloat(cr.cuotaQ||cr.cuota||0);},0);
+  var ratioCuotaIng = ingreso>0 ? Math.round((cuotaActivaTotal*2/ingreso)*100) : 0; // 2 cuotas al mes
 
-    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:9px">Historial de Financiamientos (${creditos.length})</div>
-    ${creditos.length?`<div class="lst" style="max-height:none">${creditos.map(function(cr){
+  var score = c.score_indexa||0;
+  var scoreColor = score>=625?'#5dd8a0':score>=450?'#ffcc66':score>=300?'#ff9a7b':'#ffffff';
+  var scoreLabel = score>=625?'EXCELENTE':score>=450?'BUENO':score>=300?'REGULAR':'BAJO';
+
+  // Badges de estado
+  var estadosInfo = getClienteEstados(c).estados;
+  var badgesHero = '';
+  if(estadosInfo.indexOf('activo')>=0) badgesHero += '<span class="cf-hero-badge is-green">● ACTIVO</span>';
+  if(estadosInfo.indexOf('mora')>=0) badgesHero += '<span class="cf-hero-badge is-red">⚠ EN MORA</span>';
+  if(estadosInfo.indexOf('completado')>=0) badgesHero += '<span class="cf-hero-badge">✓ COMPLETADO</span>';
+  if(estadosInfo.indexOf('lead')>=0) badgesHero += '<span class="cf-hero-badge is-amber">LEAD</span>';
+  if(esPremium) badgesHero += '<span class="cf-hero-badge is-amber">★ PREMIUM</span>';
+  if(c.cashea==='si') badgesHero += '<span class="cf-hero-badge">CASHEA</span>';
+
+  // Últimos 6 meses de pagos
+  var now = new Date();
+  var monthsData = [];
+  for(var mi=5; mi>=0; mi--){
+    var md = new Date(now.getFullYear(), now.getMonth()-mi, 1);
+    var label = md.toLocaleDateString('es-VE',{month:'short'}).replace('.','');
+    var sumM = pagos.filter(function(p){
+      if(!p.fecha) return false;
+      var pd = new Date(p.fecha);
+      return pd.getFullYear()===md.getFullYear() && pd.getMonth()===md.getMonth();
+    }).reduce(function(a,p){return a+(p.monto||0);},0);
+    monthsData.push({label:label, value:sumM});
+  }
+
+  // Timeline de eventos
+  var timeline = [];
+  if(c.creado){
+    timeline.push({fecha:c.creado, tipo:'alta', titulo:'Cliente registrado', sub:'Alta en el sistema'});
+  }
+  creditos.forEach(function(cr){
+    if(cr.fecha) timeline.push({fecha:cr.fecha, tipo:'credito', titulo:'Plan creado: '+cr.id, sub:cr.modelo+' · '+fmt(cr.cuotaQ||cr.cuota||0)+' quincenal'});
+    if(cr.fechaCompletado) timeline.push({fecha:cr.fechaCompletado, tipo:'completado', titulo:'Plan completado: '+cr.id, sub:'Saldado exitosamente'});
+  });
+  pagos.slice(0,5).forEach(function(p){
+    timeline.push({fecha:p.fecha, tipo:'pago', titulo:'Pago recibido: '+fmt(p.monto||0), sub:(p.metodo||'—')+' · '+(p.cred||'—')});
+  });
+  timeline.sort(function(a,b){return String(b.fecha||'').localeCompare(String(a.fecha||''));});
+  timeline = timeline.slice(0,8);
+
+  $('mic').textContent=esPremium?'★':'CLI';
+  $('mtt').textContent=c.nombre||'Cliente';
+  $('msb').textContent=(c.cedula||'')+(c.ciudad?' · '+c.ciudad:'');
+  $('modal-box').className='modal modal-lg';
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function val(v, fallback){
+    if(v==null || v==='' || v==='0' || v===0) return '<span class="cf-field-v is-empty">'+(fallback||'—')+'</span>';
+    return '<span class="cf-field-v">'+esc(v)+'</span>';
+  }
+  function valMoney(v){
+    var n = parseFloat(v||0);
+    if(!n) return '<span class="cf-field-v is-empty">—</span>';
+    return '<span class="cf-field-v is-em">'+fmt(n)+'</span>';
+  }
+  function field(label, v, mono){
+    return '<div class="cf-field"><div class="cf-field-l">'+esc(label)+'</div>'
+      + (typeof v==='string' && v.indexOf('<span')===0 ? v : '<div class="cf-field-v'+(mono?' is-mono':'')+'">'+(v||'<span class="cf-field-v is-empty">—</span>')+'</div>')
+      + '</div>';
+  }
+  function initials(name){
+    var p = (name||'').split(/\s+/).filter(Boolean);
+    return ((p[0]||'')[0]||'?').toUpperCase() + ((p[1]||'')[0]||'').toUpperCase();
+  }
+
+  var telWA = (c.wa||c.tel||'').replace(/[^0-9]/g,'').replace(/^0/,'');
+
+  var html = '';
+
+  // ── HERO ──
+  html += '<div class="cf-hero">'
+    + '<div class="cf-hero-row">'
+    +   '<div class="cf-avatar">'+esc(initials(c.nombre))+'</div>'
+    +   '<div class="cf-hero-info">'
+    +     '<div class="cf-hero-name">'+esc(c.nombre||'Sin nombre')+(esPremium?'<span style="color:#ffd27a">★</span>':'')+'</div>'
+    +     '<div class="cf-hero-sub">'+esc(c.cedula||'Sin CI')+(c.ciudad?' · '+esc(c.ciudad):'')+(c.tel?' · '+esc(c.tel):'')+'</div>'
+    +     (badgesHero?'<div class="cf-hero-badges">'+badgesHero+'</div>':'')
+    +   '</div>'
+    +   (score>0?'<div class="cf-score">'
+    +     '<div class="cf-score-v" style="color:'+scoreColor+'">'+score+'</div>'
+    +     '<div class="cf-score-max" style="color:'+scoreColor+'">/ 850</div>'
+    +     '<div class="cf-score-l">'+scoreLabel+'</div>'
+    +   '</div>':'')
+    + '</div>'
+    + '<div class="cf-action-btns" style="margin-top:12px">'
+    +   (telWA?'<a class="cf-action is-wa" href="https://wa.me/58'+telWA+'" target="_blank" onclick="event.stopPropagation()">💬 WhatsApp</a>':'')
+    +   (c.tel?'<a class="cf-action" href="tel:'+esc(c.tel)+'" onclick="event.stopPropagation()">📞 Llamar</a>':'')
+    +   (c.email?'<a class="cf-action" href="mailto:'+esc(c.email)+'" onclick="event.stopPropagation()">✉️ Email</a>':'')
+    + '</div>'
+    + '</div>';
+
+  // ── KPIs ──
+  html += '<div class="cf-kpis">'
+    + '<div class="cf-kpi"><div class="cf-kpi-v">'+creditos.length+'</div><div class="cf-kpi-l">Planes totales</div><div class="cf-kpi-s">'+creditosActivos.length+' activos · '+creditosCompletados.length+' completados</div></div>'
+    + '<div class="cf-kpi is-g"><div class="cf-kpi-v">'+fmt(totalPagadoReal)+'</div><div class="cf-kpi-l">Total pagado</div><div class="cf-kpi-s">'+pagos.length+' pago'+(pagos.length!==1?'s':'')+' registrados</div></div>'
+    + '<div class="cf-kpi'+(saldoTotal>0?' is-a':' is-g')+'"><div class="cf-kpi-v">'+fmt(saldoTotal)+'</div><div class="cf-kpi-l">Saldo pendiente</div><div class="cf-kpi-s">'+cuotasPagadasTotales+' de '+cuotasTotales+' cuotas</div></div>'
+    + '<div class="cf-kpi'+(tuvomora?' is-r':' is-g')+'"><div class="cf-kpi-v">'+(tuvomora?'Sí':'No')+'</div><div class="cf-kpi-l">Historial de mora</div><div class="cf-kpi-s">'+(tuvomora?'Requiere seguimiento':'Buen comportamiento')+'</div></div>'
+    + '</div>';
+
+  // ── TABS ──
+  html += '<div class="cf-tabs" id="cf-tabs-'+c.id+'">'
+    + '<button class="cf-tab is-active" data-tab="resumen" onclick="cfTab(\''+c.id+'\',\'resumen\')">Resumen</button>'
+    + '<button class="cf-tab" data-tab="personal" onclick="cfTab(\''+c.id+'\',\'personal\')">Personal</button>'
+    + '<button class="cf-tab" data-tab="laboral" onclick="cfTab(\''+c.id+'\',\'laboral\')">Laboral</button>'
+    + '<button class="cf-tab" data-tab="financiero" onclick="cfTab(\''+c.id+'\',\'financiero\')">Financiero</button>'
+    + '<button class="cf-tab" data-tab="referencias" onclick="cfTab(\''+c.id+'\',\'referencias\')">Referencias</button>'
+    + '<button class="cf-tab" data-tab="creditos" onclick="cfTab(\''+c.id+'\',\'creditos\')">Planes <span class="cf-tab-count">'+creditos.length+'</span></button>'
+    + '<button class="cf-tab" data-tab="pagos" onclick="cfTab(\''+c.id+'\',\'pagos\')">Pagos <span class="cf-tab-count">'+pagos.length+'</span></button>'
+    + '<button class="cf-tab" data-tab="docs" onclick="cfTab(\''+c.id+'\',\'docs\')">Documentos <span class="cf-tab-count">'+(Array.isArray(c.documentos)?c.documentos.length:0)+'</span></button>'
+    + '</div>';
+
+  // ── PANEL: RESUMEN ──
+  html += '<div class="cf-panel is-active" data-tab="resumen">';
+  html += '<div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-bottom:12px">';
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">📈 Pagos últimos 6 meses</div></div>'
+    + '<div class="cf-chart-wrap"><canvas id="cf-chart-pagos-'+c.id+'"></canvas></div></div>';
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">📊 Avance de cuotas</div></div>'
+    + '<div class="cf-chart-wrap is-sm"><canvas id="cf-chart-cuotas-'+c.id+'"></canvas></div>'
+    + (cuotasTotales>0?'<div style="text-align:center;font-size:11px;color:var(--ink3);margin-top:6px"><b style="color:var(--p1);font-size:13px">'+Math.round(cuotasPagadasTotales/cuotasTotales*100)+'%</b> completado</div>':'<div style="text-align:center;font-size:11px;color:var(--ink3)">Sin planes</div>')
+    + '</div>';
+  html += '</div>';
+
+  // Timeline
+  if(timeline.length){
+    html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">🕒 Línea de tiempo</div></div>'
+      + '<div class="cf-timeline">';
+    timeline.forEach(function(t){
+      var cls = t.tipo==='pago'?'is-g':t.tipo==='completado'?'is-g':t.tipo==='alta'?'':t.tipo==='mora'?'is-r':'';
+      var fecha = '—';
+      try{ fecha = new Date(t.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){}
+      html += '<div class="cf-tl-item">'
+        + '<div class="cf-tl-dot '+cls+'"></div>'
+        + '<div class="cf-tl-d">'+esc(fecha)+'</div>'
+        + '<div class="cf-tl-t">'+esc(t.titulo)+'</div>'
+        + '<div class="cf-tl-s">'+esc(t.sub||'')+'</div>'
+        + '</div>';
+    });
+    html += '</div></div>';
+  }
+  html += '</div>';
+
+  // ── PANEL: PERSONAL ──
+  html += '<div class="cf-panel" data-tab="personal">';
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">Datos personales</div></div>'
+    + '<div class="cf-grid-3">'
+    + field('Nombre completo', c.nombre)
+    + field('Cédula', c.cedula||c.ci, true)
+    + field('Teléfono', c.tel, true)
+    + field('WhatsApp', c.wa||c.tel, true)
+    + field('Email', c.email)
+    + field('Cliente desde', c.creado?new Date(c.creado).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}):'—')
+    + '</div></div>';
+
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">📍 Residencia</div></div>'
+    + '<div class="cf-grid-2">'
+    + field('Ciudad', c.ciudad)
+    + field('Estado', c.estado_ubi)
+    + '</div>'
+    + '<div class="cf-field" style="margin-top:10px"><div class="cf-field-l">Dirección completa</div><div class="cf-field-v'+(!c.dir?' is-empty':'')+'" style="line-height:1.5">'+esc(c.dir||'No registrada')+'</div></div>'
+    + '<div class="cf-grid-2" style="margin-top:10px">'
+    + field('Tipo de vivienda', c.vivienda)
+    + field('Tiempo en la dirección', c.tiempo_dir)
+    + '</div></div>';
+
+  if(c.emergencia || c.notas || c.impresion || c.conocio){
+    html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">ℹ️ Información adicional</div></div>'
+      + '<div class="cf-grid-2">'
+      + (c.conocio?field('¿Cómo nos conoció?', c.conocio):'')
+      + (c.impresion?field('Impresión del asesor', c.impresion):'')
+      + '</div>'
+      + (c.emergencia?'<div class="cf-field" style="margin-top:10px"><div class="cf-field-l">Contacto de emergencia</div><div class="cf-field-v">'+esc(c.emergencia)+'</div></div>':'')
+      + (c.notas?'<div class="cf-field" style="margin-top:10px"><div class="cf-field-l">Notas internas</div><div class="cf-field-v" style="line-height:1.5">'+esc(c.notas)+'</div></div>':'')
+      + '</div>';
+  }
+  html += '</div>';
+
+  // ── PANEL: LABORAL ──
+  html += '<div class="cf-panel" data-tab="laboral">';
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">💼 Empleo</div></div>'
+    + '<div class="cf-grid-3">'
+    + field('Tipo de empleo', c.trabajo)
+    + field('Empresa', c.empresa)
+    + field('Cargo', c.cargo)
+    + field('Antigüedad', c.antiguedad)
+    + '</div></div>';
+
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">💵 Ingresos</div></div>'
+    + '<div class="cf-grid-3">'
+    + field('Ingreso mensual', valMoney(ingreso))
+    + field('Ingreso familiar', valMoney(ingresoFam))
+    + field('Recibe remesas', c.remesas==='si'?'<span class="cf-field-v" style="color:var(--green)">✓ Sí</span>':'<span class="cf-field-v is-empty">No</span>')
+    + field('Dependientes', c.dependientes)
+    + field('Deudas previas', c.deudas)
+    + field('Historial crediticio', c.historial)
+    + '</div>';
+  if(ingreso>0 && cuotaActivaTotal>0){
+    var cuotaMensual = cuotaActivaTotal*2;
+    var indicColor = ratioCuotaIng<=30?'var(--green)':ratioCuotaIng<=50?'var(--amber)':'var(--red)';
+    html += '<div style="margin-top:12px;padding:10px 12px;background:var(--surf2);border-radius:9px;border-left:3px solid '+indicColor+'">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px">'
+      +   '<div style="font-size:11px;color:var(--ink2);font-weight:700">Capacidad de pago (cuota mensual vs. ingreso)</div>'
+      +   '<div style="font-size:18px;font-weight:900;color:'+indicColor+'">'+ratioCuotaIng+'%</div>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--ink3)">Cuota mensual: '+fmt(cuotaMensual)+' sobre ingreso '+fmt(ingreso)+' · '+(ratioCuotaIng<=30?'Saludable':ratioCuotaIng<=50?'Aceptable':'Alto compromiso')+'</div>'
+      + '</div>';
+  }
+  html += '</div>';
+  html += '</div>';
+
+  // ── PANEL: FINANCIERO ──
+  html += '<div class="cf-panel" data-tab="financiero">';
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">🏦 Información bancaria</div></div>'
+    + '<div class="cf-grid-3">'
+    + field('Banco principal', c.banco_nombre)
+    + field('Banco para cobros', c.banco_cobro)
+    + field('Estado de cuenta', c.banco_estado)
+    + field('Cuenta (últimos 4)', c.cuenta_digitos, true)
+    + field('Ahorros declarados', c.ahorro?valMoney(c.ahorro):null)
+    + '</div></div>';
+
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">💳 Perfil Cashea</div></div>';
+  if(c.cashea==='si' || c.cashea_nivel || c.cashea_deuda==='si' || c.cashea_ultimo_art){
+    // Estado bonito con color
+    var casheaEstadoLbl = {al_dia:'Al día',mora_leve:'Mora leve (<30d)',mora_grave:'Mora grave (>30d)',completado:'Canceló todo'}[c.cashea_estado] || '—';
+    var casheaEstadoCol = {al_dia:'var(--green)',mora_leve:'var(--amber)',mora_grave:'var(--red)',completado:'var(--p1)'}[c.cashea_estado] || 'var(--ink3)';
+    html += '<div class="cf-grid-3">'
+      + field('Cliente Cashea', '<span class="cf-field-v" style="color:var(--green)">✓ Sí</span>')
+      + field('Nivel', c.cashea_nivel ? 'Nivel '+c.cashea_nivel : null)
+      + field('Estado actual', c.cashea_estado ? '<span class="cf-field-v" style="color:'+casheaEstadoCol+';font-weight:800">'+casheaEstadoLbl+'</span>' : null)
+      + '</div>';
+    // Deuda activa
+    if(c.cashea_deuda==='si' || c.cashea_monto>0){
+      html += '<div style="margin-top:12px;padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:9px">'
+        + '<div style="font-size:11px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠ Deuda activa con Cashea</div>'
+        + '<div class="cf-grid-3">'
+        +   field('Monto deuda', c.cashea_monto>0 ? valMoney(c.cashea_monto) : null)
+        +   field('Cuotas pendientes', c.cashea_cuotas_pend||null)
+        +   field('Último pago', c.cashea_pago ? new Date(c.cashea_pago).toLocaleDateString('es-VE') : null)
+        + '</div></div>';
+    }
+    // Historial de compras
+    if(c.cashea_ultimo_art || c.cashea_total_compras){
+      var totalComprasLbl = {'1':'1 producto','2-3':'2 a 3 productos','4-5':'4 a 5 productos','6+':'6 o más productos'}[c.cashea_total_compras] || c.cashea_total_compras || '—';
+      html += '<div style="margin-top:10px;padding:10px 12px;background:var(--surf2);border-radius:9px">'
+        + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🛒 Historial de compras Cashea</div>'
+        + '<div class="cf-grid-3">'
+        +   field('Último artículo', c.cashea_ultimo_art)
+        +   field('Monto', c.cashea_ultimo_monto>0 ? valMoney(c.cashea_ultimo_monto) : null)
+        +   field('Fecha compra', c.cashea_ultima_fecha ? new Date(c.cashea_ultima_fecha).toLocaleDateString('es-VE') : null)
+        + '</div>'
+        + '<div style="margin-top:8px">'+field('Total compras históricas', totalComprasLbl)+'</div>'
+        + (c.cashea_obs ? '<div style="margin-top:8px"><div class="cf-field-l">Observaciones</div><div class="cf-field-v" style="line-height:1.4;font-style:italic">"'+esc(c.cashea_obs)+'"</div></div>' : '')
+        + '</div>';
+    }
+  } else {
+    html += '<div style="color:var(--ink3);font-size:12.5px;padding:6px 0;font-style:italic">No es cliente Cashea</div>';
+  }
+  html += '</div>';
+
+  if(c.fiador==='si' || c.fiador_nom){
+    html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">👥 Fiador</div></div>'
+      + '<div class="cf-grid-3">'
+      + field('Nombre', c.fiador_nom)
+      + field('Cédula', c.fiador_ci, true)
+      + field('Teléfono', c.fiador_tel, true)
+      + field('Relación', c.fiador_rel)
+      + '</div></div>';
+  }
+  html += '</div>';
+
+  // ── PANEL: REFERENCIAS ──
+  html += '<div class="cf-panel" data-tab="referencias">';
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">👤 Referencias personales</div></div>';
+  var refs = [c.ref1, c.ref2].filter(function(r){return r && (r.nom||r.tel);});
+  if(refs.length){
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    refs.forEach(function(r){
+      html += '<div class="cf-ref-card">'
+        + '<div class="cf-ref-av">'+esc(initials(r.nom))+'</div>'
+        + '<div class="cf-ref-body">'
+        +   '<div class="cf-ref-n">'+esc(r.nom||'Sin nombre')+'</div>'
+        +   '<div class="cf-ref-r">'+esc(r.rel||'—')+'</div>'
+        +   (r.tel?'<div class="cf-ref-m" style="font-family:var(--fd)">📞 '+esc(r.tel)+'</div>':'')
+        +   (r.obs?'<div class="cf-ref-m" style="margin-top:4px;font-style:italic">"'+esc(r.obs)+'"</div>':'')
+        + '</div></div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div style="color:var(--ink3);font-size:12px;padding:10px 0;font-style:italic">Sin referencias registradas</div>';
+  }
+  html += '</div>';
+  html += '</div>';
+
+  // ── PANEL: CRÉDITOS ──
+  html += '<div class="cf-panel" data-tab="creditos">';
+  if(creditos.length){
+    html += '<div class="cf-section">'
+      + '<div class="cf-section-h"><div class="cf-section-t">Historial completo · '+creditos.length+' plan'+(creditos.length!==1?'es':'')+'</div></div>'
+      + '<div class="lst" style="max-height:none">';
+    creditos.forEach(function(cr){
       var totalCr=cr.totalCuotas||cr.plazo*2;
       var cuotaV=parseFloat(cr.cuotaQ||cr.cuota||0);
-      var abonado=Array.isArray(cr.pagosRegistrados)?cr.pagosRegistrados.reduce(function(a,h){return a+h.montoPagado;},0):(cr.pagado||0)*cuotaV;
+      var abonado=Array.isArray(cr.pagosRegistrados)?cr.pagosRegistrados.reduce(function(a,h){return a+(h.montoPagado||0);},0):(cr.pagado||0)*cuotaV;
       var saldo=Math.max(0,parseFloat((cuotaV*totalCr-abonado).toFixed(2)));
       var pct=cuotaV*totalCr>0?Math.round(abonado/(cuotaV*totalCr)*100):0;
-      var tuvoMoraCr=(cr.tuvoMoraHistorica===true)||S.pagos.some(function(p){return p.cred===cr.id&&p.mora>0;});
-      return `<div class="li" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer" onclick="openAmort('${cr.id}')">
-        <div style="display:flex;width:100%;align-items:center;gap:8px">
-          <div class="li-ic" style="background:var(--gs)">${cr.estado==='completado'?'✓':'≡'}</div>
-          <div style="flex:1">
-            <div style="font-weight:700;color:var(--ink);font-size:12.5px">${cr.id} · ${cr.modelo}</div>
-            <div style="font-size:10.5px;color:var(--ink3)">Inicio: ${cr.fecha}${cr.fechaCompletado?' · Completado: '+cr.fechaCompletado:''}</div>
-          </div>
-          <div style="text-align:right">
-            <span class="bdg ${sbg(cr.estado)}">${cr.estado}</span>
-            ${tuvoMoraCr?'<span class="bdg b-r" style="margin-left:3px;font-size:9px">mora</span>':''}
-          </div>
-        </div>
-        <div style="width:100%;padding-left:44px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
-            <span style="color:var(--ink3)">${cr.pagado}/${totalCr} cuotas · Abonado: <strong style="color:var(--green)">${fmt(abonado)}</strong></span>
-            <span style="color:${saldo>0?'var(--p1)':'var(--green)'};font-weight:800">${saldo>0?'Saldo: '+fmt(saldo):'✓ Saldado'}</span>
-          </div>
-          <div class="prog"><div class="pf ${cr.mora>0?'p-r':'p-p'}" style="width:${pct}%"></div></div>
-        </div>
-      </div>`;
-    }).join('')}</div>`:`<div style="color:var(--ink3);font-size:12.5px;padding:10px 0">Sin financiamientos registrados</div>`}
+      var tuvoMoraCr=(cr.tuvoMoraHistorica===true)||pagos.some(function(p){return p.cred===cr.id&&(p.mora||0)>0;});
+      html += '<div class="li" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer" onclick="openAmort(\''+cr.id+'\')">'
+        + '<div style="display:flex;width:100%;align-items:center;gap:8px">'
+        +   '<div class="li-ic" style="background:var(--gs)">'+(cr.estado==='completado'?'✓':'≡')+'</div>'
+        +   '<div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12.5px">'+esc(cr.id)+' · '+esc(cr.modelo||'—')+'</div>'
+        +     '<div style="font-size:10.5px;color:var(--ink3)">Inicio: '+esc(cr.fecha||'—')+(cr.fechaCompletado?' · Completado: '+esc(cr.fechaCompletado):'')+'</div></div>'
+        +   '<div style="text-align:right"><span class="bdg '+sbg(cr.estado)+'">'+esc(cr.estado)+'</span>'
+        +     (tuvoMoraCr?'<span class="bdg b-r" style="margin-left:3px;font-size:9px">mora</span>':'')+'</div>'
+        + '</div>'
+        + '<div style="width:100%;padding-left:44px">'
+        +   '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
+        +     '<span style="color:var(--ink3)">'+(cr.pagado||0)+'/'+totalCr+' cuotas · Abonado: <strong style="color:var(--green)">'+fmt(abonado)+'</strong></span>'
+        +     '<span style="color:'+(saldo>0?'var(--p1)':'var(--green)')+';font-weight:800">'+(saldo>0?'Saldo: '+fmt(saldo):'✓ Saldado')+'</span>'
+        +   '</div>'
+        +   '<div class="prog"><div class="pf '+((cr.mora||0)>0?'p-r':'p-p')+'" style="width:'+pct+'%"></div></div>'
+        + '</div></div>';
+    });
+    html += '</div></div>';
+  } else {
+    html += '<div class="cf-section" style="text-align:center;padding:30px 20px"><div style="font-size:13px;font-weight:700;color:var(--ink2)">Sin planes registrados</div><div style="font-size:11.5px;color:var(--ink3);margin-top:4px">Este cliente aún no tiene un plan de cuotas activo</div></div>';
+  }
+  html += '</div>';
 
-    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin:14px 0 9px">Últimos pagos (${pagos.length})</div>
-    ${pagos.length?`<div class="lst">${pagos.slice(0,20).map(p=>`<div class="li"><div class="li-ic" style="background:var(--greens);font-size:9px;font-weight:900;color:var(--green)">PAG</div><div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">${p.fecha} · ${p.metodo}</div><div class="tds">${p.cred}</div></div><div style="font-weight:800;color:var(--green);font-family:var(--fd)">${fmt(p.monto)}</div></div>`).join('')}</div>`:`<div style="color:var(--ink3);font-size:12.5px;padding:10px 0">Sin pagos registrados</div>`}`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente(${id})">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
+  // ── PANEL: PAGOS ──
+  html += '<div class="cf-panel" data-tab="pagos">';
+  if(pagos.length){
+    html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">Últimos '+Math.min(pagos.length,30)+' pagos</div><div style="font-size:12px;font-weight:800;color:var(--green)">Total: '+fmt(totalPagadoReal)+'</div></div>'
+      + '<div class="lst">';
+    pagos.slice(0,30).forEach(function(p){
+      html += '<div class="li">'
+        + '<div class="li-ic" style="background:var(--greens);font-size:9px;font-weight:900;color:var(--green)">PAG</div>'
+        + '<div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">'+esc(p.fecha||'—')+' · '+esc(p.metodo||'—')+'</div>'
+        +   '<div class="tds">'+esc(p.cred||'—')+(p.banco?' · '+esc(p.banco):'')+'</div></div>'
+        + '<div style="text-align:right"><div style="font-weight:800;color:var(--green);font-family:var(--fd)">'+fmt(p.monto||0)+'</div>'
+        +   (p.estado?'<span class="bdg '+sbg(p.estado)+'" style="font-size:9px">'+esc(p.estado)+'</span>':'')+'</div>'
+        + '</div>';
+    });
+    html += '</div></div>';
+  } else {
+    html += '<div class="cf-section" style="text-align:center;padding:30px 20px"><div style="font-size:13px;font-weight:700;color:var(--ink2)">Sin pagos registrados</div></div>';
+  }
+  html += '</div>';
+
+  // ── PANEL: DOCUMENTOS ──
+  html += '<div class="cf-panel" data-tab="docs">';
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">Expediente del cliente</div></div>'
+    + _renderCliDocManager(c) + '</div>';
+  html += '</div>';
+
+  $('mbd').innerHTML = html;
+
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
   $('ov').style.display='flex';
+
+  // Render charts después de que el DOM esté visible
+  setTimeout(function(){ cfRenderCharts(c.id, monthsData, cuotasPagadasTotales, cuotasTotales); }, 60);
+}
+
+function cfTab(clienteId, tab){
+  var modal = $('mbd');
+  if(!modal) return;
+  var tabs = modal.querySelectorAll('.cf-tab');
+  tabs.forEach(function(t){ t.classList.toggle('is-active', t.getAttribute('data-tab')===tab); });
+  var panels = modal.querySelectorAll('.cf-panel');
+  panels.forEach(function(p){ p.classList.toggle('is-active', p.getAttribute('data-tab')===tab); });
+}
+
+var _cfCharts = {};
+function cfRenderCharts(cliId, monthsData, pagadas, totales){
+  // Destruir charts previos si existen
+  Object.keys(_cfCharts).forEach(function(k){
+    try{ _cfCharts[k].destroy(); }catch(e){}
+    delete _cfCharts[k];
+  });
+
+  var isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  var p1 = isDark?'#7c6ff0':'#6C5CE7';
+  var p1t = isDark?'rgba(124,111,240,.18)':'rgba(108,92,231,.12)';
+  var ink3 = isDark?'#6B6896':'#9794BB';
+
+  // Chart 1: pagos mensuales
+  var canvas1 = document.getElementById('cf-chart-pagos-'+cliId);
+  if(canvas1 && window.Chart){
+    _cfCharts.pagos = new Chart(canvas1, {
+      type:'bar',
+      data:{
+        labels: monthsData.map(function(m){return m.label;}),
+        datasets:[{
+          data: monthsData.map(function(m){return m.value;}),
+          backgroundColor: monthsData.map(function(m,i){return i===monthsData.length-1?p1:p1t;}),
+          borderRadius: 6,
+          borderSkipped: false
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:isDark?'#252844':'#fff',
+            borderColor:'rgba(108,92,231,.3)', borderWidth:1,
+            titleColor:isDark?'#E8E6FF':'#0B0B1E',
+            bodyColor:isDark?'#B0ADDB':'#4A4870',
+            padding:10,
+            callbacks:{ label:function(ctx){ return ' $'+ctx.raw.toLocaleString(); } }
+          }
+        },
+        scales:{
+          x:{ grid:{display:false}, border:{display:false}, ticks:{color:ink3,font:{size:10,weight:'600'}} },
+          y:{ grid:{color:'rgba(150,150,180,.08)'}, border:{display:false}, ticks:{color:ink3,font:{size:10},callback:function(v){return '$'+(v>=1000?(v/1000)+'k':v);}} }
+        }
+      }
+    });
+  }
+
+  // Chart 2: donut avance de cuotas
+  var canvas2 = document.getElementById('cf-chart-cuotas-'+cliId);
+  if(canvas2 && window.Chart){
+    var restantes = Math.max(0, totales-pagadas);
+    _cfCharts.cuotas = new Chart(canvas2, {
+      type:'doughnut',
+      data:{
+        labels:['Pagadas','Pendientes'],
+        datasets:[{
+          data:[pagadas, restantes],
+          backgroundColor:[p1, isDark?'rgba(124,111,240,.15)':'rgba(108,92,231,.12)'],
+          borderWidth:0,
+          spacing:2
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        cutout:'72%',
+        plugins:{
+          legend:{
+            position:'bottom',
+            labels:{color:ink3,font:{size:10,weight:'600'},boxWidth:10,padding:8}
+          },
+          tooltip:{
+            backgroundColor:isDark?'#252844':'#fff',
+            borderColor:'rgba(108,92,231,.3)', borderWidth:1,
+            titleColor:isDark?'#E8E6FF':'#0B0B1E',
+            bodyColor:isDark?'#B0ADDB':'#4A4870',
+            padding:10,
+            callbacks:{ label:function(ctx){ return ' '+ctx.label+': '+ctx.raw+' cuota'+(ctx.raw!==1?'s':''); } }
+          }
+        }
+      }
+    });
+  }
 }
 
 
@@ -4336,6 +4979,7 @@ notif(){
     if(tipoSel) tipoSel.onchange=function(){ actualizarPreviewNotif(); actualizarTipoDesc(); };
     var destSel=$('notif-dest');
     if(destSel) destSel.onchange=function(){ actualizarPreviewNotif(); };
+    if(typeof nxAcUpdateHint==='function') nxAcUpdateHint();
     actualizarPreviewNotif();
     actualizarTipoDesc();
   }, 80);
@@ -4431,103 +5075,210 @@ notif(){
   <div class="card">
     <div class="ch" style="border-bottom:2px solid var(--rim);padding-bottom:10px;margin-bottom:14px">
       <div>
-        <div class="ct" style="font-size:14px">Centro de Notificaciones</div>
-        <div style="font-size:11px;color:var(--ink3)">Flujo WhatsApp ordenado para leads y clientes activos</div>
-      </div>
-    </div>
-    <div class="fgr c1" style="gap:12px">
-
-      <div class="fg">
-        <label style="font-weight:700;font-size:12px;color:var(--ink2)">TIPO DE MENSAJE</label>
-        <select class="fs" id="notif-tipo" style="margin-top:4px">
-          <option value="lead_bienvenida">1. Bienvenida Lead (dejó sus datos)</option>
-          <option value="bienvenida_activo">2. Bienvenida Cliente Activo (con cuenta)</option>
-          <option value="cuota">3. Recordatorio de Cuota</option>
-          <option value="confirmado">4. Pago Recibido</option>
-          <option value="cuenta">5. Estado de Cuenta Completo</option>
-          <option value="acuerdo">6. Confirmación de Acuerdo de Pago</option>
-          <option value="mora">7. Aviso de Mora</option>
-          <option value="mora_grave">8. Aviso Urgente de Mora</option>
-          <option value="liquidacion">9. Oferta de Liquidación Anticipada</option>
-          <option value="vencimiento">10. Aviso de Vencimiento de Contrato</option>
-          <option value="custom">11. Mensaje Personalizado</option>
-        </select>
-        <div id="notif-tipo-desc" style="margin-top:5px;font-size:11px;color:var(--ink3);padding:6px 8px;background:var(--surf2);border-radius:6px;border-left:3px solid var(--p1)">
-          Incluye dias de mora, N° de cuenta, cuota y saldo pendiente.
-        </div>
-      </div>
-
-      <div class="fg">
-        <label style="font-weight:700;font-size:12px;color:var(--ink2)">ENVÍO</label>
-        <div style="margin-top:4px;font-size:12px;color:var(--ink2);padding:10px 12px;background:var(--greens);border-radius:10px;border-left:3px solid #25D366;font-weight:700">
-          WhatsApp activo
-        </div>
-        <input type="hidden" id="notif-canal" value="whatsapp">
-      </div>
-
-      <div class="fg">
-        <label style="font-weight:700;font-size:12px;color:var(--ink2)">DESTINATARIOS</label>
-        <div id="notif-dest-quick" class="notif-quick-dest">
-          <button type="button" class="notif-quick-btn is-active" data-dest="leads" onclick="setNotifDestQuick('leads')">🔘 Todos los leads</button>
-          <button type="button" class="notif-quick-btn" data-dest="activos" onclick="setNotifDestQuick('activos')">🔘 Solo aprobados</button>
-          <button type="button" class="notif-quick-btn" data-dest="proximas" onclick="setNotifDestQuick('proximas')">🔘 Solo pendientes</button>
-          <button type="button" class="notif-quick-btn" data-dest="mora" onclick="setNotifDestQuick('mora')">🔘 Solo moroso</button>
-          <button type="button" class="notif-quick-btn" data-dest="especifico" onclick="setNotifDestQuick('especifico')">🔘 Cliente específico</button>
-        </div>
-        <select class="fs" id="notif-dest" style="display:none">
-          <option value="leads">Leads sin cuenta activa</option>
-          <option value="activos">Clientes activos con cuenta</option>
-          <option value="proximas">Clientes con cuota esta semana (${proximasCuotas.length})</option>
-          <option value="mora">Clientes en mora (${moraClientes.length})</option>
-          <option value="especifico">Cliente específico</option>
-        </select>
-        <div style="margin-top:5px;font-size:11px;color:var(--ink3)">Un toque y ya tienes el grupo listo para WhatsApp.</div>
-      </div>
-
-      <div class="fg" id="notif-especifico-wrap" style="display:none">
-        <label style="font-weight:700;font-size:12px;color:var(--ink2)">SELECCIONAR CLIENTE</label>
-        <select class="fs" id="notif-cliente-sel" style="margin-top:4px">
-          ${(function(){
-            var activos=(S.clientes||[]).filter(function(c){
-              if(c.eliminado) return false;
-              return (S.creds||[]).some(function(cr){ return !cr.eliminado && cr.estado==='activo' && ((cr.cliId&&String(cr.cliId)===String(c.id)) || cr.cli===c.nombre); });
-            });
-            var leads=(S.clientes||[]).filter(function(c){
-              if(c.eliminado) return false;
-              return !(S.creds||[]).some(function(cr){ return !cr.eliminado && cr.estado==='activo' && ((cr.cliId&&String(cr.cliId)===String(c.id)) || cr.cli===c.nombre); });
-            });
-            var html='';
-            if(activos.length) html+='<optgroup label="Clientes activos">'+activos.map(function(c){
-              var cr=(S.creds||[]).find(function(x){ return !x.eliminado && x.estado==='activo' && ((x.cliId&&String(x.cliId)===String(c.id)) || x.cli===c.nombre); });
-              return '<option value="'+c.id+'">'+c.nombre+' — '+(cr&&cr.id?cr.id:'sin cuenta')+' — '+(c.tel||'sin tel')+'</option>';
-            }).join('')+'</optgroup>';
-            if(leads.length) html+='<optgroup label="Leads / sin cuenta activa">'+leads.map(function(c){
-              return '<option value="'+c.id+'">'+c.nombre+' — lead — '+(c.tel||'sin tel')+'</option>';
-            }).join('')+'</optgroup>';
-            return html;
-          })()}
-        </select>
-      </div>
-
-      <div class="fg" id="notif-custom-wrap" style="display:none">
-        <label style="font-weight:700;font-size:12px;color:var(--ink2)">MENSAJE PERSONALIZADO</label>
-        <div style="font-size:11px;color:var(--ink3);margin:3px 0 6px">Variables: <code>{nombre}</code> <code>{cuota}</code> <code>{mora}</code> <code>{modelo}</code> <code>{cuenta}</code> <code>{empresa}</code> <code>{saldo}</code> <code>{cuotaNum}</code> <code>{totalCuotas}</code> <code>{fechaProx}</code></div>
-        <textarea class="fta" id="notif-msg" rows="4" placeholder="Estimado/a {nombre}, su cuota {cuotaNum} de {cuota} por su {modelo} (cuenta {cuenta}) vence el {fechaProx}..."></textarea>
+        <div class="ct" style="font-size:14px">Nuevo envío</div>
+        <div style="font-size:11px;color:var(--ink3)">Selecciona plantilla, destinatarios y envía por WhatsApp</div>
       </div>
     </div>
 
-    <!-- Vista previa -->
-    <div style="margin:14px 0 10px">
-      <div style="font-weight:700;font-size:11px;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Vista Previa del Mensaje</div>
-      <div id="notif-preview" style="padding:12px 14px;background:var(--surf2);border-radius:10px;border:1px solid var(--rim);font-size:12px;color:var(--ink);min-height:60px;white-space:pre-wrap;line-height:1.6;font-family:var(--fb)">
-        Seleccione tipo y destinatario para ver la vista previa...
+    <!-- PASO 1: Plantilla -->
+    <div class="nx-step">
+      <div class="nx-step-head">
+        <div class="nx-step-num">1</div>
+        <div class="nx-step-title">Plantilla</div>
+        <div class="nx-step-sub" id="nx-tpl-counter">Selecciona una</div>
+      </div>
+
+      <div class="nx-cat-tabs" id="nx-cat-tabs">
+        <button type="button" class="nx-cat-tab is-active" data-cat="all" onclick="setNxCat('all')">Todas</button>
+        <button type="button" class="nx-cat-tab" data-cat="bienvenida" onclick="setNxCat('bienvenida')">Bienvenida</button>
+        <button type="button" class="nx-cat-tab" data-cat="pagos" onclick="setNxCat('pagos')">Pagos</button>
+        <button type="button" class="nx-cat-tab" data-cat="cobranza" onclick="setNxCat('cobranza')">Cobranza</button>
+        <button type="button" class="nx-cat-tab" data-cat="cierre" onclick="setNxCat('cierre')">Cierre</button>
+        <button type="button" class="nx-cat-tab" data-cat="otros" onclick="setNxCat('otros')">Otros</button>
+      </div>
+
+      <div class="nx-tpl-grid" id="nx-tpl-grid">
+        <button type="button" class="nx-tpl-card is-active" data-tipo="lead_bienvenida" data-cat="bienvenida" onclick="setNotifTipo('lead_bienvenida')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(91,78,212,.12);color:var(--p1)">👋</div>
+            <div class="nx-tpl-name">Bienvenida Lead</div>
+          </div>
+          <div class="nx-tpl-desc">Saludo formal al nuevo interesado</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="bienvenida_activo" data-cat="bienvenida" onclick="setNotifTipo('bienvenida_activo')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(91,78,212,.12);color:var(--p1)">🎉</div>
+            <div class="nx-tpl-name">Cliente activo</div>
+          </div>
+          <div class="nx-tpl-desc">Para clientes con cuenta aprobada</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="cuota" data-cat="pagos" onclick="setNotifTipo('cuota')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(91,78,212,.12);color:var(--p1)">🔔</div>
+            <div class="nx-tpl-name">Recordatorio cuota</div>
+          </div>
+          <div class="nx-tpl-desc">Aviso corto antes del vencimiento</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="confirmado" data-cat="pagos" onclick="setNotifTipo('confirmado')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(39,174,96,.14);color:#27ae60">✅</div>
+            <div class="nx-tpl-name">Pago recibido</div>
+          </div>
+          <div class="nx-tpl-desc">Confirma recepción y próxima fecha</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="cuenta" data-cat="pagos" onclick="setNotifTipo('cuenta')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(91,78,212,.12);color:var(--p1)">📊</div>
+            <div class="nx-tpl-name">Estado de cuenta</div>
+          </div>
+          <div class="nx-tpl-desc">Resumen completo de su plan</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="mora" data-cat="cobranza" onclick="setNotifTipo('mora')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(232,152,10,.14);color:var(--amber)">⚠️</div>
+            <div class="nx-tpl-name">Aviso de mora</div>
+          </div>
+          <div class="nx-tpl-desc">Notifica atraso con datos completos</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="mora_grave" data-cat="cobranza" onclick="setNotifTipo('mora_grave')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(217,59,90,.14);color:var(--red)">🚨</div>
+            <div class="nx-tpl-name">Mora urgente</div>
+          </div>
+          <div class="nx-tpl-desc">Aviso por mora prolongada</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="acuerdo" data-cat="cobranza" onclick="setNotifTipo('acuerdo')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(91,78,212,.12);color:var(--p1)">🤝</div>
+            <div class="nx-tpl-name">Acuerdo de pago</div>
+          </div>
+          <div class="nx-tpl-desc">Formaliza el acuerdo por escrito</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="liquidacion" data-cat="cierre" onclick="setNotifTipo('liquidacion')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(39,174,96,.14);color:#27ae60">💰</div>
+            <div class="nx-tpl-name">Liquidación</div>
+          </div>
+          <div class="nx-tpl-desc">Oferta de cancelación anticipada</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="vencimiento" data-cat="cierre" onclick="setNotifTipo('vencimiento')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:rgba(232,152,10,.14);color:var(--amber)">📅</div>
+            <div class="nx-tpl-name">Vencimiento</div>
+          </div>
+          <div class="nx-tpl-desc">Alerta fin de contrato próximo</div>
+        </button>
+        <button type="button" class="nx-tpl-card" data-tipo="custom" data-cat="otros" onclick="setNotifTipo('custom')">
+          <div class="nx-tpl-head">
+            <div class="nx-tpl-icon" style="background:var(--surf2);color:var(--ink2)">✏️</div>
+            <div class="nx-tpl-name">Personalizado</div>
+          </div>
+          <div class="nx-tpl-desc">Escribe tu propio mensaje</div>
+        </button>
+      </div>
+
+      <select class="fs" id="notif-tipo" style="display:none">
+        <option value="lead_bienvenida">Bienvenida Lead</option>
+        <option value="bienvenida_activo">Bienvenida Cliente Activo</option>
+        <option value="cuota">Recordatorio de Cuota</option>
+        <option value="confirmado">Pago Recibido</option>
+        <option value="cuenta">Estado de Cuenta Completo</option>
+        <option value="acuerdo">Confirmación de Acuerdo de Pago</option>
+        <option value="mora">Aviso de Mora</option>
+        <option value="mora_grave">Aviso Urgente de Mora</option>
+        <option value="liquidacion">Oferta de Liquidación Anticipada</option>
+        <option value="vencimiento">Aviso de Vencimiento de Contrato</option>
+        <option value="custom">Mensaje Personalizado</option>
+      </select>
+
+      <div id="notif-tipo-desc" style="margin-top:10px;font-size:11.5px;color:var(--ink3);padding:8px 10px;background:var(--surf2);border-radius:8px;border-left:3px solid var(--p1);line-height:1.4">
+        Selecciona una plantilla para ver su descripción.
+      </div>
+
+      <div id="notif-custom-wrap" style="display:none;margin-top:10px">
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">Variables disponibles: <code>{nombre}</code> <code>{cuota}</code> <code>{mora}</code> <code>{modelo}</code> <code>{cuenta}</code> <code>{empresa}</code> <code>{saldo}</code> <code>{cuotaNum}</code> <code>{totalCuotas}</code> <code>{fechaProx}</code></div>
+        <textarea class="fta" id="notif-msg" rows="4" placeholder="Estimado/a {nombre}, le recordamos su próxima cuota de {cuota} con fecha {fechaProx}..."></textarea>
       </div>
     </div>
 
-    <button class="btn btn-p" style="width:100%;margin-top:4px;padding:12px;font-size:14px;font-weight:800;border-radius:10px;letter-spacing:.3px" id="notif-send-btn">
-      Enviar Notificaciones por WhatsApp
-    </button>
-    <div style="text-align:center;font-size:11px;color:var(--ink3);margin-top:6px">
+    <!-- PASO 2: Destinatarios -->
+    <div class="nx-step">
+      <div class="nx-step-head">
+        <div class="nx-step-num">2</div>
+        <div class="nx-step-title">Destinatarios</div>
+        <div class="nx-step-sub" id="nx-dest-counter">0 destinatarios</div>
+      </div>
+
+      <div class="nx-seg-grid" id="notif-dest-quick">
+        <button type="button" class="nx-seg is-active" data-dest="leads" onclick="setNotifDestQuick('leads')">
+          <div class="nx-seg-count" id="nx-c-leads">0</div>
+          <div class="nx-seg-info"><div class="nx-seg-lbl">Leads</div><div class="nx-seg-hint">Sin cuenta activa</div></div>
+        </button>
+        <button type="button" class="nx-seg" data-dest="activos" onclick="setNotifDestQuick('activos')">
+          <div class="nx-seg-count" id="nx-c-activos">0</div>
+          <div class="nx-seg-info"><div class="nx-seg-lbl">Activos</div><div class="nx-seg-hint">Con cuenta aprobada</div></div>
+        </button>
+        <button type="button" class="nx-seg" data-dest="proximas" onclick="setNotifDestQuick('proximas')">
+          <div class="nx-seg-count" id="nx-c-proximas">0</div>
+          <div class="nx-seg-info"><div class="nx-seg-lbl">Cuota pendiente</div><div class="nx-seg-hint">Vencen esta semana</div></div>
+        </button>
+        <button type="button" class="nx-seg" data-dest="mora" onclick="setNotifDestQuick('mora')">
+          <div class="nx-seg-count" id="nx-c-mora">0</div>
+          <div class="nx-seg-info"><div class="nx-seg-lbl">En mora</div><div class="nx-seg-hint">Con atraso</div></div>
+        </button>
+      </div>
+
+      <select class="fs" id="notif-dest" style="display:none">
+        <option value="leads">Leads sin cuenta activa</option>
+        <option value="activos">Clientes activos con cuenta</option>
+        <option value="proximas">Clientes con cuota esta semana</option>
+        <option value="mora">Clientes en mora</option>
+        <option value="especifico">Cliente específico</option>
+      </select>
+
+      <!-- Buscador: siempre visible. Filtra dentro del segmento. Si seleccionas uno, se envía solo a ese. -->
+      <div style="margin-top:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-size:11px;color:var(--ink3);font-weight:600" id="nx-ac-hint">O busca un cliente específico dentro del grupo</div>
+          <button type="button" id="nx-ac-modeswitch" onclick="nxAcToggleScope()" style="border:none;background:transparent;color:var(--p1);font-size:11px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:6px">Ver todos</button>
+        </div>
+        <div class="nx-ac-wrap">
+          <span class="nx-ac-icon">🔍</span>
+          <input type="text" class="nx-ac-input" id="nx-ac-input" placeholder="Busca por nombre, cuenta, teléfono o cédula..." autocomplete="off" oninput="nxAcFilter()" onfocus="nxAcOpen()" onkeydown="nxAcKey(event)">
+          <button type="button" class="nx-ac-clear" id="nx-ac-clear" onclick="nxAcClearInput()">×</button>
+          <div class="nx-ac-list" id="nx-ac-list"></div>
+        </div>
+        <div id="nx-ac-selected-wrap"></div>
+        <input type="hidden" id="notif-cliente-sel-id" value="">
+        <select id="notif-cliente-sel" style="display:none"></select>
+      </div>
+    </div>
+
+    <!-- PASO 3: Preview -->
+    <div class="nx-step">
+      <div class="nx-step-head">
+        <div class="nx-step-num">3</div>
+        <div class="nx-step-title">Vista previa</div>
+        <div class="nx-step-sub">Así lo verá el cliente</div>
+      </div>
+      <div class="nx-wa-preview">
+        <div id="notif-preview" class="nx-wa-bubble" style="display:none"></div>
+        <div id="notif-preview-empty" class="nx-wa-empty">Selecciona una plantilla para ver el mensaje…</div>
+      </div>
+    </div>
+
+    <!-- Barra de envío -->
+    <div class="nx-send-bar">
+      <div class="nx-send-count">
+        <b id="nx-send-n">0</b>
+        <span id="nx-send-lbl">destinatarios listos</span>
+      </div>
+      <button class="nx-send-btn" id="notif-send-btn">
+        <span style="font-size:15px">📱</span>
+        <span>Enviar por WhatsApp</span>
+      </button>
+    </div>
+    <div style="text-align:center;font-size:10.5px;color:var(--ink3);margin-top:6px">
       Se abrirán hasta 5 chats a la vez para evitar bloqueos del navegador
     </div>
   </div>
@@ -4974,6 +5725,29 @@ config(){
     db.collection('config').doc('cobradores').get().then(function(doc){
       renderCobradores(doc.exists?doc.data().lista:['Juan Admin']);
     });
+    // Cargar score desde Firebase
+    if(db){
+      db.collection('config').doc('score').get().then(function(doc){
+        if(doc.exists){
+          var d=doc.data();
+          if(d && typeof d==='object'){
+            if(d.pesos) Object.assign(SCORE_CFG.pesos, d.pesos);
+            if(d.umbrales) Object.assign(SCORE_CFG.umbrales, d.umbrales);
+            if(d.hardReject) Object.assign(SCORE_CFG.hardReject, d.hardReject);
+            if(d.ratios) Object.assign(SCORE_CFG.ratios, d.ratios);
+            if(d.ingreso) Object.assign(SCORE_CFG.ingreso, d.ingreso);
+          }
+        }
+        scRenderPesos();
+      }).catch(function(){ scRenderPesos(); });
+    } else {
+      scRenderPesos();
+    }
+    // Listeners umbrales para preview
+    ['sc_umb_exc','sc_umb_bue','sc_umb_reg'].forEach(function(id){
+      var el=$(id); if(el) el.oninput = scRenderScalePreview;
+    });
+    scRenderScalePreview();
   },80);
 
   return`<div class="page">
@@ -5028,6 +5802,107 @@ config(){
         <div class="fg"><label>% mora mensual</label><input class="fi" id="cfg_mora" type="number" step="0.1" value="${PLAN.moraPct||5}"></div>
       </div>
       <button class="btn btn-p btn-sm" style="margin-top:10px;align-self:flex-start" onclick="guardarPlan()">Guardar plan</button>
+    </div>
+
+    <!-- ═══ SCORE / POLÍTICA DE RIESGO ═══ -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="ch" style="border-bottom:2px solid var(--rim);padding-bottom:10px;margin-bottom:14px">
+        <div>
+          <div class="ct">⚖️ Score y Política de Riesgo</div>
+          <div class="cs">Define cómo se aprueba o rechaza una solicitud. Afecta directamente la mora futura.</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-g btn-sm" onclick="abrirScoreSimulador()">🧪 Simulador</button>
+          <button class="btn btn-g btn-sm" onclick="abrirScoreAnalisis()">📊 Análisis portfolio</button>
+          <button class="btn btn-p btn-sm" onclick="guardarScoreCfg()">Guardar</button>
+        </div>
+      </div>
+
+      <!-- Tabs internas del módulo -->
+      <div class="cf-tabs" id="sc-tabs">
+        <button class="cf-tab is-active" data-sctab="pesos" onclick="scTab('pesos')">Pesos de factores</button>
+        <button class="cf-tab" data-sctab="umbrales" onclick="scTab('umbrales')">Umbrales de decisión</button>
+        <button class="cf-tab" data-sctab="hard" onclick="scTab('hard')">Rechazos automáticos</button>
+        <button class="cf-tab" data-sctab="ratio" onclick="scTab('ratio')">Ratio cuota/ingreso</button>
+      </div>
+
+      <!-- PANEL: PESOS -->
+      <div class="cf-panel is-active" data-sctab="pesos">
+        <div style="background:var(--surf2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--ink2);line-height:1.5">
+          <b>Cada factor aporta un % al score final.</b> La suma debe ser 100%. Ajusta según el perfil de riesgo que quieras priorizar.
+        </div>
+        <div id="sc-pesos-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>
+        <div style="margin-top:10px;padding:10px 12px;background:var(--gs);border-radius:9px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:11.5px;color:var(--ink2);font-weight:700">Suma total de pesos</div>
+          <div id="sc-pesos-sum" style="font-size:18px;font-weight:900;color:var(--p1);font-family:var(--fd)">100%</div>
+        </div>
+      </div>
+
+      <!-- PANEL: UMBRALES -->
+      <div class="cf-panel" data-sctab="umbrales">
+        <div style="background:var(--surf2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--ink2);line-height:1.5">
+          <b>Umbrales de decisión.</b> Define qué score se considera excelente/bueno/regular. Las solicitudes bajo el umbral regular se rechazan.
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div class="fg"><label style="color:var(--green)">Excelente (aprobación automática) ≥</label><input class="fi" id="sc_umb_exc" type="number" min="300" max="850" value="${SCORE_CFG.umbrales.excelente}"></div>
+          <div class="fg"><label style="color:var(--p1)">Bueno (aprobar) ≥</label><input class="fi" id="sc_umb_bue" type="number" min="300" max="850" value="${SCORE_CFG.umbrales.bueno}"></div>
+          <div class="fg"><label style="color:var(--amber)">Regular (revisar manual) ≥</label><input class="fi" id="sc_umb_reg" type="number" min="300" max="850" value="${SCORE_CFG.umbrales.regular}"></div>
+        </div>
+        <div style="margin-top:12px;padding:10px 12px;background:var(--reds);border-left:3px solid var(--red);border-radius:9px;font-size:11.5px;color:var(--ink2)">
+          Todo score por <b>debajo del umbral regular</b> se rechaza automáticamente.
+        </div>
+        <!-- Barra visual -->
+        <div style="margin-top:14px">
+          <div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Vista previa de la escala</div>
+          <div id="sc-scale-preview" style="position:relative;height:36px;border-radius:8px;overflow:hidden;background:var(--surf2)"></div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-top:3px"><span>300</span><span>850</span></div>
+        </div>
+      </div>
+
+      <!-- PANEL: HARD REJECTS -->
+      <div class="cf-panel" data-sctab="hard">
+        <div style="background:var(--reds);border:1px solid rgba(217,59,90,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--ink2);line-height:1.5">
+          <b style="color:var(--red)">⚠ Rechazos automáticos.</b> Si se cumple cualquiera de estas condiciones, la solicitud se rechaza <b>sin importar el score</b>. Úsalos para filtrar riesgos inaceptables.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="fg"><label>Ingreso mínimo mensual (USD)</label><input class="fi" id="sc_hr_ing" type="number" min="0" step="10" value="${SCORE_CFG.hardReject.ingresoMinimo}"><div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Rechaza si ingreso efectivo es menor</div></div>
+          <div class="fg"><label>Ratio cuota/ingreso máximo (%)</label><input class="fi" id="sc_hr_ratio" type="number" min="10" max="80" step="1" value="${Math.round(SCORE_CFG.hardReject.ratioCuotaMax*100)}"><div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Ej: 35 = cuota no puede superar el 35% del ingreso</div></div>
+        </div>
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 12px;background:var(--surf2);border-radius:8px">
+            <input type="checkbox" id="sc_hr_histmalo" ${SCORE_CFG.hardReject.historialMaloConDeuda?'checked':''} style="width:16px;height:16px;accent-color:var(--p1)">
+            <div><div style="font-size:12.5px;font-weight:700">Rechazar historial malo + deudas graves</div><div style="font-size:10.5px;color:var(--ink3)">Combinación especialmente riesgosa</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 12px;background:var(--surf2);border-radius:8px">
+            <input type="checkbox" id="sc_hr_notel" ${SCORE_CFG.hardReject.sinTelefono?'checked':''} style="width:16px;height:16px;accent-color:var(--p1)">
+            <div><div style="font-size:12.5px;font-weight:700">Rechazar sin teléfono de contacto</div><div style="font-size:10.5px;color:var(--ink3)">Imposible hacer cobranza</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 12px;background:var(--surf2);border-radius:8px">
+            <input type="checkbox" id="sc_hr_noref" ${SCORE_CFG.hardReject.sinReferencias?'checked':''} style="width:16px;height:16px;accent-color:var(--p1)">
+            <div><div style="font-size:12.5px;font-weight:700">Rechazar sin ninguna referencia</div><div style="font-size:10.5px;color:var(--ink3)">Ni personal ni fiador</div></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- PANEL: RATIO -->
+      <div class="cf-panel" data-sctab="ratio">
+        <div style="background:var(--surf2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--ink2);line-height:1.5">
+          <b>Ratio cuota/ingreso.</b> Qué % del ingreso mensual representa la cuota. Ratios bajos = menos riesgo de mora.
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div class="fg"><label style="color:var(--green)">Ideal ≤ (%)</label><input class="fi" id="sc_r_ideal" type="number" min="5" max="50" step="1" value="${Math.round(SCORE_CFG.ratios.ideal*100)}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Bonus al score</div></div>
+          <div class="fg"><label style="color:var(--p1)">Aceptable ≤ (%)</label><input class="fi" id="sc_r_ace" type="number" min="10" max="60" step="1" value="${Math.round(SCORE_CFG.ratios.aceptable*100)}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Sin penalización</div></div>
+          <div class="fg"><label style="color:var(--amber)">Alto ≤ (%)</label><input class="fi" id="sc_r_alto" type="number" min="15" max="70" step="1" value="${Math.round(SCORE_CFG.ratios.alto*100)}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Penalización media</div></div>
+          <div class="fg"><label style="color:var(--red)">Muy alto ≤ (%)</label><input class="fi" id="sc_r_muyalto" type="number" min="20" max="90" step="1" value="${Math.round(SCORE_CFG.ratios.muyAlto*100)}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Penalización fuerte</div></div>
+        </div>
+        <div style="margin-top:14px;padding:12px 14px;background:var(--gs);border-radius:10px">
+          <div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Ingreso base para el cálculo</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="fg"><label>Ingreso mínimo base (USD)</label><input class="fi" id="sc_ing_min" type="number" min="0" value="${SCORE_CFG.ingreso.minBase}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Ingresos debajo reciben 0 puntos</div></div>
+            <div class="fg"><label>Ingreso máximo base (USD)</label><input class="fi" id="sc_ing_max" type="number" min="0" value="${SCORE_CFG.ingreso.maxBase}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Ingresos arriba reciben el 100%</div></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Tasa de cambio -->
@@ -5516,6 +6391,15 @@ function _cliInitFromCliente(c){
   WZ.cashea = c.cashea || 'no';
   WZ.cashea_nivel = WZ.wz_cashea_nivel = c.cashea_nivel || '';
   WZ.cashea_pago = WZ.wz_cashea_pago = c.cashea_pago || '';
+  WZ.cashea_estado = WZ.wz_cashea_estado = c.cashea_estado || '';
+  WZ.cashea_deuda = WZ.wz_cashea_deuda = c.cashea_deuda || 'no';
+  WZ.cashea_monto = WZ.wz_cashea_monto = c.cashea_monto || '';
+  WZ.cashea_cuotas_pend = WZ.wz_cashea_cuotas_pend = c.cashea_cuotas_pend || '';
+  WZ.cashea_ultimo_art = WZ.wz_cashea_ultimo_art = c.cashea_ultimo_art || '';
+  WZ.cashea_ultimo_monto = WZ.wz_cashea_ultimo_monto = c.cashea_ultimo_monto || '';
+  WZ.cashea_ultima_fecha = WZ.wz_cashea_ultima_fecha = c.cashea_ultima_fecha || '';
+  WZ.cashea_total_compras = WZ.wz_cashea_total_compras = c.cashea_total_compras || '';
+  WZ.cashea_obs = WZ.wz_cashea_obs = c.cashea_obs || '';
   WZ.fiador_tiene = c.fiador || 'no';
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
   WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
@@ -5601,6 +6485,7 @@ function _cliStep1(){
 
 function _cliStep2(){
   function _s(title){ return '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--p1);margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--rim)">'+title+'</div>'; }
+  function _s2(title){ return '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:12px 0 6px">'+title+'</div>'; }
   function _row2(a,b){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+a+b+'</div>'; }
   function _fg(label,inner){ return '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)">'+label+'</label>'+inner+'</div>'; }
   function _sel(id,opts,onch){ return '<select class="fs" id="'+id+'" onchange="'+(onch||'')+'">'+opts+'</select>'; }
@@ -5676,11 +6561,31 @@ function _cliStep2(){
     +'<input type="radio" name="wz_cashea" value="si" onchange="_wzToggleCashea(\'si\')" style="accent-color:var(--p1)"> Tiene Cashea</label>'
     +'</div>'
   )+'</div>'
-  +'<div id="wz_cashea_det" style="display:none">'
+  +'<div id="wz_cashea_det" style="display:none;background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px">'
   +_row2(
     _fg('Nivel Cashea',_sel('wz_cashea_nivel','<option value="">Seleccionar...</option><option value="1">Nivel 1 — Básico</option><option value="2">Nivel 2 — Bronce</option><option value="3">Nivel 3 — Plata</option><option value="4">Nivel 4 — Oro</option>','_wzScore()')),
-    _fg('Fecha último pago',_inp('wz_cashea_pago','date',''))
+    _fg('Estado con Cashea',_sel('wz_cashea_estado','<option value="">Seleccionar...</option><option value="al_dia">Al día</option><option value="mora_leve">Mora < 30 días</option><option value="mora_grave">Mora > 30 días</option><option value="completado">Ya canceló todo</option>','_wzScore()'))
+  )
+  +_row2(
+    _fg('¿Tiene deuda activa con Cashea?',_sel('wz_cashea_deuda','<option value="no">No</option><option value="si">Sí</option>','_wzToggleCasheaDeuda(this.value)')),
+    _fg('Fecha último pago Cashea',_inp('wz_cashea_pago','date',''))
+  )
+  +'<div id="wz_cashea_deuda_det" style="display:none">'
+  +_row2(
+    _fg('Monto deuda actual (USD)',_inp('wz_cashea_monto','number','Ej: 350','_wzScore()')),
+    _fg('Cuotas pendientes',_inp('wz_cashea_cuotas_pend','number','Ej: 4'))
   )+'</div>'
+  +_s2('Historial de compras Cashea')
+  +_row2(
+    _fg('Último artículo comprado',_inp('wz_cashea_ultimo_art','text','Ej: Nevera LG, iPhone 13, TV Samsung...')),
+    _fg('Monto último artículo (USD)',_inp('wz_cashea_ultimo_monto','number','Ej: 450'))
+  )
+  +_row2(
+    _fg('Fecha de compra',_inp('wz_cashea_ultima_fecha','date','')),
+    _fg('Total compras con Cashea',_sel('wz_cashea_total_compras','<option value="">—</option><option value="1">1 producto</option><option value="2-3">2 a 3 productos</option><option value="4-5">4 a 5 productos</option><option value="6+">6 o más</option>','_wzScore()'))
+  )
+  +_fg('Observaciones sobre Cashea',_inp('wz_cashea_obs','text','Ej: Cliente con buen historial, pagó iPhone sin atrasos...'))
+  +'</div>'
   +_s('Referencias Personales')
   +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px;margin-bottom:10px">'
   +'<div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:10px">Referencia 1</div>'
@@ -5715,11 +6620,11 @@ function _cliStep2(){
 }
 
 function _cliHydrate(){
-  var ids=['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
+  var ids=['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null) el.value=WZ[id]; });
-  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
+  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_cashea_estado','wz_cashea_deuda','wz_cashea_total_compras','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
   var cashea = WZ.cashea||'no';
-  var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; _wzToggleCashea(cashea);
+  var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; _wzToggleCashea(cashea); if(WZ.cashea_deuda==='si') _wzToggleCasheaDeuda('si');
   var fiador = WZ.fiador_tiene||'no';
   var fiadorRadio=document.querySelector('input[name="wz_fiador"][value="'+fiador+'"]'); if(fiadorRadio) fiadorRadio.checked=true; _wzToggleFiador(fiador);
   function pick(group,val){ if(!val) return; var container=document.getElementById(group); if(container){ Array.from(container.children).forEach(function(el){ if((el.getAttribute('onclick')||'').indexOf("'"+val+"'")>=0) _wzChip(el,group,val); }); } }
@@ -5772,6 +6677,15 @@ function _cliCollectStep(step){
     WZ.cashea = (document.querySelector('input[name="wz_cashea"]:checked')||{value:'no'}).value;
     WZ.cashea_nivel = WZ.wz_cashea_nivel = g('wz_cashea_nivel');
     WZ.cashea_pago = WZ.wz_cashea_pago = g('wz_cashea_pago');
+    WZ.cashea_estado = WZ.wz_cashea_estado = g('wz_cashea_estado');
+    WZ.cashea_deuda = WZ.wz_cashea_deuda = g('wz_cashea_deuda');
+    WZ.cashea_monto = WZ.wz_cashea_monto = g('wz_cashea_monto');
+    WZ.cashea_cuotas_pend = WZ.wz_cashea_cuotas_pend = g('wz_cashea_cuotas_pend');
+    WZ.cashea_ultimo_art = WZ.wz_cashea_ultimo_art = g('wz_cashea_ultimo_art');
+    WZ.cashea_ultimo_monto = WZ.wz_cashea_ultimo_monto = g('wz_cashea_ultimo_monto');
+    WZ.cashea_ultima_fecha = WZ.wz_cashea_ultima_fecha = g('wz_cashea_ultima_fecha');
+    WZ.cashea_total_compras = WZ.wz_cashea_total_compras = g('wz_cashea_total_compras');
+    WZ.cashea_obs = WZ.wz_cashea_obs = g('wz_cashea_obs');
     WZ.fiador_tiene = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value;
     WZ.fiador_nom = WZ.wz_fiador_nom = g('wz_fiador_nom');
     WZ.fiador_tel = WZ.wz_fiador_tel = g('wz_fiador_tel');
@@ -5870,6 +6784,15 @@ function _cliGuardar(){
     cashea: WZ.cashea||'no',
     cashea_nivel: WZ.cashea_nivel||'',
     cashea_pago: WZ.cashea_pago||'',
+    cashea_estado: WZ.cashea_estado||'',
+    cashea_deuda: WZ.cashea_deuda||'no',
+    cashea_monto: parseFloat(WZ.cashea_monto)||0,
+    cashea_cuotas_pend: parseInt(WZ.cashea_cuotas_pend)||0,
+    cashea_ultimo_art: WZ.cashea_ultimo_art||'',
+    cashea_ultimo_monto: parseFloat(WZ.cashea_ultimo_monto)||0,
+    cashea_ultima_fecha: WZ.cashea_ultima_fecha||'',
+    cashea_total_compras: WZ.cashea_total_compras||'',
+    cashea_obs: WZ.cashea_obs||'',
     fiador: WZ.fiador_tiene||'no',
     fiador_nom: WZ.fiador_nom||'',
     fiador_tel: WZ.fiador_tel||'',
@@ -6103,6 +7026,7 @@ function _wzRender(motoId){
   // ── PASO 3: Perfil crediticio ──
   // helper para secciones
   function _s(title){ return '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--p1);margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--rim)">'+title+'</div>'; }
+  function _s2(title){ return '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:12px 0 6px">'+title+'</div>'; }
   function _row2(a,b){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+a+b+'</div>'; }
   function _fg(label,inner){ return '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)">'+label+'</label>'+inner+'</div>'; }
   function _sel(id,opts,onch){ return '<select class="fs" id="'+id+'" onchange="'+(onch||'')+'">'+opts+'</select>'; }
@@ -6189,11 +7113,31 @@ function _wzRender(motoId){
     +'<input type="radio" name="wz_cashea" value="si" onchange="_wzToggleCashea(\'si\')" style="accent-color:var(--p1)"> Tiene Cashea</label>'
     +'</div>'
   )+'</div>'
-  +'<div id="wz_cashea_det" style="display:none">'
+  +'<div id="wz_cashea_det" style="display:none;background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px">'
   +_row2(
     _fg('Nivel Cashea',_sel('wz_cashea_nivel','<option value="">Seleccionar...</option><option value="1">Nivel 1 — Básico</option><option value="2">Nivel 2 — Bronce</option><option value="3">Nivel 3 — Plata</option><option value="4">Nivel 4 — Oro</option>','_wzScore()')),
-    _fg('Fecha último pago',_inp('wz_cashea_pago','date',''))
+    _fg('Estado con Cashea',_sel('wz_cashea_estado','<option value="">Seleccionar...</option><option value="al_dia">Al día</option><option value="mora_leve">Mora < 30 días</option><option value="mora_grave">Mora > 30 días</option><option value="completado">Ya canceló todo</option>','_wzScore()'))
+  )
+  +_row2(
+    _fg('¿Tiene deuda activa con Cashea?',_sel('wz_cashea_deuda','<option value="no">No</option><option value="si">Sí</option>','_wzToggleCasheaDeuda(this.value)')),
+    _fg('Fecha último pago Cashea',_inp('wz_cashea_pago','date',''))
+  )
+  +'<div id="wz_cashea_deuda_det" style="display:none">'
+  +_row2(
+    _fg('Monto deuda actual (USD)',_inp('wz_cashea_monto','number','Ej: 350','_wzScore()')),
+    _fg('Cuotas pendientes',_inp('wz_cashea_cuotas_pend','number','Ej: 4'))
   )+'</div>'
+  +_s2('Historial de compras Cashea')
+  +_row2(
+    _fg('Último artículo comprado',_inp('wz_cashea_ultimo_art','text','Ej: Nevera LG, iPhone 13, TV Samsung...')),
+    _fg('Monto último artículo (USD)',_inp('wz_cashea_ultimo_monto','number','Ej: 450'))
+  )
+  +_row2(
+    _fg('Fecha de compra',_inp('wz_cashea_ultima_fecha','date','')),
+    _fg('Total compras con Cashea',_sel('wz_cashea_total_compras','<option value="">—</option><option value="1">1 producto</option><option value="2-3">2 a 3 productos</option><option value="4-5">4 a 5 productos</option><option value="6+">6 o más</option>','_wzScore()'))
+  )
+  +_fg('Observaciones sobre Cashea',_inp('wz_cashea_obs','text','Ej: Cliente con buen historial, pagó iPhone sin atrasos...'))
+  +'</div>'
 
   // ── REFERENCIAS PERSONALES ──
   +_s('Referencias Personales')
@@ -6356,16 +7300,16 @@ function _wzClienteOptions(){
 }
 
 function _wzHydrate(){
-  var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
+  var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
   ids.forEach(function(id){
     var el=document.getElementById(id);
     if(!el) return;
     if(id==='wz_cliente_sel' && WZ.clienteSel!=null && WZ.clienteSel!==''){ el.value=String(WZ.clienteSel); return; }
     if(WZ[id]!=null && WZ[id]!=='') el.value=WZ[id];
   });
-  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
+  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_cashea_estado','wz_cashea_deuda','wz_cashea_total_compras','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
   var cashea = WZ.cashea||'no';
-  var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; if(document.getElementById('wz_cashea_det')) _wzToggleCashea(cashea);
+  var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; if(document.getElementById('wz_cashea_det')) _wzToggleCashea(cashea); if(WZ.cashea_deuda==='si') _wzToggleCasheaDeuda('si');
   var fiador = WZ.fiador_tiene||'no';
   var fiadorRadio=document.querySelector('input[name="wz_fiador"][value="'+fiador+'"]'); if(fiadorRadio) fiadorRadio.checked=true; if(document.getElementById('wz_fiador_det')) _wzToggleFiador(fiador);
   function pick(group,val){ if(val==null || val==='') return; var container=document.getElementById(group); if(container){ Array.from(container.children).forEach(function(el){ if((el.getAttribute('onclick')||'').indexOf("'"+String(val)+"'")>=0) _wzChip(el,group,String(val)); }); } }
@@ -6420,6 +7364,15 @@ function _wzPickCliente(sel){
   WZ.cashea = c.cashea || 'no';
   WZ.cashea_nivel = WZ.wz_cashea_nivel = c.cashea_nivel || '';
   WZ.cashea_pago = WZ.wz_cashea_pago = c.cashea_pago || '';
+  WZ.cashea_estado = WZ.wz_cashea_estado = c.cashea_estado || '';
+  WZ.cashea_deuda = WZ.wz_cashea_deuda = c.cashea_deuda || 'no';
+  WZ.cashea_monto = WZ.wz_cashea_monto = c.cashea_monto || '';
+  WZ.cashea_cuotas_pend = WZ.wz_cashea_cuotas_pend = c.cashea_cuotas_pend || '';
+  WZ.cashea_ultimo_art = WZ.wz_cashea_ultimo_art = c.cashea_ultimo_art || '';
+  WZ.cashea_ultimo_monto = WZ.wz_cashea_ultimo_monto = c.cashea_ultimo_monto || '';
+  WZ.cashea_ultima_fecha = WZ.wz_cashea_ultima_fecha = c.cashea_ultima_fecha || '';
+  WZ.cashea_total_compras = WZ.wz_cashea_total_compras = c.cashea_total_compras || '';
+  WZ.cashea_obs = WZ.wz_cashea_obs = c.cashea_obs || '';
   WZ.fiador_tiene = c.fiador || 'no';
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
   WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
@@ -6541,6 +7494,12 @@ function _wzToggleCashea(v){
   _wzScore();
 }
 
+function _wzToggleCasheaDeuda(v){
+  var el=document.getElementById('wz_cashea_deuda_det');
+  if(el) el.style.display=v==='si'?'block':'none';
+  _wzScore();
+}
+
 // ── Toggle Fiador ──
 function _wzToggleFiador(v){
   var el=document.getElementById('wz_fiador_det');
@@ -6655,18 +7614,50 @@ function _renderCliDocManager(c){
     if(!byGroup[group]){ byGroup[group]=[]; groups.push(group); }
     byGroup[group].push({ id:id, def:def, meta:docsMap[id]||null });
   });
+
+  // Contador resumen
+  var totalDocs = Object.keys(_wzDocDefs).length;
+  var uploadedCount = docs.length;
+  var pct = totalDocs>0 ? Math.round(uploadedCount/totalDocs*100) : 0;
+  var pctColor = pct>=80?'var(--green)':pct>=40?'var(--amber)':'var(--red)';
+
+  var summaryHtml = '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;margin-bottom:12px">'
+    + '<div style="font-size:28px;font-weight:900;color:'+pctColor+';line-height:1;font-family:var(--fd);min-width:60px">'+uploadedCount+'</div>'
+    + '<div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--ink)">Documentos cargados</div>'
+    +   '<div style="font-size:11px;color:var(--ink3)">'+pct+'% del expediente completo · '+(totalDocs-uploadedCount)+' pendientes</div></div>'
+    + '<div style="width:80px;height:8px;background:var(--rim);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+pctColor+'"></div></div>'
+    + '</div>';
+
+  // Storage status warning
+  var storageStatus = '';
+  if(typeof storage === 'undefined' || !storage || typeof storage.ref !== 'function'){
+    storageStatus = '<div style="padding:9px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.45">'
+      + '<b style="color:var(--amber)">⚠ Firebase Storage no disponible.</b> Los documentos se guardarán <b>localmente en este navegador</b> (max 2MB por archivo). Para almacenamiento en la nube habilita Storage en Firebase Console.'
+      + '</div>';
+  }
+
   var docsHtml='';
   if(docs.length){
-    docsHtml='<div class="lst" style="margin-bottom:12px">'+docs.map(function(d){
+    docsHtml='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:6px">📁 Archivos cargados ('+docs.length+')</div>';
+    docsHtml+='<div class="lst" style="margin-bottom:16px">'+docs.map(function(d){
       var def=_wzDocDefs[d.id]||{};
-      return '<div class="li"><div class="li-ic" style="background:var(--gs)">'+(def.icon||'📎')+'</div><div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">'+(d.label||_wzDocLabel(d.id)||'Documento')+'</div><div class="tds" style="font-size:10px">'+(d.name||'Archivo')+(d.uploadedAt?(' · '+fmtFechaHora(d.uploadedAt)):'')+'</div></div>'+(d.url?'<div><a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener">Abrir</a></div>':'')+'</div>';
+      var isLocal = d.source==='local' || (d.url||'').indexOf('data:')===0;
+      var badge = isLocal ? '<span class="bdg b-a" style="font-size:9px;margin-left:4px">local</span>' : '<span class="bdg b-g" style="font-size:9px;margin-left:4px">nube</span>';
+      return '<div class="li">'
+        + '<div class="li-ic" style="background:var(--gs)">'+(def.icon||'📎')+'</div>'
+        + '<div style="flex:1;min-width:0">'
+        +   '<div style="font-weight:700;color:var(--ink);font-size:12px">'+(d.label||_wzDocLabel(d.id)||'Documento')+badge+'</div>'
+        +   '<div class="tds" style="font-size:10px">'+(d.name||'Archivo')+(d.size?' · '+Math.round(d.size/1024)+'KB':'')+(d.uploadedAt?(' · '+fmtFechaHora(d.uploadedAt)):'')+'</div>'
+        + '</div>'
+        + (d.url?'<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener" download="'+(d.name||'').replace(/"/g,'&quot;')+'">Abrir</a>':'')
+        + '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+c.id+'\',\''+d.id+'\')" title="Eliminar">✕</button>'
+        + '</div>';
     }).join('')+'</div>';
-  } else {
-    docsHtml='<div class="detail-item" style="margin-bottom:12px"><div style="font-size:12px;color:var(--ink3)">Aún no hay documentos cargados en este cliente.</div><div style="font-size:11px;color:var(--ink3);margin-top:4px">Puedes cargarlos aquí mismo por grupo y por tipo de documento.</div></div>';
   }
+
   var uploadHtml='<div style="background:rgba(91,78,212,.04);border:1px solid var(--rim2);border-radius:12px;padding:12px">'
-    +'<div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:6px">Cargar documentos</div>'
-    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:10px">Selecciona el tipo exacto y sube foto o PDF. Se guarda en este cliente.</div>'
+    +'<div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:4px">Cargar / actualizar documentos</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:10px">Toca el recuadro y selecciona el archivo. Se guarda automáticamente.</div>'
     +groups.map(function(group){
       return '<div style="margin-top:8px">'
         +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink3);margin:10px 0 7px">'+group+'</div>'
@@ -6675,58 +7666,239 @@ function _renderCliDocManager(c){
           return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1.5px solid '+(meta?'rgba(6,176,106,.28)':'var(--rim)')+';position:relative;overflow:hidden;margin-bottom:8px;cursor:pointer">'
             +'<input type="file" accept="'+(def.accept||'image/*,.pdf')+'" '+(def.capture?('capture="'+def.capture+'"'):'')+' data-cliente-id="'+String(c.id).replace(/"/g,'&quot;')+'" data-doc-id="'+id+'" onchange="_cliDocUploadFromInput(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">'
             +'<div style="width:34px;height:34px;border-radius:9px;background:var(--surf);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(def.icon||'📎')+'</div>'
-            +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+(def.label||id)+'</div><div style="font-size:10.5px;color:'+(meta?'var(--green)':'var(--ink3)')+';margin-top:2px">'+(meta?((meta.name||'Archivo')+(meta.uploadedAt?(' · '+fmtFechaHora(meta.uploadedAt)):'')):'Toca para subir')+'</div></div>'
+            +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+(def.label||id)+'</div><div style="font-size:10.5px;color:'+(meta?'var(--green)':'var(--ink3)')+';margin-top:2px">'+(meta?('✓ '+(meta.name||'Archivo')+(meta.uploadedAt?(' · '+fmtFechaHora(meta.uploadedAt)):'')):'Toca para subir')+'</div></div>'
             +'<div style="font-size:17px;flex-shrink:0">'+(meta?'✅':'📤')+'</div>'
-            +(meta&&meta.url?'<a class="btn btn-xs btn-g" href="'+meta.url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">Abrir</a>':'')
+            +(meta&&meta.url?'<a class="btn btn-xs btn-g" href="'+meta.url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="z-index:2;position:relative">Abrir</a>':'')
             +'</label>';
         }).join('')
         +'</div>';
     }).join('')
     +'</div>';
-  return docsHtml+uploadHtml;
+  return summaryHtml + storageStatus + docsHtml + uploadHtml;
+}
+
+// Eliminar documento
+function _cliDocDelete(cliId, docId){
+  var c = S.clientes.find(function(x){ return String(x.id)===String(cliId); });
+  if(!c) return;
+  if(!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
+
+  var docs = Array.isArray(c.documentos) ? c.documentos.slice() : [];
+  var removed = docs.find(function(d){return d&&d.id===docId;});
+  docs = docs.filter(function(d){return !d||d.id!==docId;});
+  c.documentos = docs;
+  c.docs_count = docs.length;
+
+  // Quitar de localStorage
+  try{
+    var key = 'pagasi_cli_docs_'+cliId;
+    var local = JSON.parse(localStorage.getItem(key)||'[]').filter(function(d){return !d||d.id!==docId;});
+    localStorage.setItem(key, JSON.stringify(local));
+  }catch(e){}
+
+  // Borrar de Firebase Storage si existe
+  if(storage && removed && removed.path && removed.path.indexOf('local://')!==0){
+    try{ storage.ref().child(removed.path).delete().catch(function(){}); }catch(e){}
+  }
+
+  // Actualizar Firestore
+  if(db){
+    db.collection('clientes').doc(String(c.id)).set({documentos:docs, docs_count:docs.length},{merge:true})
+      .then(function(){ toast('Documento eliminado','success'); })
+      .catch(function(){ toast('Documento eliminado localmente','info'); });
+  } else {
+    toast('Documento eliminado','success');
+  }
+
+  _cliDocRefreshInModal(cliId);
 }
 function _cliDocUploadFromInput(input){
   var clienteId=input&&input.getAttribute?input.getAttribute('data-cliente-id'):'';
   var docId=input&&input.getAttribute?input.getAttribute('data-doc-id'):'';
   return _cliDocUpload(input, clienteId, docId);
 }
-function _cliDocUpload(input, clienteId, docId){
-  var file=input&&input.files&&input.files[0];
-  if(!file) return;
-  if(!storage || typeof storage.ref!=='function'){
-    toast('Firebase Storage no está disponible para guardar documentos','error');
-    return;
-  }
-  var cliId=String(clienteId||'').trim();
-  if(!cliId){ toast('Cliente inválido','error'); return; }
-  var def=_wzDocDefs[docId]||{};
-  var safeName=_wzSafeFileName(file.name||('documento_'+docId));
-  var filePath='clientes/'+cliId+'/documentos/'+docId+'_'+Date.now()+'_'+safeName;
-  toast('Subiendo documento...','success');
-  var ref=storage.ref().child(filePath);
-  ref.put(file,{contentType:file.type||'application/octet-stream',customMetadata:{docId:docId,docLabel:_wzDocLabel(docId),clienteId:cliId}})
-    .then(function(snapshot){ return snapshot.ref.getDownloadURL(); })
-    .then(function(url){
-      var c=S.clientes.find(function(x){ return String(x.id)===String(cliId); });
-      if(!c) throw new Error('Cliente no encontrado');
-      var docs=Array.isArray(c.documentos)?c.documentos.slice():[];
-      var meta={ id:docId, label:_wzDocLabel(docId), name:file.name||safeName, url:url, path:filePath, type:file.type||'', size:file.size||0, uploadedAt:new Date().toISOString(), group:def.group||'' };
-      var idx=docs.findIndex(function(d){ return d&&d.id===docId; });
-      if(idx>=0) docs[idx]=meta; else docs.push(meta);
-      c.documentos=docs;
-      c.docs_count=docs.length;
-      return db.collection('clientes').doc(String(c.id)).set({ documentos:docs, docs_count:docs.length },{merge:true});
-    })
-    .then(function(){
-      toast('Documento guardado','success');
-      verCliente(cliId);
-    })
-    .catch(function(err){
-      console.error(err);
-      toast('No se pudo guardar el documento','error');
-    })
-    .finally(function(){ if(input) input.value=''; });
+
+// Guardar documento en localStorage como fallback cuando no hay Storage
+function _cliDocSaveLocal(cliId, meta){
+  try{
+    var key = 'pagasi_cli_docs_'+cliId;
+    var prev = JSON.parse(localStorage.getItem(key)||'[]');
+    var idx = prev.findIndex(function(d){return d&&d.id===meta.id;});
+    if(idx>=0) prev[idx] = meta; else prev.push(meta);
+    localStorage.setItem(key, JSON.stringify(prev));
+    return true;
+  }catch(e){ console.warn('localStorage doc save failed:', e); return false; }
 }
+
+function _cliDocLoadLocal(cliId){
+  try{
+    var key = 'pagasi_cli_docs_'+cliId;
+    return JSON.parse(localStorage.getItem(key)||'[]');
+  }catch(e){ return []; }
+}
+
+// Fusiona documentos locales + remotos en c.documentos (último gana por doc id)
+function _cliDocMergeInto(c){
+  if(!c) return;
+  var remote = Array.isArray(c.documentos) ? c.documentos.slice() : [];
+  var local = _cliDocLoadLocal(c.id);
+  var map = {};
+  remote.forEach(function(d){ if(d&&d.id) map[d.id] = d; });
+  local.forEach(function(d){
+    if(!d||!d.id) return;
+    // local gana si es más reciente
+    if(!map[d.id] || (d.uploadedAt||'') > (map[d.id].uploadedAt||'')){ map[d.id] = d; }
+  });
+  c.documentos = Object.keys(map).map(function(k){return map[k];});
+  c.docs_count = c.documentos.length;
+}
+
+function _cliDocUpload(input, clienteId, docId){
+  var file = input && input.files && input.files[0];
+  if(!file){ return; }
+  var cliId = String(clienteId||'').trim();
+  if(!cliId){ toast('Cliente inválido','error'); return; }
+  var def = _wzDocDefs[docId] || {};
+
+  // Limite de tamaño para localStorage fallback: 2MB por archivo
+  var FILE_LIMIT_LOCAL = 2 * 1024 * 1024;
+
+  // Indicador visual inmediato en el label que contiene el input
+  var label = input.closest ? input.closest('label') : null;
+  var statusEl = null;
+  if(label){
+    label.style.borderColor = 'var(--p1)';
+    label.style.background = 'rgba(91,78,212,.08)';
+    statusEl = label.querySelector('[data-doc-status]') || (function(){
+      var el = label.querySelector('div[style*="font-size:10.5px"]');
+      if(el) el.setAttribute('data-doc-status','1');
+      return el;
+    })();
+    if(statusEl){ statusEl.textContent = '⏳ Subiendo...'; statusEl.style.color = 'var(--p1)'; }
+  }
+
+  function finalize(meta, source){
+    var c = S.clientes.find(function(x){ return String(x.id)===String(cliId); });
+    if(!c){
+      toast('Cliente no encontrado','error');
+      return;
+    }
+    // Actualizar in-memory
+    var docs = Array.isArray(c.documentos) ? c.documentos.slice() : [];
+    var idx = docs.findIndex(function(d){ return d && d.id===docId; });
+    if(idx>=0) docs[idx] = meta; else docs.push(meta);
+    c.documentos = docs;
+    c.docs_count = docs.length;
+
+    // Persistir: intenta Firestore, sino solo localStorage
+    var savedRemote = false;
+    if(db && source==='firebase'){
+      db.collection('clientes').doc(String(c.id)).set({documentos:docs, docs_count:docs.length},{merge:true})
+        .then(function(){
+          savedRemote = true;
+          toast('✓ '+(def.label||'Documento')+' guardado','success');
+        })
+        .catch(function(err){
+          console.error('Firestore save error:', err);
+          _cliDocSaveLocal(cliId, meta);
+          toast('Guardado localmente (Firestore falló: '+(err.code||err.message||'error')+')','error');
+        });
+    } else {
+      // Ya está en localStorage
+      toast('✓ '+(def.label||'Documento')+' guardado localmente','success');
+    }
+
+    // Refrescar UI solo en la sección docs
+    setTimeout(function(){ _cliDocRefreshInModal(cliId); }, 200);
+  }
+
+  toast('Subiendo '+(def.label||'documento')+'...','success');
+
+  // CAMINO 1: Firebase Storage disponible → subir remoto
+  if(storage && typeof storage.ref === 'function'){
+    var safeName = _wzSafeFileName(file.name || ('documento_'+docId));
+    var filePath = 'clientes/'+cliId+'/documentos/'+docId+'_'+Date.now()+'_'+safeName;
+    var ref = storage.ref().child(filePath);
+    ref.put(file, {contentType:file.type||'application/octet-stream', customMetadata:{docId:docId, docLabel:_wzDocLabel(docId), clienteId:cliId}})
+      .then(function(snap){ return snap.ref.getDownloadURL(); })
+      .then(function(url){
+        var meta = {
+          id:docId, label:_wzDocLabel(docId),
+          name:file.name||safeName, url:url, path:filePath,
+          type:file.type||'', size:file.size||0,
+          uploadedAt:new Date().toISOString(), group:def.group||'',
+          source:'firebase'
+        };
+        finalize(meta, 'firebase');
+      })
+      .catch(function(err){
+        console.error('Storage upload error:', err);
+        // Fallback a localStorage si el archivo es pequeño
+        if(file.size <= FILE_LIMIT_LOCAL){
+          toast('Storage falló, guardando localmente...','error');
+          _cliDocUploadLocal(file, cliId, docId, def, finalize);
+        } else {
+          toast('Error subiendo: '+(err.code||err.message||'fallo')+' · Archivo muy grande para local ('+Math.round(file.size/1024/1024)+'MB)','error');
+          if(label){ label.style.borderColor = 'var(--red)'; label.style.background = 'rgba(217,59,90,.08)'; }
+        }
+      })
+      .finally(function(){ if(input) input.value=''; });
+  }
+  // CAMINO 2: No hay Storage → localStorage directamente
+  else {
+    if(file.size > FILE_LIMIT_LOCAL){
+      toast('Archivo muy grande ('+Math.round(file.size/1024/1024)+'MB). Máximo 2MB en modo local.','error');
+      if(label){ label.style.borderColor = 'var(--red)'; label.style.background = 'rgba(217,59,90,.08)'; }
+      if(input) input.value='';
+      return;
+    }
+    _cliDocUploadLocal(file, cliId, docId, def, finalize);
+    if(input) input.value='';
+  }
+}
+
+// Sube un archivo a localStorage como base64 data URL
+function _cliDocUploadLocal(file, cliId, docId, def, finalize){
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    var dataUrl = ev.target.result;
+    var meta = {
+      id:docId, label:_wzDocLabel(docId),
+      name:file.name||('documento_'+docId),
+      url:dataUrl,
+      path:'local://'+cliId+'/'+docId,
+      type:file.type||'',
+      size:file.size||0,
+      uploadedAt:new Date().toISOString(),
+      group:def.group||'',
+      source:'local'
+    };
+    _cliDocSaveLocal(cliId, meta);
+    finalize(meta, 'local');
+  };
+  reader.onerror = function(){
+    toast('Error leyendo el archivo','error');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Refresca solo el panel de documentos dentro del modal de cliente (evita perder scroll / tab activo)
+function _cliDocRefreshInModal(cliId){
+  var c = S.clientes.find(function(x){ return String(x.id)===String(cliId); });
+  if(!c) return;
+  _cliDocMergeInto(c);
+  var mbd = $('mbd'); if(!mbd) return;
+  var docsPanel = mbd.querySelector('.cf-panel[data-tab="docs"]');
+  if(!docsPanel) return;
+  var section = docsPanel.querySelector('.cf-section');
+  if(section){
+    section.innerHTML = '<div class="cf-section-h"><div class="cf-section-t">Expediente del cliente</div></div>' + _renderCliDocManager(c);
+  }
+  // Actualizar contador en el tab
+  var tab = mbd.querySelector('.cf-tab[data-tab="docs"] .cf-tab-count');
+  if(tab) tab.textContent = (c.documentos||[]).length;
+}
+
 function _wzEnsureDocsTempKey(){
   if(!WZ._docsTempKey) WZ._docsTempKey='TMP-'+Date.now()+'-'+Math.floor(Math.random()*100000);
   return WZ._docsTempKey;
@@ -6857,6 +8029,9 @@ function _wzScore(){
   var conocio = g('wz_conocio')||'';
   var cashea  = (document.querySelector('input[name="wz_cashea"]:checked')||{value:'no'}).value;
   var casheaNivel = parseInt(g('wz_cashea_nivel'))||0;
+  var casheaEstado = g('wz_cashea_estado')||'';
+  var casheaDeuda = g('wz_cashea_deuda')||'no';
+  var casheaTotalCompras = g('wz_cashea_total_compras')||'';
   var fiador  = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value==='si';
   var precio  = WZ.precio||parseFloat(g('wz_precio'))||0;
   var planCfg = precio>0 ? getWzPlanConfig() : null;
@@ -6869,11 +8044,35 @@ function _wzScore(){
   else if(deuda==='graves')f1=Math.max(0,f1-35);
   if(banco==='activa')f1=Math.min(100,f1+10);
   else if(banco==='no')f1=Math.max(0,f1-10);
-  if(cashea==='si')f1=Math.min(100,f1+(casheaNivel>=3?18:casheaNivel>=2?10:5));
+  // Cashea: nivel base + estado actual + historial
+  if(cashea==='si'){
+    // Bonus por nivel (cliente activo Cashea)
+    f1=Math.min(100,f1+(casheaNivel>=3?12:casheaNivel>=2?7:3));
+    // Estado de pago con Cashea: señal crediticia directa y fuerte
+    if(casheaEstado==='completado') f1=Math.min(100,f1+15);   // canceló todo ok
+    else if(casheaEstado==='al_dia') f1=Math.min(100,f1+10);  // al día
+    else if(casheaEstado==='mora_leve') f1=Math.max(0,f1-15); // mora leve
+    else if(casheaEstado==='mora_grave') f1=Math.max(0,f1-35);// mora grave (equivale a hist malo)
+    // Historial de compras: cuantas más compras sin problema = más confianza
+    if(casheaEstado!=='mora_leve' && casheaEstado!=='mora_grave'){
+      if(casheaTotalCompras==='6+') f1=Math.min(100,f1+10);
+      else if(casheaTotalCompras==='4-5') f1=Math.min(100,f1+6);
+      else if(casheaTotalCompras==='2-3') f1=Math.min(100,f1+3);
+    }
+    // Deuda activa alta con Cashea = señal de sobreendeudamiento
+    if(casheaDeuda==='si'){
+      var casheaMonto = parseFloat(g('wz_cashea_monto'))||0;
+      if(casheaMonto>500) f1=Math.max(0,f1-8);
+      else if(casheaMonto>200) f1=Math.max(0,f1-4);
+    }
+  }
   f1=Math.max(0,Math.min(100,f1));
 
   var ingBase={formal:80,publico:70,independiente:60,comerciante:65,delivery:70,remesas:55,informal:30};
-  var f2=ingEf>0?Math.min(100,((ingEf-100)/900)*100+30):0;
+  // f2 usa ingreso base configurable
+  var _minB=(SCORE_CFG&&SCORE_CFG.ingreso&&SCORE_CFG.ingreso.minBase)||100;
+  var _maxB=(SCORE_CFG&&SCORE_CFG.ingreso&&SCORE_CFG.ingreso.maxBase)||3000;
+  var f2= (ingEf>=_minB) ? Math.min(100, ((ingEf-_minB)/(_maxB-_minB))*100) : 0;
   if(emp)f2=Math.min(100,f2*(ingBase[emp]||50)/70);
   if(dep===1)f2=Math.max(0,f2-8);
   else if(dep===2)f2=Math.max(0,f2-18);
@@ -6881,10 +8080,14 @@ function _wzScore(){
   if(viv==='propia')f2=Math.min(100,f2+10);
   else if(viv==='alquilada')f2=Math.max(0,f2-8);
   if(ratio>0){
-    if(ratio<=0.20)f2=Math.min(100,f2+12);
-    else if(ratio<=0.30){}
-    else if(ratio<=0.40)f2=Math.max(0,f2-18);
-    else if(ratio<=0.50)f2=Math.max(0,f2-38);
+    var _rIdeal=(SCORE_CFG&&SCORE_CFG.ratios&&SCORE_CFG.ratios.ideal)||0.20;
+    var _rAce=(SCORE_CFG&&SCORE_CFG.ratios&&SCORE_CFG.ratios.aceptable)||0.30;
+    var _rAlto=(SCORE_CFG&&SCORE_CFG.ratios&&SCORE_CFG.ratios.alto)||0.40;
+    var _rMuy=(SCORE_CFG&&SCORE_CFG.ratios&&SCORE_CFG.ratios.muyAlto)||0.50;
+    if(ratio<=_rIdeal)f2=Math.min(100,f2+12);
+    else if(ratio<=_rAce){}
+    else if(ratio<=_rAlto)f2=Math.max(0,f2-18);
+    else if(ratio<=_rMuy)f2=Math.max(0,f2-38);
     else f2=Math.max(0,f2-60);
   }
   f2=Math.max(0,Math.min(100,f2));
@@ -6914,8 +8117,19 @@ function _wzScore(){
   if(rem==='si')f5=Math.min(100,f5+8);
   f5=Math.max(0,Math.min(100,f5));
 
-  var hardReject=(ratio>0.55)||(ingEf>0&&ingEf<100)||(hist==='malo'&&deuda==='graves');
-  var raw=Math.round((f1*30+f2*30+f3*20+f4*15+f5*5)/100*10);
+  // Hard rejects con SCORE_CFG
+  var _hr = (SCORE_CFG&&SCORE_CFG.hardReject)||{};
+  var _ingMin = _hr.ingresoMinimo||100;
+  var _ratioMax = _hr.ratioCuotaMax||0.55;
+  // nota: ratio aquí es cuota quincenal/ingreso mensual; convertimos para que sea mensual/mensual
+  var _ratioMensual = ratio*2;
+  var hardReject = (ingEf>0 && ingEf<_ingMin)
+    || (_ratioMensual>_ratioMax)
+    || (_hr.historialMaloConDeuda && hist==='malo' && deuda==='graves');
+  // Pesos configurables
+  var _p = (SCORE_CFG&&SCORE_CFG.pesos)||{f1:30,f2:30,f3:20,f4:15,f5:5};
+  var _totalPeso = (_p.f1+_p.f2+_p.f3+_p.f4+_p.f5)||100;
+  var raw=Math.round((f1*_p.f1+f2*_p.f2+f3*_p.f3+f4*_p.f4+f5*_p.f5)/_totalPeso*10);
   var score=hardReject?300:Math.max(300,Math.min(850,Math.round(300+(raw/1000)*550)));
 
   WZ.score=score;WZ.f1=Math.round(f1);WZ.f2=Math.round(f2);
@@ -7179,6 +8393,15 @@ function _wzGuardar(){
     cashea: WZ.cashea||'no',
     cashea_nivel: WZ.cashea_nivel||'',
     cashea_pago: WZ.cashea_pago||'',
+    cashea_estado: WZ.cashea_estado||'',
+    cashea_deuda: WZ.cashea_deuda||'no',
+    cashea_monto: parseFloat(WZ.cashea_monto)||0,
+    cashea_cuotas_pend: parseInt(WZ.cashea_cuotas_pend)||0,
+    cashea_ultimo_art: WZ.cashea_ultimo_art||'',
+    cashea_ultimo_monto: parseFloat(WZ.cashea_ultimo_monto)||0,
+    cashea_ultima_fecha: WZ.cashea_ultima_fecha||'',
+    cashea_total_compras: WZ.cashea_total_compras||'',
+    cashea_obs: WZ.cashea_obs||'',
     fiador: WZ.fiador_tiene||'no',
     fiador_nom: WZ.fiador_nom||'',
     fiador_tel: WZ.fiador_tel||'',
@@ -9479,6 +10702,474 @@ function guardarPlan(){
   }
 }
 
+// ══════════════════════════════════════════
+// SCORE: módulo de política de riesgo
+// ══════════════════════════════════════════
+var SCORE_FACTOR_META = [
+  {k:'f1', nombre:'Historial crediticio', desc:'Comportamiento previo, mora, deudas, bancos'},
+  {k:'f2', nombre:'Capacidad de pago',    desc:'Ingresos, dependientes, ratio cuota/ingreso'},
+  {k:'f3', nombre:'Estabilidad laboral',  desc:'Tipo de empleo, antigüedad, uso de la moto'},
+  {k:'f4', nombre:'Garantías',            desc:'Fiador, vivienda propia, banco activo'},
+  {k:'f5', nombre:'Origen y confianza',   desc:'Referido, deudas, remesas'}
+];
+
+function scTab(tab){
+  var card = $('sc-tabs');
+  if(!card) return;
+  var host = card.parentElement;
+  Array.from(host.querySelectorAll('[data-sctab]')).forEach(function(el){
+    var isBtn = el.classList.contains('cf-tab');
+    var match = el.getAttribute('data-sctab')===tab;
+    if(isBtn) el.classList.toggle('is-active', match);
+    else el.classList.toggle('is-active', match);
+  });
+  if(tab==='pesos') scRenderPesos();
+  if(tab==='umbrales') scRenderScalePreview();
+}
+
+function scRenderPesos(){
+  var grid = $('sc-pesos-grid');
+  if(!grid) return;
+  var html = '';
+  SCORE_FACTOR_META.forEach(function(f){
+    var val = SCORE_CFG.pesos[f.k]||0;
+    html += '<div style="padding:12px 14px;background:var(--surf2);border-radius:10px;border:1px solid var(--rim)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px;gap:8px">'
+      +   '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:800;color:var(--ink)">'+f.nombre+'</div>'
+      +     '<div style="font-size:10.5px;color:var(--ink3);margin-top:1px">'+f.desc+'</div></div>'
+      +   '<div style="font-size:22px;font-weight:900;color:var(--p1);font-family:var(--fd);line-height:1" id="sc-pct-'+f.k+'">'+val+'%</div>'
+      + '</div>'
+      + '<input type="range" id="sc-rng-'+f.k+'" min="0" max="60" step="1" value="'+val+'" oninput="scOnPesoChange(\''+f.k+'\', this.value)" style="width:100%;accent-color:var(--p1);cursor:pointer">'
+      + '</div>';
+  });
+  grid.innerHTML = html;
+  scUpdatePesosSum();
+}
+
+function scOnPesoChange(k, v){
+  SCORE_CFG.pesos[k] = parseInt(v,10)||0;
+  var el = $('sc-pct-'+k); if(el) el.textContent = SCORE_CFG.pesos[k]+'%';
+  scUpdatePesosSum();
+}
+
+function scUpdatePesosSum(){
+  var sum = Object.keys(SCORE_CFG.pesos).reduce(function(a,k){return a+(SCORE_CFG.pesos[k]||0);},0);
+  var el = $('sc-pesos-sum');
+  if(el){
+    el.textContent = sum+'%';
+    el.style.color = sum===100 ? 'var(--green)' : sum>100 ? 'var(--red)' : 'var(--amber)';
+  }
+}
+
+function scRenderScalePreview(){
+  var el = $('sc-scale-preview');
+  if(!el) return;
+  var reg = parseInt(($('sc_umb_reg')&&$('sc_umb_reg').value)||SCORE_CFG.umbrales.regular, 10);
+  var bue = parseInt(($('sc_umb_bue')&&$('sc_umb_bue').value)||SCORE_CFG.umbrales.bueno, 10);
+  var exc = parseInt(($('sc_umb_exc')&&$('sc_umb_exc').value)||SCORE_CFG.umbrales.excelente, 10);
+  function pct(v){ return Math.max(0,Math.min(100, (v-300)/(850-300)*100 )); }
+  var html = ''
+    + '<div style="position:absolute;left:0;top:0;bottom:0;width:'+pct(reg)+'%;background:var(--red);opacity:.4"></div>'
+    + '<div style="position:absolute;left:'+pct(reg)+'%;top:0;bottom:0;width:'+(pct(bue)-pct(reg))+'%;background:var(--amber);opacity:.45"></div>'
+    + '<div style="position:absolute;left:'+pct(bue)+'%;top:0;bottom:0;width:'+(pct(exc)-pct(bue))+'%;background:var(--p1);opacity:.45"></div>'
+    + '<div style="position:absolute;left:'+pct(exc)+'%;top:0;bottom:0;right:0;background:var(--green);opacity:.5"></div>'
+    + '<div style="position:absolute;left:'+pct(reg)+'%;top:0;bottom:0;border-left:2px dashed var(--ink2)"><div style="position:absolute;bottom:3px;left:3px;font-size:10px;font-weight:800;color:var(--ink)">'+reg+'</div></div>'
+    + '<div style="position:absolute;left:'+pct(bue)+'%;top:0;bottom:0;border-left:2px dashed var(--ink2)"><div style="position:absolute;bottom:3px;left:3px;font-size:10px;font-weight:800;color:var(--ink)">'+bue+'</div></div>'
+    + '<div style="position:absolute;left:'+pct(exc)+'%;top:0;bottom:0;border-left:2px dashed var(--ink2)"><div style="position:absolute;bottom:3px;left:3px;font-size:10px;font-weight:800;color:var(--ink)">'+exc+'</div></div>'
+    + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:space-around;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);pointer-events:none"><span>Rechaza</span><span>Revisa</span><span>Aprueba</span><span>Auto</span></div>';
+  el.innerHTML = html;
+}
+
+function guardarScoreCfg(){
+  // Pesos
+  SCORE_FACTOR_META.forEach(function(f){
+    var rng = $('sc-rng-'+f.k);
+    if(rng) SCORE_CFG.pesos[f.k] = parseInt(rng.value,10)||0;
+  });
+  var sum = Object.keys(SCORE_CFG.pesos).reduce(function(a,k){return a+(SCORE_CFG.pesos[k]||0);},0);
+  if(sum!==100){
+    toast('La suma de pesos debe ser 100% (actualmente '+sum+'%)','error');
+    return;
+  }
+  // Umbrales
+  var exc = parseInt(($('sc_umb_exc')&&$('sc_umb_exc').value),10);
+  var bue = parseInt(($('sc_umb_bue')&&$('sc_umb_bue').value),10);
+  var reg = parseInt(($('sc_umb_reg')&&$('sc_umb_reg').value),10);
+  if(!(reg<bue && bue<exc)){ toast('Los umbrales deben ser: regular < bueno < excelente','error'); return; }
+  SCORE_CFG.umbrales.excelente = exc;
+  SCORE_CFG.umbrales.bueno = bue;
+  SCORE_CFG.umbrales.regular = reg;
+  // Hard rejects
+  SCORE_CFG.hardReject.ingresoMinimo = parseFloat(($('sc_hr_ing')&&$('sc_hr_ing').value))||0;
+  SCORE_CFG.hardReject.ratioCuotaMax = (parseFloat(($('sc_hr_ratio')&&$('sc_hr_ratio').value))||35)/100;
+  SCORE_CFG.hardReject.historialMaloConDeuda = !!($('sc_hr_histmalo')&&$('sc_hr_histmalo').checked);
+  SCORE_CFG.hardReject.sinTelefono = !!($('sc_hr_notel')&&$('sc_hr_notel').checked);
+  SCORE_CFG.hardReject.sinReferencias = !!($('sc_hr_noref')&&$('sc_hr_noref').checked);
+  // Ratios
+  SCORE_CFG.ratios.ideal = (parseFloat(($('sc_r_ideal')&&$('sc_r_ideal').value))||20)/100;
+  SCORE_CFG.ratios.aceptable = (parseFloat(($('sc_r_ace')&&$('sc_r_ace').value))||30)/100;
+  SCORE_CFG.ratios.alto = (parseFloat(($('sc_r_alto')&&$('sc_r_alto').value))||40)/100;
+  SCORE_CFG.ratios.muyAlto = (parseFloat(($('sc_r_muyalto')&&$('sc_r_muyalto').value))||50)/100;
+  // Ingresos base
+  SCORE_CFG.ingreso.minBase = parseFloat(($('sc_ing_min')&&$('sc_ing_min').value))||100;
+  SCORE_CFG.ingreso.maxBase = parseFloat(($('sc_ing_max')&&$('sc_ing_max').value))||3000;
+
+  try{ localStorage.setItem('pagasi_config_score', JSON.stringify(SCORE_CFG)); }catch(_e){}
+  if(typeof db!=='undefined' && db){
+    db.collection('config').doc('score').set(SCORE_CFG)
+      .then(function(){ toast('Política de riesgo guardada ✓','success'); })
+      .catch(function(e){ toast('Error: '+e.message,'error'); });
+  } else {
+    toast('Política guardada (local) ✓','success');
+  }
+}
+
+// ── Simulador interactivo ──
+function abrirScoreSimulador(){
+  $('mic').textContent='🧪'; $('mtt').textContent='Simulador de Score'; $('msb').textContent='Prueba distintos escenarios con la política actual';
+  $('modal-box').className='modal modal-lg';
+  $('mbd').innerHTML = ''
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
+    +   '<div>'
+    +     '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Datos del solicitante</div>'
+    +     '<div class="fg"><label>Ingreso mensual (USD)</label><input class="fi" id="sim_ing" type="number" value="500" oninput="scSimular()"></div>'
+    +     '<div class="fg"><label>Ingreso familiar (USD)</label><input class="fi" id="sim_ifam" type="number" value="0" oninput="scSimular()"></div>'
+    +     '<div class="fg"><label>Cuota quincenal (USD)</label><input class="fi" id="sim_cuota" type="number" value="100" oninput="scSimular()"></div>'
+    +     '<div class="fg"><label>Tipo de empleo</label><select class="fs" id="sim_emp" onchange="scSimular()">'
+    +       '<option value="formal">Formal</option><option value="publico">Público</option><option value="independiente">Independiente</option>'
+    +       '<option value="comerciante">Comerciante</option><option value="delivery">Delivery</option><option value="remesas">Remesas</option>'
+    +       '<option value="informal" selected>Informal</option></select></div>'
+    +     '<div class="fg"><label>Antigüedad (años)</label><select class="fs" id="sim_ant" onchange="scSimular()"><option value="1">&lt;1</option><option value="2">1-2</option><option value="3" selected>2-3</option><option value="5">3+</option></select></div>'
+    +     '<div class="fg"><label>Historial crediticio</label><select class="fs" id="sim_hist" onchange="scSimular()"><option value="bueno">Bueno</option><option value="ninguno" selected>Ninguno</option><option value="mora_leve">Mora leve pasada</option><option value="malo">Malo</option></select></div>'
+    +     '<div class="fg"><label>Deudas actuales</label><select class="fs" id="sim_deuda" onchange="scSimular()"><option value="no" selected>No</option><option value="menores">Menores</option><option value="graves">Graves</option></select></div>'
+    +     '<div class="fg"><label>Dependientes</label><select class="fs" id="sim_dep" onchange="scSimular()"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3+</option></select></div>'
+    +     '<div class="fg"><label>Banco</label><select class="fs" id="sim_banco" onchange="scSimular()"><option value="activa" selected>Cuenta activa</option><option value="inactiva">Inactiva</option><option value="no">Sin cuenta</option></select></div>'
+    +     '<div class="fg"><label>Vivienda</label><select class="fs" id="sim_viv" onchange="scSimular()"><option value="propia">Propia</option><option value="familiar" selected>Familiar</option><option value="alquilada">Alquilada</option></select></div>'
+    +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +       '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_fiador" onchange="scSimular()" style="accent-color:var(--p1)">Tiene fiador</label>'
+    +       '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_tel" onchange="scSimular()" checked style="accent-color:var(--p1)">Tiene teléfono</label>'
+    +       '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_ref" onchange="scSimular()" checked style="accent-color:var(--p1)">Tiene referencia</label>'
+    +       '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_rem" onchange="scSimular()" style="accent-color:var(--p1)">Recibe remesas</label>'
+    +     '</div>'
+    +     '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'
+    +       '<button class="btn btn-g btn-xs" onclick="scSimPreset(\'alexis\')">Preset: Alexis ($10k)</button>'
+    +       '<button class="btn btn-g btn-xs" onclick="scSimPreset(\'carlos\')">Preset: Carlos ($200)</button>'
+    +       '<button class="btn btn-g btn-xs" onclick="scSimPreset(\'ideal\')">Preset: Cliente ideal</button>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div id="sim-resultado" style="padding:14px;background:var(--surf2);border-radius:12px;border:1px solid var(--rim);align-self:start">Cargando...</div>'
+    + '</div>';
+  $('mft').innerHTML='<button class="btn btn-p" onclick="closeM()">Cerrar</button>';
+  $('ov').style.display='flex';
+  setTimeout(scSimular, 30);
+}
+
+function scSimPreset(p){
+  if(p==='alexis'){
+    $('sim_ing').value=10000; $('sim_ifam').value=0; $('sim_cuota').value=150;
+    $('sim_emp').value='formal'; $('sim_ant').value='5';
+    $('sim_hist').value='ninguno'; $('sim_deuda').value='no'; $('sim_dep').value='1';
+    $('sim_banco').value='activa'; $('sim_viv').value='propia';
+    $('sim_fiador').checked=false; $('sim_tel').checked=true; $('sim_ref').checked=true; $('sim_rem').checked=false;
+  } else if(p==='carlos'){
+    $('sim_ing').value=200; $('sim_ifam').value=0; $('sim_cuota').value=60;
+    $('sim_emp').value='informal'; $('sim_ant').value='2';
+    $('sim_hist').value='ninguno'; $('sim_deuda').value='no'; $('sim_dep').value='2';
+    $('sim_banco').value='inactiva'; $('sim_viv').value='alquilada';
+    $('sim_fiador').checked=false; $('sim_tel').checked=true; $('sim_ref').checked=true; $('sim_rem').checked=false;
+  } else if(p==='ideal'){
+    $('sim_ing').value=1500; $('sim_ifam').value=0; $('sim_cuota').value=150;
+    $('sim_emp').value='formal'; $('sim_ant').value='5';
+    $('sim_hist').value='bueno'; $('sim_deuda').value='no'; $('sim_dep').value='0';
+    $('sim_banco').value='activa'; $('sim_viv').value='propia';
+    $('sim_fiador').checked=true; $('sim_tel').checked=true; $('sim_ref').checked=true; $('sim_rem').checked=false;
+  }
+  scSimular();
+}
+
+// Motor de cálculo reutilizable (usa SCORE_CFG actual)
+function calcularScoreConCfg(input){
+  var ing = parseFloat(input.ing||0);
+  var ifam = parseFloat(input.ifam||0);
+  var cuotaQ = parseFloat(input.cuotaQ||0);
+  var emp = input.emp||'informal';
+  var ant = String(input.ant||'3');
+  var hist = input.hist||'ninguno';
+  var deuda = input.deuda||'no';
+  var dep = parseInt(input.dep||0, 10);
+  var banco = input.banco||'activa';
+  var viv = input.viv||'familiar';
+  var rem = input.rem?'si':'no';
+  var fiador = !!input.fiador;
+  var tieneTel = input.tieneTel!==false;
+  var tieneRef = input.tieneRef!==false;
+
+  var ingEf = Math.max(ing, ifam);
+  var ratio = (cuotaQ>0 && ingEf>0) ? cuotaQ*2/ingEf : 0;  // cuota mensual / ingreso
+
+  // f1: historial
+  var f1 = {ninguno:50, bueno:100, mora_leve:35, malo:5}[hist]||50;
+  if(deuda==='menores') f1 = Math.max(0, f1-12);
+  else if(deuda==='graves') f1 = Math.max(0, f1-35);
+  if(banco==='activa') f1 = Math.min(100, f1+10);
+  else if(banco==='no') f1 = Math.max(0, f1-10);
+  f1 = Math.max(0, Math.min(100, f1));
+
+  // f2: capacidad
+  var minB = SCORE_CFG.ingreso.minBase||100;
+  var maxB = SCORE_CFG.ingreso.maxBase||3000;
+  var f2 = 0;
+  if(ingEf>=minB){
+    f2 = Math.min(100, ((ingEf-minB)/(maxB-minB))*100);
+  }
+  var ingBase = {formal:80, publico:70, independiente:60, comerciante:65, delivery:70, remesas:55, informal:30}[emp]||50;
+  f2 = f2 * (ingBase/70);
+  if(dep===1) f2 = Math.max(0, f2-8);
+  else if(dep===2) f2 = Math.max(0, f2-18);
+  else if(dep>=3) f2 = Math.max(0, f2-28);
+  if(viv==='propia') f2 = Math.min(100, f2+10);
+  else if(viv==='alquilada') f2 = Math.max(0, f2-8);
+  if(ratio>0){
+    if(ratio<=SCORE_CFG.ratios.ideal) f2 = Math.min(100, f2+12);
+    else if(ratio<=SCORE_CFG.ratios.aceptable) {}
+    else if(ratio<=SCORE_CFG.ratios.alto) f2 = Math.max(0, f2-18);
+    else if(ratio<=SCORE_CFG.ratios.muyAlto) f2 = Math.max(0, f2-38);
+    else f2 = Math.max(0, f2-60);
+  }
+  f2 = Math.max(0, Math.min(100, f2));
+
+  // f3: estabilidad laboral
+  var empBase = {formal:78, publico:70, independiente:65, comerciante:68, delivery:70, remesas:60, informal:38}[emp]||30;
+  var antBase = {'1':0, '2':10, '3':22, '5':35}[ant]||0;
+  var f3 = Math.min(100, empBase+antBase);
+  if(rem==='si'&&emp!=='remesas') f3 = Math.min(100, f3+8);
+  f3 = Math.max(0, Math.min(100, f3));
+
+  // f4: garantías
+  var f4 = 25;
+  if(fiador) f4 = Math.min(100, f4+45);
+  if(viv==='propia') f4 = Math.min(100, f4+15);
+  else if(viv==='familiar') f4 = Math.min(100, f4+5);
+  if(banco==='activa') f4 = Math.min(100, f4+10);
+  else if(banco==='no') f4 = Math.max(0, f4-10);
+  f4 = Math.max(0, Math.min(100, f4));
+
+  // f5: confianza
+  var f5 = 50;
+  if(deuda==='no') f5 = Math.min(100, f5+10);
+  else if(deuda==='graves') f5 = Math.max(0, f5-15);
+  if(rem==='si') f5 = Math.min(100, f5+8);
+  f5 = Math.max(0, Math.min(100, f5));
+
+  // Hard rejects
+  var motivosRechazo = [];
+  if(SCORE_CFG.hardReject.ingresoMinimo>0 && ingEf<SCORE_CFG.hardReject.ingresoMinimo)
+    motivosRechazo.push('Ingreso ('+ingEf+') < mínimo requerido ('+SCORE_CFG.hardReject.ingresoMinimo+')');
+  if(SCORE_CFG.hardReject.ratioCuotaMax>0 && ratio>SCORE_CFG.hardReject.ratioCuotaMax)
+    motivosRechazo.push('Ratio cuota/ingreso '+(Math.round(ratio*100))+'% > máximo '+(Math.round(SCORE_CFG.hardReject.ratioCuotaMax*100))+'%');
+  if(SCORE_CFG.hardReject.historialMaloConDeuda && hist==='malo' && deuda==='graves')
+    motivosRechazo.push('Historial malo + deudas graves');
+  if(SCORE_CFG.hardReject.sinTelefono && !tieneTel) motivosRechazo.push('Sin teléfono de contacto');
+  if(SCORE_CFG.hardReject.sinReferencias && !tieneRef) motivosRechazo.push('Sin referencias');
+
+  // Score
+  var p = SCORE_CFG.pesos;
+  var raw = (f1*p.f1 + f2*p.f2 + f3*p.f3 + f4*p.f4 + f5*p.f5)/100*10;
+  var score = motivosRechazo.length>0 ? 300 : Math.max(300, Math.min(850, Math.round(300+(raw/1000)*550)));
+
+  var decision, decisionColor;
+  if(motivosRechazo.length>0){ decision='RECHAZO AUTOMÁTICO'; decisionColor='var(--red)'; }
+  else if(score>=SCORE_CFG.umbrales.excelente){ decision='APROBACIÓN AUTOMÁTICA'; decisionColor='var(--green)'; }
+  else if(score>=SCORE_CFG.umbrales.bueno){ decision='APROBAR'; decisionColor='var(--p1)'; }
+  else if(score>=SCORE_CFG.umbrales.regular){ decision='REVISAR MANUALMENTE'; decisionColor='var(--amber)'; }
+  else { decision='RECHAZAR'; decisionColor='var(--red)'; }
+
+  return {score:score, decision:decision, decisionColor:decisionColor, motivosRechazo:motivosRechazo,
+          f1:Math.round(f1), f2:Math.round(f2), f3:Math.round(f3), f4:Math.round(f4), f5:Math.round(f5),
+          ratio:ratio, ingEf:ingEf};
+}
+
+function scSimular(){
+  var res = calcularScoreConCfg({
+    ing: ($('sim_ing')&&$('sim_ing').value)||0,
+    ifam: ($('sim_ifam')&&$('sim_ifam').value)||0,
+    cuotaQ: ($('sim_cuota')&&$('sim_cuota').value)||0,
+    emp: ($('sim_emp')&&$('sim_emp').value)||'informal',
+    ant: ($('sim_ant')&&$('sim_ant').value)||'3',
+    hist: ($('sim_hist')&&$('sim_hist').value)||'ninguno',
+    deuda: ($('sim_deuda')&&$('sim_deuda').value)||'no',
+    dep: ($('sim_dep')&&$('sim_dep').value)||0,
+    banco: ($('sim_banco')&&$('sim_banco').value)||'activa',
+    viv: ($('sim_viv')&&$('sim_viv').value)||'familiar',
+    rem: $('sim_rem')&&$('sim_rem').checked,
+    fiador: $('sim_fiador')&&$('sim_fiador').checked,
+    tieneTel: !($('sim_tel')&&!$('sim_tel').checked),
+    tieneRef: !($('sim_ref')&&!$('sim_ref').checked)
+  });
+
+  var host = $('sim-resultado');
+  if(!host) return;
+
+  var html = '';
+  html += '<div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid var(--rim);margin-bottom:14px">'
+    + '<div style="font-size:56px;font-weight:900;letter-spacing:-2px;line-height:1;color:'+res.decisionColor+'">'+res.score+'</div>'
+    + '<div style="font-size:12px;color:var(--ink3);margin-top:4px">Score Indexa / 850</div>'
+    + '<div style="display:inline-block;margin-top:10px;padding:6px 14px;background:'+res.decisionColor+';color:#fff;font-weight:800;font-size:12px;letter-spacing:.3px;border-radius:999px">'+res.decision+'</div>'
+    + '</div>';
+
+  if(res.motivosRechazo.length){
+    html += '<div style="padding:10px 12px;background:var(--reds);border-left:3px solid var(--red);border-radius:8px;margin-bottom:12px">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--red);text-transform:uppercase;margin-bottom:4px">⚠ Rechazo automático por:</div>';
+    res.motivosRechazo.forEach(function(m){
+      html += '<div style="font-size:12px;color:var(--ink);margin-top:3px">• '+m+'</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Desglose por factor</div>';
+  SCORE_FACTOR_META.forEach(function(f){
+    var v = res[f.k];
+    var peso = SCORE_CFG.pesos[f.k];
+    var contrib = Math.round(v*peso/100);
+    var col = v>=70?'var(--green)':v>=50?'var(--p1)':v>=30?'var(--amber)':'var(--red)';
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--rim)">'
+      + '<div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">'
+      +   '<span style="font-weight:700;color:var(--ink)">'+f.nombre+' <span style="color:var(--ink3);font-weight:500">(peso '+peso+'%)</span></span>'
+      +   '<span style="font-weight:900;color:'+col+';font-family:var(--fd)">'+v+'/100</span>'
+      + '</div>'
+      + '<div style="height:5px;background:var(--rim);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+v+'%;background:'+col+'"></div></div>'
+      + '<div style="font-size:10px;color:var(--ink3);margin-top:3px">Aporta '+contrib+' pts al score</div>'
+      + '</div>';
+  });
+  if(res.ratio>0){
+    var r = Math.round(res.ratio*100);
+    var rcol = r<=20?'var(--green)':r<=30?'var(--p1)':r<=40?'var(--amber)':'var(--red)';
+    html += '<div style="margin-top:10px;padding:10px 12px;background:var(--gs);border-radius:9px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center">'
+      +   '<div style="font-size:11px;color:var(--ink2);font-weight:700">Ratio cuota mensual / ingreso</div>'
+      +   '<div style="font-size:18px;font-weight:900;color:'+rcol+'">'+r+'%</div>'
+      + '</div></div>';
+  }
+  host.innerHTML = html;
+}
+
+// ── Análisis del portafolio actual ──
+function abrirScoreAnalisis(){
+  $('mic').textContent='📊'; $('mtt').textContent='Análisis del Portafolio'; $('msb').textContent='Distribución de score y mora actual';
+  $('modal-box').className='modal modal-lg';
+
+  // Recopilar datos
+  var clientes = (S.clientes||[]).filter(function(c){return !c.eliminado;});
+  var bandas = [
+    {lbl:'Bajo (<450)', min:300, max:450, col:'var(--red)'},
+    {lbl:'Regular (450-549)', min:450, max:550, col:'rgba(232,152,10,.7)'},
+    {lbl:'Bueno (550-624)', min:550, max:625, col:'var(--amber)'},
+    {lbl:'Muy bueno (625-749)', min:625, max:750, col:'var(--p1)'},
+    {lbl:'Excelente (≥750)', min:750, max:851, col:'var(--green)'}
+  ];
+  var stats = bandas.map(function(b){
+    var enBanda = clientes.filter(function(c){ var s=c.score_indexa||0; return s>=b.min && s<b.max; });
+    var conCred = enBanda.filter(function(c){ return getCreditosCliente(c).length>0; });
+    var enMora = enBanda.filter(function(c){
+      return getCreditosCliente(c).some(function(cr){ return (cr.mora||0)>0; });
+    });
+    var tuvoMora = enBanda.filter(function(c){
+      return getCreditosCliente(c).some(function(cr){ return cr.tuvoMoraHistorica===true || (cr.mora||0)>0; });
+    });
+    return {
+      lbl:b.lbl, col:b.col,
+      total:enBanda.length,
+      conCred:conCred.length,
+      enMora:enMora.length,
+      tuvoMora:tuvoMora.length,
+      pctMora: conCred.length>0 ? Math.round(tuvoMora.length/conCred.length*100) : 0
+    };
+  });
+  var totalCli = clientes.length;
+  var maxBanda = Math.max.apply(null, stats.map(function(s){return s.total;}).concat([1]));
+
+  var html = '';
+  // Resumen
+  var totalMora = clientes.filter(function(c){
+    return getCreditosCliente(c).some(function(cr){ return (cr.mora||0)>0; });
+  }).length;
+  var totalConCred = clientes.filter(function(c){ return getCreditosCliente(c).length>0; }).length;
+  var pctMoraGlobal = totalConCred>0 ? Math.round(totalMora/totalConCred*100) : 0;
+
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'
+    + '<div class="cf-kpi"><div class="cf-kpi-v">'+totalCli+'</div><div class="cf-kpi-l">Clientes totales</div></div>'
+    + '<div class="cf-kpi"><div class="cf-kpi-v">'+totalConCred+'</div><div class="cf-kpi-l">Con plan</div></div>'
+    + '<div class="cf-kpi is-r"><div class="cf-kpi-v">'+totalMora+'</div><div class="cf-kpi-l">En mora hoy</div></div>'
+    + '<div class="cf-kpi'+(pctMoraGlobal>15?' is-r':pctMoraGlobal>8?' is-a':' is-g')+'"><div class="cf-kpi-v">'+pctMoraGlobal+'%</div><div class="cf-kpi-l">Tasa de mora</div></div>'
+    + '</div>';
+
+  // Distribución por banda con tasa de mora
+  html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;margin-bottom:12px">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Distribución por banda de score · tasa de mora histórica</div>';
+  stats.forEach(function(s){
+    var wBar = Math.round(s.total/maxBanda*100);
+    var moraCol = s.pctMora>=30?'var(--red)':s.pctMora>=15?'var(--amber)':'var(--green)';
+    html += '<div style="padding:9px 0;border-bottom:1px solid var(--rim)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;margin-bottom:5px">'
+      +   '<div style="font-weight:800;color:var(--ink)">'+s.lbl+'</div>'
+      +   '<div style="display:flex;gap:14px;align-items:center">'
+      +     '<span style="font-size:11px;color:var(--ink3)">'+s.conCred+' con plan</span>'
+      +     '<span style="font-weight:900;color:'+moraCol+';font-family:var(--fd);font-size:13px">'+s.pctMora+'% mora</span>'
+      +     '<span style="font-weight:800;color:var(--ink);font-family:var(--fd);min-width:30px;text-align:right">'+s.total+'</span>'
+      +   '</div>'
+      + '</div>'
+      + '<div style="height:8px;background:var(--surf2);border-radius:4px;overflow:hidden">'
+      +   '<div style="height:100%;width:'+wBar+'%;background:'+s.col+';border-radius:4px"></div>'
+      + '</div></div>';
+  });
+  html += '</div>';
+
+  // Alertas / recomendaciones
+  var recos = [];
+  stats.forEach(function(s, i){
+    if(i<2 && s.pctMora>=25) recos.push({tipo:'warn', txt:'La banda "'+s.lbl+'" tiene '+s.pctMora+'% de mora. Considera <b>subir el umbral de rechazo</b> o endurecer hard-rejects.'});
+    if(i>=3 && s.pctMora>=15) recos.push({tipo:'warn', txt:'La banda "'+s.lbl+'" (supuestamente buena) tiene '+s.pctMora+'% de mora. El modelo puede estar siendo <b>demasiado permisivo</b>.'});
+  });
+  if(pctMoraGlobal>15) recos.push({tipo:'crit', txt:'Tasa global de mora de <b>'+pctMoraGlobal+'%</b> es alta. Revisa los pesos de los factores y los hard-rejects.'});
+  if(pctMoraGlobal<3 && totalConCred>10) recos.push({tipo:'ok', txt:'Mora global de '+pctMoraGlobal+'% muy baja. Podrías <b>relajar requisitos</b> para captar más clientes sin subir demasiado el riesgo.'});
+
+  // Casos concretos
+  var alexis = clientes.find(function(c){ return /alexis\s+ramos/i.test(c.nombre||''); });
+  var carlos = clientes.find(function(c){ return /carlos\s+l[oó]pez/i.test(c.nombre||''); });
+  if(alexis || carlos){
+    html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;margin-bottom:12px">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Casos específicos</div>';
+    [alexis, carlos].filter(Boolean).forEach(function(c){
+      var s = c.score_indexa||0;
+      var ing = c.ingreso||0;
+      var col = s>=625?'var(--green)':s>=450?'var(--amber)':'var(--red)';
+      html += '<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--rim)">'
+        + '<div style="width:54px;text-align:center"><div style="font-size:22px;font-weight:900;color:'+col+';line-height:1">'+s+'</div><div style="font-size:9px;color:var(--ink3)">/850</div></div>'
+        + '<div style="flex:1"><div style="font-weight:800;font-size:13px">'+c.nombre+'</div>'
+        +   '<div style="font-size:11px;color:var(--ink3)">Ingreso: $'+ing+'/mes · '+(c.trabajo||'—')+' · '+(c.ciudad||'—')+'</div></div>'
+        + '</div>';
+    });
+    html += '<div style="padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
+      + '<b>Observación:</b> si un cliente con $200/mes está arriba de 600, probablemente el peso de "Capacidad de pago" es bajo o el ingreso mínimo base es muy permisivo. Ve a la pestaña Ratio y revisa "Ingreso mínimo base".'
+      + '</div></div>';
+  }
+
+  if(recos.length){
+    html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">💡 Recomendaciones</div>';
+    recos.forEach(function(r){
+      var bg = r.tipo==='crit'?'var(--reds)':r.tipo==='warn'?'var(--ambers)':'var(--greens)';
+      var bc = r.tipo==='crit'?'var(--red)':r.tipo==='warn'?'var(--amber)':'var(--green)';
+      html += '<div style="padding:10px 12px;background:'+bg+';border-left:3px solid '+bc+';border-radius:8px;margin-bottom:6px;font-size:12px;color:var(--ink2);line-height:1.5">'+r.txt+'</div>';
+    });
+    html += '</div>';
+  }
+
+  $('mbd').innerHTML = html;
+  $('mft').innerHTML='<button class="btn btn-p" onclick="closeM()">Cerrar</button>';
+  $('ov').style.display='flex';
+}
+
 function agregarCuentaBanc(){
   $('mic').textContent='BNK'; $('mtt').textContent='Agregar Cuenta / Método de Pago'; $('msb').textContent='Se usará como método de cobro y en el módulo Cuentas';
   $('modal-box').className='modal';
@@ -11265,8 +12956,6 @@ function renderHistorialNotificaciones(){
 function setNotifDestQuick(dest){
   var sel = $('notif-dest');
   if(sel) sel.value = dest || 'leads';
-  var hidden = $('notif-dest-hidden');
-  if(hidden) hidden.value = dest || 'leads';
   var wrap = $('notif-dest-quick');
   if(wrap){
     Array.from(wrap.querySelectorAll('[data-dest]')).forEach(function(btn){
@@ -11274,73 +12963,407 @@ function setNotifDestQuick(dest){
       btn.classList.toggle('is-active', active);
     });
   }
+  // Cambiar de grupo → limpiar selección específica previa y refrescar autocomplete
+  nxAcUnpick(true);
+  _nxAcScope = 'group';  // por defecto: limitar búsqueda al grupo
+  nxAcUpdateHint();
+  // Repoblar lista con el nuevo scope
+  _nxAcResults = nxAcGetClientsForScope();
+  nxAcRender();
+  actualizarPreviewNotif();
+  actualizarContadoresNotif();
+}
+
+function setNotifTipo(tipo){
+  var sel = $('notif-tipo');
+  if(sel) sel.value = tipo || 'lead_bienvenida';
+  var grid = $('nx-tpl-grid');
+  if(grid){
+    Array.from(grid.querySelectorAll('[data-tipo]')).forEach(function(btn){
+      var active = btn.getAttribute('data-tipo') === (tipo || 'lead_bienvenida');
+      btn.classList.toggle('is-active', active);
+    });
+  }
+  // Actualizar contador de plantilla seleccionada
+  var counter = $('nx-tpl-counter');
+  if(counter){
+    var names={lead_bienvenida:'Bienvenida Lead',bienvenida_activo:'Cliente activo',cuota:'Recordatorio cuota',confirmado:'Pago recibido',cuenta:'Estado de cuenta',mora:'Aviso de mora',mora_grave:'Mora urgente',acuerdo:'Acuerdo de pago',liquidacion:'Liquidación',vencimiento:'Vencimiento',custom:'Personalizado'};
+    counter.textContent = names[tipo] || 'Selecciona una';
+  }
+  actualizarTipoDesc();
   actualizarPreviewNotif();
 }
 
+function setNxCat(cat){
+  var tabs = $('nx-cat-tabs');
+  if(tabs){
+    Array.from(tabs.querySelectorAll('[data-cat]')).forEach(function(b){
+      b.classList.toggle('is-active', b.getAttribute('data-cat')===cat);
+    });
+  }
+  var grid = $('nx-tpl-grid');
+  if(grid){
+    Array.from(grid.querySelectorAll('[data-cat]')).forEach(function(card){
+      var show = (cat==='all') || (card.getAttribute('data-cat')===cat);
+      card.style.display = show ? '' : 'none';
+    });
+  }
+}
+
 function actualizarTipoDesc(){
-  var tipo=($('notif-tipo')&&$('notif-tipo').value)||'mora';
+  var tipo=($('notif-tipo')&&$('notif-tipo').value)||'lead_bienvenida';
   var desc=$('notif-tipo-desc');
   var customWrap=$('notif-custom-wrap');
   var descs={
-    lead_bienvenida:'Mensaje comercial corto para motivar la compra en cuotas, sin mencionar datos internos ni ciudad.',
-    bienvenida_activo:'Mensaje de bienvenida para clientes ya activos con datos claros y tono comercial.',
-    mora:        'Notifica el atraso con datos completos: cuenta, cuota N°, dias de mora, saldo pendiente y fecha de vencimiento.',
-    mora_grave:  'Aviso de caracter urgente para cuentas con mora prolongada. Menciona inicio de proceso de recuperacion si no regulariza.',
-    cuota:       'Recordatorio corto y comercial por WhatsApp, sin saldo pendiente ni texto administrativo.',
-    confirmado:  'Confirma la recepcion del pago, actualiza el saldo pendiente y comunica la proxima fecha de vencimiento.',
-    cuenta:      'Estado de cuenta completo: cuotas pagadas, restantes, porcentaje avanzado, saldo, mora y fecha fin de contrato.',
-    acuerdo:     'Formaliza por escrito el acuerdo de pago acordado verbalmente con el cliente.',
-        liquidacion: 'Ofrece al cliente la posibilidad de liquidar anticipadamente con informacion del saldo total.',
-    vencimiento: 'Alerta cuando el contrato se acerca a su fecha final con cuotas pendientes.',
-    custom:      'Redacte su propio mensaje. Variables disponibles: {nombre} {cuota} {mora} {modelo} {cuenta} {empresa} {saldo} {cuotaNum} {totalCuotas} {fechaProx}'
+    lead_bienvenida:'Mensaje formal de bienvenida para leads que dejaron sus datos. Presenta la empresa y anuncia el contacto de un asesor.',
+    bienvenida_activo:'Mensaje de bienvenida para clientes ya activos con datos de su plan de cuotas.',
+    mora:'Notifica el atraso con datos completos: cuenta, cuota N°, días de mora, saldo pendiente y fecha de vencimiento.',
+    mora_grave:'Aviso de carácter urgente para cuentas con mora prolongada. Menciona inicio de proceso de recuperación si no regulariza.',
+    cuota:'Recordatorio corto y comercial por WhatsApp, sin saldo pendiente ni texto administrativo.',
+    confirmado:'Confirma la recepción del pago, actualiza el saldo pendiente y comunica la próxima fecha de vencimiento.',
+    cuenta:'Estado de cuenta completo: cuotas pagadas, restantes, porcentaje avanzado, saldo, mora y fecha fin de contrato.',
+    acuerdo:'Formaliza por escrito el acuerdo de pago acordado verbalmente con el cliente.',
+    liquidacion:'Ofrece al cliente la posibilidad de liquidar anticipadamente con información del saldo total.',
+    vencimiento:'Alerta cuando el contrato se acerca a su fecha final con cuotas pendientes.',
+    custom:'Redacte su propio mensaje. Variables disponibles: {nombre} {cuota} {mora} {modelo} {cuenta} {empresa} {saldo} {cuotaNum} {totalCuotas} {fechaProx}'
   };
   if(desc) desc.textContent=descs[tipo]||descs.custom;
   if(customWrap) customWrap.style.display=(tipo==='custom')?'block':'none';
-  var btn=$('notif-send-btn');
-  if(btn){
-    var canal=($('notif-canal')&&$('notif-canal').value)||'whatsapp';
-    btn.textContent='Enviar por WhatsApp';
+}
+
+function _nxCountGroup(dest){
+  // Cuenta ignorando el cliente específico seleccionado
+  var prev = null;
+  var hidden = $('notif-cliente-sel-id');
+  if(hidden){ prev = hidden.value; hidden.value = ''; }
+  var n = (getDestinatariosNotif(dest)||[]).length;
+  if(hidden) hidden.value = prev;
+  return n;
+}
+
+function actualizarContadoresNotif(){
+  var counts = {
+    leads: _nxCountGroup('leads'),
+    activos: _nxCountGroup('activos'),
+    proximas: _nxCountGroup('proximas'),
+    mora: _nxCountGroup('mora')
+  };
+  Object.keys(counts).forEach(function(k){
+    var el = $('nx-c-'+k);
+    if(el) el.textContent = counts[k];
+  });
+  // Destinatarios efectivos (considera el cliente específico si está seleccionado)
+  var dest = ($('notif-dest')&&$('notif-dest').value)||'leads';
+  var destinatarios = getDestinatariosNotif(dest)||[];
+  var n = destinatarios.length;
+  var hasSpecific = !!($('notif-cliente-sel-id')&&$('notif-cliente-sel-id').value);
+  var destCounter = $('nx-dest-counter');
+  if(destCounter){
+    if(hasSpecific) destCounter.textContent = '1 cliente seleccionado';
+    else destCounter.textContent = n + ' destinatario' + (n!==1?'s':'');
   }
+  var sendN = $('nx-send-n'); if(sendN) sendN.textContent = n;
+  var sendLbl = $('nx-send-lbl');
+  if(sendLbl){
+    var sinTel = destinatarios.filter(function(d){return !d.tel||d.tel.replace(/[^0-9]/g,'').length<7;}).length;
+    if(n===0) sendLbl.textContent = 'sin destinatarios';
+    else if(hasSpecific && sinTel>0) sendLbl.textContent = 'cliente seleccionado · sin teléfono';
+    else if(hasSpecific) sendLbl.textContent = 'cliente seleccionado';
+    else if(sinTel>0) sendLbl.textContent = 'listos · '+sinTel+' sin teléfono';
+    else sendLbl.textContent = 'destinatarios listos';
+  }
+  var btn = $('notif-send-btn');
+  if(btn) btn.disabled = (n===0);
 }
 
 function actualizarPreviewNotif(){
-  var tipo   = ($('notif-tipo')&&$('notif-tipo').value)||'mora';
-  var dest   = ($('notif-dest')&&$('notif-dest').value)||'mora';
-  var wrap   = $('notif-especifico-wrap');
-  if(wrap) wrap.style.display = dest==='especifico' ? 'block' : 'none';
+  var tipo = ($('notif-tipo')&&$('notif-tipo').value)||'lead_bienvenida';
+  var dest = ($('notif-dest')&&$('notif-dest').value)||'leads';
   actualizarTipoDesc();
-  var destinatarios = getDestinatariosNotif(dest);
+  var destinatarios = getDestinatariosNotif(dest)||[];
   var sampleD = destinatarios[0]||{nombre:'Cliente Ejemplo',tel:'04120000000',cuota:15000,mora:5,modelo:'Moto 150cc',cred:'CRED-0001'};
   var msg = buildMensajeNotif(tipo, sampleD);
-  var preview = $('notif-preview');
-  if(preview){
-    if(!destinatarios.length){
-      preview.innerHTML = '<span style="color:var(--red)">⚠️ Sin destinatarios con este filtro — al enviar podrás ingresar un número manualmente.</span>';
+  var bubble = $('notif-preview');
+  var empty = $('notif-preview-empty');
+  if(bubble && empty){
+    if(!msg){
+      bubble.style.display = 'none';
+      empty.style.display = 'block';
     } else {
-      var sinTel=destinatarios.filter(function(d){return !d.tel||d.tel.replace(/[^0-9]/g,'').length<7;}).length;
-      preview.innerHTML = '<div style="margin-bottom:8px;font-size:11px;font-weight:800;color:var(--p1)">'
-        + '📋 Vista previa · '+destinatarios.length+' destinatario'+(destinatarios.length!==1?'s':'')
-        +(sinTel?' · <span style="color:var(--amber)">⚠ '+sinTel+' sin teléfono</span>':'')
-        +'</div>'
-        + '<div style="white-space:pre-wrap;line-height:1.7;font-size:12px;color:var(--ink);font-family:var(--fb)">' + msg + '</div>';
+      bubble.style.display = 'inline-block';
+      empty.style.display = 'none';
+      var ahora = new Date();
+      var hora = ahora.getHours().toString().padStart(2,'0')+':'+ahora.getMinutes().toString().padStart(2,'0');
+      // Limpiar y construir: span de texto + span de hora
+      bubble.innerHTML = '';
+      var textSpan = document.createElement('span');
+      textSpan.textContent = msg;
+      bubble.appendChild(textSpan);
+      var timeSpan = document.createElement('span');
+      timeSpan.className = 'nx-wa-time';
+      timeSpan.textContent = hora + ' ✓✓';
+      bubble.appendChild(timeSpan);
     }
+  }
+  actualizarContadoresNotif();
+}
+
+// ── Autocomplete para elegir un cliente dentro del grupo (o de todos) ──
+var _nxAcFocusIdx = -1;
+var _nxAcResults = [];
+var _nxAcScope = 'group'; // 'group' = solo clientes del segmento activo; 'all' = todos
+
+function nxAcGetAllClients(){
+  var out = [];
+  (S.clientes||[]).forEach(function(c){
+    if(c.eliminado) return;
+    var creds = (typeof getCreditosCliente==='function') ? getCreditosCliente(c) : [];
+    var cr = creds.find(function(x){ return x.estado==='activo'||x.estado==='mora'; });
+    out.push({
+      id: c.id,
+      nombre: c.nombre || '',
+      tel: c.tel || '',
+      cedula: c.cedula || c.ci || '',
+      cuenta: cr ? cr.id : '',
+      isActivo: !!cr,
+      modelo: cr ? cr.modelo : '',
+      mora: cr ? (cr.mora||0) : 0
+    });
+  });
+  return out;
+}
+
+// Devuelve los clientes del scope actual (grupo activo, o todos si _nxAcScope==='all')
+function nxAcGetClientsForScope(){
+  var all = nxAcGetAllClients();
+  if(_nxAcScope==='all') return all;
+  var dest = ($('notif-dest')&&$('notif-dest').value)||'leads';
+  // IDs del grupo activo según destinatarios reales del segmento
+  var destGroup = getDestinatariosNotif(dest)||[];
+  // Los destinatarios no tienen id del cliente; hacemos match por nombre
+  var names = new Set();
+  destGroup.forEach(function(d){ if(d && d.nombre) names.add(d.nombre); });
+  return all.filter(function(c){ return names.has(c.nombre); });
+}
+
+function nxAcToggleScope(){
+  _nxAcScope = (_nxAcScope==='group') ? 'all' : 'group';
+  nxAcUpdateHint();
+  var input = $('nx-ac-input');
+  _nxAcResults = nxAcGetClientsForScope();
+  // Aplicar filtro de búsqueda actual si había texto
+  if(input && input.value.trim()){
+    nxAcFilter();
+  } else {
+    nxAcRender();
+    nxAcOpen();
   }
 }
 
+function nxAcUpdateHint(){
+  var hint = $('nx-ac-hint');
+  var btn = $('nx-ac-modeswitch');
+  var dest = ($('notif-dest')&&$('notif-dest').value)||'leads';
+  var names = {leads:'leads',activos:'clientes activos',proximas:'clientes con cuota pendiente',mora:'clientes en mora'};
+  var grupoLbl = names[dest] || 'este grupo';
+  if(_nxAcScope==='group'){
+    if(hint) hint.textContent = 'O busca un ' + grupoLbl.replace(/s$/,'') + ' específico dentro del grupo';
+    if(btn) btn.textContent = 'Ver todos los clientes';
+  } else {
+    if(hint) hint.textContent = 'Buscando en TODOS los clientes';
+    if(btn) btn.textContent = 'Volver al grupo';
+  }
+}
+
+function nxAcFilter(){
+  var input = $('nx-ac-input');
+  if(!input) return;
+  var q = (input.value||'').toLowerCase().trim();
+  var clear = $('nx-ac-clear');
+  if(clear) clear.classList.toggle('is-visible', q.length>0);
+  var base = nxAcGetClientsForScope();
+  if(q){
+    _nxAcResults = base.filter(function(c){
+      return (c.nombre.toLowerCase().indexOf(q) !== -1)
+          || (c.tel && c.tel.toLowerCase().indexOf(q) !== -1)
+          || (c.cedula && c.cedula.toLowerCase().indexOf(q) !== -1)
+          || (c.cuenta && c.cuenta.toLowerCase().indexOf(q) !== -1);
+    });
+  } else {
+    _nxAcResults = base;
+  }
+  _nxAcFocusIdx = -1;
+  nxAcRender();
+  nxAcOpen();
+}
+
+function nxAcRender(){
+  var list = $('nx-ac-list');
+  if(!list) return;
+  if(!_nxAcResults.length){
+    var input=$('nx-ac-input');
+    var hasQuery = input && input.value.trim();
+    if(hasQuery){
+      list.innerHTML = '<div class="nx-ac-empty">Sin coincidencias en este grupo. <button type="button" onclick="nxAcToggleScope()" style="border:none;background:none;color:var(--p1);font-weight:700;cursor:pointer;padding:0;font-size:inherit;text-decoration:underline">Buscar en todos los clientes</button></div>';
+    } else {
+      list.innerHTML = '<div class="nx-ac-empty">No hay clientes en este grupo</div>';
+    }
+    return;
+  }
+  var activos = _nxAcResults.filter(function(c){ return c.isActivo; });
+  var leads = _nxAcResults.filter(function(c){ return !c.isActivo; });
+  var html = '';
+  function initials(name){
+    var p = (name||'').split(/\s+/).filter(Boolean);
+    return ((p[0]||'')[0]||'?').toUpperCase() + ((p[1]||'')[0]||'').toUpperCase();
+  }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function renderItem(c, idx){
+    var meta = [];
+    if(c.cuenta) meta.push(c.cuenta);
+    else if(!c.isActivo) meta.push('Lead');
+    if(c.tel) meta.push(c.tel);
+    else meta.push('sin teléfono');
+    if(c.mora>0) meta.push(c.mora+'d mora');
+    return '<div class="nx-ac-item" data-id="'+esc(c.id)+'" data-idx="'+idx+'" onclick="nxAcPick(\''+esc(c.id)+'\')">'
+      + '<div class="nx-ac-avatar" style="'+(c.isActivo?'':'background:var(--ink3)')+'">'+esc(initials(c.nombre))+'</div>'
+      + '<div class="nx-ac-body">'
+      +   '<div class="nx-ac-name">'+esc(c.nombre||'Sin nombre')+'</div>'
+      +   '<div class="nx-ac-meta">'+esc(meta.join(' · '))+'</div>'
+      + '</div></div>';
+  }
+  var idxCounter = 0;
+  if(activos.length && leads.length){
+    html += '<div class="nx-ac-group">Clientes activos ('+activos.length+')</div>';
+    activos.forEach(function(c){ html += renderItem(c, idxCounter++); });
+    html += '<div class="nx-ac-group">Leads / sin cuenta ('+leads.length+')</div>';
+    leads.forEach(function(c){ html += renderItem(c, idxCounter++); });
+  } else {
+    _nxAcResults.forEach(function(c){ html += renderItem(c, idxCounter++); });
+  }
+  list.innerHTML = html;
+}
+
+function nxAcOpen(){
+  var input = $('nx-ac-input');
+  if(!input) return;
+  if(!_nxAcResults.length) _nxAcResults = nxAcGetClientsForScope();
+  nxAcRender();
+  var list = $('nx-ac-list');
+  if(list) list.classList.add('is-open');
+}
+
+function nxAcClose(){
+  var list = $('nx-ac-list');
+  if(list) list.classList.remove('is-open');
+  _nxAcFocusIdx = -1;
+}
+
+function nxAcPick(id){
+  var all = nxAcGetAllClients();
+  var c = all.find(function(x){ return String(x.id)===String(id); });
+  if(!c) return;
+  var hidden = $('notif-cliente-sel-id');
+  if(hidden) hidden.value = c.id;
+  var sel = $('notif-cliente-sel');
+  if(sel){
+    var has = Array.from(sel.options).some(function(o){return String(o.value)===String(c.id);});
+    if(!has){ var o=document.createElement('option'); o.value=c.id; o.textContent=c.nombre; sel.appendChild(o); }
+    sel.value = c.id;
+  }
+  var input = $('nx-ac-input');
+  if(input) input.value = '';
+  var clear = $('nx-ac-clear'); if(clear) clear.classList.remove('is-visible');
+  nxAcClose();
+  var selWrap = $('nx-ac-selected-wrap');
+  if(selWrap){
+    function initials(name){
+      var p = (name||'').split(/\s+/).filter(Boolean);
+      return ((p[0]||'')[0]||'?').toUpperCase() + ((p[1]||'')[0]||'').toUpperCase();
+    }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+    var meta = [];
+    if(c.cuenta) meta.push(c.cuenta);
+    else meta.push('Lead');
+    if(c.tel) meta.push(c.tel);
+    else meta.push('sin teléfono');
+    selWrap.innerHTML = '<div class="nx-ac-selected">'
+      + '<div class="nx-ac-avatar">'+esc(initials(c.nombre))+'</div>'
+      + '<div class="nx-ac-body">'
+      +   '<div class="nx-ac-name" style="display:flex;align-items:center;gap:6px">'
+      +     '<span style="background:var(--p1);color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:900;letter-spacing:.3px">SOLO ESTE</span>'
+      +     esc(c.nombre)
+      +   '</div>'
+      +   '<div class="nx-ac-meta">'+esc(meta.join(' · '))+'</div>'
+      + '</div>'
+      + '<button type="button" class="nx-ac-selected-x" onclick="nxAcUnpick()" title="Volver a enviar a todo el grupo">×</button>'
+      + '</div>';
+  }
+  actualizarPreviewNotif();
+}
+
+function nxAcUnpick(silent){
+  var hidden = $('notif-cliente-sel-id'); if(hidden) hidden.value = '';
+  var sel = $('notif-cliente-sel'); if(sel) sel.value = '';
+  var selWrap = $('nx-ac-selected-wrap'); if(selWrap) selWrap.innerHTML = '';
+  var input = $('nx-ac-input'); if(input) input.value='';
+  if(!silent) actualizarPreviewNotif();
+}
+
+function nxAcClearInput(){
+  var input = $('nx-ac-input');
+  if(input){ input.value=''; input.focus(); }
+  var clear = $('nx-ac-clear'); if(clear) clear.classList.remove('is-visible');
+  _nxAcResults = nxAcGetClientsForScope();
+  nxAcRender();
+}
+
+function nxAcKey(ev){
+  var list = $('nx-ac-list');
+  if(!list || !list.classList.contains('is-open')){ if(ev.key!=='Escape') nxAcOpen(); }
+  var items = Array.from(list.querySelectorAll('.nx-ac-item'));
+  if(ev.key==='ArrowDown'){
+    ev.preventDefault();
+    _nxAcFocusIdx = Math.min(_nxAcFocusIdx+1, items.length-1);
+  } else if(ev.key==='ArrowUp'){
+    ev.preventDefault();
+    _nxAcFocusIdx = Math.max(_nxAcFocusIdx-1, 0);
+  } else if(ev.key==='Enter'){
+    ev.preventDefault();
+    if(_nxAcFocusIdx>=0 && items[_nxAcFocusIdx]){
+      var id = items[_nxAcFocusIdx].getAttribute('data-id');
+      nxAcPick(id);
+    }
+    return;
+  } else if(ev.key==='Escape'){
+    nxAcClose();
+    return;
+  } else { return; }
+  items.forEach(function(it,i){ it.classList.toggle('is-focus', i===_nxAcFocusIdx); });
+  if(items[_nxAcFocusIdx]) items[_nxAcFocusIdx].scrollIntoView({block:'nearest'});
+}
+
+document.addEventListener('click', function(ev){
+  var wrap = ev.target.closest && ev.target.closest('.nx-ac-wrap');
+  if(!wrap){ nxAcClose(); }
+});
+
 function getDestinatariosNotif(dest){
   function findCliente(c){
-    if(c && c.cliId!=null){
+    if(c && c.cliId!=null && String(c.cliId)!==''){
       var byId=(S.clientes||[]).find(function(x){ return String(x.id)===String(c.cliId); });
       if(byId) return byId;
+      return {}; // si tiene cliId pero no encuentra, NO cae al fallback de nombre
     }
-    return (S.clientes||[]).find(function(x){ return x.nombre===((c&&c.cli)||''); }) || {};
+    var nom=(c&&c.cli||'').trim();
+    if(!nom) return {};
+    return (S.clientes||[]).find(function(x){ return (x.nombre||'').trim()===nom; }) || {};
   }
   function activeCredForClient(cl){
-    return (S.creds||[]).find(function(cr){
-      return !cr.eliminado && cr.estado==='activo' && (((cr.cliId!=null) && String(cr.cliId)===String(cl.id)) || cr.cli===cl.nombre);
-    }) || (S.creds||[]).filter(function(cr){
-      return !cr.eliminado && (((cr.cliId!=null) && String(cr.cliId)===String(cl.id)) || cr.cli===cl.nombre);
-    }).sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); })[0] || null;
+    var creds = (typeof getCreditosCliente==='function') ? getCreditosCliente(cl) : [];
+    return creds.find(function(cr){ return cr.estado==='activo'||cr.estado==='mora'; })
+        || creds.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); })[0]
+        || null;
   }
   function mkDest(cl, c, extra){
     cl = cl || {};
@@ -11358,6 +13381,18 @@ function getDestinatariosNotif(dest){
       ingreso: cl.ing || cl.ingreso || 0,
       totalCuotas: c.totalCuotas || 0
     };
+  }
+
+  // ── Override: si hay un cliente seleccionado en el autocomplete, envía solo a ese ──
+  var selId = String(
+    (typeof document!=='undefined' && document.getElementById('notif-cliente-sel-id') && document.getElementById('notif-cliente-sel-id').value) || ''
+  );
+  if(selId){
+    var cl = (S.clientes||[]).find(function(x){ return String(x.id)===selId; });
+    if(cl){
+      var cred = activeCredForClient(cl);
+      return [mkDest(cl, cred||{}, {esLead:!cred})];
+    }
   }
 
   if(dest==='mora'){
@@ -11386,7 +13421,11 @@ function getDestinatariosNotif(dest){
     });
   }
   if(dest==='especifico'){
-    var selId = String((($('notif-cliente-sel')&&$('notif-cliente-sel').value)||''));
+    var selId = String(
+      (($('notif-cliente-sel-id')&&$('notif-cliente-sel-id').value)||'')
+      || (($('notif-cliente-sel')&&$('notif-cliente-sel').value)||'')
+    );
+    if(!selId) return [];
     var cl = (S.clientes||[]).find(function(x){ return String(x.id)===selId; });
     if(!cl) return [];
     var cred = activeCredForClient(cl);
@@ -11500,7 +13539,7 @@ function buildMensajeNotif(tipo, d){
       '',
       'Estimado/a '+nombre+':',
       '',
-      'Hemos recibido y procesado exitosamente su pago correspondiente a la cuota N° '+cuotasPagadas+' de su financiamiento.',
+      'Hemos recibido y procesado exitosamente su pago correspondiente a la cuota N° '+cuotasPagadas+' de su plan de cuotas.',
       '',
       bloqueHeader,
       '',
@@ -11518,7 +13557,7 @@ function buildMensajeNotif(tipo, d){
       '',
       'Estimado/a '+nombre+':',
       '',
-      'A continuacion le presentamos el estado actualizado de su cuenta de financiamiento:',
+      'A continuacion le presentamos el estado actualizado de su cuenta:',
       '',
       bloqueHeader,
       '',
@@ -11552,10 +13591,18 @@ function buildMensajeNotif(tipo, d){
 
   if(tipo==='lead_bienvenida'){
     return [
-      'Aprobación rápida ⚡',
-      'Cuotas a tu medida',
-      'Tu moto lista para salir 🏍️',
-      'Escríbenos y arranca hoy.'
+      empresa.toUpperCase()+' — BIENVENIDA',
+      '',
+      'Estimado/a '+nombre+':',
+      '',
+      'Reciba un cordial saludo de '+empresa+'. Agradecemos su interés en nuestros planes de pago en cuotas para motocicletas.',
+      '',
+      'Uno de nuestros asesores se comunicará con usted a la brevedad para brindarle la información correspondiente y acompañarle en el proceso.',
+      '',
+      'Quedamos atentos a cualquier consulta por este medio.',
+      '',
+      'Cordialmente,',
+      empresa.toUpperCase()
     ].filter(Boolean).join('\n');
   }
 
@@ -11565,7 +13612,7 @@ function buildMensajeNotif(tipo, d){
       '',
       'Estimado/a '+nombre+':',
       '',
-      'Nos complace darle la bienvenida como cliente activo de '+empresa+'. Su cuenta de financiamiento ya fue creada exitosamente.',
+      'Nos complace darle la bienvenida como cliente activo de '+empresa+'. Su cuenta ya fue creada exitosamente.',
       '',
       bloqueHeader,
       '',
@@ -11601,11 +13648,11 @@ function buildMensajeNotif(tipo, d){
       '',
       'Estimado/a '+nombre+':',
       '',
-      'Le informamos que su contrato de financiamiento N° '+cred+' se encuentra proximo a su fecha de vencimiento final: '+fechaVencFin+'.',
+      'Le informamos que su contrato N° '+cred+' se encuentra proximo a su fecha de vencimiento final: '+fechaVencFin+'.',
       '',
       bloqueHeader,
       '',
-      'Tiene pendientes '+cuotasRest+' cuota'+(cuotasRest!==1?'s':'')+' por un total de '+fmt(saldoPend)+'. Le solicitamos asegurarse de mantener sus pagos al dia para completar su financiamiento exitosamente.',
+      'Tiene pendientes '+cuotasRest+' cuota'+(cuotasRest!==1?'s':'')+' por un total de '+fmt(saldoPend)+'. Le solicitamos asegurarse de mantener sus pagos al dia para completar su plan exitosamente.',
       '',
       'Para cualquier consulta, comuniquese con nuestra oficina.',
       '',
