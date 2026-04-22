@@ -1778,6 +1778,246 @@ tbody tr:hover td {
 .cf-action.is-wa{background:#25D366;color:#fff;border-color:#25D366}
 .cf-action.is-wa:hover{background:#1da851;color:#fff}
 
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* ══════════════  MOBILE OVERHAUL · optimización completa  ═════════════ */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 820px) {
+
+  /* Base: padding general reducido, tipografía legible */
+  body, html { overflow-x: hidden; }
+  .page, .content, main { padding: 12px !important; padding-top: 10px !important; }
+
+  /* Títulos de página más compactos */
+  .page > div:first-child > div:first-child > div:first-child { font-size: 18px !important; line-height: 1.15 !important; }
+
+  /* Grids de KPIs: 2 columnas fijas en móvil */
+  .sg, .cf-kpis, .stats-grid,
+  div[style*="grid-template-columns:repeat(auto-fit,minmax(135px"],
+  div[style*="grid-template-columns:repeat(auto-fit,minmax(155px"],
+  div[style*="grid-template-columns:repeat(auto-fit,minmax(160px"],
+  div[style*="grid-template-columns:repeat(auto-fit,minmax(130px"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .stat { padding: 10px 11px !important; }
+  .st-v { font-size: 16px !important; }
+  .st-l { font-size: 10px !important; }
+  .st-ic { width: 28px !important; height: 28px !important; font-size: 13px !important; }
+
+  .cf-kpi-v { font-size: 16px !important; }
+  .cf-kpi-l { font-size: 9.5px !important; }
+  .cf-kpi-s { font-size: 9.5px !important; }
+
+  /* Grids de 2 y 3 columnas → 1 columna en móvil */
+  .cf-grid-2, .cf-grid-3,
+  div[style*="grid-template-columns:1fr 1fr 1fr"],
+  div[style*="grid-template-columns:1fr 1fr"],
+  div[style*="grid-template-columns:1fr 1.3fr"],
+  div[style*="grid-template-columns:1.3fr 1fr"],
+  div[style*="grid-template-columns:repeat(3,1fr)"],
+  div[style*="grid-template-columns:repeat(4,1fr)"] {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* fgr c1 / c2 / c3 (form grids del sistema) */
+  .fgr, .fgr.c1, .fgr.c2, .fgr.c3 { grid-template-columns: 1fr !important; gap: 8px !important; }
+
+  /* Cards: padding reducido */
+  .card { padding: 12px !important; border-radius: 12px !important; margin-bottom: 10px !important; }
+  .ch { flex-wrap: wrap; gap: 8px; }
+  .ct { font-size: 13px !important; }
+  .cs { font-size: 10.5px !important; }
+
+  /* ── TABLAS → convertir a cards en móvil ── */
+  .tw { overflow-x: visible !important; }
+  .tw table, .tw thead, .tw tbody, .tw tr, .tw td, .tw th { display: block; width: 100% !important; }
+  .tw thead { display: none; }
+  .tw tr {
+    background: var(--surf);
+    border: 1px solid var(--rim);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tw td {
+    padding: 4px 0 !important;
+    border: none !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .tw td:empty { display: none; }
+  .tw td .tdm { font-size: 12.5px; font-weight: 700; }
+  .tw td .tds { font-size: 10.5px; color: var(--ink3); }
+
+  /* La primera celda (cliente con avatar) a ancho completo como header de la card */
+  .tw tr td:first-child {
+    border-bottom: 1px solid var(--rim) !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 4px !important;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Última celda con botones: alineada a la derecha */
+  .tw tr td:last-child {
+    border-top: 1px solid var(--rim) !important;
+    padding-top: 8px !important;
+    margin-top: 4px !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Botones en tabla-móvil */
+  .btn-xs { padding: 6px 10px !important; font-size: 11px !important; min-height: 32px; }
+  .btn-sm { padding: 7px 11px !important; font-size: 11.5px !important; min-height: 36px; }
+  .btn { padding: 9px 14px !important; font-size: 12.5px !important; min-height: 40px; }
+
+  /* Inputs touch-friendly */
+  .fi, .fs, .fta, input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="date"], input[type="password"], select, textarea {
+    font-size: 15px !important;  /* Evita el zoom automático de iOS (<16px lo dispara) */
+    padding: 11px 12px !important;
+    min-height: 42px;
+  }
+  .fta { min-height: 80px; }
+  label.fsec, label { font-size: 11.5px !important; }
+
+  /* ── Modales a pantalla completa ── */
+  .modal, .modal-lg {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+  }
+  #ov { padding: 0 !important; align-items: stretch !important; }
+  #mbd, .modal-body { flex: 1; overflow-y: auto !important; padding: 14px !important; -webkit-overflow-scrolling: touch; }
+  #mft, .modal-footer {
+    padding: 10px 14px !important;
+    flex-wrap: wrap;
+    gap: 6px !important;
+    border-top: 1px solid var(--rim);
+    background: var(--surf);
+    position: sticky;
+    bottom: 0;
+  }
+  #mft button, .modal-footer button { flex: 1 1 calc(50% - 3px); min-width: 120px; }
+
+  /* ── Ficha de cliente: hero, tabs, panels ── */
+  .cf-hero { padding: 14px !important; border-radius: 12px !important; }
+  .cf-hero-row { flex-wrap: wrap; gap: 10px; }
+  .cf-avatar { width: 52px !important; height: 52px !important; font-size: 18px !important; }
+  .cf-hero-name { font-size: 17px !important; }
+  .cf-hero-sub { font-size: 11px !important; }
+  .cf-score {
+    border-left: none !important;
+    border-top: 1px solid rgba(255,255,255,.25);
+    width: 100%;
+    flex-direction: row !important;
+    gap: 10px;
+    padding: 10px 0 0 !important;
+    justify-content: center;
+    align-items: baseline !important;
+  }
+  .cf-score-v { font-size: 24px !important; }
+  .cf-score-l { font-size: 9px !important; }
+
+  .cf-tabs { gap: 2px !important; padding: 3px !important; }
+  .cf-tab { padding: 7px 10px !important; font-size: 11px !important; }
+  .cf-tab-count { font-size: 9px !important; padding: 1px 5px !important; }
+
+  .cf-section { padding: 12px !important; border-radius: 10px !important; }
+  .cf-field-l { font-size: 9.5px !important; }
+  .cf-field-v { font-size: 12.5px !important; }
+  .cf-chart-wrap { height: 180px !important; }
+  .cf-chart-wrap.is-sm { height: 130px !important; }
+
+  /* ── Dashboard: acciones rápidas y widgets ── */
+  .qa-grid, .qa { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+  .qa { padding: 12px 10px !important; }
+  .qa-ic { width: 36px !important; height: 36px !important; font-size: 16px !important; }
+  .qa-t { font-size: 12px !important; }
+
+  /* ── Listados (lst) ── */
+  .lst { max-height: none !important; }
+  .li { padding: 10px 11px !important; flex-wrap: wrap; gap: 8px; }
+  .li-ic { width: 32px !important; height: 32px !important; font-size: 13px !important; flex-shrink: 0; }
+
+  /* ── Módulo de Notificaciones ── */
+  .nx-tpl-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .nx-seg-grid { grid-template-columns: 1fr 1fr !important; }
+  .nx-tpl-card { padding: 10px !important; }
+  .nx-tpl-name { font-size: 11.5px !important; }
+  .nx-tpl-desc { font-size: 10px !important; }
+  .nx-cat-tab { font-size: 11px !important; padding: 6px 10px !important; }
+  .nx-seg-lbl { font-size: 11.5px !important; }
+  .nx-seg-hint { font-size: 9.5px !important; }
+  .nx-send-bar { flex-direction: column; align-items: stretch !important; }
+  .nx-send-bar .nx-send-count { text-align: center; }
+  .nx-send-btn { width: 100%; justify-content: center; padding: 12px !important; font-size: 14px !important; }
+
+  /* ── Login en móvil ── */
+  .login-card { padding: 24px 20px !important; border-radius: 14px !important; margin: 12px !important; max-width: calc(100% - 24px) !important; }
+
+  /* ── Topbar más compacto ── */
+  .topbar { height: 52px !important; padding: 0 12px !important; gap: 6px !important; }
+  .tb-ttl { font-size: 14px !important; }
+
+  /* ── Chips/badges que no se encimen ── */
+  .bdg { font-size: 10px !important; padding: 2px 7px !important; }
+
+  /* ── Botones de acciones en headers de card ── */
+  .ch > div:last-child, .ch .actions { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  /* ── Score config: sliders más anchos ── */
+  #sc-pesos-grid { grid-template-columns: 1fr !important; }
+  .cf-tabs[id*="sc-"] { overflow-x: auto; }
+
+  /* ── Autocomplete cliente: lista más alta ── */
+  .nx-ac-list { max-height: 60vh !important; }
+
+  /* Reducir esfuerzo visual en secciones secundarias */
+  .notif-tipo-groups, .notif-tipo-group-btns { gap: 4px !important; }
+  .notif-tipo-btn { font-size: 11px !important; padding: 7px 10px !important; }
+
+  /* Modal body: mejor espaciado */
+  #mbd > div, #mbd > section { margin-bottom: 10px; }
+
+  /* Scroll horizontal forzado solo para tabs que lo necesiten */
+  .cf-tabs, .nx-cat-tabs { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+}
+
+/* Pantallas muy pequeñas (iPhone SE, etc.) */
+@media (max-width: 380px) {
+  .sg, .cf-kpis { grid-template-columns: 1fr !important; }
+  .nx-tpl-grid, .nx-seg-grid { grid-template-columns: 1fr !important; }
+  .qa-grid, .qa { grid-template-columns: 1fr !important; }
+  .page, .content { padding: 10px !important; }
+  .card { padding: 10px !important; }
+}
+
+/* Mejorar scroll táctil en todo el sistema */
+@media (pointer: coarse) {
+  * { -webkit-tap-highlight-color: rgba(91,78,212,.15); }
+  button, .btn, label[class*="-btn"], .nx-seg, .nx-tpl-card, .cf-tab, .nx-cat-tab {
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  input, textarea, select { touch-action: manipulation; }
+}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -6362,7 +6602,7 @@ function _cliInitFromCliente(c){
   WZ = { step:1, totalSteps:2, score:0, f1:0,f2:0,f3:0,f4:0,f5:0, cuota:0,ratio:0,monto:0,precio:0,plazo:0,ini:0,ing:0, mode:'cliente', clienteEditId:(c&&c.id)||null };
   if(!c) return;
   WZ.nom = WZ.wz_nom = c.nombre || '';
-  WZ.ci = WZ.wz_ci = c.cedula || '';
+  WZ.ci = WZ.wz_ci = _wzFmtCedula(c.cedula || '');
   WZ.tel = WZ.wz_tel = c.tel || '';
   WZ.wa = WZ.wz_wa = c.wa || c.tel || '';
   WZ.email = WZ.wz_email = c.email || '';
@@ -6403,7 +6643,7 @@ function _cliInitFromCliente(c){
   WZ.fiador_tiene = c.fiador || 'no';
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
   WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
-  WZ.fiador_ci = WZ.wz_fiador_ci = c.fiador_ci || '';
+  WZ.fiador_ci = WZ.wz_fiador_ci = _wzFmtCedula(c.fiador_ci || '');
   WZ.fiador_rel = WZ.wz_fiador_rel = c.fiador_rel || '';
   WZ.r1n = WZ.wz_r1n = c.ref1&&c.ref1.nom || '';
   WZ.r1t = WZ.wz_r1t = c.ref1&&c.ref1.tel || '';
@@ -6440,7 +6680,7 @@ function _cliScorePill(){
 function _cliStep1(){
   return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     + _wzFg('Nombre completo *','wz_nom','text','Ej: Carlos Pérez','',true)
-    + _wzFg('N° Cédula *','wz_ci','text','V-12345678','',true)
+    + _wzFg('N° Cédula *','wz_ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"',true)
     + _wzFg('Teléfono *','wz_tel','tel','0412-0000000','',true)
     + _wzFg('WhatsApp','wz_wa','tel','0412-0000000')
     + _wzFg('Correo','wz_email','email','correo@ejemplo.com')
@@ -6608,7 +6848,7 @@ function _cliStep2(){
   )+'</div>'
   +'<div id="wz_fiador_det" style="display:none">'
   +_row2(_fg('Nombre del fiador',_inp('wz_fiador_nom','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_fiador_tel','tel','0412-0000000')))
-  +_row2(_fg('Cédula del fiador',_inp('wz_fiador_ci','text','V-12345678')),_fg('Relación',_sel('wz_fiador_rel','<option value="familiar">Familiar directo</option><option value="conyuge">Cónyuge / pareja</option><option value="amigo">Amigo/a</option><option value="colega">Colega / socio</option>')))
+  +_row2(_fg('Cédula del fiador',_inp('wz_fiador_ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"')),_fg('Relación',_sel('wz_fiador_rel','<option value="familiar">Familiar directo</option><option value="conyuge">Cónyuge / pareja</option><option value="amigo">Amigo/a</option><option value="colega">Colega / socio</option>')))
   +'</div>'
   +_s('Notas del Vendedor')
   +'<div style="margin-bottom:10px">'+_fg('Impresión general',
@@ -6640,7 +6880,7 @@ function _cliCollectStep(step){
   var g=function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
   if(step===1){
     WZ.nom = WZ.wz_nom = g('wz_nom');
-    WZ.ci = WZ.wz_ci = g('wz_ci');
+    WZ.ci = WZ.wz_ci = _wzFmtCedula(g('wz_ci'));
     WZ.tel = WZ.wz_tel = g('wz_tel');
     WZ.wa = WZ.wz_wa = g('wz_wa');
     WZ.email = WZ.wz_email = g('wz_email');
@@ -6689,7 +6929,7 @@ function _cliCollectStep(step){
     WZ.fiador_tiene = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value;
     WZ.fiador_nom = WZ.wz_fiador_nom = g('wz_fiador_nom');
     WZ.fiador_tel = WZ.wz_fiador_tel = g('wz_fiador_tel');
-    WZ.fiador_ci = WZ.wz_fiador_ci = g('wz_fiador_ci');
+    WZ.fiador_ci = WZ.wz_fiador_ci = _wzFmtCedula(g('wz_fiador_ci'));
     WZ.fiador_rel = WZ.wz_fiador_rel = g('wz_fiador_rel');
     WZ.r1n = WZ.wz_r1n = g('wz_r1n'); WZ.r1t = WZ.wz_r1t = g('wz_r1t'); WZ.r1r = WZ.wz_r1r = g('wz_r1r'); WZ.r1obs = WZ.wz_r1obs = g('wz_r1obs');
     WZ.r2n = WZ.wz_r2n = g('wz_r2n'); WZ.r2t = WZ.wz_r2t = g('wz_r2t'); WZ.r2r = WZ.wz_r2r = g('wz_r2r'); WZ.r2obs = WZ.wz_r2obs = g('wz_r2obs');
@@ -6924,7 +7164,7 @@ function _wzRender(motoId){
     + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Puedes elegir un cliente ya registrado o dejarlo en nuevo cliente y escribir los datos manualmente.</div></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     + _wzFg('Nombre completo *','wz_nom','text','Ej: Carlos Pérez','',true)
-    + _wzFg('N° Cédula *','wz_ci','text','V-12345678','',true)
+    + _wzFg('N° Cédula *','wz_ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"',true)
     + _wzFg('Teléfono *','wz_tel','tel','0412-0000000','',true)
     + _wzFg('WhatsApp','wz_wa','tel','0412-0000000')
     + _wzFg('Correo','wz_email','email','correo@ejemplo.com')
@@ -7178,7 +7418,7 @@ function _wzRender(motoId){
     _fg('Teléfono',_inp('wz_fiador_tel','tel','0412-0000000'))
   )
   +_row2(
-    _fg('Cédula del fiador',_inp('wz_fiador_ci','text','V-12345678')),
+    _fg('Cédula del fiador',_inp('wz_fiador_ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"')),
     _fg('Relación',_sel('wz_fiador_rel','<option value="familiar">Familiar directo</option><option value="conyuge">Cónyuge / pareja</option><option value="amigo">Amigo/a</option><option value="colega">Colega / socio</option>'))
   )+'</div>'
 
@@ -7335,7 +7575,7 @@ function _wzPickCliente(sel){
   var c = (S.clientes||[]).find(function(x){ return String((x&&x.id)!=null ? x.id : '').trim()===id; });
   if(!c) return;
   WZ.nom = WZ.wz_nom = c.nombre || '';
-  WZ.ci = WZ.wz_ci = c.cedula || '';
+  WZ.ci = WZ.wz_ci = _wzFmtCedula(c.cedula || '');
   WZ.tel = WZ.wz_tel = c.tel || '';
   WZ.wa = WZ.wz_wa = c.wa || c.tel || '';
   WZ.email = WZ.wz_email = c.email || '';
@@ -7376,7 +7616,7 @@ function _wzPickCliente(sel){
   WZ.fiador_tiene = c.fiador || 'no';
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
   WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
-  WZ.fiador_ci = WZ.wz_fiador_ci = c.fiador_ci || '';
+  WZ.fiador_ci = WZ.wz_fiador_ci = _wzFmtCedula(c.fiador_ci || '');
   WZ.fiador_rel = WZ.wz_fiador_rel = c.fiador_rel || '';
   WZ.r1n = c.ref1&&c.ref1.nom || '';
   WZ.r1t = c.ref1&&c.ref1.tel || '';
@@ -7599,6 +7839,31 @@ var _wzDocDefs={
   wz_doc_pago_var:{label:'Soportes Zelle / Pago Móvil / Efectivo',icon:'💸',group:'Pagos',accept:'image/*,.pdf'}
 };
 function _wzDocTotal(){ return Object.keys(_wzDocDefs).length; }
+// ── Formato de cédula Venezuela: siempre V-12345678 (o E-, J-, G-) ──
+function _wzFmtCedula(raw){
+  if(raw==null) return '';
+  var s = String(raw).toUpperCase().replace(/\s+/g,'');
+  // Remover todo excepto letras válidas, dígitos y guión
+  var prefixMatch = s.match(/^([VEJGP])/);
+  var digits = s.replace(/[^0-9]/g,'');
+  if(!digits) return '';
+  var prefix = prefixMatch ? prefixMatch[1] : 'V';
+  return prefix + '-' + digits;
+}
+
+function _wzCedulaInput(ev){
+  var el = ev && ev.target ? ev.target : ev;
+  if(!el) return;
+  var pos = el.selectionStart;
+  var prev = el.value;
+  var next = _wzFmtCedula(prev);
+  if(next !== prev){
+    el.value = next;
+    // Mover cursor al final (simple, evita saltos raros)
+    try{ el.setSelectionRange(next.length, next.length); }catch(_e){}
+  }
+}
+
 function _wzSafeFileName(name){
   return String(name||'archivo').replace(/[^a-zA-Z0-9._-]+/g,'_');
 }
@@ -8191,7 +8456,7 @@ function _wzValidar(){
   // Guardar valores antes de avanzar
   if(s===1){
     WZ.clienteSel = g('wz_cliente_sel');
-    WZ.nom = g('wz_nom'); WZ.ci = g('wz_ci'); WZ.tel = g('wz_tel');
+    WZ.nom = g('wz_nom'); WZ.ci = _wzFmtCedula(g('wz_ci')); WZ.tel = g('wz_tel');
     WZ.wa = g('wz_wa'); WZ.email = g('wz_email'); WZ.ciudad = g('wz_ciudad');
     WZ.emp = g('wz_emp'); WZ.ant = g('wz_ant');
     WZ.ing = parseFloat((document.getElementById('wz_ing')||{}).value)||0;
