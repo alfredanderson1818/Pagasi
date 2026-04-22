@@ -15654,8 +15654,8 @@ window.addEventListener('resize', function(){
   if (deskBar) deskBar.style.display = isMob ? 'none' : 'flex';
 });
 
+setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.isArray(S.creds)) syncTodosEstadosClientes(); }catch(e){} }, 1200);
+
 </script>
 </body>
 </html>
-
-setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.isArray(S.creds)) syncTodosEstadosClientes(); }catch(e){} }, 1200);
