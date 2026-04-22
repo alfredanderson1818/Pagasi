@@ -3303,6 +3303,21 @@ var DB = {
       }
       S.motos       = mergeMotosPreferLocal(m.map(mapMoto), motosCacheLocal);
       saveMotosCache(S.motos);
+      // SANEAR score_indexa corrupto (objeto guardado completo en lugar de número)
+      cl.forEach(function(cli){
+        if(!cli) return;
+        var sr = cli.score_indexa;
+        if(sr && typeof sr === 'object' && sr !== null){
+          // Rescatar el total del objeto
+          var t = parseFloat(sr.total || 0);
+          cli.score_indexa = (t >= 300 && t <= 850) ? t : 0;
+          cli._scoreFueCorrupto = true;  // marcar para recalcular después
+        } else {
+          var n = parseFloat(sr);
+          if(isNaN(n) || n < 300 || n > 850) cli.score_indexa = 0;
+          else cli.score_indexa = n;
+        }
+      });
       S.clientes    = cl;
       S.creds       = cr.map(mapCred);
       S.pagos       = p.map(mapPago);
@@ -4250,7 +4265,11 @@ function renderClienteList(q=''){
       const credsCli=S.creds.filter(x=>!x.eliminado&&x.cli===c.nombre);
       const activo=credsCli.find(x=>x.estado==='activo');
       const scRaw=c.score_indexa;
-      const sc = (scRaw && typeof scRaw === 'object') ? (scRaw.total||0) : (parseFloat(scRaw)||0);
+      var scNum;
+      if(scRaw && typeof scRaw === 'object' && scRaw !== null) scNum = parseFloat(scRaw.total||0);
+      else scNum = parseFloat(scRaw)||0;
+      if(isNaN(scNum) || scNum < 300 || scNum > 850) scNum = 0;
+      const sc = scNum;
       const scoreCol=sc>=625?'var(--green)':sc>=450?'var(--amber)':'var(--red)';
       return`<tr onclick="verCliente(\'${c.id}\')" style="cursor:pointer">
       <td><div style="display:flex;align-items:center;gap:9px">
