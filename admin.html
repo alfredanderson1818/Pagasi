@@ -1872,8 +1872,11 @@ tbody tr:hover td {
     width: 100% !important;
     max-width: 100% !important;
     height: 100vh !important;
+    height: 100dvh !important;
     max-height: 100vh !important;
+    max-height: 100dvh !important;
     min-height: 100vh !important;
+    min-height: 100dvh !important;
     margin: 0 !important;
     border-radius: 0 !important;
     display: flex !important;
@@ -2425,6 +2428,91 @@ tbody tr:hover td {
 
   /* Sin padding inferior (ya no hay bottom bar) */
   body, .app, #app-root { padding-bottom: 0 !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* ════════════════  MOBILE v4 · REFINAMIENTOS  ════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 820px) {
+
+  /* ══ MODAL con altura dinámica (iOS Safari) ══ */
+  /* 100vh en iOS incluye la barra de URL que aparece/desaparece, causando que el footer quede tapado.
+     100dvh = altura REAL disponible. Con fallback a 100vh si no soporta dvh. */
+  .modal, .modal.modal-lg, .modal-lg {
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+  }
+  #ov, .ov {
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+
+  /* Footer del modal: sticky real + respeta safe-area */
+  #mft, .m-ft, .modal-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 10 !important;
+    background: var(--surf) !important;
+    border-top: 1px solid var(--rim) !important;
+    padding: 10px 14px !important;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 12px)) !important;
+    flex-shrink: 0 !important;
+    margin-top: auto !important;
+  }
+  /* El body del modal debe tener padding-bottom para que el contenido no quede tapado */
+  #mbd, .m-bd, .modal-body {
+    padding-bottom: 24px !important;
+  }
+
+  /* ══ Cards de clientes: cerradas correctamente, sin espacios raros ══ */
+  .tw tr {
+    overflow: hidden !important;
+  }
+  /* Celda de acciones (última) — visible y compacta, sin espacio fantasma */
+  .tw tr td:last-child {
+    min-height: 38px;
+    padding: 8px 0 0 !important;
+  }
+  .tw tr td:last-child .btn {
+    padding: 7px 12px !important;
+    font-size: 11.5px !important;
+    min-height: 34px !important;
+  }
+
+  /* ══ Chips de filtro: estado activo MUY visible ══ */
+  .page > div > button.btn.btn-p,
+  .page button.btn-p {
+    background: var(--p1) !important;
+    color: #fff !important;
+    border-color: var(--p1) !important;
+    box-shadow: 0 2px 8px rgba(91,78,212,.25);
+    font-weight: 800 !important;
+  }
+  .page > div > button.btn.btn-g,
+  .page button.btn-g {
+    background: var(--surf) !important;
+    color: var(--ink2) !important;
+    border: 1px solid var(--rim) !important;
+    font-weight: 600 !important;
+  }
+  /* Al tocar (tap) — feedback inmediato */
+  .page button.btn:active {
+    transform: scale(.96);
+    transition: transform .08s ease;
+  }
+
+  /* Botones del filtro: más grandes, legibles, fáciles de tocar */
+  .page > div[style*="flex-wrap:wrap"] > button.btn-sm {
+    padding: 9px 14px !important;
+    font-size: 12px !important;
+    min-height: 36px !important;
+    border-radius: 20px !important;
+  }
 }
 
 </style>
@@ -3766,7 +3854,25 @@ function renderClienteList(q=''){
     if(!q) return true;
     return `${c.nombre} ${c.cedula} ${c.tel} ${c.ciudad} ${c.trabajo}`.toLowerCase().includes(String(q).toLowerCase());
   });
-  const filtered = base;
+  // Ordenar por prioridad: 1° En mora, 2° Activos, 3° Completados, 4° Leads, 5° Sin crédito
+  // Dentro de cada grupo, los más recientes primero
+  function clientePriority(c){
+    var creds = S.creds.filter(function(x){return !x.eliminado && x.cli===c.nombre;});
+    var hasMora = creds.some(function(x){return (x.mora||0)>0 && x.estado==='activo';});
+    var hasActivo = creds.some(function(x){return x.estado==='activo';});
+    var hasCompletado = creds.some(function(x){return x.estado==='completado';});
+    if(hasMora) return 0;       // 1° mora (más urgente)
+    if(hasActivo) return 1;     // 2° activos
+    if(hasCompletado) return 2; // 3° completados
+    if(creds.length===0) return 3; // 4° leads (sin créditos)
+    return 4;                   // 5° otros (recuperado, cancelado, etc.)
+  }
+  const filtered = base.slice().sort(function(a,b){
+    var pa = clientePriority(a), pb = clientePriority(b);
+    if(pa!==pb) return pa-pb;
+    // Dentro de misma prioridad, por fecha de creación descendente
+    return (b.createdAt||b.created||0) > (a.createdAt||a.created||0) ? 1 : -1;
+  });
   if(!filtered.length) return `<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q || (estadoFiltro==='todos' ? '' : estadoFiltro)}"</div></div>`;
   const PER=50; const pg=pgGet('clientes'); const start=(pg-1)*PER;
   const page=filtered.slice(start,start+PER);
@@ -6790,9 +6896,16 @@ users(){
 function setClienteEstadoFiltro(f){
   S.clienteEstadoFiltro=f||'todos';
   pgSet('clientes',1);
+  // Actualizar visualmente los chips inmediatamente
+  var chips = document.querySelectorAll('.page button[onclick^="setClienteEstadoFiltro"]');
+  chips.forEach(function(btn){
+    var m = btn.getAttribute('onclick').match(/setClienteEstadoFiltro\('([^']+)'\)/);
+    var val = m ? m[1] : '';
+    btn.classList.remove('btn-p','btn-g');
+    btn.classList.add(val===S.clienteEstadoFiltro ? 'btn-p' : 'btn-g');
+  });
   const list=$('clienteList');
   if(list) list.innerHTML=renderClienteList(($('clienteQ')&&$('clienteQ').value)||'');
-  if(S.page==='clientes') render();
 }
 function liveSearchCliente(q){
   pgSet('clientes',1);
