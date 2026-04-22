@@ -2920,7 +2920,7 @@ function verCliente(id){
     ${c.emergencia?`<div class="detail-item" style="margin-bottom:12px"><div class="detail-lbl">Contacto de emergencia</div><div class="detail-val" style="font-size:12.5px;margin-top:4px">${c.emergencia}</div></div>`:''}
     ${c.notas?`<div class="detail-item" style="margin-bottom:14px"><div class="detail-lbl">Notas</div><div style="font-size:12.5px;color:var(--ink2);margin-top:4px">${c.notas}</div></div>`:''}
     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin:14px 0 9px">Documentos del Expediente (${Array.isArray(c.documentos)?c.documentos.length:0})</div>
-    ${_renderCliDocManager(c)}
+    ${Array.isArray(c.documentos)&&c.documentos.length?`<div class="lst">${c.documentos.map(function(d){return `<div class="li"><div class="li-ic" style="background:var(--gs)">${(_wzDocDefs[d.id]&&_wzDocDefs[d.id].icon)||'📎'}</div><div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">${d.label||_wzDocLabel(d.id)||'Documento'}</div><div class="tds" style="font-size:10px">${d.name||'Archivo'}${d.uploadedAt?` · ${fmtFechaHora(d.uploadedAt)}`:''}</div></div><div><a class="btn btn-xs btn-g" href="${d.url}" target="_blank" rel="noopener">Abrir</a></div></div>`;}).join('')}</div>`:`<div class="detail-item" style="margin-bottom:14px"><div style="font-size:12px;color:var(--ink3)">Aún no hay documentos cargados en este cliente.</div><div style="font-size:11px;color:var(--ink3);margin-top:4px">Pulsa <b>Editar</b> para subir cédula, financiamiento, documentos de la moto o pagos.</div></div>`}
 
     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:9px">Historial de Financiamientos (${creditos.length})</div>
     ${creditos.length?`<div class="lst" style="max-height:none">${creditos.map(function(cr){
@@ -6671,78 +6671,6 @@ function _wzUpdateDocCount(){
     else if(n>=3){tag.textContent='Parcial ('+n+'/'+total+')';tag.style.background='var(--ambers)';tag.style.color='var(--amber)';}
     else{tag.textContent='⏳ Pendiente';tag.style.background='var(--surf2)';tag.style.color='var(--ink3)';}
   }
-}
-
-function _renderCliDocManager(c){
-  var docs=(c&&Array.isArray(c.documentos))?c.documentos:[];
-  var docsMap={};
-  docs.forEach(function(d){ if(d&&d.id) docsMap[d.id]=d; });
-  var groups=[]; var byGroup={};
-  Object.keys(_wzDocDefs).forEach(function(id){
-    var d=_wzDocDefs[id]||{}; var g=d.group||'Documentos';
-    if(!byGroup[g]){ byGroup[g]=[]; groups.push(g); }
-    byGroup[g].push({id:id,def:d,meta:docsMap[id]||null});
-  });
-  var docsHtml = docs.length
-    ? '<div class="lst" style="margin-bottom:12px">'+docs.map(function(d){ return '<div class="li"><div class="li-ic" style="background:var(--gs)">'+(((_wzDocDefs[d.id]||{}).icon)||'📎')+'</div><div style="flex:1"><div style="font-weight:700;color:var(--ink);font-size:12px">'+(d.label||_wzDocLabel(d.id)||'Documento')+'</div><div class="tds" style="font-size:10px">'+(d.name||'Archivo')+(d.uploadedAt?(' · '+fmtFechaHora(d.uploadedAt)):'')+'</div></div><div><a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener">Abrir</a></div></div>'; }).join('')+'</div>'
-    : '<div class="detail-item" style="margin-bottom:12px"><div style="font-size:12px;color:var(--ink3)">Aún no hay documentos cargados en este cliente.</div><div style="font-size:11px;color:var(--ink3);margin-top:4px">Puedes cargarlos aquí mismo por grupo y por tipo de documento.</div></div>';
-  var uploadHtml = '<div style="background:rgba(91,78,212,.04);border:1px solid var(--rim2);border-radius:12px;padding:12px">'
-    +'<div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:6px">Cargar documentos</div>'
-    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:10px">Selecciona el tipo exacto y sube foto o PDF. Se guarda de inmediato en este cliente.</div>'
-    + groups.map(function(g){
-      return '<div style="margin-top:6px">'
-        +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink3);margin:10px 0 7px">'+g+'</div>'
-        + byGroup[g].map(function(item){
-          var id=item.id, d=item.def||{}, m=item.meta;
-          return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1.5px solid '+(m?'rgba(6,176,106,.28)':'var(--rim)')+';position:relative;overflow:hidden;margin-bottom:8px">'
-            +'<input type="file" accept="'+(d.accept||'image/*,.pdf')+'" '+(d.capture?('capture="'+d.capture+'"'):'')+' onchange="_cliDocUpload(this,''+String(c.id).replace(/'/g,"\'")+'',''+id+'')" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">'
-            +'<div style="width:34px;height:34px;border-radius:9px;background:var(--surf);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(d.icon||'📎')+'</div>'
-            +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+(d.label||id)+'</div><div style="font-size:10.5px;color:'+(m?'var(--green)':'var(--ink3)')+';margin-top:2px">'+(m?((m.name||'Archivo')+(m.uploadedAt?(' · '+fmtFechaHora(m.uploadedAt)):'')):'Toca para subir')+'</div></div>'
-            +'<div style="font-size:17px;flex-shrink:0">'+(m?'✅':'📤')+'</div>'
-            +(m&&m.url?'<a class="btn btn-xs btn-g" href="'+m.url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">Abrir</a>':'')
-            +'</div>';
-        }).join('')
-        +'</div>';
-    }).join('')
-    +'</div>';
-  return docsHtml + uploadHtml;
-}
-
-function _cliDocUpload(input, clienteId, docId){
-  var file=input&&input.files&&input.files[0]; if(!file)return;
-  if(!storage || typeof storage.ref!=='function'){
-    toast('Firebase Storage no está disponible para guardar documentos','error');
-    return;
-  }
-  var cliId=String(clienteId||'').trim();
-  if(!cliId){ toast('Cliente inválido','error'); return; }
-  var def=_wzDocDefs[docId]||{};
-  var safeName=_wzSafeFileName(file.name||('documento_'+docId));
-  var filePath='clientes/'+cliId+'/documentos/'+docId+'_'+Date.now()+'_'+safeName;
-  toast('Subiendo documento...','success');
-  var ref=storage.ref().child(filePath);
-  ref.put(file,{contentType:file.type||'application/octet-stream',customMetadata:{docId:docId,docLabel:_wzDocLabel(docId),clienteId:cliId}})
-    .then(function(snapshot){ return snapshot.ref.getDownloadURL(); })
-    .then(function(url){
-      var c=S.clientes.find(function(x){ return String(x.id)===String(cliId); });
-      if(!c) throw new Error('Cliente no encontrado');
-      var docs=Array.isArray(c.documentos)?c.documentos.slice():[];
-      var meta={ id:docId, label:_wzDocLabel(docId), name:file.name||safeName, url:url, path:filePath, type:file.type||'', size:file.size||0, uploadedAt:new Date().toISOString(), group:def.group||'' };
-      var idx=docs.findIndex(function(d){ return d&&d.id===docId; });
-      if(idx>=0) docs[idx]=meta; else docs.push(meta);
-      c.documentos=docs;
-      c.docs_count=docs.length;
-      return db.collection('clientes').doc(String(cliId)).set({ id:String(cliId), documentos:docs, docs_count:docs.length, editadoEn:new Date().toISOString(), editadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin', editadoPorUid:(S.currentUser&&S.currentUser.uid)||'' }, {merge:true}).then(function(){
-        saveLS();
-        toast('Documento guardado','success');
-        verCliente(cliId);
-      });
-    })
-    .catch(function(err){
-      console.warn('cliDocUpload error:', err);
-      toast('No se pudo guardar el documento','error');
-    })
-    .finally(function(){ try{ input.value=''; }catch(_e){} });
 }
 
 // ── Motor de score (actualizado con todos los campos nuevos) ──
