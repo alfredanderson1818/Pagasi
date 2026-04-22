@@ -2853,6 +2853,37 @@ if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join(
 // ══════════════════════════════════════════
 // CLIENTE DETAIL + SEARCH
 // ══════════════════════════════════════════
+function getCreditosCliente(c){
+  return (S.creds||[]).filter(function(x){
+    if(x.eliminado) return false;
+    if(c && x.cliId!=null && String(x.cliId)===String(c.id)) return true;
+    return (x.cli||'')===((c&&c.nombre)||'');
+  });
+}
+function getClienteEstados(c){
+  var credsCli=getCreditosCliente(c);
+  var hasActivo=credsCli.some(function(x){ return x.estado==='activo' || x.estado==='mora'; });
+  var hasMora=credsCli.some(function(x){ return x.estado==='mora' || ((x.estado==='activo'||x.estado==='mora') && (parseInt(x.mora||0,10)>0)); });
+  var hasHistorial=credsCli.length>0;
+  var estados=[];
+  if(!hasActivo && !hasHistorial){ estados.push('lead'); }
+  if(hasActivo){ estados.push('activo'); }
+  if(hasMora){ estados.push('mora'); }
+  if(!hasActivo && hasHistorial){ estados.push('completado'); }
+  return {estados:estados, creds:credsCli};
+}
+function clienteMatchesFiltro(c, filtro){
+  filtro=filtro||'todos';
+  if(filtro==='todos') return true;
+  var info=getClienteEstados(c).estados;
+  return info.indexOf(filtro)>=0;
+}
+function clienteBadgesHTML(c){
+  var estados=getClienteEstados(c).estados;
+  if(!estados.length) estados=['lead'];
+  var labels={lead:'Lead',activo:'Activo',mora:'En mora',completado:'Completado'};
+  return estados.map(function(s){ return '<span class="bdg '+sbg(s)+'">'+labels[s]+'</span>'; }).join(' ');
+}
 function renderClienteList(q=''){
   const filtered = q?S.clientes.filter(c=>!c.eliminado&&`${c.nombre} ${c.cedula} ${c.tel} ${c.ciudad} ${c.trabajo}`.toLowerCase().includes(q.toLowerCase())):S.clientes.filter(c=>!c.eliminado);
   if(!filtered.length) return `<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q}"</div></div>`;
@@ -3576,12 +3607,17 @@ dash(){
 },
 
 clientes(){
+  const estado=S.clienteEstadoFiltro||'todos';
+  const chips=[['todos','Todos'],['lead','Leads'],['activo','Activos'],['mora','En mora'],['completado','Completados']];
   return`<div class="page">
-  <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap">
+  <div style="display:flex;gap:9px;margin-bottom:10px;flex-wrap:wrap">
     <div class="srch" style="flex:1"><span class="srch-i">◆</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
     <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
   </div>
-  <div id="clienteList">${renderClienteList()}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    ${chips.map(function(ch){ return `<button class="btn btn-sm ${estado===ch[0]?'btn-p':'btn-g'}" onclick="setClienteEstadoFiltro('${ch[0]}')">${ch[1]}</button>`; }).join('')}
+  </div>
+  <div id="clienteList">${renderClienteList(($('clienteQ')&&$('clienteQ').value)||'')}</div>
   </div>`;
 },
 
@@ -4383,7 +4419,7 @@ notif(){
     <div class="ch" style="border-bottom:2px solid var(--rim);padding-bottom:10px;margin-bottom:14px">
       <div>
         <div class="ct" style="font-size:14px">Centro de Notificaciones</div>
-        <div style="font-size:11px;color:var(--ink3)">Envie mensajes a sus clientes via WhatsApp o portapapeles</div>
+        <div style="font-size:11px;color:var(--ink3)">Flujo WhatsApp ordenado para leads y clientes activos</div>
       </div>
     </div>
     <div class="fgr c1" style="gap:12px">
@@ -4391,16 +4427,17 @@ notif(){
       <div class="fg">
         <label style="font-weight:700;font-size:12px;color:var(--ink2)">TIPO DE MENSAJE</label>
         <select class="fs" id="notif-tipo" style="margin-top:4px">
-          <option value="mora">Aviso de Mora</option>
-          <option value="mora_grave">Aviso Urgente de Mora (caso grave)</option>
-          <option value="cuota">Recordatorio de Cuota</option>
-          <option value="confirmado">Pago Recibido</option>
-          <option value="cuenta">Estado de Cuenta Completo</option>
-          <option value="acuerdo">Confirmacion de Acuerdo de Pago</option>
-          <option value="bienvenida">Bienvenida / Activacion de Cuenta</option>
-          <option value="liquidacion">Oferta de Liquidacion Anticipada</option>
-          <option value="vencimiento">Aviso de Vencimiento de Contrato</option>
-          <option value="custom">Mensaje Personalizado</option>
+          <option value="lead_bienvenida">1. Bienvenida Lead (dejó sus datos)</option>
+          <option value="bienvenida_activo">2. Bienvenida Cliente Activo (con cuenta)</option>
+          <option value="cuota">3. Recordatorio de Cuota</option>
+          <option value="confirmado">4. Pago Recibido</option>
+          <option value="cuenta">5. Estado de Cuenta Completo</option>
+          <option value="acuerdo">6. Confirmación de Acuerdo de Pago</option>
+          <option value="mora">7. Aviso de Mora</option>
+          <option value="mora_grave">8. Aviso Urgente de Mora</option>
+          <option value="liquidacion">9. Oferta de Liquidación Anticipada</option>
+          <option value="vencimiento">10. Aviso de Vencimiento de Contrato</option>
+          <option value="custom">11. Mensaje Personalizado</option>
         </select>
         <div id="notif-tipo-desc" style="margin-top:5px;font-size:11px;color:var(--ink3);padding:6px 8px;background:var(--surf2);border-radius:6px;border-left:3px solid var(--p1)">
           Incluye dias de mora, N° de cuenta, cuota y saldo pendiente.
@@ -4410,26 +4447,47 @@ notif(){
       <div class="fg">
         <label style="font-weight:700;font-size:12px;color:var(--ink2)">CANAL DE ENVIO</label>
         <select class="fs" id="notif-canal" style="margin-top:4px">
-          <option value="whatsapp">WhatsApp (abre chat directo)</option>
-          <option value="sms">Copiar para SMS</option>
-          <option value="clipboard">Copiar al portapapeles</option>
+          <option value="whatsapp">WhatsApp (único canal activo)</option>
         </select>
+        <div style="margin-top:5px;font-size:11px;color:var(--ink3);padding:6px 8px;background:var(--greens);border-radius:6px;border-left:3px solid #25D366">
+          Por ahora los envíos saldrán solo por WhatsApp.
+        </div>
       </div>
 
       <div class="fg">
         <label style="font-weight:700;font-size:12px;color:var(--ink2)">DESTINATARIOS</label>
         <select class="fs" id="notif-dest" style="margin-top:4px">
+          <option value="leads">Leads sin cuenta activa</option>
+          <option value="activos">Clientes activos con cuenta</option>
+          <option value="proximas">Clientes con cuota esta semana (${proximasCuotas.length})</option>
           <option value="mora">Clientes en mora (${moraClientes.length})</option>
-          <option value="proximas">Cuotas esta semana (${proximasCuotas.length})</option>
-          <option value="todos">Todos los clientes activos</option>
-          <option value="especifico">Cliente especifico</option>
+          <option value="especifico">Cliente específico</option>
         </select>
+        <div style="margin-top:5px;font-size:11px;color:var(--ink3)">Elige primero a quién le vas a escribir en el flujo real de WhatsApp.</div>
       </div>
 
       <div class="fg" id="notif-especifico-wrap" style="display:none">
         <label style="font-weight:700;font-size:12px;color:var(--ink2)">SELECCIONAR CLIENTE</label>
         <select class="fs" id="notif-cliente-sel" style="margin-top:4px">
-          ${S.clientes.filter(c=>!c.eliminado).map(c=>`<option value="${c.id}">${c.nombre} — ${c.tel||'sin tel'}</option>`).join('')}
+          ${(function(){
+            var activos=(S.clientes||[]).filter(function(c){
+              if(c.eliminado) return false;
+              return (S.creds||[]).some(function(cr){ return !cr.eliminado && cr.estado==='activo' && ((cr.cliId&&String(cr.cliId)===String(c.id)) || cr.cli===c.nombre); });
+            });
+            var leads=(S.clientes||[]).filter(function(c){
+              if(c.eliminado) return false;
+              return !(S.creds||[]).some(function(cr){ return !cr.eliminado && cr.estado==='activo' && ((cr.cliId&&String(cr.cliId)===String(c.id)) || cr.cli===c.nombre); });
+            });
+            var html='';
+            if(activos.length) html+='<optgroup label="Clientes activos">'+activos.map(function(c){
+              var cr=(S.creds||[]).find(function(x){ return !x.eliminado && x.estado==='activo' && ((x.cliId&&String(x.cliId)===String(c.id)) || x.cli===c.nombre); });
+              return '<option value="'+c.id+'">'+c.nombre+' — '+(cr&&cr.id?cr.id:'sin cuenta')+' — '+(c.tel||'sin tel')+'</option>';
+            }).join('')+'</optgroup>';
+            if(leads.length) html+='<optgroup label="Leads / sin cuenta activa">'+leads.map(function(c){
+              return '<option value="'+c.id+'">'+c.nombre+' — lead — '+(c.tel||'sin tel')+'</option>';
+            }).join('')+'</optgroup>';
+            return html;
+          })()}
         </select>
       </div>
 
@@ -4483,6 +4541,7 @@ notif(){
               <div style="font-size:12px;font-weight:800;color:var(--ink)">${n.tipo}</div>
               <div style="font-size:11px;color:var(--ink3);margin-top:2px">${n.dest} — ${n.cantidad} mensaje${n.cantidad!==1?'s':''} — ${n.canal}</div>
               <div style="font-size:10.5px;color:var(--ink3)">${n.fecha}</div>
+              ${n.mensaje?`<div style="margin-top:6px;padding:8px 10px;background:var(--surf2);border:1px solid var(--rim);border-radius:8px;font-size:11px;white-space:pre-wrap;line-height:1.45;color:var(--ink)">${String(n.mensaje).replace(/</g,'&lt;')}</div>`:''}
             </div>
             <span class="bdg b-g" style="align-self:flex-start">enviado</span>
           </div>`).join('')
@@ -5186,6 +5245,13 @@ users(){
 // ══════════════════════════════════════════
 // LIVE SEARCH CLIENTES
 // ══════════════════════════════════════════
+function setClienteEstadoFiltro(f){
+  S.clienteEstadoFiltro=f||'todos';
+  pgSet('clientes',1);
+  const list=$('clienteList');
+  if(list) list.innerHTML=renderClienteList(($('clienteQ')&&$('clienteQ').value)||'');
+  if(S.page==='clientes') render();
+}
 function liveSearchCliente(q){
   pgSet('clientes',1);
   const list=$('clienteList');
@@ -11172,6 +11238,7 @@ function renderHistorialNotificaciones(){
       +'<div style="font-size:12px;font-weight:800;color:var(--ink)">'+n.tipo+'</div>'
       +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+n.dest+' — '+n.cantidad+' mensaje'+(n.cantidad!==1?'s':'')+' — '+n.canal+'</div>'
       +'<div style="font-size:10.5px;color:var(--ink3)">'+n.fecha+'</div>'
+      +(n.mensaje?'<div style="margin-top:6px;padding:8px 10px;background:var(--surf2);border:1px solid var(--rim);border-radius:8px;font-size:11px;white-space:pre-wrap;line-height:1.45;color:var(--ink)">'+String(n.mensaje).replace(/</g,'&lt;')+'</div>':'')
       +'</div>'
       +'<span class="bdg b-g" style="align-self:flex-start">enviado</span></div>';
   }).join('');
@@ -11181,14 +11248,15 @@ function actualizarTipoDesc(){
   var desc=$('notif-tipo-desc');
   var customWrap=$('notif-custom-wrap');
   var descs={
+    lead_bienvenida:'Primer mensaje al lead que nos dejó sus datos. No exige cuenta activa ni número de contrato.',
+    bienvenida_activo:'Mensaje de bienvenida para clientes ya activos. Incluye cuenta, cuota, saldo y próxima fecha.',
     mora:        'Notifica el atraso con datos completos: cuenta, cuota N°, dias de mora, saldo pendiente y fecha de vencimiento.',
     mora_grave:  'Aviso de caracter urgente para cuentas con mora prolongada. Menciona inicio de proceso de recuperacion si no regulariza.',
     cuota:       'Recordatorio previo al vencimiento: cuota N°, monto, fecha de corte, saldo restante y total pagado.',
     confirmado:  'Confirma la recepcion del pago, actualiza el saldo pendiente y comunica la proxima fecha de vencimiento.',
     cuenta:      'Estado de cuenta completo: cuotas pagadas, restantes, porcentaje avanzado, saldo, mora y fecha fin de contrato.',
     acuerdo:     'Formaliza por escrito el acuerdo de pago acordado verbalmente con el cliente.',
-    bienvenida:  'Mensaje de activacion para clientes nuevos con todos los datos de su financiamiento y primera cuota.',
-    liquidacion: 'Ofrece al cliente la posibilidad de liquidar anticipadamente con informacion del saldo total.',
+        liquidacion: 'Ofrece al cliente la posibilidad de liquidar anticipadamente con informacion del saldo total.',
     vencimiento: 'Alerta cuando el contrato se acerca a su fecha final con cuotas pendientes.',
     custom:      'Redacte su propio mensaje. Variables disponibles: {nombre} {cuota} {mora} {modelo} {cuenta} {empresa} {saldo} {cuotaNum} {totalCuotas} {fechaProx}'
   };
@@ -11208,7 +11276,7 @@ function actualizarPreviewNotif(){
   if(wrap) wrap.style.display = dest==='especifico' ? 'block' : 'none';
   actualizarTipoDesc();
   var destinatarios = getDestinatariosNotif(dest);
-  var sampleD = destinatarios[0]||{nombre:'Cliente Ejemplo',cuota:15000,mora:5,modelo:'Moto 150cc',cred:'CRED-0001'};
+  var sampleD = destinatarios[0]||{nombre:'Cliente Ejemplo',tel:'04120000000',cuota:15000,mora:5,modelo:'Moto 150cc',cred:'CRED-0001'};
   var msg = buildMensajeNotif(tipo, sampleD);
   var preview = $('notif-preview');
   if(preview){
@@ -11226,54 +11294,71 @@ function actualizarPreviewNotif(){
 }
 
 function getDestinatariosNotif(dest){
-  // Helper: construye un destinatario completo con TODA la info que necesita buildMensajeNotif
-  function mkDest(cl, c){
-    cl = cl || {};
-    c = c || {};
-    return {
-      nombre: cl.nombre || c.cli || 'Cliente',
-      tel:    cl.tel || c.tel || '',
-      mora:   c.mora || 0,
-      cuota:  c.cuotaQ || c.cuota || 0,
-      modelo: c.modelo || '',
-      cred:   c.id || null     // ← CRÍTICO: sin esto buildMensajeNotif no puede hallar el crédito
-    };
-  }
-  // Helper: busca un cliente por nombre O por id (robusto ante datos inconsistentes)
   function findCliente(c){
-    if(c.cliId){
-      var byId = S.clientes.find(function(x){ return x.id===c.cliId; });
+    if(c && c.cliId!=null){
+      var byId=(S.clientes||[]).find(function(x){ return String(x.id)===String(c.cliId); });
       if(byId) return byId;
     }
-    return S.clientes.find(function(x){ return x.nombre===c.cli; }) || {};
+    return (S.clientes||[]).find(function(x){ return x.nombre===((c&&c.cli)||''); }) || {};
+  }
+  function activeCredForClient(cl){
+    return (S.creds||[]).find(function(cr){
+      return !cr.eliminado && cr.estado==='activo' && (((cr.cliId!=null) && String(cr.cliId)===String(cl.id)) || cr.cli===cl.nombre);
+    }) || (S.creds||[]).filter(function(cr){
+      return !cr.eliminado && (((cr.cliId!=null) && String(cr.cliId)===String(cl.id)) || cr.cli===cl.nombre);
+    }).sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); })[0] || null;
+  }
+  function mkDest(cl, c, extra){
+    cl = cl || {};
+    c = c || {};
+    extra = extra || {};
+    return {
+      nombre: cl.nombre || c.cli || 'Cliente',
+      tel: cl.tel || c.tel || '',
+      mora: c.mora || 0,
+      cuota: c.cuotaQ || c.cuota || 0,
+      modelo: c.modelo || extra.modelo || '',
+      cred: c.id || c.cuenta || extra.cred || '',
+      esLead: !!extra.esLead,
+      ciudad: cl.ciudad || '',
+      ingreso: cl.ing || cl.ingreso || 0,
+      totalCuotas: c.totalCuotas || 0
+    };
   }
 
   if(dest==='mora'){
-    return S.creds.filter(function(c){ return !c.eliminado && c.mora>0; }).map(function(c){
+    return (S.creds||[]).filter(function(c){ return !c.eliminado && c.estado==='activo' && (c.mora||0)>0; }).map(function(c){
       return mkDest(findCliente(c), c);
     });
   }
   if(dest==='proximas'){
-    return S.creds.filter(function(c){
+    return (S.creds||[]).filter(function(c){
       if(c.eliminado || c.estado!=='activo' || !c.fecha) return false;
-      var sig = new Date(new Date(c.fecha).getTime() + ((c.pagado+1)*15*24*60*60*1000));
+      var sig = new Date(new Date(c.fecha).getTime() + ((getCreditoCuotasPagadas(c)+1)*15*24*60*60*1000));
       var diff = Math.floor((sig - new Date())/(24*60*60*1000));
       return diff>=0 && diff<=7;
-    }).map(function(c){
+    }).map(function(c){ return mkDest(findCliente(c), c); });
+  }
+  if(dest==='leads'){
+    return (S.clientes||[]).filter(function(cl){
+      if(cl.eliminado) return false;
+      var cr=activeCredForClient(cl);
+      return !cr;
+    }).map(function(cl){ return mkDest(cl, {}, {esLead:true}); });
+  }
+  if(dest==='activos'){
+    return (S.creds||[]).filter(function(c){ return !c.eliminado && c.estado==='activo'; }).map(function(c){
       return mkDest(findCliente(c), c);
     });
   }
   if(dest==='especifico'){
-    var selId = parseInt(($('notif-cliente-sel')&&$('notif-cliente-sel').value)||0);
-    var cl = S.clientes.find(function(x){ return x.id===selId; });
+    var selId = String((($('notif-cliente-sel')&&$('notif-cliente-sel').value)||''));
+    var cl = (S.clientes||[]).find(function(x){ return String(x.id)===selId; });
     if(!cl) return [];
-    // Preferir crédito activo; si no hay, tomar el más reciente
-    var cred = S.creds.find(function(c){ return !c.eliminado && c.cli===cl.nombre && c.estado==='activo'; })
-            || S.creds.filter(function(c){ return !c.eliminado && c.cli===cl.nombre; }).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');})[0];
-    return [mkDest(cl, cred||{})];
+    var cred = activeCredForClient(cl);
+    return [mkDest(cl, cred||{}, {esLead:!cred})];
   }
-  // todos activos: un destinatario por cada crédito activo (no por cliente, porque un cliente podría tener varios)
-  return S.creds.filter(function(c){ return !c.eliminado && c.estado==='activo'; }).map(function(c){
+  return (S.creds||[]).filter(function(c){ return !c.eliminado && c.estado==='activo'; }).map(function(c){
     return mkDest(findCliente(c), c);
   });
 }
@@ -11283,7 +11368,7 @@ function buildMensajeNotif(tipo, d){
   var cuota  = d.cuota ? fmt(d.cuota) : '0,00';
   var mora   = d.mora  || 0;
   var modelo = d.modelo||'—';
-  var cred   = d.cred  || '—';
+  var cred   = d.cred  || d.cuenta || d.cuentaId || (d.esLead ? 'LEAD' : 'CUENTA ACTIVA');
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
   var cr = d.cred ? (S&&S.creds ? S.creds.find(function(x){return x.id===d.cred;}) : null) : null;
   // Usar helpers canónicos para que los números coincidan con dashboard/reportes/contabilidad
@@ -11436,19 +11521,41 @@ function buildMensajeNotif(tipo, d){
     ].filter(Boolean).join('\n');
   }
 
-  if(tipo==='bienvenida'){
+  if(tipo==='lead_bienvenida'){
+    return [
+      empresa.toUpperCase()+' — BIENVENIDO/A',
+      '',
+      'Hola '+nombre+', gracias por compartirnos tus datos con '+empresa+'.',
+      '',
+      'Ya recibimos tu solicitud y tu información quedó registrada correctamente. En breve nuestro equipo revisará tu perfil y te contactará por este mismo WhatsApp para indicarte los siguientes pasos.',
+      '',
+      'DATOS REGISTRADOS',
+      lineaSep,
+      'CLIENTE      : '+nombre,
+      d.tel ? 'WHATSAPP     : '+d.tel : '',
+      d.ciudad ? 'CIUDAD       : '+d.ciudad : '',
+      d.ingreso ? 'INGRESO REF. : '+fmt(d.ingreso) : '',
+      lineaSep,
+      '',
+      'IMPORTANTE: Este mensaje confirma la recepción de tus datos. Aún no tienes una cuenta de financiamiento activa.',
+      '',
+      empresa.toUpperCase()
+    ].filter(Boolean).join('\n');
+  }
+
+  if(tipo==='bienvenida_activo' || tipo==='bienvenida'){
     return [
       empresa.toUpperCase()+' — BIENVENIDO/A',
       '',
       'Estimado/a '+nombre+':',
       '',
-      'Nos complace darle la bienvenida como cliente de '+empresa+'. Su financiamiento ha sido activado exitosamente.',
+      'Nos complace darle la bienvenida como cliente activo de '+empresa+'. Su cuenta de financiamiento ya fue creada exitosamente.',
       '',
       bloqueHeader,
       '',
       'Su primera cuota de '+cuota+' vence el dia '+fechaProx+'. Recuerde que las cuotas son quincenales y su contrato tiene una duracion de '+Math.round(totalCuotas/2)+' meses ('+totalCuotas+' cuotas).',
       '',
-      'Para consultas sobre su cuenta, pagos o cualquier inquietud, comuniquese con nuestra oficina. Estamos para servirle.',
+      'Guarde este número de WhatsApp para consultas sobre su cuenta, pagos o cualquier inquietud. Estamos para servirle.',
       '',
       empresa.toUpperCase()
     ].filter(Boolean).join('\n');
@@ -11573,9 +11680,10 @@ function enviarNotificaciones(){
   cargarHistorialNotificaciones();
   if(!window._notifHistorial) window._notifHistorial=[];
   window._notifHistorial.unshift({
-    tipo:{mora:'Mora',mora_grave:'Mora Grave',cuota:'Cuota proxima',confirmado:'Pago recibido',cuenta:'Estado de cuenta',acuerdo:'Acuerdo de pago',bienvenida:'Bienvenida',liquidacion:'Liquidacion anticipada',vencimiento:'Vencimiento proximo',custom:'Personalizado'}[tipo]||tipo,
-    canal:canal, dest:dest,
+    tipo:{lead_bienvenida:'Bienvenida Lead',bienvenida_activo:'Bienvenida Cliente Activo',mora:'Mora',mora_grave:'Mora Grave',cuota:'Cuota próxima',confirmado:'Pago recibido',cuenta:'Estado de cuenta',acuerdo:'Acuerdo de pago',bienvenida:'Bienvenida Cliente Activo',liquidacion:'Liquidación anticipada',vencimiento:'Vencimiento próximo',custom:'Personalizado'}[tipo]||tipo,
+    canal:canal, dest:{leads:'Leads',activos:'Clientes activos',mora:'Clientes en mora',proximas:'Cuotas esta semana',especifico:'Cliente específico'}[dest]||dest,
     cantidad:destinatarios.length,
+    mensaje:buildMensajeNotif(tipo,destinatarios[0]||{}),
     fecha:new Date().toLocaleDateString('es-VE')
   });
   if(window._notifHistorial.length>100) window._notifHistorial=window._notifHistorial.slice(0,100);
