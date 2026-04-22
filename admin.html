@@ -3303,22 +3303,69 @@ var DB = {
       }
       S.motos       = mergeMotosPreferLocal(m.map(mapMoto), motosCacheLocal);
       saveMotosCache(S.motos);
-      // SANEAR score_indexa corrupto (objeto guardado completo en lugar de número)
+
+      // ══════ SANEAR score_indexa corrupto ══════
+      // En algunos clientes se guardó el objeto completo del score en lugar del número
+      var _scoreCorruptos = 0;
       cl.forEach(function(cli){
         if(!cli) return;
         var sr = cli.score_indexa;
+        // Caso 1: objeto → rescatar total/score/valor
         if(sr && typeof sr === 'object' && sr !== null){
-          // Rescatar el total del objeto
-          var t = parseFloat(sr.total || 0);
+          _scoreCorruptos++;
+          if(_scoreCorruptos <= 2) console.log('[SCORE CORRUPTO]', cli.nombre, 'tenía:', sr);
+          var t = parseFloat(sr.total || sr.score || sr.valor || sr.value || 0);
           cli.score_indexa = (t >= 300 && t <= 850) ? t : 0;
-          cli._scoreFueCorrupto = true;  // marcar para recalcular después
+          cli._scoreFueCorrupto = true;
         } else {
           var n = parseFloat(sr);
           if(isNaN(n) || n < 300 || n > 850) cli.score_indexa = 0;
           else cli.score_indexa = n;
         }
+
+        // Fallback: si no hay score pero hay ingreso, calcular uno estimado simple
+        if(!cli.score_indexa && cli.ingreso){
+          var ing = parseFloat(cli.ingreso) || 0;
+          var emp = (cli.trabajo || '').toLowerCase();
+          // Score base por ingreso (300 a 750 según rango)
+          var base = 300;
+          if(ing >= 2000) base = 720;
+          else if(ing >= 1000) base = 650;
+          else if(ing >= 500) base = 580;
+          else if(ing >= 300) base = 500;
+          else if(ing >= 150) base = 430;
+          else base = 380;
+          // Bonus/penalización por tipo de empleo
+          if(emp.indexOf('formal')>=0 || emp.indexOf('público')>=0 || emp.indexOf('publico')>=0) base += 40;
+          else if(emp.indexOf('informal')>=0 || emp.indexOf('indepen')>=0) base -= 20;
+          // Limitar 300-850
+          cli.score_indexa = Math.max(300, Math.min(850, base));
+          cli._scoreEstimado = true;
+        }
       });
+      if(_scoreCorruptos > 0){
+        console.log('[SCORE] Se sanearon '+_scoreCorruptos+' scores corruptos de Firestore');
+      }
+
       S.clientes    = cl;
+
+      // Persistir en background los scores saneados — sobrescribe el objeto corrupto en Firestore
+      setTimeout(function(){
+        if(!db) return;
+        var fixed = 0;
+        cl.forEach(function(cli){
+          if(cli._scoreFueCorrupto && cli.id){
+            delete cli._scoreFueCorrupto;
+            try {
+              db.collection('clientes').doc(String(cli.id)).update({
+                score_indexa: cli.score_indexa || 0,
+                score_saneado: new Date().toISOString()
+              }).then(function(){ fixed++; }).catch(function(){});
+            } catch(e){}
+          }
+        });
+        if(fixed>0) console.log('[SCORE] Persistidos '+fixed+' scores saneados en Firestore');
+      }, 1500);
       S.creds       = cr.map(mapCred);
       S.pagos       = p.map(mapPago);
       S.egresos     = e;
