@@ -8606,30 +8606,79 @@ function _cliDocUpload(input, clienteId, docId){
     var safeName = _wzSafeFileName(file.name || ('documento_'+docId));
     var filePath = 'clientes/'+cliId+'/documentos/'+docId+'_'+Date.now()+'_'+safeName;
     var ref = storage.ref().child(filePath);
-    ref.put(file, {contentType:file.type||'application/octet-stream', customMetadata:{docId:docId, docLabel:_wzDocLabel(docId), clienteId:cliId}})
-      .then(function(snap){ return snap.ref.getDownloadURL(); })
-      .then(function(url){
-        var meta = {
-          id:docId, label:_wzDocLabel(docId),
-          name:file.name||safeName, url:url, path:filePath,
-          type:file.type||'', size:file.size||0,
-          uploadedAt:new Date().toISOString(), group:def.group||'',
-          source:'firebase'
-        };
-        finalize(meta, 'firebase');
-      })
-      .catch(function(err){
-        console.error('Storage upload error:', err);
-        // Fallback a localStorage si el archivo es pequeño
-        if(file.size <= FILE_LIMIT_LOCAL){
-          toast('Storage falló, guardando localmente...','error');
-          _cliDocUploadLocal(file, cliId, docId, def, finalize);
-        } else {
-          toast('Error subiendo: '+(err.code||err.message||'fallo')+' · Archivo muy grande para local ('+Math.round(file.size/1024/1024)+'MB)','error');
-          if(label){ label.style.borderColor = 'var(--red)'; label.style.background = 'rgba(217,59,90,.08)'; }
+    var uploadCompleted = false;
+
+    // TIMEOUT de seguridad: si el upload no responde en 15s, asumimos que falló (CORS silencioso, red caída, etc)
+    var timeoutId = setTimeout(function(){
+      if(uploadCompleted) return;
+      uploadCompleted = true;
+      console.warn('Upload timeout (15s) — usando fallback local');
+      toast('Upload lento, guardando localmente...','info');
+      if(file.size <= FILE_LIMIT_LOCAL){
+        _cliDocUploadLocal(file, cliId, docId, def, finalize);
+      } else {
+        toast('Archivo muy grande para fallback local ('+Math.round(file.size/1024/1024)+'MB)','error');
+        if(label){ label.style.borderColor = 'var(--red)'; label.style.background = 'rgba(217,59,90,.08)'; }
+      }
+      if(input) input.value='';
+    }, 15000);
+
+    function handleUploadError(err){
+      if(uploadCompleted) return;
+      uploadCompleted = true;
+      clearTimeout(timeoutId);
+      console.error('Storage upload error:', err);
+      var errMsg = err && (err.code || err.message) || 'error desconocido';
+      // Detectar CORS específicamente
+      var isCors = /cors|preflight|access control|network/i.test(errMsg);
+      if(file.size <= FILE_LIMIT_LOCAL){
+        toast(isCors ? 'Firebase Storage no permite tu dominio (CORS). Guardando localmente...' : 'Storage falló: '+errMsg+'. Guardando local.','info');
+        _cliDocUploadLocal(file, cliId, docId, def, finalize);
+      } else {
+        toast('Error: '+errMsg+' · Archivo muy grande para local ('+Math.round(file.size/1024/1024)+'MB)','error');
+        if(label){ label.style.borderColor = 'var(--red)'; label.style.background = 'rgba(217,59,90,.08)'; }
+      }
+      if(input) input.value='';
+    }
+
+    function handleUploadSuccess(url){
+      if(uploadCompleted) return;
+      uploadCompleted = true;
+      clearTimeout(timeoutId);
+      var meta = {
+        id:docId, label:_wzDocLabel(docId),
+        name:file.name||safeName, url:url, path:filePath,
+        type:file.type||'', size:file.size||0,
+        uploadedAt:new Date().toISOString(), group:def.group||'',
+        source:'firebase'
+      };
+      finalize(meta, 'firebase');
+      if(input) input.value='';
+    }
+
+    try{
+      var task = ref.put(file, {contentType:file.type||'application/octet-stream', customMetadata:{docId:docId, docLabel:_wzDocLabel(docId), clienteId:cliId}});
+      // Usar .on() para capturar errores que .then() se come silenciosamente
+      task.on('state_changed',
+        function(snapshot){
+          // Progreso — actualizar label si queremos
+          if(label && !uploadCompleted){
+            var pct = snapshot.totalBytes > 0 ? Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0;
+            var statusDiv = label.querySelector('[data-doc-status]');
+            if(statusDiv) statusDiv.textContent = '⏳ Subiendo... '+pct+'%';
+          }
+        },
+        handleUploadError,
+        function(){
+          // completado — obtener URL
+          task.snapshot.ref.getDownloadURL()
+            .then(handleUploadSuccess)
+            .catch(handleUploadError);
         }
-      })
-      .finally(function(){ if(input) input.value=''; });
+      );
+    }catch(e){
+      handleUploadError(e);
+    }
   }
   // CAMINO 2: No hay Storage → localStorage directamente
   else {
