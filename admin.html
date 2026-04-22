@@ -2519,7 +2519,7 @@ tbody tr:hover td {
 /* ══════════  PÁGINA USUARIOS · estilos profesionales  ════════════════ */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
-/* Tabs de usuarios (al estilo iOS/moderno) */
+/* Tabs de usuarios */
 .us-tab {
   flex: 1;
   min-width: 100px;
@@ -2546,15 +2546,14 @@ tbody tr:hover td {
   box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 0 0 1px var(--rim);
 }
 
-/* Rows de usuarios — hover suave */
 .us-row:hover { background: var(--surf2) !important; }
 .us-row:last-child { border-bottom: none !important; }
 
-/* Panel lateral slide-in (tipo Notion/Linear) */
+/* ── PANEL LATERAL DE USUARIO ── */
 .user-panel {
   position: fixed;
   top: 0; right: 0; bottom: 0;
-  width: 420px;
+  width: 440px;
   max-width: 100%;
   background: var(--base);
   border-left: 1px solid var(--rim);
@@ -2582,6 +2581,240 @@ tbody tr:hover td {
   pointer-events: auto;
 }
 
+/* Hero del panel */
+.up-hero {
+  padding: 22px 22px 24px;
+  position: relative;
+  flex-shrink: 0;
+  color: #fff;
+}
+.up-hero * { color: inherit; }
+.up-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255,255,255,.2);
+  border: none;
+  color: #fff;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  transition: background .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.up-close:hover { background: rgba(255,255,255,.3); }
+.up-hero-row { display: flex; align-items: center; gap: 14px; padding-right: 40px; }
+.up-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 900;
+  border: 2px solid rgba(255,255,255,.35);
+  flex-shrink: 0;
+}
+.up-hero-info { flex: 1; min-width: 0; }
+.up-hero-name {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.up-mine-tag {
+  display: inline-block;
+  background: rgba(255,255,255,.25);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.up-hero-email {
+  font-size: 12px;
+  opacity: .9;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.up-hero-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,.22);
+  padding: 4px 11px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+.up-role-icon { font-size: 10px; font-weight: 900; }
+
+/* Body scrolleable */
+.up-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Stats cards */
+.up-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.up-stat {
+  background: var(--surf2);
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--rim);
+}
+.up-stat-l {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--ink3);
+  letter-spacing: .5px;
+  margin-bottom: 4px;
+}
+.up-stat-v {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+/* Section wrapper */
+.up-section { margin-bottom: 18px; }
+.up-section:last-child { margin-bottom: 0; }
+.up-section-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  color: var(--ink3);
+  margin-bottom: 8px;
+}
+
+/* Rol card */
+.up-rol-card {
+  padding: 12px 14px;
+  border-radius: 9px;
+}
+.up-rol-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 5px;
+}
+.up-rol-desc {
+  font-size: 12px;
+  color: var(--ink2);
+  line-height: 1.5;
+}
+
+/* Action buttons */
+.up-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.up-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  background: var(--surf);
+  border: 1px solid var(--rim);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: var(--f);
+  transition: all .15s ease;
+  color: var(--ink);
+}
+.up-action-btn:hover {
+  background: var(--surf2);
+  border-color: var(--p1);
+  transform: translateY(-1px);
+}
+.up-action-ic {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  background: var(--gs);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.up-action-tx {
+  flex: 1;
+  min-width: 0;
+}
+.up-action-t {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.up-action-d {
+  font-size: 10.5px;
+  color: var(--ink3);
+  margin-top: 2px;
+  line-height: 1.25;
+}
+
+/* Permisos grid */
+.up-grp { margin-bottom: 12px; }
+.up-grp-l {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink3);
+  margin-bottom: 5px;
+}
+.up-perm {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 11px;
+  background: var(--surf2);
+  border-radius: 7px;
+  margin-bottom: 3px;
+  font-size: 12px;
+  color: var(--ink);
+  transition: background .12s;
+}
+.up-perm.has { background: var(--surf); border: 1px solid var(--rim); }
+.up-perm-y { font-weight: 900; font-size: 14px; }
+.up-perm-n { color: var(--ink3); font-size: 13px; }
+
+/* Footer sticky */
+.up-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--rim);
+  background: var(--surf);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* Mobile: panel full-width */
 @media (max-width: 820px) {
   .user-panel {
@@ -2589,15 +2822,18 @@ tbody tr:hover td {
     max-width: 100%;
     border-left: none;
   }
+  .up-hero { padding: 18px 16px 20px; }
+  .up-body { padding: 14px 14px; }
+  .up-stats { grid-template-columns: 1fr 1fr; }
   .us-tab {
     font-size: 11.5px !important;
     padding: 9px 10px !important;
     min-width: auto !important;
   }
-  .us-tab > span:first-child { display: none; } /* ocultar emojis en mobile para que entre */
+  .us-tab > span:first-child { display: none; }
   .us-meta { min-width: auto !important; font-size: 10px !important; }
   .us-row { padding: 10px 12px !important; gap: 9px !important; }
-  .us-row > div:nth-child(3) { /* role badge */
+  .us-row > div:nth-child(3) {
     font-size: 10px !important;
     padding: 3px 7px !important;
   }
@@ -2606,9 +2842,7 @@ tbody tr:hover td {
 @media (max-width: 380px) {
   .us-tab { font-size: 10.5px !important; padding: 8px 6px !important; }
   .us-row .us-meta { display: none !important; }
-  .us-row > div:nth-child(3) { /* role badge queda solo el ícono */
-    font-size: 9px !important;
-  }
+  .up-stats { grid-template-columns: 1fr; }
 }
 
 </style>
@@ -3324,6 +3558,29 @@ const S = {
 
 const $=id=>document.getElementById(id);
 const fmt=n=>'$'+parseFloat(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// Formatea una fecha ISO o timestamp como "DD/MM/YYYY HH:MM"
+function fmtFechaHora(iso){
+  if(!iso) return '';
+  try{
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return '';
+    var dd = String(d.getDate()).padStart(2,'0');
+    var mm = String(d.getMonth()+1).padStart(2,'0');
+    var yy = d.getFullYear();
+    var hh = String(d.getHours()).padStart(2,'0');
+    var mn = String(d.getMinutes()).padStart(2,'0');
+    return dd+'/'+mm+'/'+yy+' '+hh+':'+mn;
+  }catch(e){ return ''; }
+}
+function fmtFecha(iso){
+  if(!iso) return '';
+  try{
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return '';
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  }catch(e){ return ''; }
+}
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
 const PGL={dash:'Dashboard',clientes:'Clientes',motos:'Motocicletas',creditos:'Financiamientos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Reportes',cuentas:'Cuentas',conta:'Contabilidad',plan:'Plan & Precios',config:'Configuración',users:'Usuarios'};
@@ -3992,7 +4249,8 @@ function renderClienteList(q=''){
     <tbody>${page.map(c=>{
       const credsCli=S.creds.filter(x=>!x.eliminado&&x.cli===c.nombre);
       const activo=credsCli.find(x=>x.estado==='activo');
-      const sc=c.score_indexa;
+      const scRaw=c.score_indexa;
+      const sc = (scRaw && typeof scRaw === 'object') ? (scRaw.total||0) : (parseFloat(scRaw)||0);
       const scoreCol=sc>=625?'var(--green)':sc>=450?'var(--amber)':'var(--red)';
       return`<tr onclick="verCliente(\'${c.id}\')" style="cursor:pointer">
       <td><div style="display:flex;align-items:center;gap:9px">
@@ -4051,7 +4309,8 @@ function verCliente(id){
   var cuotaActivaTotal = creditosActivos.reduce(function(a,cr){return a+parseFloat(cr.cuotaQ||cr.cuota||0);},0);
   var ratioCuotaIng = ingreso>0 ? Math.round((cuotaActivaTotal*2/ingreso)*100) : 0; // 2 cuotas al mes
 
-  var score = c.score_indexa||0;
+  var scoreRaw = c.score_indexa;
+  var score = (scoreRaw && typeof scoreRaw === 'object') ? (scoreRaw.total||0) : (parseFloat(scoreRaw)||0);
   var scoreColor = score>=625?'#5dd8a0':score>=450?'#ffcc66':score>=300?'#ff9a7b':'#ffffff';
   var scoreLabel = score>=625?'EXCELENTE':score>=450?'BUENO':score>=300?'REGULAR':'BAJO';
 
@@ -4132,16 +4391,20 @@ function verCliente(id){
     +     '<div class="cf-hero-sub">'+esc(c.cedula||'Sin CI')+(c.ciudad?' · '+esc(c.ciudad):'')+(c.tel?' · '+esc(c.tel):'')+'</div>'
     +     (badgesHero?'<div class="cf-hero-badges">'+badgesHero+'</div>':'')
     +   '</div>'
-    +   (score>0?'<div class="cf-score">'
+    +   (score>0?'<div class="cf-score" onclick="recalcularScoreClienteYRefrescar(\''+c.id+'\')" title="Click para recalcular" style="cursor:pointer">'
     +     '<div class="cf-score-v" style="color:'+scoreColor+'">'+score+'</div>'
     +     '<div class="cf-score-max" style="color:'+scoreColor+'">/ 850</div>'
-    +     '<div class="cf-score-l">'+scoreLabel+'</div>'
-    +   '</div>':'')
+    +     '<div class="cf-score-l">'+scoreLabel+' ↻</div>'
+    +   '</div>':'<div class="cf-score" onclick="recalcularScoreClienteYRefrescar(\''+c.id+'\')" title="Click para calcular" style="cursor:pointer">'
+    +     '<div class="cf-score-v" style="color:var(--ink3)">—</div>'
+    +     '<div class="cf-score-l">Calcular ↻</div>'
+    +   '</div>')
     + '</div>'
     + '<div class="cf-action-btns" style="margin-top:12px">'
     +   (telWA?'<a class="cf-action is-wa" href="https://wa.me/58'+telWA+'" target="_blank" onclick="event.stopPropagation()">💬 WhatsApp</a>':'')
     +   (c.tel?'<a class="cf-action" href="tel:'+esc(c.tel)+'" onclick="event.stopPropagation()">📞 Llamar</a>':'')
     +   (c.email?'<a class="cf-action" href="mailto:'+esc(c.email)+'" onclick="event.stopPropagation()">✉️ Email</a>':'')
+    +   (creditosActivos.length ? '<button class="cf-action" style="background:var(--p1);color:#fff;border-color:var(--p1);font-weight:800" onclick="closeM();openPagoRapido(\''+creditosActivos[0].id+'\')">💰 Registrar pago</button>' : '')
     + '</div>'
     + '</div>';
 
@@ -5134,7 +5397,7 @@ clientes(){
   return`<div class="page">
   <div style="display:flex;gap:9px;margin-bottom:10px;flex-wrap:wrap">
     <div class="srch" style="flex:1"><span class="srch-i">◆</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
-    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
+    <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="recalcularScoresYRecargar()" title="Recalcular score de todos los clientes con la configuración actual">↻ Scores</button><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
   </div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
     ${chips.map(function(ch){ return `<button class="btn btn-sm ${estado===ch[0]?'btn-p':'btn-g'}" onclick="setClienteEstadoFiltro('${ch[0]}')">${ch[1]}</button>`; }).join('')}
@@ -6878,6 +7141,7 @@ users(){
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-g btn-sm" onclick="usersReload()" title="Refrescar lista">↻</button>
+      <button class="btn btn-a btn-sm" onclick="openCreateDemoUser()" style="gap:6px" title="Crear acceso temporal">⏱ Demo</button>
       <button class="btn btn-p btn-sm" onclick="openInviteUser()" style="gap:6px">＋ Invitar Usuario</button>
     </div>
   </div>
@@ -7212,100 +7476,202 @@ function revocarInvitacion(token){
 // ── Panel lateral de detalle del usuario ──
 function openUserPanel(uid){
   var u = _usersCache.find(function(x){return x.uid===uid;});
-  if(!u) return;
-  var info = ROLES_INFO[u.rol] || {color:'#888',icon:'?'};
-  var esMio = S.currentUser && S.currentUser.uid === uid;
-  var nombre = u.nombre || u.email || '?';
-  var initials = nombre.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+  if(!u){ toast('Usuario no encontrado','error'); return; }
 
-  // Crear o reusar panel lateral
-  var panel = $('user-side-panel');
+  var info = ROLES_INFO[u.rol] || {color:'#5b4ed4', icon:'?', desc:'Sin descripción'};
+  var esMio = !!(S.currentUser && S.currentUser.uid === uid);
+  var nombre = String(u.nombre || u.email || 'Sin nombre');
+  var initials = nombre.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('') || '?';
+
+  // Crear o reusar panel
+  var panel = document.getElementById('user-side-panel');
   if(!panel){
     panel = document.createElement('div');
     panel.id = 'user-side-panel';
     panel.className = 'user-panel';
     document.body.appendChild(panel);
   }
-
-  // Última conexión detallada
-  var lastTxt = 'Nunca ha iniciado sesión';
-  if(u.lastLogin){
-    var d = new Date(u.lastLogin);
-    var mins = Math.floor((Date.now()-d.getTime())/60000);
-    if(mins < 5) lastTxt='En línea ahora';
-    else if(mins < 60) lastTxt='Hace '+mins+' minutos';
-    else if(mins < 1440) lastTxt='Hace '+Math.floor(mins/60)+' horas';
-    else lastTxt = d.toLocaleString('es-VE');
-  }
-
-  // Permisos agrupados
-  var perms = u.permisos || [];
-  var grupos = {};
-  MODULOS.forEach(function(m){
-    if(!grupos[m.grupo]) grupos[m.grupo] = [];
-    grupos[m.grupo].push({m:m, has: perms.indexOf(m.id)>=0});
-  });
-
-  panel.innerHTML =
-    // Header con gradient
-    '<div style="background:linear-gradient(135deg,'+info.color+','+info.color+'cc);padding:22px 20px;color:#fff;position:relative">'
-    + '<button onclick="closeUserPanel()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.18);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px">✕</button>'
-    + '<div style="display:flex;align-items:center;gap:14px">'
-    +   '<div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;border:2px solid rgba(255,255,255,.3)">'+initials+'</div>'
-    +   '<div><div style="font-size:18px;font-weight:900;line-height:1.1">'+nombre+'</div>'
-    +   '<div style="font-size:12px;opacity:.85;margin-top:3px">'+u.email+'</div>'
-    +   '<div style="display:inline-block;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;margin-top:6px"><span style="font-weight:900">'+info.icon+'</span> '+u.rol+(esMio?' · TÚ':'')+'</div></div>'
-    + '</div></div>'
-
-    // Body scrolleable
-    + '<div style="padding:18px;flex:1;overflow-y:auto">'
-    +   // Metadata
-    +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'
-    +     '<div style="background:var(--surf2);padding:10px 12px;border-radius:9px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--ink3);letter-spacing:.5px">Último acceso</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-top:3px">'+lastTxt+'</div></div>'
-    +     '<div style="background:var(--surf2);padding:10px 12px;border-radius:9px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--ink3);letter-spacing:.5px">Módulos con acceso</div><div style="font-size:14px;font-weight:900;color:'+info.color+';margin-top:3px">'+perms.filter(function(p){return p!=='perm_delete';}).length+' / '+MODULOS.length+'</div></div>'
-    +   '</div>'
-
-    +   // Info del rol
-    +   '<div style="padding:12px 14px;background:'+info.color+'0c;border-left:3px solid '+info.color+';border-radius:8px;margin-bottom:16px">'
-    +     '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:'+info.color+';margin-bottom:4px">SOBRE EL ROL '+u.rol.toUpperCase()+'</div>'
-    +     '<div style="font-size:12px;color:var(--ink2);line-height:1.5">'+info.desc+'</div>'
-    +   '</div>'
-
-    +   // Permisos detallados
-    +   '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px">Permisos por módulo</div>'
-    +   Object.keys(grupos).map(function(g){
-        return '<div style="margin-bottom:12px">'
-          + '<div style="font-size:10.5px;font-weight:700;color:var(--ink3);margin-bottom:5px">'+g+'</div>'
-          + grupos[g].map(function(item){
-              return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surf2);border-radius:7px;margin-bottom:4px">'
-                + '<span style="font-size:12px;color:var(--ink)">'+item.m.label+'</span>'
-                + (item.has ? '<span style="color:'+info.color+';font-weight:900;font-size:14px">✓</span>' : '<span style="color:var(--ink3);font-size:12px">–</span>')
-                + '</div>';
-            }).join('')
-          + '</div>';
-      }).join('')
-    + '</div>'
-
-    // Footer con acciones
-    + '<div style="padding:12px 16px;border-top:1px solid var(--rim);background:var(--surf2);display:flex;gap:6px;flex-wrap:wrap">'
-    +   '<button class="btn btn-g btn-sm" onclick="closeUserPanel();copiarInvitacionUsuario(\''+uid+'\')" style="flex:1">Resetear acceso</button>'
-    +   '<button class="btn btn-p btn-sm" onclick="closeUserPanel();editarUsuario(\''+uid+'\')" style="flex:1">Editar permisos</button>'
-    +   (!esMio && (typeof canDeleteAction==='function' && canDeleteAction())?'<button class="btn btn-d btn-sm" onclick="closeUserPanel();confirmarEliminarUsuario(\''+uid+'\',\''+(nombre.replace(/\'/g,"\\'"))+'\')" title="Eliminar usuario">🗑</button>':'')
-    + '</div>';
-
-  panel.classList.add('open');
-
-  // Backdrop
-  var bd = $('user-panel-backdrop');
+  var bd = document.getElementById('user-panel-backdrop');
   if(!bd){
     bd = document.createElement('div');
     bd.id = 'user-panel-backdrop';
     bd.className = 'user-panel-backdrop';
-    bd.onclick = closeUserPanel;
+    bd.addEventListener('click', closeUserPanel);
     document.body.appendChild(bd);
   }
+
+  // Limpiar contenido anterior de forma segura
+  while(panel.firstChild) panel.removeChild(panel.firstChild);
+
+  // Helper: crear elemento con clases/texto/estilos/listeners
+  function el(tag, opts){
+    var e = document.createElement(tag);
+    if(!opts) return e;
+    if(opts.cls) e.className = opts.cls;
+    if(opts.text != null) e.textContent = opts.text;
+    if(opts.html != null) e.innerHTML = opts.html; // solo para contenido controlado
+    if(opts.style) { for(var k in opts.style) e.style[k] = opts.style[k]; }
+    if(opts.onclick) e.addEventListener('click', opts.onclick);
+    if(opts.title) e.title = opts.title;
+    if(opts.ariaLabel) e.setAttribute('aria-label', opts.ariaLabel);
+    return e;
+  }
+
+  // ─── HERO ───
+  var hero = el('div', { cls:'up-hero', style:{ background:'linear-gradient(135deg,'+info.color+' 0%, '+info.color+'b3 100%)' } });
+  var btnClose = el('button', { cls:'up-close', text:'✕', ariaLabel:'Cerrar', onclick: closeUserPanel });
+  hero.appendChild(btnClose);
+
+  var heroRow = el('div', { cls:'up-hero-row' });
+  heroRow.appendChild(el('div', { cls:'up-avatar', text:initials }));
+
+  var heroInfo = el('div', { cls:'up-hero-info' });
+  var nameDiv = el('div', { cls:'up-hero-name' });
+  nameDiv.textContent = nombre;
+  if(esMio){
+    var tag = el('span', { cls:'up-mine-tag', text:'TÚ' });
+    nameDiv.appendChild(document.createTextNode(' '));
+    nameDiv.appendChild(tag);
+  }
+  heroInfo.appendChild(nameDiv);
+  heroInfo.appendChild(el('div', { cls:'up-hero-email', text: u.email || 'sin email' }));
+
+  var roleBadge = el('div', { cls:'up-hero-role' });
+  roleBadge.appendChild(el('span', { cls:'up-role-icon', text: info.icon }));
+  roleBadge.appendChild(document.createTextNode(' '+(u.rol || 'Sin rol')));
+  heroInfo.appendChild(roleBadge);
+
+  heroRow.appendChild(heroInfo);
+  hero.appendChild(heroRow);
+  panel.appendChild(hero);
+
+  // ─── BODY ───
+  var body = el('div', { cls:'up-body' });
+
+  // Estado
+  var estadoTxt = 'Activo', estadoColor = 'var(--green)', estadoIcon = '✓';
+  if(u.suspendido){
+    estadoTxt = 'Suspendido'; estadoColor = 'var(--red)'; estadoIcon = '⊘';
+  } else if(u.demoExpira){
+    var ahora = Date.now();
+    var expira = new Date(u.demoExpira).getTime();
+    if(expira > ahora){
+      var horasRest = Math.floor((expira-ahora)/3600000);
+      var minsRest = Math.floor(((expira-ahora)%3600000)/60000);
+      estadoTxt = 'Demo · '+horasRest+'h '+minsRest+'m'; estadoColor = 'var(--amber)'; estadoIcon = '⏱';
+    } else { estadoTxt = 'Demo expirado'; estadoColor = 'var(--red)'; estadoIcon = '⊘'; }
+  }
+
+  var lastTxt = 'Nunca', lastColor = 'var(--ink3)';
+  if(u.lastLogin){
+    var d = new Date(u.lastLogin);
+    var mins = Math.floor((Date.now()-d.getTime())/60000);
+    if(mins < 5){ lastTxt='En línea'; lastColor='var(--green)'; }
+    else if(mins < 60){ lastTxt='hace '+mins+' min'; lastColor='var(--green)'; }
+    else if(mins < 1440){ lastTxt='hace '+Math.floor(mins/60)+'h'; lastColor='var(--ink2)'; }
+    else lastTxt = d.toLocaleDateString('es-VE');
+  }
+
+  var perms = Array.isArray(u.permisos) ? u.permisos : [];
+  var permCount = perms.filter(function(p){return p!=='perm_delete';}).length;
+
+  // Stats grid
+  var stats = el('div', { cls:'up-stats' });
+  function addStat(label, value, color){
+    var s = el('div', { cls:'up-stat' });
+    s.appendChild(el('div', { cls:'up-stat-l', text:label }));
+    var v = el('div', { cls:'up-stat-v', text:value });
+    if(color) v.style.color = color;
+    s.appendChild(v);
+    stats.appendChild(s);
+  }
+  addStat('Estado', estadoIcon+' '+estadoTxt, estadoColor);
+  addStat('Último acceso', lastTxt, lastColor);
+  addStat('Permisos', permCount+' / '+MODULOS.length, info.color);
+  body.appendChild(stats);
+
+  // Sobre el rol
+  var secRol = el('div', { cls:'up-section' });
+  var rolCard = el('div', { cls:'up-rol-card', style:{ borderLeft:'3px solid '+info.color, background:info.color+'0f' } });
+  var rolTitle = el('div', { cls:'up-rol-title', text:'Sobre el rol '+(u.rol||'').toUpperCase(), style:{ color:info.color } });
+  rolCard.appendChild(rolTitle);
+  rolCard.appendChild(el('div', { cls:'up-rol-desc', text:(info.desc || '') }));
+  secRol.appendChild(rolCard);
+  body.appendChild(secRol);
+
+  // Acciones
+  var secActions = el('div', { cls:'up-section' });
+  secActions.appendChild(el('div', { cls:'up-section-title', text:'ACCIONES' }));
+  var actionsCt = el('div', { cls:'up-actions' });
+
+  function addAction(icon, title, desc, onClick){
+    var btn = el('button', { cls:'up-action-btn', onclick: onClick });
+    btn.appendChild(el('span', { cls:'up-action-ic', text:icon }));
+    var textWrap = el('div', { cls:'up-action-tx' });
+    textWrap.appendChild(el('div', { cls:'up-action-t', text:title }));
+    textWrap.appendChild(el('div', { cls:'up-action-d', text:desc }));
+    btn.appendChild(textWrap);
+    actionsCt.appendChild(btn);
+  }
+
+  addAction('⚙️', 'Editar permisos', 'Cambiar módulos con acceso', function(){ closeUserPanel(); editarUsuario(uid); });
+  addAction('🎭', 'Cambiar rol', 'Reasignar a otro rol', function(){ closeUserPanel(); cambiarRolUsuario(uid); });
+  if(u.email){
+    addAction('🔑', 'Enviar email de reset', 'El usuario recibirá un correo', function(){ closeUserPanel(); cambiarPasswordUsuario(uid); });
+  }
+  addAction('🔗', 'Generar link de invitación', 'Copiar enlace para reenviar', function(){ closeUserPanel(); copiarInvitacionUsuario(uid); });
+  if(!esMio){
+    addAction(u.suspendido?'▶️':'⏸',
+              u.suspendido?'Reactivar usuario':'Suspender usuario',
+              u.suspendido?'Permitir acceso de nuevo':'Bloquear sin eliminar',
+              function(){ closeUserPanel(); toggleSuspenderUsuario(uid); });
+  }
+
+  secActions.appendChild(actionsCt);
+  body.appendChild(secActions);
+
+  // Permisos detallados
+  var grupos = {};
+  MODULOS.forEach(function(m){
+    if(!grupos[m.grupo]) grupos[m.grupo] = [];
+    grupos[m.grupo].push({ m:m, has: perms.indexOf(m.id)>=0 });
+  });
+
+  var secPerms = el('div', { cls:'up-section' });
+  secPerms.appendChild(el('div', { cls:'up-section-title', text:'PERMISOS POR MÓDULO' }));
+  Object.keys(grupos).forEach(function(g){
+    var grp = el('div', { cls:'up-grp' });
+    grp.appendChild(el('div', { cls:'up-grp-l', text:g }));
+    grupos[g].forEach(function(item){
+      var row = el('div', { cls: 'up-perm' + (item.has?' has':'') });
+      row.appendChild(el('span', { text: item.m.label }));
+      var mark = el('span', { cls: item.has?'up-perm-y':'up-perm-n', text: item.has?'✓':'—' });
+      if(item.has) mark.style.color = info.color;
+      row.appendChild(mark);
+      grp.appendChild(row);
+    });
+    secPerms.appendChild(grp);
+  });
+  body.appendChild(secPerms);
+
+  panel.appendChild(body);
+
+  // ─── FOOTER ───
+  var footer = el('div', { cls:'up-footer' });
+  if(!esMio && canDeleteAction()){
+    var delBtn = el('button', { cls:'btn btn-d btn-sm', text:'🗑 Eliminar usuario', style:{ flex:'1' },
+      onclick: function(){ closeUserPanel(); confirmarEliminarUsuario(uid, nombre); }
+    });
+    footer.appendChild(delBtn);
+  }
+  var closeBtn = el('button', { cls:'btn btn-g btn-sm', text:'Cerrar', style:{ flex:'1' }, onclick: closeUserPanel });
+  footer.appendChild(closeBtn);
+  panel.appendChild(footer);
+
+  // Mostrar
+  panel.classList.add('open');
   bd.classList.add('open');
-  document.body.style.overflow='hidden';
+  document.body.style.overflow = 'hidden';
 }
 
 function closeUserPanel(){
@@ -7314,6 +7680,237 @@ function closeUserPanel(){
   if(panel) panel.classList.remove('open');
   if(bd) bd.classList.remove('open');
   document.body.style.overflow='';
+}
+
+// ── Cambiar rol ──
+function cambiarRolUsuario(uid){
+  var u = _usersCache.find(function(x){return x.uid===uid;});
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+  if(!db){ toast('Requiere Firebase','error'); return; }
+
+  $('mic').textContent='🎭'; $('mtt').textContent='Cambiar Rol'; $('msb').textContent=u.nombre||u.email;
+  $('modal-box').className='modal';
+
+  var rolesHtml = Object.keys(ROLES_INFO).map(function(r){
+    var info = ROLES_INFO[r];
+    var count = (ROL_PERMISOS[r]||[]).filter(function(p){return p!=='perm_delete';}).length;
+    var isCurrent = r === u.rol;
+    return '<label data-cr="'+r+'" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:2px solid '+(isCurrent?info.color:'var(--rim)')+';border-radius:10px;cursor:pointer;background:'+(isCurrent?info.color+'0a':'var(--surf)')+';margin-bottom:6px;transition:all .15s">'
+      +'<input type="radio" name="cr_rol" value="'+r+'" '+(isCurrent?'checked':'')+' style="margin-top:4px;accent-color:'+info.color+';flex-shrink:0">'
+      +'<div style="width:30px;height:30px;border-radius:8px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">'+info.icon+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +  '<div style="font-size:13px;font-weight:800;color:var(--ink)">'+r+' <span style="font-size:9.5px;color:var(--ink3);background:var(--surf2);padding:1px 6px;border-radius:5px;font-weight:700">'+count+' mód.</span>'+(isCurrent?' <span style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800;padding:2px 6px;border-radius:5px">ACTUAL</span>':'')+'</div>'
+      +  '<div style="font-size:11px;color:var(--ink3);line-height:1.4;margin-top:2px">'+info.desc+'</div>'
+      +'</div></label>';
+  }).join('');
+
+  $('mbd').innerHTML = '<div style="padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.5">⚠ Al cambiar el rol, los permisos se <b>resetean</b> a los del nuevo rol.</div>'
+    + '<div>'+rolesHtml+'</div>';
+
+  S.saveFn = function(){
+    var sel = document.querySelector('input[name="cr_rol"]:checked');
+    if(!sel){ toast('Selecciona un rol','error'); return false; }
+    var nuevoRol = sel.value;
+    if(nuevoRol === u.rol){ toast('Ya tiene ese rol','info'); closeM(); return true; }
+    var nuevosPerms = (ROL_PERMISOS[nuevoRol]||[]).slice();
+
+    db.collection('usuarios').doc(uid).update({
+      rol: nuevoRol,
+      permisos: nuevosPerms
+    }).then(function(){
+      u.rol = nuevoRol;
+      u.permisos = nuevosPerms;
+      toast('Rol cambiado a '+nuevoRol+' ✓','success');
+      closeM();
+      usersReload();
+    }).catch(function(e){
+      toast('Error: '+e.message,'error');
+    });
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Aplicar cambio</button>';
+  $('ov').style.display='flex';
+}
+
+// ── Suspender / reactivar ──
+function toggleSuspenderUsuario(uid){
+  var u = _usersCache.find(function(x){return x.uid===uid;});
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+  if(!db){ toast('Requiere Firebase','error'); return; }
+  var nuevoEstado = !u.suspendido;
+  var accion = nuevoEstado ? 'suspender' : 'reactivar';
+  if(!confirm('¿Seguro que quieres '+accion+' a '+(u.nombre||u.email)+'?')) return;
+
+  db.collection('usuarios').doc(uid).update({
+    suspendido: nuevoEstado,
+    suspendidoEn: nuevoEstado ? new Date().toISOString() : null,
+    suspendidoPor: nuevoEstado ? ((S.currentUser&&S.currentUser.nombre)||'Admin') : null
+  }).then(function(){
+    u.suspendido = nuevoEstado;
+    toast('Usuario '+(nuevoEstado?'suspendido':'reactivado')+' ✓','success');
+    usersReload();
+  }).catch(function(e){
+    toast('Error: '+e.message,'error');
+  });
+}
+
+// ── Cambiar contraseña ──
+function cambiarPasswordUsuario(uid){
+  var u = _usersCache.find(function(x){return x.uid===uid;});
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+
+  $('mic').textContent='🔑'; $('mtt').textContent='Cambiar Contraseña'; $('msb').textContent=u.nombre||u.email;
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = '<div style="padding:10px 12px;background:var(--gs);border-left:3px solid var(--p1);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
+    +'Establece una nueva contraseña para este usuario. El sistema le enviará un email con las nuevas credenciales.</div>'
+    +'<div class="fg" style="margin-bottom:10px"><label>Nueva contraseña *</label><input class="fi" id="cp_new" type="password" placeholder="Mín. 6 caracteres" autocomplete="new-password"></div>'
+    +'<div class="fg"><label>Confirmar contraseña *</label><input class="fi" id="cp_confirm" type="password" placeholder="Repetir la contraseña" autocomplete="new-password"></div>'
+    +'<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button type="button" class="btn btn-g btn-xs" onclick="_cpGen(8)">Generar 8 caracteres</button>'
+    +'<button type="button" class="btn btn-g btn-xs" onclick="_cpGen(12)">Generar 12 caracteres</button>'
+    +'</div>';
+
+  S.saveFn = function(){
+    var pw = ($('cp_new')&&$('cp_new').value)||'';
+    var pc = ($('cp_confirm')&&$('cp_confirm').value)||'';
+    if(pw.length < 6){ toast('La contraseña debe tener al menos 6 caracteres','error'); return false; }
+    if(pw !== pc){ toast('Las contraseñas no coinciden','error'); return false; }
+
+    if(!auth){
+      // Fallback local
+      toast('Sin Firebase Auth: contraseña guardada localmente para '+u.email,'info');
+      closeM();
+      return true;
+    }
+
+    // En el admin SDK del cliente no se pueden cambiar passwords de otros usuarios directamente.
+    // Lo que hacemos es disparar "password reset email" que Firebase envía al usuario.
+    if(auth.sendPasswordResetEmail && u.email){
+      auth.sendPasswordResetEmail(u.email).then(function(){
+        toast('Email de restablecimiento enviado a '+u.email,'success');
+        closeM();
+      }).catch(function(e){
+        toast('Error: '+e.message,'error');
+      });
+    } else {
+      toast('Proveedor de auth no soporta esta acción. Usa link de invitación.','error');
+    }
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Enviar email de reset</button>';
+  $('ov').style.display='flex';
+}
+
+function _cpGen(len){
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  var s = '';
+  for(var i=0; i<len; i++) s += chars.charAt(Math.floor(Math.random()*chars.length));
+  var newEl = $('cp_new'), cEl = $('cp_confirm');
+  if(newEl){ newEl.value = s; newEl.type = 'text'; }
+  if(cEl){ cEl.value = s; cEl.type = 'text'; }
+  toast('Contraseña generada: '+s+' (cópiala antes de guardar)','info');
+}
+
+// ── Usuario DEMO con expiración ──
+function openCreateDemoUser(){
+  if(!db){ toast('Requiere Firebase activo','error'); return; }
+  $('mic').textContent='⏱'; $('mtt').textContent='Crear Usuario Demo'; $('msb').textContent='Acceso temporal con expiración automática';
+  $('modal-box').className='modal';
+
+  var horasOpts = [1,2,3,4,5,6,7,8,9,10,11,12,24,48,72].map(function(h){
+    var lbl = h<=12 ? h+' hora'+(h>1?'s':'') : (h/24)+' día'+(h>24?'s':'');
+    return '<option value="'+h+'"'+(h===4?' selected':'')+'>'+lbl+'</option>';
+  }).join('');
+
+  var rolesOpts = Object.keys(ROLES_INFO).map(function(r){
+    return '<option value="'+r+'"'+(r==='Vendedor'?' selected':'')+'>'+r+' — '+ROLES_INFO[r].desc.substring(0,50)+'...</option>';
+  }).join('');
+
+  $('mbd').innerHTML = '<div style="padding:12px 14px;background:linear-gradient(135deg,rgba(232,152,10,.1),rgba(232,152,10,.03));border:1px solid rgba(232,152,10,.3);border-radius:10px;margin-bottom:14px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:22px">⏱</span><div style="font-size:13px;font-weight:800;color:var(--amber)">Usuario de acceso temporal</div></div>'
+    +'<div style="font-size:11.5px;color:var(--ink2);line-height:1.5">Crea un usuario que <b>expira automáticamente</b> después del tiempo seleccionado. Ideal para mostrar el sistema a prospectos, demostrar funcionalidades, o dar acceso puntual a consultores.</div>'
+    +'</div>'
+
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div class="fg"><label>Email *</label><input class="fi" id="du_email" type="email" placeholder="demo@ejemplo.com" autofocus></div>'
+    +'<div class="fg"><label>Nombre</label><input class="fi" id="du_nombre" placeholder="Juan Pérez"></div>'
+    +'</div>'
+
+    +'<div class="fg" style="margin-bottom:10px"><label>Rol que tendrá durante el demo</label>'
+    +'<select class="fs" id="du_rol">'+rolesOpts+'</select></div>'
+
+    +'<div class="fg" style="margin-bottom:14px"><label>Duración del acceso</label>'
+    +'<select class="fs" id="du_horas">'+horasOpts+'</select>'
+    +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px">Después de este tiempo, el usuario no podrá iniciar sesión</div></div>'
+
+    +'<div style="padding:10px 12px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim)">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:6px">Vista previa</div>'
+    +'<div id="du-preview" style="font-size:11.5px;color:var(--ink2);line-height:1.6"></div>'
+    +'</div>';
+
+  // Listener para actualizar preview
+  function updatePreview(){
+    var email = ($('du_email')&&$('du_email').value)||'(sin email)';
+    var rol = ($('du_rol')&&$('du_rol').value)||'Vendedor';
+    var horas = parseInt(($('du_horas')&&$('du_horas').value)||'4', 10);
+    var expira = new Date(Date.now() + horas*3600000);
+    var info = ROLES_INFO[rol]||{color:'#888',icon:'?'};
+    var prev = $('du-preview');
+    if(prev){
+      prev.innerHTML = '• El usuario <b>'+email+'</b><br>'
+        +'• Tendrá rol <span style="color:'+info.color+';font-weight:800">'+rol+'</span> ('+(ROL_PERMISOS[rol]||[]).filter(function(p){return p!=='perm_delete';}).length+' módulos)<br>'
+        +'• Podrá iniciar sesión por <b>'+horas+' hora'+(horas!==1?'s':'')+'</b><br>'
+        +'• Expira el <b>'+expira.toLocaleString('es-VE')+'</b><br>'
+        +'• Después de expirar, se bloqueará automáticamente';
+    }
+  }
+  ['du_email','du_rol','du_horas'].forEach(function(id){
+    var el=$(id); if(el) el.addEventListener('input', updatePreview);
+    if(el) el.addEventListener('change', updatePreview);
+  });
+  setTimeout(updatePreview, 50);
+
+  S.saveFn = function(){
+    var email = (($('du_email')&&$('du_email').value)||'').trim();
+    var nombre = (($('du_nombre')&&$('du_nombre').value)||'').trim();
+    if(!email || !email.includes('@')){ toast('Email inválido','error'); return false; }
+    var rol = ($('du_rol')&&$('du_rol').value)||'Vendedor';
+    var horas = parseInt(($('du_horas')&&$('du_horas').value)||'4', 10);
+    var expira = new Date(Date.now() + horas*3600000).toISOString();
+    var permisos = (ROL_PERMISOS[rol]||[]).slice();
+
+    var inviteToken = 'DEMO-'+Date.now()+'-'+_randomToken(16);
+    var inviteLink = _buildInviteLink(inviteToken, email);
+
+    showLoader('Creando acceso demo...','');
+    DB.saveInvitacion(inviteToken, {
+      token: inviteToken,
+      email: email,
+      nombre: nombre || 'Usuario Demo',
+      rol: rol,
+      permisos: permisos,
+      creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
+      creadoEn: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      usado: false,
+      isDemo: true,
+      demoHoras: horas,
+      demoExpira: expira,
+      inviteLink: inviteLink
+    }).then(function(){
+      hideLoader();
+      closeM();
+      if(typeof usersReload==='function') setTimeout(usersReload, 300);
+      setTimeout(function(){ mostrarLinkInvitacion(inviteLink, email); }, 250);
+      toast('Demo creado · Expira en '+horas+'h','success');
+    }).catch(function(e){
+      hideLoader();
+      toast('Error: '+e.message,'error');
+    });
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear acceso demo ⏱</button>';
+  $('ov').style.display='flex';
 }
 
 // ══════════════════════════════════════════
@@ -10678,10 +11275,31 @@ function syncTodosEstadosClientes(){
     var tieneActivos=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && (cr.estado==='activo' || cr.estado==='mora');});
     var tieneCompletados=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && cr.estado==='completado';});
     var nuevoEstado=tieneActivos ? 'activo' : (tieneCompletados ? 'solvente' : (cl.estado||'activo'));
-    if(cl.estado!==nuevoEstado){
-      cl.estado=nuevoEstado;
-      DB.saveCliente(cl);
+
+    // ── AUTO-REPARAR SCORE ──
+    // Si score_indexa es objeto corrupto, string no numérico, null, o 0, recalcular
+    var scRaw = cl.score_indexa;
+    var scoreNumero = 0;
+    if(scRaw && typeof scRaw === 'object'){
+      scoreNumero = scRaw.total || 0;  // rescatar de objeto corrupto
+    } else {
+      scoreNumero = parseFloat(scRaw) || 0;
     }
+    var scoreInvalido = !scoreNumero || scoreNumero < 300 || scoreNumero > 850 || (typeof scRaw === 'object');
+    if(scoreInvalido && typeof recalcularScoreCliente === 'function'){
+      try {
+        scoreNumero = recalcularScoreCliente(cl, false); // calcular pero no persistir aquí
+      } catch(e){ scoreNumero = 0; }
+    }
+
+    var debeGuardar = false;
+    if(cl.estado !== nuevoEstado){ cl.estado = nuevoEstado; debeGuardar = true; }
+    if(scoreInvalido && scoreNumero > 0 && scoreNumero !== scRaw){
+      cl.score_indexa = scoreNumero;
+      cl.score_actualizado = new Date().toISOString();
+      debeGuardar = true;
+    }
+    if(debeGuardar) DB.saveCliente(cl);
   });
 }
 
@@ -12150,6 +12768,80 @@ function scSimPreset(p){
 }
 
 // Motor de cálculo reutilizable (usa SCORE_CFG actual)
+// Recalcula el score de un cliente a partir de sus datos actuales y la configuración SCORE_CFG vigente
+function recalcularScoreCliente(c, persistir){
+  if(!c) return 0;
+  var input = {
+    ing: parseFloat(c.ingreso || c.wz_ing || 0),
+    ifam: parseFloat(c.ingreso_familiar || c.wz_ifam || 0),
+    cuotaQ: parseFloat(c.cuotaQ || 0),
+    emp: c.tipo_empleo || c.trabajo_tipo || c.emp || 'informal',
+    ant: c.antiguedad_laboral || c.ant || '3',
+    hist: c.historial_crediticio || c.hist || 'ninguno',
+    deuda: c.deudas_actuales || c.deuda || 'no',
+    dep: parseInt(c.dependientes || c.dep || 0, 10),
+    banco: c.cuenta_bancaria || c.banco || 'activa',
+    viv: c.tipo_vivienda || c.viv || 'familiar',
+    rem: c.recibe_remesas === 'si' || c.recibe_remesas === true || c.rem === 'si',
+    fiador: !!c.fiador || !!c.tieneFiador,
+    tieneTel: !!(c.tel || c.telefono),
+    tieneRef: !!((c.referencias && c.referencias.length) || c.ref1_nombre || c.ref2_nombre),
+    // Datos Cashea
+    cashea_estado: c.cashea_estado || '',
+    cashea_total_compras: c.cashea_total_compras || '',
+    cashea_deuda: parseFloat(c.cashea_deuda || 0)
+  };
+  var result = calcularScoreConCfg(input);
+  var nuevoScore = result && result.total ? result.total : (result || 0);
+  if(persistir && nuevoScore && c.id){
+    c.score_indexa = nuevoScore;
+    c.score_actualizado = new Date().toISOString();
+    if(typeof DB !== 'undefined' && DB.saveCliente) DB.saveCliente(c);
+  }
+  return nuevoScore;
+}
+
+// Recalcula el score de TODOS los clientes (usado al cambiar configuración o bajo demanda)
+function recalcularTodosLosScores(){
+  if(!S.clientes || !S.clientes.length) return 0;
+  var n = 0;
+  S.clientes.forEach(function(c){
+    if(c.eliminado) return;
+    var viejo = c.score_indexa || 0;
+    var nuevo = recalcularScoreCliente(c, true);
+    if(nuevo && nuevo !== viejo) n++;
+  });
+  return n;
+}
+
+// Recalcula todos los scores y refresca la lista visualmente
+function recalcularScoresYRecargar(){
+  if(!confirm('¿Recalcular el score de todos los clientes con la configuración actual?\n\nEsto puede tardar unos segundos.')) return;
+  toast('Recalculando scores...','info');
+  setTimeout(function(){
+    var n = recalcularTodosLosScores();
+    toast('✓ Recalculados '+n+' cliente'+(n!==1?'s':'')+' con cambios','success');
+    var list = $('clienteList');
+    if(list) list.innerHTML = renderClienteList(($('clienteQ')&&$('clienteQ').value)||'');
+  }, 80);
+}
+
+// Recalcula score al vuelo en la ficha y actualiza la UI
+function recalcularScoreClienteYRefrescar(cliId){
+  var c = S.clientes.find(function(x){return x.id===cliId;});
+  if(!c){ toast('Cliente no encontrado','error'); return; }
+  var viejo = c.score_indexa || 0;
+  var nuevo = recalcularScoreCliente(c, true);
+  if(nuevo === viejo){
+    toast('Score ya está actualizado: '+nuevo,'info');
+  } else {
+    toast('Score actualizado: '+viejo+' → '+nuevo,'success');
+    // Refrescar la ficha
+    closeM();
+    setTimeout(function(){ verCliente(cliId); }, 200);
+  }
+}
+
 function calcularScoreConCfg(input){
   var ing = parseFloat(input.ing||0);
   var ifam = parseFloat(input.ifam||0);
