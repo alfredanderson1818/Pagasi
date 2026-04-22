@@ -1608,6 +1608,12 @@ tbody tr:hover td {
   -webkit-overflow-scrolling: touch;
 }
 
+
+.notif-quick-dest{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.notif-quick-btn{border:none;border-radius:12px;padding:10px 14px;background:var(--gs);color:var(--ink2);font-weight:800;cursor:pointer;transition:.18s ease;box-shadow:inset 0 0 0 1px var(--rim)}
+.notif-quick-btn:hover{transform:translateY(-1px);box-shadow:inset 0 0 0 1px rgba(91,78,212,.25),0 6px 18px rgba(15,23,42,.08)}
+.notif-quick-btn.is-active{background:var(--p1);color:#fff;box-shadow:0 10px 22px rgba(91,78,212,.24)}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -2885,8 +2891,15 @@ function clienteBadgesHTML(c){
   return estados.map(function(s){ return '<span class="bdg '+sbg(s)+'">'+labels[s]+'</span>'; }).join(' ');
 }
 function renderClienteList(q=''){
-  const filtered = q?S.clientes.filter(c=>!c.eliminado&&`${c.nombre} ${c.cedula} ${c.tel} ${c.ciudad} ${c.trabajo}`.toLowerCase().includes(q.toLowerCase())):S.clientes.filter(c=>!c.eliminado);
-  if(!filtered.length) return `<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q}"</div></div>`;
+  const estadoFiltro = S.clienteEstadoFiltro || 'todos';
+  const base = S.clientes.filter(function(c){
+    if(c.eliminado) return false;
+    if(!clienteMatchesFiltro(c, estadoFiltro)) return false;
+    if(!q) return true;
+    return `${c.nombre} ${c.cedula} ${c.tel} ${c.ciudad} ${c.trabajo}`.toLowerCase().includes(String(q).toLowerCase());
+  });
+  const filtered = base;
+  if(!filtered.length) return `<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q || (estadoFiltro==='todos' ? '' : estadoFiltro)}"</div></div>`;
   const PER=50; const pg=pgGet('clientes'); const start=(pg-1)*PER;
   const page=filtered.slice(start,start+PER);
   return `<div class="card"><div class="tw"><table>
@@ -4445,25 +4458,30 @@ notif(){
       </div>
 
       <div class="fg">
-        <label style="font-weight:700;font-size:12px;color:var(--ink2)">CANAL DE ENVIO</label>
-        <select class="fs" id="notif-canal" style="margin-top:4px">
-          <option value="whatsapp">WhatsApp (único canal activo)</option>
-        </select>
-        <div style="margin-top:5px;font-size:11px;color:var(--ink3);padding:6px 8px;background:var(--greens);border-radius:6px;border-left:3px solid #25D366">
-          Por ahora los envíos saldrán solo por WhatsApp.
+        <label style="font-weight:700;font-size:12px;color:var(--ink2)">ENVÍO</label>
+        <div style="margin-top:4px;font-size:12px;color:var(--ink2);padding:10px 12px;background:var(--greens);border-radius:10px;border-left:3px solid #25D366;font-weight:700">
+          WhatsApp activo
         </div>
+        <input type="hidden" id="notif-canal" value="whatsapp">
       </div>
 
       <div class="fg">
         <label style="font-weight:700;font-size:12px;color:var(--ink2)">DESTINATARIOS</label>
-        <select class="fs" id="notif-dest" style="margin-top:4px">
+        <div id="notif-dest-quick" class="notif-quick-dest">
+          <button type="button" class="notif-quick-btn is-active" data-dest="leads" onclick="setNotifDestQuick('leads')">🔘 Todos los leads</button>
+          <button type="button" class="notif-quick-btn" data-dest="activos" onclick="setNotifDestQuick('activos')">🔘 Solo aprobados</button>
+          <button type="button" class="notif-quick-btn" data-dest="proximas" onclick="setNotifDestQuick('proximas')">🔘 Solo pendientes</button>
+          <button type="button" class="notif-quick-btn" data-dest="mora" onclick="setNotifDestQuick('mora')">🔘 Solo moroso</button>
+          <button type="button" class="notif-quick-btn" data-dest="especifico" onclick="setNotifDestQuick('especifico')">🔘 Cliente específico</button>
+        </div>
+        <select class="fs" id="notif-dest" style="display:none">
           <option value="leads">Leads sin cuenta activa</option>
           <option value="activos">Clientes activos con cuenta</option>
           <option value="proximas">Clientes con cuota esta semana (${proximasCuotas.length})</option>
           <option value="mora">Clientes en mora (${moraClientes.length})</option>
           <option value="especifico">Cliente específico</option>
         </select>
-        <div style="margin-top:5px;font-size:11px;color:var(--ink3)">Elige primero a quién le vas a escribir en el flujo real de WhatsApp.</div>
+        <div style="margin-top:5px;font-size:11px;color:var(--ink3)">Un toque y ya tienes el grupo listo para WhatsApp.</div>
       </div>
 
       <div class="fg" id="notif-especifico-wrap" style="display:none">
@@ -11236,23 +11254,39 @@ function renderHistorialNotificaciones(){
       +'<div style="width:10px;height:10px;border-radius:50%;background:'+dotColor+';flex-shrink:0;margin-top:4px"></div>'
       +'<div style="flex:1;min-width:0">'
       +'<div style="font-size:12px;font-weight:800;color:var(--ink)">'+n.tipo+'</div>'
-      +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+n.dest+' — '+n.cantidad+' mensaje'+(n.cantidad!==1?'s':'')+' — '+n.canal+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+n.dest+' — '+n.cantidad+' mensaje'+(n.cantidad!==1?'s':'')+'</div>'
       +'<div style="font-size:10.5px;color:var(--ink3)">'+n.fecha+'</div>'
       +(n.mensaje?'<div style="margin-top:6px;padding:8px 10px;background:var(--surf2);border:1px solid var(--rim);border-radius:8px;font-size:11px;white-space:pre-wrap;line-height:1.45;color:var(--ink)">'+String(n.mensaje).replace(/</g,'&lt;')+'</div>':'')
       +'</div>'
       +'<span class="bdg b-g" style="align-self:flex-start">enviado</span></div>';
   }).join('');
 }
+
+function setNotifDestQuick(dest){
+  var sel = $('notif-dest');
+  if(sel) sel.value = dest || 'leads';
+  var hidden = $('notif-dest-hidden');
+  if(hidden) hidden.value = dest || 'leads';
+  var wrap = $('notif-dest-quick');
+  if(wrap){
+    Array.from(wrap.querySelectorAll('[data-dest]')).forEach(function(btn){
+      var active = btn.getAttribute('data-dest') === (dest || 'leads');
+      btn.classList.toggle('is-active', active);
+    });
+  }
+  actualizarPreviewNotif();
+}
+
 function actualizarTipoDesc(){
   var tipo=($('notif-tipo')&&$('notif-tipo').value)||'mora';
   var desc=$('notif-tipo-desc');
   var customWrap=$('notif-custom-wrap');
   var descs={
-    lead_bienvenida:'Primer mensaje al lead que nos dejó sus datos. No exige cuenta activa ni número de contrato.',
-    bienvenida_activo:'Mensaje de bienvenida para clientes ya activos. Incluye cuenta, cuota, saldo y próxima fecha.',
+    lead_bienvenida:'Mensaje comercial corto para motivar la compra en cuotas, sin mencionar datos internos ni ciudad.',
+    bienvenida_activo:'Mensaje de bienvenida para clientes ya activos con datos claros y tono comercial.',
     mora:        'Notifica el atraso con datos completos: cuenta, cuota N°, dias de mora, saldo pendiente y fecha de vencimiento.',
     mora_grave:  'Aviso de caracter urgente para cuentas con mora prolongada. Menciona inicio de proceso de recuperacion si no regulariza.',
-    cuota:       'Recordatorio previo al vencimiento: cuota N°, monto, fecha de corte, saldo restante y total pagado.',
+    cuota:       'Recordatorio corto y comercial por WhatsApp, sin saldo pendiente ni texto administrativo.',
     confirmado:  'Confirma la recepcion del pago, actualiza el saldo pendiente y comunica la proxima fecha de vencimiento.',
     cuenta:      'Estado de cuenta completo: cuotas pagadas, restantes, porcentaje avanzado, saldo, mora y fecha fin de contrato.',
     acuerdo:     'Formaliza por escrito el acuerdo de pago acordado verbalmente con el cliente.',
@@ -11265,7 +11299,7 @@ function actualizarTipoDesc(){
   var btn=$('notif-send-btn');
   if(btn){
     var canal=($('notif-canal')&&$('notif-canal').value)||'whatsapp';
-    btn.textContent=canal==='whatsapp'?'Enviar por WhatsApp':'Copiar Mensajes';
+    btn.textContent='Enviar por WhatsApp';
   }
 }
 
@@ -11449,20 +11483,16 @@ function buildMensajeNotif(tipo, d){
 
   if(tipo==='cuota'){
     return [
-      empresa.toUpperCase()+' — RECORDATORIO DE CUOTA',
+      'Hola ' + nombre + ' 👋',
       '',
-      'Estimado/a '+nombre+':',
+      'Te escribimos para recordarte tu cuota de la moto 🏍️',
+      fechaProx ? 'Tu próxima fecha es el ' + fechaProx + '.' : 'Estamos atentos para ayudarte con tu pago.',
       '',
-      'Le recordamos que su cuota quincenal N° '+cuotaNum+' de '+cuota+' correspondiente a su vehiculo '+modelo+' vence el dia '+fechaProx+'.',
-      '',
-      bloqueHeader,
-      '',
-      'Realice su pago puntualmente para mantener su historial crediticio en buen estado y evitar cargos por mora.',
-      '',
-      'Para consultar metodos de pago disponibles, comuniquese con nuestra oficina.',
+      'Escríbenos y la resolvemos rápido.',
       '',
       empresa.toUpperCase()
-    ].filter(Boolean).join('\n');
+    ].filter(Boolean).join('
+');
   }
 
   if(tipo==='confirmado'){
@@ -11523,24 +11553,12 @@ function buildMensajeNotif(tipo, d){
 
   if(tipo==='lead_bienvenida'){
     return [
-      empresa.toUpperCase()+' — BIENVENIDO/A',
-      '',
-      'Hola '+nombre+', gracias por compartirnos tus datos con '+empresa+'.',
-      '',
-      'Ya recibimos tu solicitud y tu información quedó registrada correctamente. En breve nuestro equipo revisará tu perfil y te contactará por este mismo WhatsApp para indicarte los siguientes pasos.',
-      '',
-      'DATOS REGISTRADOS',
-      lineaSep,
-      'CLIENTE      : '+nombre,
-      d.tel ? 'WHATSAPP     : '+d.tel : '',
-      d.ciudad ? 'CIUDAD       : '+d.ciudad : '',
-      d.ingreso ? 'INGRESO REF. : '+fmt(d.ingreso) : '',
-      lineaSep,
-      '',
-      'IMPORTANTE: Este mensaje confirma la recepción de tus datos. Aún no tienes una cuenta de financiamiento activa.',
-      '',
-      empresa.toUpperCase()
-    ].filter(Boolean).join('\n');
+      'Aprobación rápida ⚡',
+      'Cuotas a tu medida',
+      'Tu moto lista para salir 🏍️',
+      'Escríbenos y arranca hoy.'
+    ].filter(Boolean).join('
+');
   }
 
   if(tipo==='bienvenida_activo' || tipo==='bienvenida'){
@@ -11604,7 +11622,7 @@ function buildMensajeNotif(tipo, d){
 
 function enviarNotificaciones(){
   var tipo  = ($('notif-tipo') &&$('notif-tipo').value) ||'mora';
-  var canal = ($('notif-canal')&&$('notif-canal').value)||'whatsapp';
+  var canal = 'whatsapp';
   var dest  = ($('notif-dest') &&$('notif-dest').value) ||'mora';
   var destinatarios = getDestinatariosNotif(dest);
 
