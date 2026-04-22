@@ -2275,7 +2275,7 @@ const S = {
 const $=id=>document.getElementById(id);
 const fmt=n=>'$'+parseFloat(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-const sbg=s=>({lead:'b-a',activo:'b-g',mora:'b-r',solvente:'b-b',completado:'b-b',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
+const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
 const PGL={dash:'Dashboard',clientes:'Clientes',motos:'Motocicletas',creditos:'Financiamientos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Reportes',cuentas:'Cuentas',conta:'Contabilidad',plan:'Plan & Precios',config:'Configuración',users:'Usuarios'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
@@ -2853,20 +2853,37 @@ if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join(
 // ══════════════════════════════════════════
 // CLIENTE DETAIL + SEARCH
 // ══════════════════════════════════════════
-function getClienteEstadoMeta(c){
-  var credsCli=S.creds.filter(function(x){return !x.eliminado&&x.cli===c.nombre;});
-  var tieneActivo=credsCli.some(function(x){return x.estado==='activo'||x.estado==='mora';});
-  var tieneMora=credsCli.some(function(x){return (parseFloat(x.mora)||0)>0 || x.estado==='mora' || x.estado==='vencido';});
-  var tieneCompletado=credsCli.some(function(x){return x.estado==='completado';});
-  var etiquetas=[];
-  if(tieneActivo) etiquetas.push('<span class="bdg '+sbg('activo')+'">activo</span>');
-  if(tieneMora) etiquetas.push('<span class="bdg '+sbg('mora')+'">en mora</span>');
-  if(!tieneActivo && tieneCompletado) etiquetas.push('<span class="bdg '+sbg('completado')+'">completado</span>');
-  if(!tieneActivo && !tieneCompletado) etiquetas.push('<span class="bdg '+sbg('lead')+'">lead</span>');
-  var base=tieneActivo?'activo':(tieneCompletado?'completado':'lead');
-  return {credsCli:credsCli, badges:etiquetas.join(' '), base:base};
+function getCreditosCliente(c){
+  return (S.creds||[]).filter(function(x){
+    if(x.eliminado) return false;
+    if(c && x.cliId!=null && String(x.cliId)===String(c.id)) return true;
+    return (x.cli||'')===((c&&c.nombre)||'');
+  });
 }
-
+function getClienteEstados(c){
+  var credsCli=getCreditosCliente(c);
+  var hasActivo=credsCli.some(function(x){ return x.estado==='activo' || x.estado==='mora'; });
+  var hasMora=credsCli.some(function(x){ return x.estado==='mora' || ((x.estado==='activo'||x.estado==='mora') && (parseInt(x.mora||0,10)>0)); });
+  var hasHistorial=credsCli.length>0;
+  var estados=[];
+  if(!hasActivo && !hasHistorial){ estados.push('lead'); }
+  if(hasActivo){ estados.push('activo'); }
+  if(hasMora){ estados.push('mora'); }
+  if(!hasActivo && hasHistorial){ estados.push('completado'); }
+  return {estados:estados, creds:credsCli};
+}
+function clienteMatchesFiltro(c, filtro){
+  filtro=filtro||'todos';
+  if(filtro==='todos') return true;
+  var info=getClienteEstados(c).estados;
+  return info.indexOf(filtro)>=0;
+}
+function clienteBadgesHTML(c){
+  var estados=getClienteEstados(c).estados;
+  if(!estados.length) estados=['lead'];
+  var labels={lead:'Lead',activo:'Activo',mora:'En mora',completado:'Completado'};
+  return estados.map(function(s){ return '<span class="bdg '+sbg(s)+'">'+labels[s]+'</span>'; }).join(' ');
+}
 function renderClienteList(q=''){
   const filtered = q?S.clientes.filter(c=>!c.eliminado&&`${c.nombre} ${c.cedula} ${c.tel} ${c.ciudad} ${c.trabajo}`.toLowerCase().includes(q.toLowerCase())):S.clientes.filter(c=>!c.eliminado);
   if(!filtered.length) return `<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q}"</div></div>`;
@@ -2888,7 +2905,7 @@ function renderClienteList(q=''){
       <td><div class="tdm">${c.trabajo||'—'}</div><div class="tds" style="color:var(--green);font-weight:700">${fmt(c.ingreso)}/mes</div></td>
       <td>${sc?`<span style="font-weight:900;font-size:14px;color:${scoreCol}">${sc}</span><div class="tds">/850</div>`:'<span style="color:var(--ink3)">—</span>'}</td>
       <td><div class="tdm">${credsCli.length} crédito${credsCli.length!==1?'s':''}</div><div class="tds">${activo?'Activo: '+activo.id:'Sin activo'}</div></td>
-      <td><div style="display:flex;gap:4px;flex-wrap:wrap">${meta.badges}</div></td>
+      <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
         <button class="btn btn-g btn-xs" onclick="editCliente(\'${c.id}\')">Editar</button>
         <button class="btn btn-d btn-xs" onclick="delCliente(\'${c.id}\')">✕</button>
@@ -3166,7 +3183,7 @@ function empleadoDashHTML(){
         <td class="tdm">${c.cli}</td>
         <td class="tds">${c.modelo}</td>
         <td class="tds">${c.fecha||'—'}</td>
-        <td><div style="display:flex;gap:4px;flex-wrap:wrap">${meta.badges}</div></td>
+        <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       </tr>`).join('')}</tbody>
     </table></div>
     ` : `<div style="text-align:center;padding:28px 0;color:var(--ink3);font-size:13px">Aún no has creado solicitudes. <a onclick="openAddCred()" style="color:var(--p1);cursor:pointer;font-weight:700">Crear la primera →</a></div>`}
@@ -3590,12 +3607,17 @@ dash(){
 },
 
 clientes(){
+  const estado=S.clienteEstadoFiltro||'todos';
+  const chips=[['todos','Todos'],['lead','Leads'],['activo','Activos'],['mora','En mora'],['completado','Completados']];
   return`<div class="page">
-  <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap">
+  <div style="display:flex;gap:9px;margin-bottom:10px;flex-wrap:wrap">
     <div class="srch" style="flex:1"><span class="srch-i">◆</span><input type="text" id="clienteQ" placeholder="Buscar por nombre, cédula, teléfono, ciudad..." oninput="liveSearchCliente(this.value)"></div>
     <div style="display:flex;gap:6px"><button class="btn btn-g btn-sm" onclick="exportarCSV('clientes')">↓ CSV</button><button class="btn btn-p btn-sm" onclick="openAddCliente()">＋ Nuevo Cliente</button></div>
   </div>
-  <div id="clienteList">${renderClienteList()}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    ${chips.map(function(ch){ return `<button class="btn btn-sm ${estado===ch[0]?'btn-p':'btn-g'}" onclick="setClienteEstadoFiltro('${ch[0]}')">${ch[1]}</button>`; }).join('')}
+  </div>
+  <div id="clienteList">${renderClienteList(($('clienteQ')&&$('clienteQ').value)||'')}</div>
   </div>`;
 },
 
@@ -3768,7 +3790,7 @@ creditos(){
       <td style="font-weight:900;font-family:var(--fd);color:${saldoColor}">${saldoPendiente===0?'✓ $0':fmt(saldoPendiente)}</td>
       <td>${moraCell}</td>
       <td><span style="font-weight:800;font-family:var(--fd);color:var(--ink)">${apyVal.toFixed(2)}%</span></td>
-      <td><div style="display:flex;gap:4px;flex-wrap:wrap">${meta.badges}</div></td>
+      <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap" onclick="event.stopPropagation()">
         <button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button>
         <button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">Editar</button>
@@ -5223,6 +5245,13 @@ users(){
 // ══════════════════════════════════════════
 // LIVE SEARCH CLIENTES
 // ══════════════════════════════════════════
+function setClienteEstadoFiltro(f){
+  S.clienteEstadoFiltro=f||'todos';
+  pgSet('clientes',1);
+  const list=$('clienteList');
+  if(list) list.innerHTML=renderClienteList(($('clienteQ')&&$('clienteQ').value)||'');
+  if(S.page==='clientes') render();
+}
 function liveSearchCliente(q){
   pgSet('clientes',1);
   const list=$('clienteList');
@@ -8131,7 +8160,7 @@ function syncEstadoClientePorCredito(credId){
   var nombre=S.clientes[cliIdx].nombre;
   var tieneActivos=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && (cr.estado==='activo' || cr.estado==='mora');});
   var tieneCompletados=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && cr.estado==='completado';});
-  var nuevoEstado=tieneActivos ? 'activo' : (tieneCompletados ? 'completado' : 'lead');
+  var nuevoEstado=tieneActivos ? 'activo' : (tieneCompletados ? 'solvente' : (S.clientes[cliIdx].estado||'activo'));
   if(S.clientes[cliIdx].estado!==nuevoEstado){
     S.clientes[cliIdx].estado=nuevoEstado;
     DB.saveCliente(S.clientes[cliIdx]);
@@ -8145,7 +8174,7 @@ function syncTodosEstadosClientes(){
     var nombre=cl.nombre;
     var tieneActivos=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && (cr.estado==='activo' || cr.estado==='mora');});
     var tieneCompletados=S.creds.some(function(cr){return !cr.eliminado && cr.cli===nombre && cr.estado==='completado';});
-    var nuevoEstado=tieneActivos ? 'activo' : (tieneCompletados ? 'completado' : 'lead');
+    var nuevoEstado=tieneActivos ? 'activo' : (tieneCompletados ? 'solvente' : (cl.estado||'activo'));
     if(cl.estado!==nuevoEstado){
       cl.estado=nuevoEstado;
       DB.saveCliente(cl);
@@ -11289,7 +11318,7 @@ function getDestinatariosNotif(dest){
       mora: c.mora || 0,
       cuota: c.cuotaQ || c.cuota || 0,
       modelo: c.modelo || extra.modelo || '',
-      cred: c.id || extra.cred || '',
+      cred: c.id || c.cuenta || extra.cred || '',
       esLead: !!extra.esLead,
       ciudad: cl.ciudad || '',
       ingreso: cl.ing || cl.ingreso || 0,
@@ -11339,7 +11368,7 @@ function buildMensajeNotif(tipo, d){
   var cuota  = d.cuota ? fmt(d.cuota) : '0,00';
   var mora   = d.mora  || 0;
   var modelo = d.modelo||'—';
-  var cred   = d.cred  || (d.esLead ? 'LEAD' : '—');
+  var cred   = d.cred  || d.cuenta || d.cuentaId || (d.esLead ? 'LEAD' : 'CUENTA ACTIVA');
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
   var cr = d.cred ? (S&&S.creds ? S.creds.find(function(x){return x.id===d.cred;}) : null) : null;
   // Usar helpers canónicos para que los números coincidan con dashboard/reportes/contabilidad
