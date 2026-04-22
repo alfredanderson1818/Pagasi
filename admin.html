@@ -16277,8 +16277,9 @@ function showAdminProfile() {
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
       + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:14px">Cambiar Contraseña</div>'
       + '<div style="display:flex;flex-direction:column;gap:10px">'
-        + '<div class="fg"><label>Nueva contraseña</label><input id="prof-pass1" type="password" class="fi" placeholder="Mínimo 6 caracteres" style="width:100%"></div>'
-        + '<div class="fg"><label>Confirmar contraseña</label><input id="prof-pass2" type="password" class="fi" placeholder="Repetir contraseña" style="width:100%"></div>'
+        + '<div class="fg"><label>Contraseña actual</label><input id="prof-pass-current" type="password" class="fi" placeholder="Tu contraseña actual" autocomplete="current-password" style="width:100%"></div>'
+        + '<div class="fg"><label>Nueva contraseña</label><input id="prof-pass1" type="password" class="fi" placeholder="Mínimo 6 caracteres" autocomplete="new-password" style="width:100%"></div>'
+        + '<div class="fg"><label>Confirmar contraseña</label><input id="prof-pass2" type="password" class="fi" placeholder="Repetir contraseña" autocomplete="new-password" style="width:100%"></div>'
         + '<div id="prof-msg" style="display:none;font-size:12px;padding:9px 12px;border-radius:9px"></div>'
         + '<button class="btn btn-p btn-sm" onclick="cambiarPasswordPerfil()" style="align-self:flex-start">Actualizar contraseña</button>'
       + '</div>'
@@ -16299,6 +16300,7 @@ function _profKpi(label, val, color, badge){
 }
 
 function cambiarPasswordPerfil() {
+  var pCur = ($('prof-pass-current') || {}).value || '';
   var p1 = ($('prof-pass1') || {}).value || '';
   var p2 = ($('prof-pass2') || {}).value || '';
   var msg = $('prof-msg');
@@ -16309,19 +16311,37 @@ function cambiarPasswordPerfil() {
     msg.style.color = ok ? '#27ae60' : '#e74c3c';
     msg.textContent = txt;
   }
+  if (!pCur) return showMsg('⛔ Ingresá tu contraseña actual', false);
   if (p1.length < 6) return showMsg('⛔ La contraseña debe tener al menos 6 caracteres', false);
   if (p1 !== p2) return showMsg('Las contraseñas no coinciden', false);
   var user = auth && auth.currentUser;
   if (!user) return showMsg('⛔ No hay sesión activa', false);
-  user.updatePassword(p1)
+  if (!user.email) return showMsg('⛔ El usuario no tiene email asociado', false);
+
+  showMsg('Verificando…', true);
+
+  // Reautenticar con la contraseña actual y luego actualizar
+  var credential = firebase.auth.EmailAuthProvider.credential(user.email, pCur);
+  user.reauthenticateWithCredential(credential)
+    .then(function() {
+      return user.updatePassword(p1);
+    })
     .then(function() {
       showMsg('✓ Contraseña actualizada correctamente', true);
+      if ($('prof-pass-current')) $('prof-pass-current').value = '';
       if ($('prof-pass1')) $('prof-pass1').value = '';
       if ($('prof-pass2')) $('prof-pass2').value = '';
     })
     .catch(function(e) {
-      if (e.code === 'auth/requires-recent-login') {
-        showMsg('⚠ Por seguridad, cerrá sesión y volvé a ingresar antes de cambiar la contraseña.', false);
+      var code = e && e.code;
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        showMsg('⛔ La contraseña actual es incorrecta', false);
+      } else if (code === 'auth/too-many-requests') {
+        showMsg('⛔ Demasiados intentos. Esperá un momento e intentá de nuevo.', false);
+      } else if (code === 'auth/weak-password') {
+        showMsg('⛔ La nueva contraseña es demasiado débil', false);
+      } else if (code === 'auth/network-request-failed') {
+        showMsg('⛔ Error de conexión. Verificá tu internet.', false);
       } else {
         showMsg('⛔ ' + (e.message || 'Error al actualizar'), false);
       }
