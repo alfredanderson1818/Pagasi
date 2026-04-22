@@ -4870,175 +4870,325 @@ function getMonthlyIngresos(){
 // ══════════════════════════════════════════
 function empleadoDashHTML(){
   const me = (S.currentUser && S.currentUser.nombre) || 'Empleado';
+  const rol = (S.currentUser && S.currentUser.rol) || 'Empleado';
   const hoy = new Date();
   const hoyStr = hoy.toISOString().slice(0,10);
   const hoyTxt = hoy.toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long'});
+  const horaActual = hoy.getHours();
+  const saludo = horaActual < 12 ? 'Buenos días' : horaActual < 19 ? 'Buenas tardes' : 'Buenas noches';
 
-  // Semana actual: lunes → domingo
+  // Semana actual
   const d = new Date(hoy); d.setHours(0,0,0,0);
-  const dow = d.getDay(); // 0=dom
+  const dow = d.getDay();
   const lunesOffset = dow===0?-6:1-dow;
   const lunes = new Date(d); lunes.setDate(d.getDate()+lunesOffset);
   const domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
   const lunesStr = lunes.toISOString().slice(0,10);
   const domingoStr = domingo.toISOString().slice(0,10);
 
+  // Mes actual
+  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0,10);
+  const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0).toISOString().slice(0,10);
+
   const activos = S.creds.filter(c=>!c.eliminado && c.estado==='activo');
 
-  // ─── EN MORA — urgente ───
+  // ─── EN MORA ordenado por urgencia ───
   const enMora = activos.filter(c=>c.mora>0).sort((a,b)=>b.mora-a.mora);
+  const mora1a7 = enMora.filter(c=>c.mora<=7).length;
+  const mora8a30 = enMora.filter(c=>c.mora>7 && c.mora<=30).length;
+  const mora31mas = enMora.filter(c=>c.mora>30).length;
 
-  // ─── PAGOS REGISTRADOS POR MÍ ───
-  const misPagosSemana = S.pagos.filter(p=>!p.eliminado && p.cobrador===me && p.fecha>=lunesStr && p.fecha<=domingoStr);
-  const misPagosHoy    = S.pagos.filter(p=>!p.eliminado && p.cobrador===me && p.fecha===hoyStr);
-  const totalCobradoSem = misPagosSemana.filter(p=>p.estado==='confirmado').reduce((a,p)=>a+p.monto,0);
+  // ─── PAGOS por mí ───
+  const misPagosConf = S.pagos.filter(p=>!p.eliminado && p.cobrador===me && p.estado==='confirmado');
+  const misPagosHoy = misPagosConf.filter(p=>p.fecha===hoyStr);
+  const misPagosSemana = misPagosConf.filter(p=>p.fecha>=lunesStr && p.fecha<=domingoStr);
+  const misPagosMes = misPagosConf.filter(p=>p.fecha>=primerDiaMes && p.fecha<=ultimoDiaMes);
 
-  // ─── MIS SOLICITUDES RECIENTES ───
-  const misSolicitudes = S.creds.filter(c=>!c.eliminado && c.creadoPor===me).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,5);
+  const cobradoHoy = misPagosHoy.reduce((a,p)=>a+(p.monto||0),0);
+  const cobradoSemana = misPagosSemana.reduce((a,p)=>a+(p.monto||0),0);
+  const cobradoMes = misPagosMes.reduce((a,p)=>a+(p.monto||0),0);
 
-  // ─── A COBRAR ESTA SEMANA — créditos activos al día con próximo vencimiento esta semana ───
-  // Heurística: calculamos si su próxima cuota vence en los próximos 7 días
+  // ─── METAS (calculadas: meta = 80% de lo cobrable) ───
+  const esperadoSemana = activos.reduce((a,c)=>{
+    // cuotas que deberían vencerse esta semana
+    return a + parseFloat(c.cuotaQ||c.cuota||0) * 0.5;
+  }, 0);
+  const metaSemana = Math.round(esperadoSemana * 0.8);
+  const avanceMeta = metaSemana > 0 ? Math.min(100, Math.round((cobradoSemana/metaSemana)*100)) : 0;
+
+  // ─── RANKING del equipo (solo cobros confirmados del mes) ───
+  const cobrosPorCobrador = {};
+  S.pagos.filter(p=>!p.eliminado && p.estado==='confirmado' && p.fecha>=primerDiaMes).forEach(p=>{
+    const nom = p.cobrador||'Sin asignar';
+    if(!cobrosPorCobrador[nom]) cobrosPorCobrador[nom] = {monto:0, count:0};
+    cobrosPorCobrador[nom].monto += (p.monto||0);
+    cobrosPorCobrador[nom].count += 1;
+  });
+  const ranking = Object.keys(cobrosPorCobrador).map(nom=>({
+    nombre: nom,
+    monto: cobrosPorCobrador[nom].monto,
+    count: cobrosPorCobrador[nom].count
+  })).sort((a,b)=>b.monto-a.monto);
+  const miPosicion = ranking.findIndex(r=>r.nombre===me) + 1;
+
+  // ─── MIS SOLICITUDES ───
+  const misSolicitudes = S.creds.filter(c=>!c.eliminado && c.creadoPor===me)
+    .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,5);
+  const misSolicitudesActivas = S.creds.filter(c=>!c.eliminado && c.creadoPor===me && c.estado==='activo').length;
+  const misSolicitudesCompletadas = S.creds.filter(c=>!c.eliminado && c.creadoPor===me && c.estado==='completado').length;
+
+  // ─── A COBRAR ESTA SEMANA ───
   function proximaCuota(c){
     if(!c.fecha) return null;
     const inicio = new Date(c.fecha);
     if(isNaN(inicio.getTime())) return null;
     const pagadas = c.pagado||0;
-    // cuota quincenal = cada 15 días
     const proxima = new Date(inicio);
     proxima.setDate(inicio.getDate() + (pagadas+1)*15);
     return proxima;
   }
   const enSemana = activos.filter(c=>{
-    if(c.mora>0) return false; // ya está en "en mora"
+    if(c.mora>0) return false;
     const px = proximaCuota(c);
     if(!px) return false;
     return px>=lunes && px<=domingo;
   }).map(c=>({...c, _proxima:proximaCuota(c)}))
     .sort((a,b)=>a._proxima-b._proxima);
 
-  const totalAcobrar = enMora.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0)
-                     + enSemana.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
+  const totalAcobrarMora = enMora.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
+  const totalAcobrarSem = enSemana.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
+  const totalAcobrar = totalAcobrarMora + totalAcobrarSem;
+
+  // ─── CLIENTES POR LLAMAR HOY (mora + vence hoy) ───
+  const porLlamarHoy = enMora.slice(0,5).concat(
+    enSemana.filter(c=>c._proxima.toISOString().slice(0,10)===hoyStr).slice(0,3)
+  );
 
   return `<div class="page">
 
-  <!-- Header bienvenida -->
-  <div style="background:linear-gradient(135deg,var(--p1) 0%,var(--p2) 100%);color:#fff;border-radius:16px;padding:20px 22px;margin-bottom:14px;box-shadow:0 8px 32px rgba(91,78,212,.18)">
-    <div style="font-size:13px;opacity:.85;font-weight:600;margin-bottom:4px;text-transform:capitalize">${hoyTxt}</div>
-    <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;margin-bottom:12px">Hola, ${me.split(' ')[0]}</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-      <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px)">
-        <div style="font-size:10px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Cobrado hoy</div>
-        <div style="font-size:18px;font-weight:900;font-family:var(--fd);margin-top:2px">${fmt(misPagosHoy.filter(p=>p.estado==='confirmado').reduce((a,p)=>a+p.monto,0))}</div>
+  <!-- ══ HERO HEADER ══ -->
+  <div style="background:linear-gradient(135deg,var(--p1) 0%,var(--p2) 100%);color:#fff;border-radius:16px;padding:20px 22px;margin-bottom:14px;box-shadow:0 8px 32px rgba(91,78,212,.18);position:relative;overflow:hidden">
+    <div style="position:absolute;top:-40px;right:-20px;width:180px;height:180px;background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%);pointer-events:none"></div>
+    <div style="position:relative;z-index:1">
+      <div style="font-size:12px;opacity:.85;font-weight:600;margin-bottom:3px;text-transform:capitalize">${hoyTxt}</div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-.4px;margin-bottom:3px">${saludo}, ${me.split(' ')[0]}</div>
+      <div style="font-size:11.5px;opacity:.85;margin-bottom:14px">${rol}${miPosicion>0?` · Posición #${miPosicion} este mes 🏆`:''}</div>
+
+      <!-- Stats mensuales del cobrador -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <div style="background:rgba(255,255,255,.14);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px)">
+          <div style="font-size:9.5px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Hoy</div>
+          <div style="font-size:17px;font-weight:900;font-family:var(--fd);margin-top:2px">${fmt(cobradoHoy)}</div>
+          <div style="font-size:10px;opacity:.75;margin-top:1px">${misPagosHoy.length} cobro${misPagosHoy.length!==1?'s':''}</div>
+        </div>
+        <div style="background:rgba(255,255,255,.14);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px)">
+          <div style="font-size:9.5px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Esta semana</div>
+          <div style="font-size:17px;font-weight:900;font-family:var(--fd);margin-top:2px">${fmt(cobradoSemana)}</div>
+          <div style="font-size:10px;opacity:.75;margin-top:1px">${misPagosSemana.length} cobro${misPagosSemana.length!==1?'s':''}</div>
+        </div>
+        <div style="background:rgba(255,255,255,.14);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px)">
+          <div style="font-size:9.5px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Este mes</div>
+          <div style="font-size:17px;font-weight:900;font-family:var(--fd);margin-top:2px">${fmt(cobradoMes)}</div>
+          <div style="font-size:10px;opacity:.75;margin-top:1px">${misPagosMes.length} cobro${misPagosMes.length!==1?'s':''}</div>
+        </div>
       </div>
-      <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px)">
-        <div style="font-size:10px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Cobrado semana</div>
-        <div style="font-size:18px;font-weight:900;font-family:var(--fd);margin-top:2px">${fmt(totalCobradoSem)}</div>
+
+      ${metaSemana>0 ? `
+      <!-- Progreso meta semanal -->
+      <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:10px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:11px;font-weight:700">Meta semanal: ${fmt(metaSemana)}</div>
+          <div style="font-size:11px;font-weight:800">${avanceMeta}%</div>
+        </div>
+        <div style="background:rgba(255,255,255,.15);height:6px;border-radius:3px;overflow:hidden">
+          <div style="background:#fff;height:100%;width:${avanceMeta}%;border-radius:3px;transition:width .5s ease"></div>
+        </div>
+        ${avanceMeta >= 100 ? '<div style="font-size:10.5px;margin-top:5px;font-weight:700">🎉 ¡Meta cumplida! Sigue así</div>' : ''}
       </div>
-      <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px)">
-        <div style="font-size:10px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Pagos registrados</div>
-        <div style="font-size:18px;font-weight:900;font-family:var(--fd);margin-top:2px">${misPagosSemana.length} <span style="font-size:11px;opacity:.7;font-weight:600">/ sem</span></div>
-      </div>
+      ` : ''}
     </div>
   </div>
 
-  <!-- Resumen accionable -->
-  <div class="sg" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
-    <div class="stat" style="border-left:3px solid var(--red)">
-      <div class="st-v" style="color:var(--red)">${enMora.length}</div>
-      <div class="st-l">En mora — urgente</div>
-    </div>
-    <div class="stat" style="border-left:3px solid var(--amber)">
-      <div class="st-v" style="color:var(--amber)">${enSemana.length}</div>
-      <div class="st-l">Por cobrar esta semana</div>
-    </div>
-    <div class="stat" style="border-left:3px solid var(--p1)">
-      <div class="st-v" style="color:var(--p1);font-family:var(--fd)">${fmt(totalAcobrar)}</div>
-      <div class="st-l">Total por cobrar</div>
-    </div>
+  <!-- ══ ACCIONES RÁPIDAS ══ -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+    <button onclick="openAddPago()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border-radius:12px;border:1px solid var(--rim);background:var(--surf);cursor:pointer;transition:all .15s;font-family:var(--f)" onmouseover="this.style.borderColor='var(--green)';this.style.background='var(--greens)'" onmouseout="this.style.borderColor='var(--rim)';this.style.background='var(--surf)'">
+      <div style="font-size:22px">💰</div>
+      <div style="font-size:11.5px;font-weight:800;color:var(--ink)">Registrar Pago</div>
+      <div style="font-size:9.5px;color:var(--ink3)">Cobro rápido</div>
+    </button>
+    <button onclick="openAddCred()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border-radius:12px;border:1px solid var(--rim);background:var(--surf);cursor:pointer;transition:all .15s;font-family:var(--f)" onmouseover="this.style.borderColor='var(--p1)';this.style.background='var(--gs)'" onmouseout="this.style.borderColor='var(--rim)';this.style.background='var(--surf)'">
+      <div style="font-size:22px">📝</div>
+      <div style="font-size:11.5px;font-weight:800;color:var(--ink)">Nueva Solicitud</div>
+      <div style="font-size:9.5px;color:var(--ink3)">Capturar cliente</div>
+    </button>
+    <button onclick="nav('cobranza')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border-radius:12px;border:1px solid var(--rim);background:var(--surf);cursor:pointer;transition:all .15s;font-family:var(--f)" onmouseover="this.style.borderColor='var(--amber)';this.style.background='var(--ambers)'" onmouseout="this.style.borderColor='var(--rim)';this.style.background='var(--surf)'">
+      <div style="font-size:22px">📋</div>
+      <div style="font-size:11.5px;font-weight:800;color:var(--ink)">Ver Cobranza</div>
+      <div style="font-size:9.5px;color:var(--ink3)">Todos los créditos</div>
+    </button>
   </div>
 
-  <!-- CTA grande Nueva Solicitud -->
-  <button onclick="openAddCred()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border-radius:14px;border:2px dashed var(--p1);background:var(--gs);color:var(--p1);font-family:var(--f);font-size:14px;font-weight:800;cursor:pointer;margin-bottom:16px;transition:all .15s" onmouseover="this.style.background='var(--p1)';this.style.color='#fff'" onmouseout="this.style.background='var(--gs)';this.style.color='var(--p1)'">
-    <span style="font-size:18px;font-weight:900">＋</span> Nueva Solicitud de Crédito
-  </button>
+  <!-- ══ ALERTAS Y URGENCIAS ══ -->
+  ${enMora.length>0 ? `
+  <div style="background:linear-gradient(135deg,rgba(217,59,90,.08) 0%,rgba(217,59,90,.02) 100%);border:1px solid rgba(217,59,90,.25);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:38px;height:38px;background:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⚠️</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--red)">${enMora.length} cliente${enMora.length!==1?'s':''} en mora</div>
+        <div style="font-size:11.5px;color:var(--ink2)">${fmt(totalAcobrarMora)} por recuperar</div>
+      </div>
+      <button class="btn btn-r btn-sm" onclick="nav('cobranza')">Ver todos →</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+      <div style="background:rgba(255,255,255,.4);border-radius:8px;padding:7px 9px;text-align:center">
+        <div style="font-size:16px;font-weight:900;color:var(--amber);line-height:1">${mora1a7}</div>
+        <div style="font-size:9.5px;color:var(--ink3);font-weight:600;margin-top:2px">1-7 días</div>
+      </div>
+      <div style="background:rgba(255,255,255,.4);border-radius:8px;padding:7px 9px;text-align:center">
+        <div style="font-size:16px;font-weight:900;color:var(--amber);line-height:1">${mora8a30}</div>
+        <div style="font-size:9.5px;color:var(--ink3);font-weight:600;margin-top:2px">8-30 días</div>
+      </div>
+      <div style="background:rgba(255,255,255,.4);border-radius:8px;padding:7px 9px;text-align:center">
+        <div style="font-size:16px;font-weight:900;color:var(--red);line-height:1">${mora31mas}</div>
+        <div style="font-size:9.5px;color:var(--ink3);font-weight:600;margin-top:2px">+30 días</div>
+      </div>
+    </div>
+  </div>
+  ` : ''}
 
-  <!-- Mora — urgente -->
+  <!-- ══ A LLAMAR HOY — top priorizada ══ -->
+  ${porLlamarHoy.length>0 ? `
   <div class="card" style="margin-bottom:12px">
     <div class="ch">
       <div>
-        <div class="ct" style="color:var(--red)">⚠ En mora — Cobrar YA</div>
-        <div class="cs">${enMora.length} clientes · ${fmt(enMora.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0))} por cobrar</div>
+        <div class="ct">📞 Llamar hoy · Lista priorizada</div>
+        <div class="cs">${porLlamarHoy.length} clientes · Los más urgentes primero</div>
       </div>
-      ${enMora.length?`<button class="btn btn-r btn-sm" onclick="nav('cobranza')">Ir a cobranza →</button>`:''}
     </div>
-    ${enMora.length ? `<div class="tw"><table>
-      <thead><tr><th>Cliente</th><th>Modelo</th><th>Días</th><th>Cuota</th><th></th></tr></thead>
-      <tbody>${enMora.slice(0,8).map(c=>`<tr>
-        <td class="tdm">${c.cli}<div class="tds" style="font-size:10px">${c.tel||''}</div></td>
-        <td class="tds">${c.modelo}</td>
-        <td><span class="bdg ${c.mora>60?'b-r':c.mora>30?'b-a':'b-b'}">${c.mora}d</span></td>
-        <td style="font-weight:800;color:var(--red);font-family:var(--fd)">${fmt(c.cuotaQ||c.cuota||0)}</td>
-        <td style="text-align:right">
-          <button class="btn btn-p btn-sm" onclick="openAmort('${c.id}')" title="Ver y cobrar">💳</button>
-          ${c.tel?`<a href="https://wa.me/${(c.tel||'').replace(/\\D/g,'')}" target="_blank" class="btn btn-g btn-sm" title="WhatsApp">💬</a>`:''}
-        </td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-    ${enMora.length>8?`<div style="text-align:center;padding:10px 0 0;color:var(--ink3);font-size:11px">+${enMora.length-8} más — <a onclick="nav('cobranza')" style="color:var(--p1);cursor:pointer;font-weight:700">ver todos</a></div>`:''}
-    ` : `<div style="text-align:center;padding:32px 0;color:var(--green);font-size:13px;font-weight:700">✅ ¡Sin mora! Excelente trabajo</div>`}
+    <div style="display:flex;flex-direction:column;gap:6px;padding:0 14px 14px">
+      ${porLlamarHoy.map(c=>{
+        const esMora = c.mora>0;
+        const urgColor = esMora ? (c.mora>30?'var(--red)':'var(--amber)') : 'var(--p1)';
+        const urgTxt = esMora ? c.mora+'d mora' : 'Vence hoy';
+        const cuota = fmt(c.cuotaQ||c.cuota||0);
+        const telClean = (c.tel||'').replace(/\D/g,'');
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf2);border-radius:10px;border-left:3px solid ${urgColor}">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cli}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">${c.modelo} · <span style="color:${urgColor};font-weight:700">${urgTxt}</span> · <span style="font-weight:800;font-family:var(--fd)">${cuota}</span></div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            ${telClean?`<a href="tel:${telClean}" class="btn btn-g btn-xs" style="padding:6px 9px" title="Llamar">📞</a>`:''}
+            ${telClean?`<a href="https://wa.me/58${telClean}" target="_blank" class="btn btn-g btn-xs" style="padding:6px 9px;background:#25D366;color:#fff;border-color:#25D366" title="WhatsApp">💬</a>`:''}
+            <button class="btn btn-p btn-xs" style="padding:6px 9px" onclick="openPagoRapido('${c.id}')" title="Cobrar ahora">💰</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
   </div>
+  ` : `
+  <div style="background:linear-gradient(135deg,rgba(46,204,113,.08) 0%,rgba(46,204,113,.02) 100%);border:1px solid rgba(46,204,113,.25);border-radius:12px;padding:20px;margin-bottom:14px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">✨</div>
+    <div style="font-size:14px;font-weight:800;color:var(--green)">¡Sin urgencias hoy!</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:4px">No hay mora ni vencimientos urgentes. Buen trabajo.</div>
+  </div>
+  `}
 
-  <!-- A cobrar esta semana -->
+  <!-- ══ PRÓXIMOS VENCIMIENTOS DE LA SEMANA ══ -->
   <div class="card" style="margin-bottom:12px">
     <div class="ch">
       <div>
         <div class="ct">📅 Esta semana</div>
-        <div class="cs">Clientes con cuota por vencer — ${lunes.toLocaleDateString('es-VE',{day:'numeric',month:'short'})} al ${domingo.toLocaleDateString('es-VE',{day:'numeric',month:'short'})}</div>
+        <div class="cs">${enSemana.length} vencimiento${enSemana.length!==1?'s':''} · ${fmt(totalAcobrarSem)} esperado</div>
       </div>
+      ${enSemana.length>6?`<button class="btn btn-g btn-sm" onclick="nav('cobranza')">Ver todos →</button>`:''}
     </div>
     ${enSemana.length ? `<div class="tw"><table>
       <thead><tr><th>Día</th><th>Cliente</th><th>Modelo</th><th>Cuota</th><th></th></tr></thead>
-      <tbody>${enSemana.slice(0,10).map(c=>{
+      <tbody>${enSemana.slice(0,6).map(c=>{
         const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
         const px = c._proxima;
         const esHoy = px.toISOString().slice(0,10)===hoyStr;
+        const mañana = new Date(hoy); mañana.setDate(hoy.getDate()+1);
+        const esMañana = px.toISOString().slice(0,10)===mañana.toISOString().slice(0,10);
+        const diaLbl = esHoy?'HOY':esMañana?'MAÑANA':dias[px.getDay()]+' '+px.getDate();
+        const diaColor = esHoy?'var(--amber)':esMañana?'var(--p1)':'var(--ink3)';
         return `<tr ${esHoy?'style="background:rgba(232,152,10,.06)"':''}>
-          <td style="white-space:nowrap"><span style="font-size:10px;font-weight:800;color:${esHoy?'var(--amber)':'var(--ink3)'};text-transform:uppercase">${esHoy?'HOY':dias[px.getDay()]+' '+px.getDate()}</span></td>
+          <td style="white-space:nowrap"><span style="font-size:10px;font-weight:800;color:${diaColor};text-transform:uppercase">${diaLbl}</span></td>
           <td class="tdm">${c.cli}<div class="tds" style="font-size:10px">${c.tel||''}</div></td>
           <td class="tds">${c.modelo}</td>
           <td style="font-weight:700;font-family:var(--fd)">${fmt(c.cuotaQ||c.cuota||0)}</td>
-          <td style="text-align:right">
-            <button class="btn btn-p btn-sm" onclick="openAmort('${c.id}')">💳</button>
-            ${c.tel?`<a href="https://wa.me/${(c.tel||'').replace(/\\D/g,'')}" target="_blank" class="btn btn-g btn-sm">💬</a>`:''}
+          <td style="text-align:right;white-space:nowrap">
+            <button class="btn btn-p btn-xs" onclick="openPagoRapido('${c.id}')" title="Cobrar">💰</button>
+            ${c.tel?`<a href="https://wa.me/58${(c.tel||'').replace(/\D/g,'')}" target="_blank" class="btn btn-xs" style="background:#25D366;color:#fff;border-color:#25D366;padding:4px 7px" title="WhatsApp">💬</a>`:''}
           </td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>
-    ${enSemana.length>10?`<div style="text-align:center;padding:10px 0 0;color:var(--ink3);font-size:11px">+${enSemana.length-10} más</div>`:''}
     ` : `<div style="text-align:center;padding:28px 0;color:var(--ink3);font-size:13px">Sin vencimientos esta semana</div>`}
   </div>
 
-  <!-- Mis solicitudes recientes -->
+  <!-- ══ RANKING DEL EQUIPO ══ -->
+  ${ranking.length > 1 ? `
+  <div class="card" style="margin-bottom:12px">
+    <div class="ch">
+      <div>
+        <div class="ct">🏆 Ranking del mes</div>
+        <div class="cs">Cobros confirmados · Este mes</div>
+      </div>
+    </div>
+    <div style="padding:4px 14px 14px">
+      ${ranking.slice(0,5).map((r,i)=>{
+        const esMio = r.nombre===me;
+        const medalla = i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);
+        const maxMonto = ranking[0].monto || 1;
+        const pctBar = Math.round((r.monto/maxMonto)*100);
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 4px;${i<ranking.length-1?'border-bottom:1px solid var(--rim);':''}${esMio?'background:var(--gs);margin:0 -10px;padding:10px 14px;border-radius:8px':''}">
+          <div style="flex-shrink:0;width:32px;text-align:center;font-size:${i<3?'20px':'12px'};font-weight:800;color:${i===0?'#ffd700':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--ink3)'}">${medalla}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <div style="font-size:12.5px;font-weight:${esMio?'900':'700'};color:${esMio?'var(--p1)':'var(--ink)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nombre}${esMio?' <span style="background:var(--p1);color:#fff;font-size:8.5px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px">TÚ</span>':''}</div>
+              <div style="font-size:12px;font-weight:900;font-family:var(--fd);color:var(--ink);flex-shrink:0">${fmt(r.monto)}</div>
+            </div>
+            <div style="background:var(--surf2);height:4px;border-radius:2px;overflow:hidden">
+              <div style="background:${i===0?'#ffd700':esMio?'var(--p1)':'var(--ink3)'};height:100%;width:${pctBar}%;border-radius:2px;transition:width .5s ease"></div>
+            </div>
+            <div style="font-size:9.5px;color:var(--ink3);margin-top:2px">${r.count} cobro${r.count!==1?'s':''}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+  ` : ''}
+
+  <!-- ══ MIS SOLICITUDES RECIENTES ══ -->
+  ${misSolicitudes.length > 0 ? `
   <div class="card">
     <div class="ch">
       <div>
-        <div class="ct">Mis últimas solicitudes</div>
-        <div class="cs">${S.creds.filter(c=>!c.eliminado && c.creadoPor===me).length} en total</div>
+        <div class="ct">📋 Mis solicitudes recientes</div>
+        <div class="cs">${misSolicitudesActivas} activas · ${misSolicitudesCompletadas} completadas</div>
       </div>
       <button class="btn btn-g btn-sm" onclick="nav('creditos')">Ver todas →</button>
     </div>
-    ${misSolicitudes.length ? `<div class="tw"><table>
-      <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>Fecha</th><th>Estado</th></tr></thead>
+    <div class="tw"><table>
+      <thead><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>Estado</th></tr></thead>
       <tbody>${misSolicitudes.map(c=>`<tr onclick="openAmort('${c.id}')" style="cursor:pointer">
-        <td class="tds">${c.id}</td>
+        <td class="tds" style="font-family:monospace;font-size:11px">${c.id}</td>
         <td class="tdm">${c.cli}</td>
         <td class="tds">${c.modelo}</td>
-        <td class="tds">${c.fecha||'—'}</td>
         <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
       </tr>`).join('')}</tbody>
     </table></div>
-    ` : `<div style="text-align:center;padding:28px 0;color:var(--ink3);font-size:13px">Aún no has creado solicitudes. <a onclick="openAddCred()" style="color:var(--p1);cursor:pointer;font-weight:700">Crear la primera →</a></div>`}
   </div>
+  ` : `
+  <div class="card" style="padding:24px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px;opacity:.4">📝</div>
+    <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:4px">Aún no has creado solicitudes</div>
+    <div style="font-size:11.5px;color:var(--ink3);margin-bottom:12px">Crea la primera para que empiece a contar</div>
+    <button class="btn btn-p btn-sm" onclick="openAddCred()">＋ Crear solicitud</button>
+  </div>
+  `}
 
   </div>`;
 }
