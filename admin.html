@@ -487,16 +487,6 @@ tbody tr:last-child td{border-bottom:none}
   .btn-sm { padding: 7px 12px; font-size: 11px; }
   .btn-xs { padding: 5px 10px; font-size: 10px; }
 
-  /* Modal — full screen en mobile */
-  .modal, .modal.modal-lg {
-    max-width: 100%; width: 100%; max-height: 95vh;
-    border-radius: 16px 16px 0 0;
-    margin-top: auto; position: fixed;
-    bottom: 0; left: 0; right: 0;
-  }
-  #ov { align-items: flex-end; }
-  .m-bd { max-height: 60vh; }
-
   /* Módulos checklist en invitar */
   #modulos-grid label { font-size: 11px; padding: 4px 7px; }
 
@@ -1463,23 +1453,6 @@ tbody tr:hover td {
   .fgr.c1 { grid-template-columns: 1fr !important; }
   .fgr.c3 { grid-template-columns: 1fr 1fr !important; }
 
-  /* ── Modal: full screen ── */
-  .ov {
-    padding: 0 !important;
-    align-items: flex-end !important;
-  }
-  .modal {
-    border-radius: 20px 20px 0 0 !important;
-    max-height: 92vh;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  .m-bd {
-    max-height: 65vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
   /* ── Amortization table on mobile ── */
   .ah, .ar { font-size: 10px !important; }
 
@@ -1895,28 +1868,64 @@ tbody tr:hover td {
   label.fsec, label { font-size: 11.5px !important; }
 
   /* ── Modales a pantalla completa ── */
-  .modal, .modal-lg {
+  .modal, .modal.modal-lg, .modal-lg {
     width: 100% !important;
     max-width: 100% !important;
     height: 100vh !important;
     max-height: 100vh !important;
+    min-height: 100vh !important;
     margin: 0 !important;
     border-radius: 0 !important;
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    top: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
   }
-  #ov { padding: 0 !important; align-items: stretch !important; }
-  #mbd, .modal-body { flex: 1; overflow-y: auto !important; padding: 14px !important; -webkit-overflow-scrolling: touch; }
-  #mft, .modal-footer {
-    padding: 10px 14px !important;
-    flex-wrap: wrap;
-    gap: 6px !important;
-    border-top: 1px solid var(--rim);
-    background: var(--surf);
+  #ov, .ov {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+  /* HEADER sticky arriba */
+  #mbd .m-hd, .m-hd {
+    flex-shrink: 0 !important;
     position: sticky;
-    bottom: 0;
+    top: 0;
+    z-index: 2;
   }
-  #mft button, .modal-footer button { flex: 1 1 calc(50% - 3px); min-width: 120px; }
+  /* BODY scroll, ocupa todo el espacio disponible */
+  #mbd, .m-bd, .modal-body {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    padding: 14px !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 20px !important;
+  }
+  /* FOOTER anclado al fondo de la pantalla */
+  #mft, .m-ft, .modal-footer {
+    flex-shrink: 0 !important;
+    padding: 10px 14px !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    border-top: 1px solid var(--rim) !important;
+    background: var(--surf) !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 3 !important;
+    /* Respeta el notch/home indicator del iPhone */
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #mft button, .m-ft button, .modal-footer button {
+    flex: 1 1 calc(50% - 3px) !important;
+    min-width: 120px !important;
+    min-height: 44px !important;
+  }
 
   /* ── Ficha de cliente: hero, tabs, panels ── */
   .cf-hero { padding: 14px !important; border-radius: 12px !important; }
