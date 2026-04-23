@@ -4209,7 +4209,7 @@ function motoCard(m){
 }
 
 function changeMotoStatus(id, newStatus){
-  const idx = S.motos.findIndex(m=>m.id===id);
+  const idx = S.motos.findIndex(m=>String(m.id)===String(id));
   if(idx<0) return;
   S.motos[idx].estado = newStatus;
   DB.saveMoto(S.motos[idx]);
@@ -8156,7 +8156,7 @@ function liveSearchCliente(q){
 // MOTO CRUD
 // ══════════════════════════════════════════
 function openAddMoto(id=null){
-  const m=id?S.motos.find(x=>x.id===id):null,ed=!!m;
+  const m=id?S.motos.find(x=>String(x.id)===String(id)):null,ed=!!m;
   $('mic').textContent='MOT';
   $('mtt').textContent=ed?'Editar Moto':'Nueva Unidad al Inventario';
   $('msb').textContent=ed?m.modelo:'Unidad física — VIN, color, estado';
@@ -8218,7 +8218,7 @@ function openAddMoto(id=null){
     const precioBaseReal=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||precio))||precio;
     const calc=planMode==='custom' ? calcCustomPlan(precioBaseReal, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo) : Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
     const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,color:g('m_color')||'',vin:g('m_vin')||'VIN-'+Date.now().toString().slice(-4),estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
-    if(ed){const i=S.motos.findIndex(x=>x.id===m.id);S.motos[i]=obj;}else S.motos.push(obj);
+    if(ed){const i=S.motos.findIndex(x=>String(x.id)===String(m.id));if(i>=0){S.motos[i]=obj;}else{S.motos.push(obj);}}else S.motos.push(obj);
     DB.saveMoto(obj);
     closeM();nav('motos');toast(ed?'Moto actualizada':'✓ Moto agregada','success');return true;
   };
@@ -8263,7 +8263,7 @@ function setCredTab(t){S.credTab=t;window._pages={};nav('creditos');}
 function setPagosTab(t){S.pagosTab=t;window._pages={};nav('pagos');}
 function delMoto(id){
   if(!requireDeletePermission()) return;
-  const m=S.motos.find(x=>x.id===id);if(!m)return;
+  const m=S.motos.find(x=>String(x.id)===String(id));if(!m)return;
   $('mic').textContent='Del';$('mtt').textContent='Eliminar Moto';$('msb').textContent='No se puede deshacer';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`<div style="text-align:center;padding:14px 0"><div style="font-size:46px;margin-bottom:12px">MOT</div><div style="font-size:16px;font-weight:800;margin-bottom:5px">${m.modelo}</div><div style="color:var(--ink3);margin-bottom:18px;font-size:12px">Precio: ${fmt(m.precio)}</div><div style="background:var(--reds);border:1px solid rgba(240,75,106,0.2);border-radius:var(--r8);padding:11px;color:var(--red);font-size:13px;font-weight:700">¿Confirmas eliminar esta moto del catálogo?</div></div>`;
@@ -8342,7 +8342,7 @@ function auditBadge(item){
 
 
 function cDel(id){
-  var i=S.motos.findIndex(x=>x.id===id); if(i<0) return;
+  var i=S.motos.findIndex(x=>String(x.id)===String(id)); if(i<0) return;
   var m=S.motos[i];
   confirmarEliminacion({
     titulo:'Eliminar Moto',
@@ -9410,17 +9410,17 @@ function _wzActualizarPrecioBaseDesdePrecio(){
 
 // ── Selección de moto del inventario ──
 function _wzPickMotoInv(sel){
-  if(!sel.value){ WZ.precio=0; _wzScore(); return; }
+  if(!sel.value){ WZ.precio=0; WZ.motoInvId=null; _wzScore(); return; }
   var opt = sel.options[sel.selectedIndex];
   var precio = parseFloat(opt.getAttribute('data-precio')||0);
-  var moto = S.motos.find(function(m){ return m.id===parseInt(sel.value); });
+  var moto = S.motos.find(function(m){ return String(m.id)===String(sel.value); });
   var catSel = document.getElementById('wz_moto_cat');
   if(catSel) catSel.value = '';
   var pInp = document.getElementById('wz_precio');
   if(pInp){ pInp.value = precio; }
   WZ.precio = precio;
   _wzActualizarPrecioBaseDesdePrecio();
-  WZ.motoInvId = parseInt(sel.value);
+  WZ.motoInvId = sel.value;
   WZ.motoModelo = moto ? moto.modelo : opt.text.split(' —')[0].trim();
   _wzActualizarFinPreview(precio);
   _wzScore();
@@ -10544,7 +10544,7 @@ function _wzGuardar(){
 
   // Marcar moto como financiada o crearla desde catálogo
   if(WZ.motoInvId){
-    var mi = S.motos.findIndex(function(m){ return m.id===WZ.motoInvId; });
+    var mi = S.motos.findIndex(function(m){ return String(m.id)===String(WZ.motoInvId); });
     if(mi>=0){
       S.motos[mi].estado='financiada';
       S.motos[mi].cliente=((existing&&existing.nombre)||WZ.nom);
@@ -10690,8 +10690,8 @@ function openAddCredLegacy(motoId=null){
   S.saveFn=()=>{
     const sel=$('k_moto');
     if(!sel || !sel.value){toast('No hay motos disponibles para financiar','error');return false;}
-    const mId=parseInt(sel.value);
-    const moto=S.motos.find(x=>x.id===mId);
+    const mId=sel.value;
+    const moto=S.motos.find(x=>String(x.id)===String(mId));
     if(!moto){toast('Selecciona una moto','error');return false;}
     if(moto.eliminado || moto.estado!=='disponible'){toast('Solo puedes financiar motos disponibles','error');return false;}
     const vin=(($('k_vin')&&$('k_vin').value)||'').trim();
@@ -10728,7 +10728,7 @@ function openAddCredLegacy(motoId=null){
     };
     S.creds.push(newCred);
     DB.saveCred(newCred);
-    const mi=S.motos.findIndex(x=>x.id===mId);
+    const mi=S.motos.findIndex(x=>String(x.id)===String(mId));
     if(mi>=0){S.motos[mi].estado='financiada';S.motos[mi].cliente=newCred.cli;S.motos[mi].vin=vin;DB.saveMoto(S.motos[mi]);}
 
     // ── Registrar pago de la inicial como movimiento en cuentas ──
@@ -10869,7 +10869,7 @@ function ejecutarDelCred(audit){
       marcarPagosYCuentasCreditoEliminados(credId, 'Financiamiento eliminado por completo: '+S.creds[ci].canceladoRazon);
     }
 
-    var mi = S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
+    var mi = S.motos.findIndex(function(x){return String(x.id)===String(S.creds[ci].motoId);});
     if(mi>=0 && (S.motos[mi].estado==='financiada' || S.motos[mi].estado==='recuperada')){
       S.motos[mi].estado='recuperada';
       S.motos[mi].cliente=null;
@@ -11090,7 +11090,7 @@ function openAddPago(){
         S.creds[ci].fechaCompletado=new Date().toISOString().split('T')[0];
 
         // ── Punto 2: Cambiar estado de la moto a 'propia' ──
-        var mIdx=S.motos.findIndex(function(m){return m.id===S.creds[ci].motoId;});
+        var mIdx=S.motos.findIndex(function(m){return String(m.id)===String(S.creds[ci].motoId);});
         if(mIdx>=0){
           S.motos[mIdx].estado='propia';
           S.motos[mIdx].propietario=S.creds[ci].cli;
@@ -11374,7 +11374,7 @@ function confirmarRecuperacion(credId){
     if(ci>=0){
       S.creds[ci].estado='recuperado';
       DB.updateCred(credId,{estado:'recuperado'});
-      var mi=S.motos.findIndex(function(x){return x.id===S.creds[ci].motoId;});
+      var mi=S.motos.findIndex(function(x){return String(x.id)===String(S.creds[ci].motoId);});
       if(mi>=0){S.motos[mi].estado='recuperada';S.motos[mi].cliente=null;DB.saveMoto(S.motos[mi]);}
     }
     toast('Unidad recuperada — crédito cerrado','info');
@@ -11745,7 +11745,7 @@ function ejecutarLiquidacionAnticipada(){
   });
 
   if($('liq_moto_propia') && $('liq_moto_propia').checked){
-    var mIdx=S.motos.findIndex(function(m){return m.id===c.motoId;});
+    var mIdx=S.motos.findIndex(function(m){return String(m.id)===String(c.motoId);});
     if(mIdx>=0){
       S.motos[mIdx].estado='propia';
       S.motos[mIdx].propietario=c.cli;
