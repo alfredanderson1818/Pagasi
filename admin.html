@@ -4387,13 +4387,10 @@ function verCliente(id){
   const tuvomora=creditos.some(function(cr){return (cr.mora||0)>0||cr.tuvoMoraHistorica===true||pagos.some(function(p){return p.cred===cr.id&&(p.mora||0)>0;});});
   const esPremium=c.premium===true;
 
-  // Cálculos extras
+  // Cálculos extras — USAR funciones centrales que respetan pagos eliminados
   var saldoTotal = creditos.reduce(function(a,cr){
-    if(cr.estado==='completado') return a;
-    var totalCr=cr.totalCuotas||cr.plazo*2;
-    var cuotaV=parseFloat(cr.cuotaQ||cr.cuota||0);
-    var abonado=Array.isArray(cr.pagosRegistrados)?cr.pagosRegistrados.reduce(function(s,h){return s+(h.montoPagado||0);},0):(cr.pagado||0)*cuotaV;
-    return a + Math.max(0, cuotaV*totalCr-abonado);
+    if(cr.estado==='completado' || cr.estado==='cancelado') return a;
+    return a + getCreditoSaldoPendiente(cr);
   },0);
   var montoFinanciadoTotal = creditos.reduce(function(a,cr){
     var totalCr=cr.totalCuotas||cr.plazo*2;
@@ -4401,7 +4398,7 @@ function verCliente(id){
     return a + (cuotaV*totalCr);
   },0);
   var cuotasTotales = creditos.reduce(function(a,cr){return a+(cr.totalCuotas||cr.plazo*2||0);},0);
-  var cuotasPagadasTotales = creditos.reduce(function(a,cr){return a+(cr.pagado||0);},0);
+  var cuotasPagadasTotales = creditos.reduce(function(a,cr){return a+getCreditoCuotasPagadas(cr);},0);
   var ingreso = parseFloat(c.ingreso||0);
   var ingresoFam = parseFloat(c.ingreso_familiar||0);
   var cuotaActivaTotal = creditosActivos.reduce(function(a,cr){return a+parseFloat(cr.cuotaQ||cr.cuota||0);},0);
