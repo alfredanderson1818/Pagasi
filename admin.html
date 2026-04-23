@@ -4884,15 +4884,19 @@ function getMonthlyIngresos(){
   }
   return months.map(function(m){
     var total=S.pagos.filter(function(p){
+      if(p.eliminado) return false;
       if(p.estado!=='confirmado') return false;
       var pd=new Date(p.fecha);
       return pd.getFullYear()===m.y && pd.getMonth()===m.m;
-    }).reduce(function(a,p){return a+p.monto;},0);
-    // also add iniciales from creds started this month
+    }).reduce(function(a,p){return a+(parseFloat(p.monto)||0);},0);
+    // also add iniciales from creds started this month — excluir eliminados y cancelados
     var ini=S.creds.filter(function(c){
+      if(c.eliminado) return false;
+      if(c.estado==='cancelado') return false;
+      if(!c.fecha) return false;
       var cd=new Date(c.fecha);
       return cd.getFullYear()===m.y && cd.getMonth()===m.m;
-    }).reduce(function(a,c){return a+c.ini;},0);
+    }).reduce(function(a,c){return a+(parseFloat(c.ini)||0);},0);
     return {label:m.label,total:total+ini};
   });
 }
