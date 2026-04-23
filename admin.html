@@ -5888,7 +5888,7 @@ pagos(){
     const cuotaNum=(c.pagado||0)+1;
     const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
     const diff=Math.round((vence-new Date())/(24*60*60*1000));
-    return diff<=7 && diff>=-30; // muestra hasta 30 días de atraso y próximas 7 días
+    return diff<=14 && diff>=-30; // muestra hasta 30 días de atraso y próximas 14 días
   }).map(function(c){
     const start=new Date(c.fecha);
     const cuotaNum=(c.pagado||0)+1;
@@ -5977,11 +5977,11 @@ pagos(){
   <!-- Cuotas Próximas -->
   <div class="card" style="margin-bottom:12px">
     <div class="ch" style="margin-bottom:10px">
-      <div><div class="ct">Cuotas Próximas</div><div class="cs">Clientes a cobrar esta semana · atrasados primero</div></div>
+      <div><div class="ct">Cuotas Próximas</div><div class="cs">Clientes a cobrar en los próximos 14 días · atrasados primero</div></div>
       <span class="bdg ${proximasCuotas.length>0?'b-a':'b-g'}">${proximasCuotas.length}</span>
     </div>
     ${proximasCuotas.length===0 ? '<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">Sin cuotas próximas ni atrasadas</div>' :
-      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:300px;overflow-y:auto">
+      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:520px;overflow-y:auto">
       ${proximasCuotas.map(function(item){
         const c=item.cred, diff=item.diff;
         const col = diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';
