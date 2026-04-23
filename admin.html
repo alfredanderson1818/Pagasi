@@ -3803,7 +3803,7 @@ var _cuentasBanc = [];
 var _cobradores = ['Juan Admin'];
 // Datos de la empresa (nombre, RIF, ciudad, tel, email) — se usan en contratos y reportes
 // Fuente única de verdad que NO depende del DOM (Config solo existe cuando estás en esa página)
-var _empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'' };
+var _empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'', representante:'', repCI:'' };
 
 // Helper global para leer empresa de forma consistente.
 // Primero intenta el DOM (por si está en Config editándose), si no usa la variable cacheada.
@@ -3813,7 +3813,10 @@ function getEmpresa(){
   var ciudad = ($('cfg_ciudad') &&$('cfg_ciudad').value) || _empresa.ciudad || 'Caracas';
   var tel    = ($('cfg_tel')    &&$('cfg_tel').value)    || _empresa.tel    || '';
   var email  = ($('cfg_email2') &&$('cfg_email2').value) || _empresa.email  || '';
-  return { nombre:nombre.trim(), rif:rif.trim(), ciudad:ciudad.trim(), tel:tel.trim(), email:email.trim(), direccion:(_empresa.direccion||'').trim() };
+  var direccion    = ($('cfg_direccion')   &&$('cfg_direccion').value)   || _empresa.direccion    || '';
+  var representante= ($('cfg_representante')&&$('cfg_representante').value)|| _empresa.representante|| '';
+  var repCI        = ($('cfg_rep_ci')      &&$('cfg_rep_ci').value)      || _empresa.repCI        || '';
+  return { nombre:nombre.trim(), rif:rif.trim(), ciudad:ciudad.trim(), tel:tel.trim(), email:email.trim(), direccion:direccion.trim(), representante:representante.trim(), repCI:repCI.trim() };
 }
 
 // Cargar datos de empresa desde Firebase al iniciar
@@ -3823,12 +3826,14 @@ function cargarEmpresa(){
     if(doc.exists){
       var d = doc.data()||{};
       _empresa = {
-        nombre:   d.nombre   || 'Pagasi',
-        rif:      d.rif      || 'J-00000000-0',
-        ciudad:   d.ciudad   || 'Caracas',
-        tel:      d.tel      || '',
-        email:    d.email    || '',
-        direccion:d.direccion|| ''
+        nombre:       d.nombre       || 'Pagasi',
+        rif:          d.rif          || 'J-00000000-0',
+        ciudad:       d.ciudad       || 'Caracas',
+        tel:          d.tel          || '',
+        email:        d.email        || '',
+        direccion:    d.direccion    || '',
+        representante:d.representante|| '',
+        repCI:        d.repCI        || ''
       };
     }
   }).catch(function(){});
@@ -6227,10 +6232,10 @@ contratos(){return`<div class="page"><div style="display:grid;grid-template-colu
   <div class="card"><div class="ch"><div class="ct">Generador de Contrato</div></div>
     <div class="fgr c1" style="gap:9px">
       <div class="fg"><label>Cliente / Crédito</label><select class="fs" id="sel-cred">${S.creds.map(c=>`<option value="${c.id}">${c.id} — ${c.cli} · ${c.modelo}</option>`).join('')}</select></div>
-      <div class="fg"><label>Tipo de documento</label><select class="fs"><option>Contrato de Compraventa en Cuotas</option><option>Pagaré</option><option>Carta de Instrucciones</option><option>Cláusula de Reserva de Dominio</option></select></div>
+      <div class="fg"><label>Tipo de documento</label><select class="fs"><option>Contrato de Arrendamiento con Opción a Compra</option><option>Pagaré</option><option>Carta de Instrucciones</option></select></div>
     </div>
     <div style="margin-top:10px;padding:9px 11px;background:var(--gs);border:1px solid var(--rim2);border-radius:8px;font-size:11px;color:var(--ink3)">
-      <strong style="color:var(--ink2)">Datos de la empresa:</strong> se toman de Configuración → Datos de la Empresa (nombre, RIF, ciudad).
+      <strong style="color:var(--ink2)">Autocompletado:</strong> se toman los datos de la empresa (Configuración), del cliente asignado y de la moto del crédito.
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px">
       <button class="btn btn-p btn-sm" onclick="renderContrato()">Ver Vista Previa</button>
@@ -7047,6 +7052,9 @@ config(){
       if($('cfg_ciudad')) $('cfg_ciudad').value=d.ciudad||'';
       if($('cfg_tel'))    $('cfg_tel').value=d.tel||'';
       if($('cfg_email2')) $('cfg_email2').value=d.email||'';
+      if($('cfg_direccion'))    $('cfg_direccion').value=d.direccion||'';
+      if($('cfg_representante'))$('cfg_representante').value=d.representante||'';
+      if($('cfg_rep_ci'))       $('cfg_rep_ci').value=d.repCI||'';
     });
     db.collection('config').doc('plan').get().then(function(doc){
       if(!doc.exists) return;
@@ -7123,6 +7131,11 @@ config(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div class="fg"><label>Teléfono</label><input class="fi" id="cfg_tel" placeholder="0212-555-0000"></div>
           <div class="fg"><label>Email</label><input class="fi" id="cfg_email2" type="email" placeholder="info@pagasi.com"></div>
+        </div>
+        <div class="fg"><label>Domicilio fiscal</label><input class="fi" id="cfg_direccion" placeholder="Av. Principal, Edif. X, Piso Y, Caracas"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="fg"><label>Representante legal</label><input class="fi" id="cfg_representante" placeholder="Nombre y apellido"></div>
+          <div class="fg"><label>C.I. del representante</label><input class="fi" id="cfg_rep_ci" placeholder="V-12345678"></div>
         </div>
         <button class="btn btn-p btn-sm" style="margin-top:4px;align-self:flex-start" onclick="guardarEmpresa()">Guardar empresa</button>
       </div>
@@ -12162,96 +12175,231 @@ function openNota(id){
 // CONTRATO
 function renderContrato(){
   const credId=($('sel-cred')&&$('sel-cred').value);
-  const c=S.creds.find(x=>x.id===credId)||S.creds[0];
+  const c=S.creds.find(x=>String(x.id)===String(credId))||S.creds[0];
+  if(!c){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un financiamiento primero</div></div>'; return; }
   const logoSrc=(document.querySelector('.sb-logo img')||{}).src||'';
-  // Leer empresa de la variable global (funciona aunque no estés en Config)
+  // Leer empresa de Config
   const emp = getEmpresa();
-  const empresa   = emp.nombre;
-  const empresaUp = empresa.toUpperCase();
-  const rif       = emp.rif;
-  const direccion = emp.direccion;
-  const ciudad    = emp.ciudad;
-  const tel       = emp.tel;
-  const cli=S.clientes.find(x=>x.nombre===c.cli)||{cedula:'—',tel:'—',ciudad:'Venezuela'};
-  const hoy=new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
-  const cuotasRestantes=Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c));
-  $('cz').innerHTML=`<div class="cdoc">
-    <div style="text-align:center;margin-bottom:4px"><img src="${logoSrc}" style="height:42px;object-fit:contain"></div>
-    <div style="text-align:center;font-size:10px;color:#777;margin-bottom:2px;font-weight:600;letter-spacing:0.5px">${empresaUp} — VENTA DE MOTOCICLETAS EN CUOTAS</div>
-    <div style="text-align:center;font-size:9.5px;color:#999;margin-bottom:16px">RIF: ${rif} · ${ciudad}, Venezuela${direccion?' · '+direccion:''}${tel?' · Tel: '+tel:''}</div>
-    <h2>CONTRATO DE COMPRAVENTA EN CUOTAS</h2>
-    <div style="text-align:center;font-size:11px;color:#888;margin-bottom:20px">N° ${c.id} · ${ciudad}, ${hoy}</div>
+  const empresaUp = (emp.nombre||'PAGASI').toUpperCase();
+  // Cliente asignado al crédito
+  const cli = S.clientes.find(x=>x.nombre===c.cli) || S.clientes.find(x=>String(x.id)===String(c.clienteId)) || {};
+  // Moto asignada al crédito (buscar primero por motoId, sino usar datos del crédito)
+  const moto = S.motos.find(m=>String(m.id)===String(c.motoId)) || {};
+  // Fecha actual formateada
+  const hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
+  // Helpers para línea rellena o placeholder
+  const V = (x)=> (x!=null && String(x).trim()!=='') ? String(x).trim() : '________________';
+  const Vm = (n)=> (n!=null && !isNaN(parseFloat(n))) ? '$ '+parseFloat(n).toFixed(2) : '$ _______________';
+  // Datos moto unificados (crédito tiene copia de algunos campos; moto puede tener más)
+  const mModelo = c.modelo || moto.modelo || '';
+  const mVin    = c.vin    || moto.vin    || '';
+  const mColor  = c.color  || moto.color  || '';
+  const mAnio   = c.anio   || moto.anio   || '';
+  const mPlaca  = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
+  const mMarca  = moto.marca || (mModelo ? mModelo.split(' ')[0] : '');
+  const mSerialMotor = moto.serialMotor || '';
+  const mSerialChasis = moto.serialChasis || mVin;  // fallback: VIN como serial de chasis
+  const mGpsNum = moto.gpsNum || moto.gps_id || (moto.gps ? 'Activo' : '');
+  // Obligaciones y cláusulas – estilo
+  const purple = '#5E3BEE';
+  const purpleDark = '#4C2ED0';
+  const purpleLight = '#F2EEFF';
+  const rowStyle = 'padding:8px 12px;border-bottom:1px solid #EAE5F7;font-size:11.5px';
+  const tableHdr = 'background:'+purple+';color:#fff;font-size:12px;font-weight:800;text-align:center;padding:9px 10px;letter-spacing:.3px;text-transform:uppercase';
+  const clausH = 'color:'+purple+';font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid '+purple;
+  const p = 'font-size:11.5px;line-height:1.55;color:#222;margin:6px 0;text-align:justify';
+  const li = 'font-size:11.5px;line-height:1.55;color:#222;margin:3px 0;text-align:justify';
+  const lblCell = 'background:'+purpleLight+';color:'+purpleDark+';font-weight:700;font-size:11.5px;padding:7px 10px;width:32%';
+  const valCell = 'padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7';
 
-    <h3>PRIMERA: DE LAS PARTES</h3>
-    <p>El presente contrato se celebra entre:</p>
-    <p style="margin-top:8px"><strong>EL VENDEDOR:</strong> ${empresaUp}, debidamente constituida conforme a las leyes de la República Bolivariana de Venezuela, inscrita bajo el RIF ${rif}, con domicilio en ${ciudad}, Venezuela, representada en este acto por su Representante Legal.</p>
-    <p style="margin-top:8px"><strong>EL COMPRADOR:</strong> ${c.cli}, titular de la cédula de identidad N° ${cli.cedula}, domiciliado en ${cli.ciudad||'Venezuela'}, teléfono ${cli.tel||'—'}.</p>
+  $('cz').innerHTML = `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
 
-    <h3>SEGUNDA: OBJETO DEL CONTRATO</h3>
-    <p>EL VENDEDOR da en venta a EL COMPRADOR, y este declara adquirir, la siguiente motocicleta:</p>
-    <table style="width:100%;font-size:11.5px;border-collapse:collapse;margin-top:8px">
-      ${[['Modelo / Marca',c.modelo],['VIN / Serie',c.vin||'—'],['Color','—'],['Año','—']].map(([k,v])=>`<tr><td style="padding:4px 0;border-bottom:1px solid #f0f0f0;color:#555;width:45%">${k}</td><td style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-weight:700">${v}</td></tr>`).join('')}
-    </table>
-
-    <h3>TERCERA: PLAN DE CUOTAS</h3>
-    <p>Las partes acuerdan el siguiente plan de cuotas para la cancelación de la motocicleta descrita:</p>
-    <table style="width:100%;font-size:11.5px;border-collapse:collapse;margin-top:8px">
-      ${[
-        ['Número de cuotas', getCreditoTotalCuotas(c)+' cuotas quincenales'],
-        ['Monto de cada cuota quincenal', fmt(c.cuotaQ||c.cuota)],
-        ['Equivalente mensual referencial', fmt(c.cuotaM||((c.cuotaQ||c.cuota||0)*2))],
-        ['Cuotas ya canceladas', getCreditoCuotasPagadas(c)+' de '+getCreditoTotalCuotas(c)],
-        ['Cuotas pendientes', Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c))+' restantes'],
-        ['Fecha de inicio del plan', c.fecha],
-      ].map(([k,v])=>`<tr><td style="padding:5px 0;border-bottom:1px solid #f0f0f0;color:#555;width:55%">${k}</td><td style="padding:5px 0;border-bottom:1px solid #f0f0f0;font-weight:700;color:#111">${v}</td></tr>`).join('')}
-    </table>
-    <p style="margin-top:10px;font-size:10.5px;color:#888">EL COMPRADOR declara conocer y aceptar que el plan operativo del crédito se maneja en cuotas quincenales sucesivas de quince (15) días, contadas desde la fecha de inicio indicada, sin necesidad de cobro o requerimiento previo por parte de EL VENDEDOR.</p>
-
-    <h3>CUARTA: FORMA DE PAGO</h3>
-    <p>EL COMPRADOR se obliga a cancelar cada cuota en la fecha acordada mediante cualquiera de los siguientes métodos: transferencia bancaria, pago móvil, Zelle, PayPal o efectivo en USD. El pago se considerará efectuado únicamente cuando EL VENDEDOR confirme la recepción del monto correspondiente. Los pagos parciales se aplicarán primero a la cuota quincenal más antigua pendiente y solo detendrán la mora cuando la cuota vencida quede totalmente cubierta según el sistema de amortización del crédito.</p>
-
-    <h3>QUINTA: RESERVA DE DOMINIO</h3>
-    <p>De conformidad con la Ley de Venta con Reserva de Dominio vigente en Venezuela, EL VENDEDOR se reserva el dominio y la propiedad de la motocicleta hasta tanto EL COMPRADOR cancele la <strong>totalidad del precio pactado</strong>. El incumplimiento de <strong>tres (3) cuotas consecutivas</strong> o <strong>cinco (5) cuotas alternadas</strong> faculta a EL VENDEDOR a recuperar la unidad de forma inmediata y sin necesidad de intervención judicial, renunciando EL COMPRADOR expresamente a cualquier recurso de oposición por esta causa. EL COMPRADOR no podrá oponer derechos de retención ni reclamar mejoras realizadas sobre la unidad.</p>
-
-    <h3>SEXTA: MORA E INCUMPLIMIENTO</h3>
-    <p>Transcurridos <strong>cinco (5) días calendario</strong> desde la fecha de vencimiento de cualquier cuota sin que se haya recibido el pago completo, EL COMPRADOR incurrirá automáticamente en mora, generándose un recargo del <strong>cinco por ciento (5%) mensual</strong> sobre el saldo vencido, sin perjuicio del derecho de EL VENDEDOR a declarar de plazo vencido la totalidad de la deuda y exigir el pago inmediato de todas las cuotas pendientes. El incumplimiento reiterado faculta a EL VENDEDOR a reportar al comprador ante los registros de crédito correspondientes y a ejercer todas las acciones legales a que hubiere lugar.</p>
-
-    <h3>SÉPTIMA: PROHIBICIÓN DE ENAJENACIÓN Y TRANSFERENCIA</h3>
-    <p>Mientras subsista saldo pendiente, EL COMPRADOR queda expresamente prohibido de vender, ceder, traspasar, pignorar, empeñar, arrendar o de cualquier forma gravar o transferir la motocicleta objeto de este contrato, ya sea total o parcialmente, sin la autorización previa y por escrito de EL VENDEDOR. Cualquier acto en contravención a esta cláusula será nulo de pleno derecho, y EL VENDEDOR podrá exigir la devolución inmediata de la unidad y el pago total del saldo adeudado.</p>
-
-    <h3>OCTAVA: MANTENIMIENTO, USO Y CUSTODIA</h3>
-    <p>EL COMPRADOR se obliga a: (a) mantener la motocicleta en buen estado de funcionamiento y conservación; (b) no modificar ni alterar sus características originales sin autorización escrita de EL VENDEDOR; (c) no utilizarla para actividades ilegales, carreras, alquiler comercial sin notificación previa, ni trasladarla fuera del país sin autorización; (d) notificar a EL VENDEDOR de inmediato ante cualquier accidente, robo o deterioro significativo. El incumplimiento de estas obligaciones faculta a EL VENDEDOR para resolver el contrato y recuperar la unidad.</p>
-
-    <h3>NOVENA: DISPOSITIVO DE RASTREO GPS</h3>
-    <p>EL COMPRADOR autoriza expresamente la instalación y activación de un dispositivo de rastreo GPS en la motocicleta objeto de este contrato, el cual permanecerá activo durante toda la vigencia del plan de cuotas. EL COMPRADOR se compromete a no interferir, desconectar, destruir ni manipular dicho dispositivo. Cualquier alteración o desactivación del GPS será considerada señal de fuga de bienes y facultará a EL VENDEDOR a recuperar la unidad de inmediato, con los gastos de localización y recuperación a cargo exclusivo del comprador.</p>
-
-    <h3>DÉCIMA: FIANZA Y RESPONSABILIDAD SOLIDARIA</h3>
-    <p>En caso de incumplimiento por parte de EL COMPRADOR, este responderá con la totalidad de sus bienes presentes y futuros frente a EL VENDEDOR. De existir un fiador o garante identificado en la solicitud de crédito, este responde solidaria e ilimitadamente por todas las obligaciones derivadas del presente contrato, renunciando expresamente al beneficio de excusión. EL VENDEDOR podrá dirigir su acción de cobro indistintamente contra EL COMPRADOR o su garante.</p>
-
-    <h3>DÉCIMA PRIMERA: DECLARACIÓN DE VERACIDAD Y DATOS PERSONALES</h3>
-    <p>EL COMPRADOR declara bajo juramento que toda la información suministrada para la obtención de este financiamiento es veraz, exacta y actualizada. Cualquier falsedad, omisión o documentación fraudulenta en los datos proporcionados dará derecho a EL VENDEDOR a resolver el contrato de pleno derecho, exigir el pago inmediato del saldo total adeudado, y ejercer las acciones penales correspondientes. Asimismo, EL COMPRADOR autoriza a EL VENDEDOR a verificar, consultar y conservar sus datos personales con fines de gestión del crédito y cobranza, conforme a la legislación venezolana vigente.</p>
-
-    <h3>DÉCIMA SEGUNDA: DOMICILIO ESPECIAL Y JURISDICCIÓN</h3>
-    <p>Para todos los efectos del presente contrato, las partes eligen como domicilio especial la ciudad de ${ciudad}, República Bolivariana de Venezuela, y se someten expresamente a la jurisdicción de sus Tribunales competentes, renunciando a cualquier otro fuero o domicilio que pudiera corresponderles. Cualquier controversia derivada de este contrato se resolverá ante los tribunales civiles de ${ciudad}, siendo los gastos del proceso a cargo de la parte que resulte vencida.</p>
-
-    <div style="margin-top:30px;padding:10px 14px;background:#fff8f0;border:1px solid #f5c28a;border-radius:6px;font-size:10px;color:#555">
-      <strong>DECLARACIÓN FINAL:</strong> Las partes manifiestan haber leído, entendido y aceptado en su totalidad el contenido del presente contrato, el cual se firma en dos (2) ejemplares de igual valor y tenor, en ${ciudad}, a los ${hoy}.
+    <!-- Header con logo y N° de contrato -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>${logoSrc?`<img src="${logoSrc}" style="height:46px;object-fit:contain">`:`<div style="font-size:22px;font-weight:900;color:${purple}">${empresaUp}</div>`}</div>
+      <div style="font-size:11px;color:#555"><strong>N° de Contrato:</strong> <span style="border-bottom:1px solid #888;padding:0 24px 2px">${c.id||'________'}</span></div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:44px">
-      <div style="text-align:center">
-        <div style="border-top:1px solid #333;padding-top:7px;margin-top:55px;font-size:10.5px;color:#333">
-          <strong>EL VENDEDOR</strong><br>${empresaUp}<br>Representante Legal
+    <!-- Título principal -->
+    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #E8C842">
+      <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">CONTRATO DE ARRENDAMIENTO · CON OPCIÓN A COMPRA</div>
+    </div>
+
+    <!-- Ciudad y Fecha -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 4px;font-size:11.5px">
+      <div><strong style="color:${purple}">Ciudad / Estado:</strong> ${emp.ciudad||'Caracas'}</div>
+      <div><strong style="color:${purple}">Fecha:</strong> ${hoy}</div>
+    </div>
+    <div style="border-bottom:1px solid #ccc;margin-bottom:6px"></div>
+
+    <!-- CLÁUSULA PRIMERA -->
+    <h3 style="${clausH}">CLÁUSULA PRIMERA: DE LAS PARTES</h3>
+    <p style="${p}">El presente contrato de arrendamiento con opción a compra se celebra entre las siguientes partes:</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+      <tr>
+        <th style="${tableHdr};width:50%">EL ARRENDADOR</th>
+        <th style="${tableHdr};width:50%">EL ARRENDATARIO</th>
+      </tr>
+      <tr>
+        <td style="${rowStyle};vertical-align:top">
+          <div style="margin-bottom:5px"><strong>Denominación:</strong> ${empresaUp}</div>
+          <div style="margin-bottom:5px"><strong>RIF:</strong> ${V(emp.rif)}</div>
+          <div style="margin-bottom:5px"><strong>Domicilio:</strong> ${V(emp.direccion)}</div>
+          <div style="margin-bottom:5px"><strong>Representante:</strong> ${V(emp.representante)}</div>
+          <div style="margin-bottom:5px"><strong>C.I.:</strong> ${V(emp.repCI)}</div>
+          <div><strong>Teléfono:</strong> ${V(emp.tel)}</div>
+        </td>
+        <td style="${rowStyle};vertical-align:top">
+          <div style="margin-bottom:5px"><strong>Nombre y Apellido:</strong> ${V(cli.nombre||c.cli)}</div>
+          <div style="margin-bottom:5px"><strong>Cédula de Identidad:</strong> ${V(cli.cedula)}</div>
+          <div style="margin-bottom:5px"><strong>Teléfono:</strong> ${V(cli.tel)}</div>
+          <div style="margin-bottom:5px"><strong>Dirección:</strong> ${V(cli.dir||cli.ciudad)}</div>
+          <div><strong>Correo electrónico:</strong> ${V(cli.email)}</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- CLÁUSULA SEGUNDA -->
+    <h3 style="${clausH}">CLÁUSULA SEGUNDA: OBJETO DEL CONTRATO</h3>
+    <p style="${p}">EL ARRENDADOR da en arrendamiento con opción a compra a EL ARRENDATARIO, quien acepta en dicho carácter, una motocicleta de las siguientes características:</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Marca:</td><td style="${valCell}">${V(mMarca)}</td><td style="${lblCell}">Modelo:</td><td style="${valCell}">${V(mModelo)}</td></tr>
+      <tr><td style="${lblCell}">Color:</td><td style="${valCell}">${V(mColor)}</td><td style="${lblCell}">Año:</td><td style="${valCell}">${V(mAnio)}</td></tr>
+      <tr><td style="${lblCell}">Serial de Motor:</td><td style="${valCell}">${V(mSerialMotor)}</td><td style="${lblCell}">Serial de Chasis:</td><td style="${valCell}">${V(mSerialChasis)}</td></tr>
+      <tr><td style="${lblCell}">Placa:</td><td style="${valCell}">${V(mPlaca)}</td><td style="${lblCell}">N° de GPS:</td><td style="${valCell}">${V(mGpsNum)}</td></tr>
+    </table>
+
+    <!-- CLÁUSULA TERCERA -->
+    <h3 style="${clausH}">CLÁUSULA TERCERA: CONDICIONES ECONÓMICAS DEL ARRENDAMIENTO</h3>
+    <p style="${p}">Las partes acuerdan las siguientes condiciones económicas:</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+      <tr>
+        <th style="${tableHdr};text-align:left">Concepto</th>
+        <th style="${tableHdr};text-align:right;width:30%">Monto (USD)</th>
+      </tr>
+      <tr><td style="${valCell}">Precio de referencia de la motocicleta:</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.precio)}</td></tr>
+      <tr><td style="${valCell}">Depósito inicial (pago al momento de la firma):</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.ini)}</td></tr>
+      <tr><td style="${valCell}">Monto sujeto a canon de arrendamiento:</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.fin)}</td></tr>
+      <tr><td style="${valCell}">Canon quincenal de arrendamiento (24 cuotas):</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.cuotaQ||c.cuota)}</td></tr>
+      <tr><td style="${valCell}">Canon total del período de arrendamiento:</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.total)}</td></tr>
+      <tr style="background:${purpleLight}"><td style="padding:9px 10px;font-size:11.5px;font-weight:800;color:${purpleDark}">Precio de ejercicio de la opción a compra</td><td style="padding:9px 10px;text-align:right;font-weight:900;color:${purpleDark}">$ 1.00</td></tr>
+    </table>
+    <p style="${p};margin-top:10px">Todos los pagos deberán realizarse <strong>exclusivamente en Dólares Americanos (USD)</strong>. No se aceptarán pagos en moneda nacional, ni ninguna otra divisa. Los cánones se cancelarán los días ________________ y ________________ de cada mes, contados a partir de la fecha de suscripción del presente contrato.</p>
+
+    <!-- CLÁUSULA CUARTA -->
+    <h3 style="${clausH}">CLÁUSULA CUARTA: PLAZO DEL ARRENDAMIENTO</h3>
+    <p style="${p}">El presente contrato tendrá una duración de <strong>doce (12) meses</strong>, equivalentes a <strong>veinticuatro (24) cuotas quincenales</strong> consecutivas, contadas a partir de la fecha de suscripción. Una vez canceladas la totalidad de las cuotas, EL ARRENDATARIO podrá ejercer la opción a compra descrita en la Cláusula Séptima.</p>
+
+    <!-- CLÁUSULA QUINTA -->
+    <h3 style="${clausH}">CLÁUSULA QUINTA: OBLIGACIONES DE EL ARRENDATARIO</h3>
+    <div style="padding-left:4px">
+      <p style="${li}">1. Pagar puntualmente los cánones de arrendamiento en las fechas y montos establecidos.</p>
+      <p style="${li}">2. Usar la motocicleta exclusivamente para fines lícitos y personales, dentro del territorio de la República Bolivariana de Venezuela.</p>
+      <p style="${li}">3. Mantener la motocicleta en buen estado de funcionamiento y conservación, corriendo por su cuenta los gastos de mantenimiento ordinario.</p>
+      <p style="${li}">4. No ceder, subarrendar, ni transferir a terceros el uso del vehículo arrendado sin previa autorización escrita de EL ARRENDADOR.</p>
+      <p style="${li}">5. Permitir a EL ARRENDADOR o a sus representantes verificar el estado de la motocicleta cuando lo considere conveniente.</p>
+      <p style="${li}">6. No realizar modificaciones estructurales ni mecánicas al vehículo sin autorización escrita de EL ARRENDADOR.</p>
+      <p style="${li}">7. Mantener activo y en óptimas condiciones el dispositivo GPS instalado. Cualquier manipulación o interferencia del sistema GPS será considerada incumplimiento grave del contrato.</p>
+      <p style="${li}">8. Notificar de inmediato a EL ARRENDADOR ante cualquier accidente, robo, avería mayor o circunstancia que afecte el estado del vehículo.</p>
+      <p style="${li}">9. Portar en todo momento el presente contrato como documento de uso del vehículo.</p>
+    </div>
+
+    <!-- CLÁUSULA SEXTA -->
+    <h3 style="${clausH}">CLÁUSULA SEXTA: MORA Y PENALIDADES</h3>
+    <div style="background:#FFF8E8;border:1px solid #E8C842;border-radius:4px;padding:10px 14px">
+      <p style="${p};margin:0">Si EL ARRENDATARIO se atrasa en el pago del canon por más de <strong>cuatro (4) días</strong> contados desde la fecha de vencimiento, deberá cancelar un recargo de mora equivalente al <strong>5% sobre el canon quincenal vencido</strong>, adicional al monto adeudado. En caso de atraso superior a <strong>sesenta (60) días</strong>, EL ARRENDADOR podrá dar por resuelto el contrato de pleno derecho conforme a lo establecido en la Cláusula Novena.</p>
+    </div>
+
+    <!-- CLÁUSULA SÉPTIMA -->
+    <h3 style="${clausH}">CLÁUSULA SÉPTIMA: OPCIÓN A COMPRA</h3>
+    <p style="${p}">Una vez cancelados los <strong>veinticuatro (24) cánones quincenales</strong> sin resolución contractual, EL ARRENDATARIO adquirirá el derecho de ejercer la opción a compra mediante el pago simbólico de <strong>Un Dólar Americano (USD 1.00)</strong>. EL ARRENDADOR realizará el traspaso legal del vehículo dentro de los <strong>treinta (30) días hábiles</strong> siguientes al ejercicio de dicha opción, previo cumplimiento de los trámites ante el INTT.</p>
+
+    <!-- CLÁUSULA OCTAVA -->
+    <h3 style="${clausH}">CLÁUSULA OCTAVA: SISTEMA DE LOCALIZACIÓN GPS</h3>
+    <p style="${p}">La motocicleta podría contar con un dispositivo GPS instalado y activo. EL ARRENDATARIO autoriza expresamente el monitoreo continuo de la ubicación del vehículo durante toda la vigencia del contrato. Cualquier intento de remoción, bloqueo o desactivación del GPS facultará a EL ARRENDADOR para resolver el contrato de forma inmediata y recuperar el vehículo sin necesidad de procedimiento judicial previo.</p>
+
+    <!-- CLÁUSULA NOVENA -->
+    <h3 style="${clausH}">CLÁUSULA NOVENA: RESOLUCIÓN DEL CONTRATO Y RECUPERACIÓN DEL VEHÍCULO</h3>
+    <p style="${p}">EL ARRENDADOR podrá resolver el contrato y recuperar la motocicleta de forma inmediata, sin notificación previa ni intervención judicial, en cualquiera de los siguientes supuestos:</p>
+    <div style="padding-left:4px">
+      <p style="${li}">1. Falta de pago de cuatro (4) o más cánones quincenales consecutivos.</p>
+      <p style="${li}">2. Uso del vehículo para actividades ilícitas.</p>
+      <p style="${li}">3. Cesión no autorizada del uso del vehículo a terceros.</p>
+      <p style="${li}">4. Manipulación o desactivación del sistema GPS.</p>
+      <p style="${li}">5. Traslado del vehículo fuera del territorio nacional sin autorización.</p>
+      <p style="${li}">6. Cualquier otro incumplimiento grave de las obligaciones establecidas en este contrato.</p>
+    </div>
+    <p style="${p}">EL ARRENDATARIO acepta que, en caso de resolución por incumplimiento, todos los cánones pagados quedarán a favor de EL ARRENDADOR como indemnización, renunciando a cualquier reclamación al respecto.</p>
+
+    <!-- CLÁUSULA DÉCIMA -->
+    <h3 style="${clausH}">CLÁUSULA DÉCIMA: FIADOR SOLIDARIO</h3>
+    <p style="${p}">EL ARRENDATARIO presenta como fiador y principal pagador, garante solidario e indivisible de todas las obligaciones contraídas en el presente contrato:</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Nombre y Apellido:</td><td style="${valCell}">${V(cli.fiador_nom)}</td></tr>
+      <tr><td style="${lblCell}">Cédula de Identidad:</td><td style="${valCell}">${V(cli.fiador_ci)}</td></tr>
+      <tr><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${V(cli.fiador_tel)}</td></tr>
+      <tr><td style="${lblCell}">Dirección:</td><td style="${valCell}">${V(cli.fiador_dir)}</td></tr>
+      <tr><td style="${lblCell}">Parentesco / Relación:</td><td style="${valCell}">${V(cli.fiador_rel)}</td></tr>
+    </table>
+
+    <!-- CLÁUSULA DÉCIMA PRIMERA -->
+    <h3 style="${clausH}">CLÁUSULA DÉCIMA PRIMERA: JURISDICCIÓN Y DOMICILIO ESPECIAL</h3>
+    <p style="${p}">Para todos los efectos legales, las partes eligen domicilio especial en la ciudad de <strong>${emp.ciudad||'Caracas'}</strong>, sometiéndose a la jurisdicción de sus tribunales competentes, renunciando a cualquier otro fuero que pudiera corresponderles.</p>
+
+    <!-- CLÁUSULA DÉCIMA SEGUNDA -->
+    <h3 style="${clausH}">CLÁUSULA DÉCIMA SEGUNDA: ACEPTACIÓN Y CONFORMIDAD</h3>
+    <p style="${p}">Las partes declaran haber leído, entendido y aceptado en su totalidad los términos del presente contrato, el cual se firma en dos (2) ejemplares de igual valor e igual tenor, en la ciudad y fecha indicadas al inicio del mismo.</p>
+
+    <!-- Firmas -->
+    <div style="margin-top:28px;border-top:2px solid ${purple};padding-top:18px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
+          <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:56px;text-align:center">EL ARRENDADOR</div>
+          <div style="border-top:1px solid #333;padding-top:6px;font-size:10.5px;text-align:center">
+            <strong>${empresaUp}</strong><br>
+            Representante Legal<br>
+            ${emp.representante?'Nombre: '+emp.representante:''}<br>
+            C.I.: ${emp.repCI||'_______________'}
+          </div>
         </div>
-      </div>
-      <div style="text-align:center">
-        <div style="border-top:1px solid #333;padding-top:7px;margin-top:55px;font-size:10.5px;color:#333">
-          <strong>EL COMPRADOR</strong><br>${c.cli}<br>C.I.: ${cli.cedula}
+        <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
+          <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL ARRENDATARIO</div>
+          <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
+            <div style="text-align:center;padding-top:46px">
+              <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
+                Firma<br>
+                Nombre: ${cli.nombre||c.cli||'________________'}<br>
+                C.I.: ${cli.cedula||'__________________'}
+              </div>
+            </div>
+            <div>
+              <div style="border:1px dashed #666;background:#fff;height:70px;border-radius:3px"></div>
+              <div style="text-align:center;font-size:9px;color:#555;margin-top:3px;font-weight:700">HUELLA</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#F6EEFC;padding:14px 10px;border-radius:4px">
+          <div style="background:#8B5BC9;color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL FIADOR</div>
+          <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
+            <div style="text-align:center;padding-top:46px">
+              <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
+                Firma<br>
+                Nombre: ${cli.fiador_nom||'________________'}<br>
+                C.I.: ${cli.fiador_ci||'__________________'}
+              </div>
+            </div>
+            <div>
+              <div style="border:1px dashed #666;background:#fff;height:70px;border-radius:3px"></div>
+              <div style="text-align:center;font-size:9px;color:#555;margin-top:3px;font-weight:700">HUELLA</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div style="margin-top:28px;padding:10px;border:1px solid #eee;border-radius:6px;font-size:9.5px;color:#aaa;text-align:center">
-      Documento con plena validez legal entre las partes. N° ${c.id} · ${hoy}
+
+    <!-- Footer -->
+    <div style="margin-top:22px;padding-top:10px;border-top:1px solid #ccc;text-align:center;font-size:9.5px;color:#888">
+      ${empresaUp} · Arrendamiento con Opción a Compra de Motocicletas · Documento válido con firma de ambas partes · Venezuela
     </div>
   </div>`;
 }
@@ -12757,10 +12905,13 @@ function guardarEmpresa(){
   var ciudad = (($('cfg_ciudad')&&$('cfg_ciudad').value)||'').trim();
   var tel    = (($('cfg_tel')&&$('cfg_tel').value)||'').trim();
   var email  = (($('cfg_email2')&&$('cfg_email2').value)||'').trim();
+  var direccion    = (($('cfg_direccion')&&$('cfg_direccion').value)||'').trim();
+  var representante= (($('cfg_representante')&&$('cfg_representante').value)||'').trim();
+  var repCI        = (($('cfg_rep_ci')&&$('cfg_rep_ci').value)||'').trim();
   if(!nombre){ toast('Escribe el nombre de la empresa','error'); return; }
   // Actualizar la variable global también (para que contratos/reportes la lean aun sin estar en Config)
-  _empresa = { nombre:nombre, rif:rif, ciudad:ciudad, tel:tel, email:email, direccion:_empresa.direccion||'' };
-  var data = {nombre, rif, ciudad, tel, email, updated: new Date().toISOString()};
+  _empresa = { nombre:nombre, rif:rif, ciudad:ciudad, tel:tel, email:email, direccion:direccion, representante:representante, repCI:repCI };
+  var data = {nombre, rif, ciudad, tel, email, direccion, representante, repCI, updated: new Date().toISOString()};
   if(db){
     db.collection('config').doc('empresa').set(data)
       .then(function(){ toast('Empresa guardada — se reflejará en contratos y reportes','success'); })
@@ -13857,48 +14008,26 @@ function descargarContratoPDF(){
 }
 
 function descargarContratoPDFById(credId){
-  var c = S.creds.find(function(x){return x.id===credId;});
-  if(!c){ toast('Crédito no encontrado','error'); return; }
-  var cl = S.clientes.find(function(x){return x.nombre===c.cli;})||{cedula:'—',tel:'—',ciudad:'Venezuela'};
-  var hoy = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
-  var cuotasRestantes = (c.totalCuotas||c.plazo*2) - (c.pagado||0);
-  var html = `
-    <div style="text-align:center;margin-bottom:4px;font-size:10px;color:#777;font-weight:600;letter-spacing:0.5px">PAGASI — VENTA DE MOTOCICLETAS EN CUOTAS</div>
-    <h2>CONTRATO DE COMPRAVENTA EN CUOTAS</h2>
-    <div style="text-align:center;font-size:11px;color:#888;margin-bottom:20px">N° ${c.id} · ${hoy}</div>
-    <h3>PRIMERA: DE LAS PARTES</h3>
-    <p><strong>EL VENDEDOR:</strong> PAGASI VENTA DE MOTOS EN CUOTAS, C.A.</p>
-    <p><strong>EL COMPRADOR:</strong> ${c.cli}, C.I. N° ${cl.cedula}, domiciliado en ${cl.ciudad||'Venezuela'}, teléfono ${cl.tel||'—'}.</p>
-    <h3>SEGUNDA: OBJETO DEL CONTRATO</h3>
-    <table><tr><th>Descripción</th><th>Detalle</th></tr>
-      <tr><td>Modelo</td><td><strong>${c.modelo}</strong></td></tr>
-      <tr><td>VIN / Serial</td><td>${c.vin||'—'}</td></tr>
-      <tr><td>Color</td><td>${c.color||'—'}</td></tr>
-      <tr><td>Año</td><td>${c.anio||'—'}</td></tr>
-      ${c.placa&&c.placa!=='—'?`<tr><td>Placa</td><td>${c.placa}</td></tr>`:''}
-    </table>
-    <h3>TERCERA: PLAN DE CUOTAS</h3>
-    <table>
-      <tr><td>Precio de venta</td><td><strong>${fmt(c.precio)}</strong></td></tr>
-      <tr><td>Inicial (${(c.inicialPct||PLAN.inicial)*100}%)</td><td>${fmt(c.ini)}</td></tr>
-      <tr><td>Monto financiado</td><td>${fmt(c.fin)}</td></tr>
-      <tr><td>Total a pagar</td><td><strong>${fmt(c.total)}</strong></td></tr>
-      <tr><td>Cuota quincenal</td><td><strong>${fmt(c.cuotaQ||c.cuota)}</strong></td></tr>
-      <tr><td>Total de cuotas</td><td>${c.totalCuotas||c.plazo*2} quincenales</td></tr>
-      <tr><td>Cuotas pagadas</td><td>${c.pagado||0} de ${c.totalCuotas||c.plazo*2}</td></tr>
-      <tr><td>Cuotas pendientes</td><td>${cuotasRestantes}</td></tr>
-      <tr><td>Fecha de inicio</td><td>${c.fecha}</td></tr>
-    </table>
-    <h3>CUARTA: RESERVA DE DOMINIO</h3>
-    <p>EL VENDEDOR se reserva el dominio y la propiedad de la motocicleta hasta tanto EL COMPRADOR cancele la totalidad del precio pactado. El incumplimiento de tres (3) cuotas consecutivas o cinco (5) cuotas alternadas faculta a EL VENDEDOR a recuperar la unidad de forma inmediata.</p>
-    <h3>QUINTA: MORA E INCUMPLIMIENTO</h3>
-    <p>Transcurridos cinco (5) días calendario desde la fecha de vencimiento, EL COMPRADOR incurrirá en mora con un recargo del cinco por ciento (5%) mensual sobre el saldo vencido.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:60px;padding-top:20px;border-top:1px solid #ccc">
-      <div style="text-align:center"><div style="border-top:1px solid #111;margin-top:60px;padding-top:8px;font-size:11px">Representante Pagasi</div></div>
-      <div style="text-align:center"><div style="border-top:1px solid #111;margin-top:60px;padding-top:8px;font-size:11px">${c.cli} — C.I. ${cl.cedula}</div></div>
-    </div>
-    <div style="text-align:center;margin-top:18px;font-size:10px;color:#888">Documento generado el ${hoy} · ${c.id}</div>`;
-  _abrirVentanaImpresion('Contrato '+credId, html);
+  // Selecciona el crédito en el dropdown y usa renderContrato() para generar el HTML
+  var sel = $('sel-cred');
+  if(sel){
+    // Asegurarnos de que la opción existe en el select antes de asignar
+    var opt = Array.prototype.find.call(sel.options||[], function(o){return String(o.value)===String(credId);});
+    if(opt) sel.value = credId;
+  }
+  // Si no estamos en la página de contratos, navegar brevemente para que #cz exista
+  if(!$('cz')){ nav('contratos'); }
+  setTimeout(function(){
+    // Forzar que renderContrato use el credId correcto: si el select no existe o no coincide,
+    // guardamos temporalmente y restauramos
+    var prevSel = sel ? sel.value : null;
+    if(sel) sel.value = credId;
+    renderContrato();
+    var cz = $('cz');
+    if(!cz){ toast('No se pudo generar el contrato','error'); return; }
+    _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML);
+    if(sel && prevSel!==null) sel.value = prevSel;
+  }, 150);
 }
 // EXPORTAR CSV
 // ══════════════════════════════════════════════════════════════
