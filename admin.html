@@ -6232,7 +6232,7 @@ contratos(){return`<div class="page"><div style="display:grid;grid-template-colu
   <div class="card"><div class="ch"><div class="ct">Generador de Contrato</div></div>
     <div class="fgr c1" style="gap:9px">
       <div class="fg"><label>Cliente / Crédito</label><select class="fs" id="sel-cred">${S.creds.map(c=>`<option value="${c.id}">${c.id} — ${c.cli} · ${c.modelo}</option>`).join('')}</select></div>
-      <div class="fg"><label>Tipo de documento</label><select class="fs"><option>Contrato de Arrendamiento con Opción a Compra</option><option>Pagaré</option><option>Carta de Instrucciones</option></select></div>
+      <div class="fg"><label>Tipo de documento</label><select class="fs" id="sel-tipo-doc" onchange="renderContrato()"><option value="contrato">Contrato de Arrendamiento con Opción a Compra</option><option value="pagare">Pagaré</option><option value="carta">Carta de Instrucciones</option></select></div>
     </div>
     <div style="margin-top:10px;padding:9px 11px;background:var(--gs);border:1px solid var(--rim2);border-radius:8px;font-size:11px;color:var(--ink3)">
       <strong style="color:var(--ink2)">Autocompletado:</strong> se toman los datos de la empresa (Configuración), del cliente asignado y de la moto del crédito.
@@ -12172,45 +12172,96 @@ function openNota(id){
   $('ov').style.display='flex';
 }
 
-// CONTRATO
+// CONTRATO - Dispatcher por tipo de documento
 function renderContrato(){
-  const credId=($('sel-cred')&&$('sel-cred').value);
-  const c=S.creds.find(x=>String(x.id)===String(credId))||S.creds[0];
-  if(!c){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un financiamiento primero</div></div>'; return; }
-  const logoSrc=(document.querySelector('.sb-logo img')||{}).src||'';
-  // Leer empresa de Config
-  const emp = getEmpresa();
-  const empresaUp = (emp.nombre||'PAGASI').toUpperCase();
-  // Cliente asignado al crédito
-  const cli = S.clientes.find(x=>x.nombre===c.cli) || S.clientes.find(x=>String(x.id)===String(c.clienteId)) || {};
-  // Moto asignada al crédito (buscar primero por motoId, sino usar datos del crédito)
-  const moto = S.motos.find(m=>String(m.id)===String(c.motoId)) || {};
-  // Fecha actual formateada
-  const hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
-  // Helpers para línea rellena o placeholder
-  const V = (x)=> (x!=null && String(x).trim()!=='') ? String(x).trim() : '________________';
-  const Vm = (n)=> (n!=null && !isNaN(parseFloat(n))) ? '$ '+parseFloat(n).toFixed(2) : '$ _______________';
-  // Datos moto unificados (crédito tiene copia de algunos campos; moto puede tener más)
-  const mModelo = c.modelo || moto.modelo || '';
-  const mVin    = c.vin    || moto.vin    || '';
-  const mColor  = c.color  || moto.color  || '';
-  const mAnio   = c.anio   || moto.anio   || '';
-  const mPlaca  = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
-  const mMarca  = moto.marca || (mModelo ? mModelo.split(' ')[0] : '');
-  const mSerialMotor = moto.serialMotor || '';
-  const mSerialChasis = moto.serialChasis || mVin;  // fallback: VIN como serial de chasis
-  const mGpsNum = moto.gpsNum || moto.gps_id || (moto.gps ? 'Activo' : '');
-  // Obligaciones y cláusulas – estilo
-  const purple = '#5E3BEE';
-  const purpleDark = '#4C2ED0';
-  const purpleLight = '#F2EEFF';
-  const rowStyle = 'padding:8px 12px;border-bottom:1px solid #EAE5F7;font-size:11.5px';
-  const tableHdr = 'background:'+purple+';color:#fff;font-size:12px;font-weight:800;text-align:center;padding:9px 10px;letter-spacing:.3px;text-transform:uppercase';
-  const clausH = 'color:'+purple+';font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid '+purple;
-  const p = 'font-size:11.5px;line-height:1.55;color:#222;margin:6px 0;text-align:justify';
-  const li = 'font-size:11.5px;line-height:1.55;color:#222;margin:3px 0;text-align:justify';
-  const lblCell = 'background:'+purpleLight+';color:'+purpleDark+';font-weight:700;font-size:11.5px;padding:7px 10px;width:32%';
-  const valCell = 'padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7';
+  var tipo = ($('sel-tipo-doc')&&$('sel-tipo-doc').value) || 'contrato';
+  if(tipo==='pagare')   return _renderPagare();
+  if(tipo==='carta')    return _renderCartaInstrucciones();
+  return _renderContratoArrendamiento();
+}
+
+// Helper: arma el contexto común (datos y estilos) para todos los documentos
+function _docCtx(){
+  var credId=($('sel-cred')&&$('sel-cred').value);
+  var c=S.creds.find(function(x){return String(x.id)===String(credId);})||S.creds[0];
+  if(!c){ return null; }
+  var logoSrc=(document.querySelector('.sb-logo img')||{}).src||'';
+  var emp = getEmpresa();
+  var empresaUp = (emp.nombre||'PAGASI').toUpperCase();
+  var cli = S.clientes.find(function(x){return x.nombre===c.cli;}) || S.clientes.find(function(x){return String(x.id)===String(c.clienteId);}) || {};
+  var moto = S.motos.find(function(m){return String(m.id)===String(c.motoId);}) || {};
+  var hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
+  var V = function(x){ return (x!=null && String(x).trim()!=='') ? String(x).trim() : '________________'; };
+  var Vm = function(n){ return (n!=null && !isNaN(parseFloat(n))) ? '$ '+parseFloat(n).toFixed(2) : '$ _______________'; };
+  var mModelo = c.modelo || moto.modelo || '';
+  var mVin    = c.vin    || moto.vin    || '';
+  var mColor  = c.color  || moto.color  || '';
+  var mAnio   = c.anio   || moto.anio   || '';
+  var mPlaca  = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
+  var mMarca  = moto.marca || (mModelo ? mModelo.split(' ')[0] : '');
+  var mSerialMotor = moto.serialMotor || '';
+  var mSerialChasis = moto.serialChasis || mVin;
+  var mGpsNum = moto.gpsNum || moto.gps_id || (moto.gps ? 'Activo' : '');
+  var purple = '#5E3BEE';
+  var purpleDark = '#4C2ED0';
+  var purpleLight = '#F2EEFF';
+  var rowStyle = 'padding:8px 12px;border-bottom:1px solid #EAE5F7;font-size:11.5px';
+  var tableHdr = 'background:'+purple+';color:#fff;font-size:12px;font-weight:800;text-align:center;padding:9px 10px;letter-spacing:.3px;text-transform:uppercase';
+  var clausH = 'color:'+purple+';font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid '+purple;
+  var p = 'font-size:11.5px;line-height:1.55;color:#222;margin:6px 0;text-align:justify';
+  var li = 'font-size:11.5px;line-height:1.55;color:#222;margin:3px 0;text-align:justify';
+  var lblCell = 'background:'+purpleLight+';color:'+purpleDark+';font-weight:700;font-size:11.5px;padding:7px 10px;width:32%';
+  var valCell = 'padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7';
+  return { c:c, cli:cli, moto:moto, emp:emp, empresaUp:empresaUp, logoSrc:logoSrc, hoy:hoy, V:V, Vm:Vm,
+           mModelo:mModelo, mVin:mVin, mColor:mColor, mAnio:mAnio, mPlaca:mPlaca, mMarca:mMarca,
+           mSerialMotor:mSerialMotor, mSerialChasis:mSerialChasis, mGpsNum:mGpsNum,
+           purple:purple, purpleDark:purpleDark, purpleLight:purpleLight,
+           rowStyle:rowStyle, tableHdr:tableHdr, clausH:clausH, p:p, li:li, lblCell:lblCell, valCell:valCell };
+}
+
+// Monto en letras (simple, para pagarés)
+function _numALetras(n){
+  n = parseFloat(n)||0;
+  if(n===0) return 'CERO DÓLARES AMERICANOS';
+  var entero = Math.floor(n);
+  var cents = Math.round((n-entero)*100);
+  var un = ['','UNO','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISEIS','DIECISIETE','DIECIOCHO','DIECINUEVE','VEINTE','VEINTIUNO','VEINTIDOS','VEINTITRES','VEINTICUATRO','VEINTICINCO','VEINTISEIS','VEINTISIETE','VEINTIOCHO','VEINTINUEVE'];
+  var dec = ['','','','TREINTA','CUARENTA','CINCUENTA','SESENTA','SETENTA','OCHENTA','NOVENTA'];
+  var cen = ['','CIENTO','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS','SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
+  function bajo1000(num){
+    if(num===0) return '';
+    if(num===100) return 'CIEN';
+    var c = Math.floor(num/100), r = num%100;
+    var s = cen[c];
+    if(r===0) return s;
+    if(r<30) return (s?s+' ':'')+un[r];
+    var d = Math.floor(r/10), u = r%10;
+    return (s?s+' ':'')+dec[d]+(u?' Y '+un[u]:'');
+  }
+  var txt = '';
+  if(entero>=1000000){
+    var mill = Math.floor(entero/1000000);
+    txt += (mill===1?'UN MILLÓN':bajo1000(mill)+' MILLONES')+' ';
+    entero = entero%1000000;
+  }
+  if(entero>=1000){
+    var mil = Math.floor(entero/1000);
+    txt += (mil===1?'MIL':bajo1000(mil)+' MIL')+' ';
+    entero = entero%1000;
+  }
+  if(entero>0) txt += bajo1000(entero);
+  txt = txt.trim()+' DÓLARES AMERICANOS';
+  if(cents>0) txt += ' CON '+(cents<10?'0'+cents:cents)+'/100';
+  return txt;
+}
+
+function _renderContratoArrendamiento(){
+  var ctx = _docCtx();
+  if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un financiamiento primero</div></div>'; return; }
+  var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, V=ctx.V, Vm=ctx.Vm;
+  var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mMarca=ctx.mMarca, mSerialMotor=ctx.mSerialMotor, mSerialChasis=ctx.mSerialChasis, mGpsNum=ctx.mGpsNum;
+  var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
+  var rowStyle=ctx.rowStyle, tableHdr=ctx.tableHdr, clausH=ctx.clausH, p=ctx.p, li=ctx.li, lblCell=ctx.lblCell, valCell=ctx.valCell;
 
   $('cz').innerHTML = `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
 
@@ -12400,6 +12451,249 @@ function renderContrato(){
     <!-- Footer -->
     <div style="margin-top:22px;padding-top:10px;border-top:1px solid #ccc;text-align:center;font-size:9.5px;color:#888">
       ${empresaUp} · Arrendamiento con Opción a Compra de Motocicletas · Documento válido con firma de ambas partes · Venezuela
+    </div>
+  </div>`;
+}
+
+// PAGARÉ — Documento a la orden firmado por el arrendatario
+function _renderPagare(){
+  var ctx = _docCtx();
+  if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un financiamiento primero</div></div>'; return; }
+  var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, V=ctx.V, Vm=ctx.Vm;
+  var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
+  var tableHdr=ctx.tableHdr, clausH=ctx.clausH, p=ctx.p, lblCell=ctx.lblCell, valCell=ctx.valCell;
+  // El pagaré cubre el monto sujeto a canon (lo que financia) — si prefieres el total, cambia c.fin por c.total
+  var monto = parseFloat(c.fin)||parseFloat(c.total)||0;
+  var montoLetras = _numALetras(monto);
+  var plazoMeses = c.plazo || 12;
+  var cuotaQ = parseFloat(c.cuotaQ||c.cuota)||0;
+  var totalCuotas = c.totalCuotas || (plazoMeses*2);
+  // Fecha de vencimiento (estimación: fecha inicio + plazo en meses)
+  var fechaBase = c.fecha ? new Date(c.fecha) : new Date();
+  var fechaVenc = new Date(fechaBase); fechaVenc.setMonth(fechaVenc.getMonth()+plazoMeses);
+  var fechaVencStr = fechaVenc.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
+
+  $('cz').innerHTML = `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>${logoSrc?`<img src="${logoSrc}" style="height:46px;object-fit:contain">`:`<div style="font-size:22px;font-weight:900;color:${purple}">${empresaUp}</div>`}</div>
+      <div style="font-size:11px;color:#555"><strong>N° de Pagaré:</strong> <span style="border-bottom:1px solid #888;padding:0 24px 2px">PAG-${c.id||'________'}</span></div>
+    </div>
+
+    <!-- Título principal -->
+    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #E8C842">
+      <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">PAGARÉ A LA ORDEN</div>
+    </div>
+
+    <!-- Datos superiores -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:14px 0 10px;font-size:11.5px">
+      <div><strong style="color:${purple}">Ciudad / Estado:</strong> ${emp.ciudad||'Caracas'}</div>
+      <div><strong style="color:${purple}">Fecha de emisión:</strong> ${hoy}</div>
+      <div><strong style="color:${purple}">Contrato asociado:</strong> ${c.id||'—'}</div>
+    </div>
+    <div style="border-bottom:1px solid #ccc;margin-bottom:6px"></div>
+
+    <!-- Monto destacado -->
+    <div style="background:${purpleLight};border:2px solid ${purple};border-radius:8px;padding:16px 20px;margin:14px 0;text-align:center">
+      <div style="font-size:11px;color:${purpleDark};font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Valor del pagaré</div>
+      <div style="font-size:28px;font-weight:900;color:${purpleDark};letter-spacing:-.5px">${Vm(monto)}</div>
+      <div style="font-size:11.5px;color:#444;margin-top:6px;font-style:italic">${montoLetras}</div>
+    </div>
+
+    <!-- Texto principal del pagaré -->
+    <h3 style="${clausH}">DECLARACIÓN DE PAGO</h3>
+    <p style="${p}">Yo, <strong>${V(cli.nombre||c.cli)}</strong>, venezolano(a), mayor de edad, titular de la cédula de identidad N° <strong>${V(cli.cedula)}</strong>, domiciliado(a) en <strong>${V(cli.dir||cli.ciudad)}</strong>, declaro por medio del presente <strong>PAGARÉ</strong> que debo y pagaré sin aviso y sin protesto a la orden de <strong>${empresaUp}</strong>, inscrita bajo el RIF <strong>${V(emp.rif)}</strong>, con domicilio en ${V(emp.direccion)}, la cantidad de <strong>${Vm(monto)}</strong> (<em>${montoLetras}</em>), derivada del contrato de arrendamiento con opción a compra N° <strong>${c.id}</strong>.</p>
+
+    <!-- Condiciones de pago -->
+    <h3 style="${clausH}">CONDICIONES DE PAGO</h3>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Monto total adeudado:</td><td style="${valCell};font-weight:700">${Vm(monto)}</td></tr>
+      <tr><td style="${lblCell}">Forma de pago:</td><td style="${valCell}">${totalCuotas} cuotas quincenales consecutivas</td></tr>
+      <tr><td style="${lblCell}">Monto de cada cuota:</td><td style="${valCell};font-weight:700">${Vm(cuotaQ)}</td></tr>
+      <tr><td style="${lblCell}">Fecha de inicio:</td><td style="${valCell}">${c.fecha||hoy}</td></tr>
+      <tr><td style="${lblCell}">Fecha de vencimiento final:</td><td style="${valCell};font-weight:700">${fechaVencStr}</td></tr>
+      <tr><td style="${lblCell}">Moneda:</td><td style="${valCell};font-weight:700">Dólares Americanos (USD) — exclusivamente</td></tr>
+      <tr><td style="${lblCell}">Lugar de pago:</td><td style="${valCell}">${V(emp.direccion||emp.ciudad)}</td></tr>
+    </table>
+
+    <!-- Cláusula de mora -->
+    <h3 style="${clausH}">MORA Y CONSECUENCIAS DEL INCUMPLIMIENTO</h3>
+    <p style="${p}">El atraso en el pago de cualquier cuota por más de <strong>cuatro (4) días</strong> contados desde la fecha de vencimiento, generará un recargo de mora equivalente al <strong>5% sobre el monto de la cuota vencida</strong>, adicional al capital adeudado, conforme a lo establecido en la Cláusula Sexta del contrato principal.</p>
+    <p style="${p}">En caso de incumplimiento del pago de <strong>cuatro (4) o más cuotas consecutivas</strong>, o de atraso superior a <strong>sesenta (60) días</strong>, la totalidad del saldo adeudado se considerará de <strong>plazo vencido</strong>, quedando facultado el tenedor del presente pagaré para exigir el pago inmediato e íntegro de la suma pendiente por la vía judicial o extrajudicial que estime conveniente.</p>
+
+    <!-- Renuncia de aviso y protesto -->
+    <h3 style="${clausH}">RENUNCIA DE AVISO Y PROTESTO</h3>
+    <p style="${p}">El suscriptor renuncia expresamente a los beneficios de notificación, aviso y protesto por falta de aceptación o pago, así como a cualquier otra formalidad exigida por el Código de Comercio venezolano para el ejercicio de las acciones cambiarias derivadas del presente pagaré.</p>
+
+    <!-- Fiador solidario -->
+    <h3 style="${clausH}">AVAL / FIADOR SOLIDARIO</h3>
+    <p style="${p}">Se constituye como <strong>avalista y principal pagador solidario</strong> de las obligaciones aquí contenidas, renunciando al beneficio de excusión y de división:</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Nombre y Apellido:</td><td style="${valCell}">${V(cli.fiador_nom)}</td></tr>
+      <tr><td style="${lblCell}">Cédula de Identidad:</td><td style="${valCell}">${V(cli.fiador_ci)}</td></tr>
+      <tr><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${V(cli.fiador_tel)}</td></tr>
+      <tr><td style="${lblCell}">Parentesco / Relación:</td><td style="${valCell}">${V(cli.fiador_rel)}</td></tr>
+    </table>
+
+    <!-- Domicilio especial -->
+    <h3 style="${clausH}">DOMICILIO ESPECIAL</h3>
+    <p style="${p}">Para todos los efectos legales derivados del presente pagaré, el suscriptor elige como domicilio especial la ciudad de <strong>${emp.ciudad||'Caracas'}</strong>, sometiéndose a la jurisdicción de sus tribunales competentes, renunciando a cualquier otro fuero que pudiera corresponderle.</p>
+
+    <!-- Firmas -->
+    <div style="margin-top:28px;border-top:2px solid ${purple};padding-top:18px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
+          <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL DEUDOR (SUSCRIPTOR)</div>
+          <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
+            <div style="text-align:center;padding-top:46px">
+              <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
+                Firma<br>
+                Nombre: ${cli.nombre||c.cli||'________________'}<br>
+                C.I.: ${cli.cedula||'__________________'}
+              </div>
+            </div>
+            <div>
+              <div style="border:1px dashed #666;background:#fff;height:70px;border-radius:3px"></div>
+              <div style="text-align:center;font-size:9px;color:#555;margin-top:3px;font-weight:700">HUELLA</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#F6EEFC;padding:14px 10px;border-radius:4px">
+          <div style="background:#8B5BC9;color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL AVALISTA / FIADOR</div>
+          <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
+            <div style="text-align:center;padding-top:46px">
+              <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
+                Firma<br>
+                Nombre: ${cli.fiador_nom||'________________'}<br>
+                C.I.: ${cli.fiador_ci||'__________________'}
+              </div>
+            </div>
+            <div>
+              <div style="border:1px dashed #666;background:#fff;height:70px;border-radius:3px"></div>
+              <div style="text-align:center;font-size:9px;color:#555;margin-top:3px;font-weight:700">HUELLA</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top:22px;padding-top:10px;border-top:1px solid #ccc;text-align:center;font-size:9.5px;color:#888">
+      ${empresaUp} · Pagaré a la Orden · Instrumento complementario al Contrato N° ${c.id} · Venezuela
+    </div>
+  </div>`;
+}
+
+// CARTA DE INSTRUCCIONES — autorización del cliente al arrendador
+function _renderCartaInstrucciones(){
+  var ctx = _docCtx();
+  if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un financiamiento primero</div></div>'; return; }
+  var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, V=ctx.V;
+  var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mSerialChasis=ctx.mSerialChasis;
+  var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
+  var clausH=ctx.clausH, p=ctx.p, li=ctx.li, lblCell=ctx.lblCell, valCell=ctx.valCell;
+
+  $('cz').innerHTML = `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>${logoSrc?`<img src="${logoSrc}" style="height:46px;object-fit:contain">`:`<div style="font-size:22px;font-weight:900;color:${purple}">${empresaUp}</div>`}</div>
+      <div style="font-size:11px;color:#555"><strong>Ref. Contrato:</strong> <span style="border-bottom:1px solid #888;padding:0 24px 2px">${c.id||'________'}</span></div>
+    </div>
+
+    <!-- Título principal -->
+    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #E8C842">
+      <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">CARTA DE INSTRUCCIONES Y AUTORIZACIONES</div>
+    </div>
+
+    <!-- Ciudad y Fecha -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 4px;font-size:11.5px">
+      <div><strong style="color:${purple}">Ciudad / Estado:</strong> ${emp.ciudad||'Caracas'}</div>
+      <div><strong style="color:${purple}">Fecha:</strong> ${hoy}</div>
+    </div>
+    <div style="border-bottom:1px solid #ccc;margin-bottom:6px"></div>
+
+    <!-- Destinatario y remitente -->
+    <p style="${p}margin-top:14px"><strong>Señores:</strong><br><strong>${empresaUp}</strong><br>RIF: ${V(emp.rif)}<br>${V(emp.direccion)}<br>Presente.—</p>
+
+    <p style="${p}"><strong>Referencia:</strong> Contrato de Arrendamiento con Opción a Compra N° <strong>${c.id}</strong>.</p>
+
+    <p style="${p}">Quien suscribe, <strong>${V(cli.nombre||c.cli)}</strong>, venezolano(a), mayor de edad, titular de la cédula de identidad N° <strong>${V(cli.cedula)}</strong>, domiciliado(a) en <strong>${V(cli.dir||cli.ciudad)}</strong>, actuando en mi propio nombre y en mi carácter de <strong>ARRENDATARIO</strong> del contrato arriba referenciado, mediante la presente carta manifiesto mi conformidad y autorizo expresamente a <strong>${empresaUp}</strong> para lo siguiente:</p>
+
+    <!-- Bloque de autorizaciones -->
+    <h3 style="${clausH}">PRIMERA: AUTORIZACIÓN DE MONITOREO GPS</h3>
+    <p style="${p}">Autorizo de manera expresa e irrevocable el monitoreo continuo de la ubicación del vehículo arrendado durante toda la vigencia del contrato, mediante el dispositivo GPS instalado en la motocicleta. Reconozco que esta autorización es condición esencial del arrendamiento y que cualquier intento de desactivación, bloqueo o manipulación del GPS facultará al arrendador para recuperar la unidad de forma inmediata.</p>
+
+    <h3 style="${clausH}">SEGUNDA: AUTORIZACIÓN DE RECUPERACIÓN EXTRAJUDICIAL</h3>
+    <p style="${p}">Autorizo expresamente a ${empresaUp}, o a los representantes que ésta designe, para recuperar la motocicleta objeto del arrendamiento, sin necesidad de notificación previa ni intervención judicial, en cualquiera de los supuestos de resolución contemplados en la Cláusula Novena del contrato, especialmente en caso de falta de pago de cuatro (4) o más cánones quincenales consecutivos, manipulación del GPS, uso ilícito del vehículo o traslado del mismo fuera del territorio nacional sin autorización.</p>
+
+    <h3 style="${clausH}">TERCERA: AUTORIZACIÓN DE CONSULTA Y REPORTE CREDITICIO</h3>
+    <p style="${p}">Autorizo a ${empresaUp} a consultar, procesar, conservar y reportar mi información crediticia y comercial ante cualquier central de riesgo, buró de crédito o base de datos financiera pública o privada, en Venezuela o en el exterior, durante la vigencia del contrato y por el tiempo que la legislación permita con posterioridad a su terminación.</p>
+
+    <h3 style="${clausH}">CUARTA: MEDIOS DE CONTACTO Y NOTIFICACIÓN</h3>
+    <p style="${p}">Declaro como mis medios válidos de contacto y notificación, a los efectos del contrato y de cualquier gestión de cobranza, los siguientes:</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Teléfono principal:</td><td style="${valCell}">${V(cli.tel)}</td></tr>
+      <tr><td style="${lblCell}">WhatsApp:</td><td style="${valCell}">${V(cli.wa||cli.tel)}</td></tr>
+      <tr><td style="${lblCell}">Correo electrónico:</td><td style="${valCell}">${V(cli.email)}</td></tr>
+      <tr><td style="${lblCell}">Dirección física:</td><td style="${valCell}">${V(cli.dir||cli.ciudad)}</td></tr>
+    </table>
+    <p style="${p}">Acepto que cualquier notificación remitida por ${empresaUp} a través de estos medios se considerará válidamente efectuada para todos los efectos contractuales y legales. Me comprometo a informar por escrito cualquier cambio en mis datos de contacto dentro de los cinco (5) días siguientes a la modificación.</p>
+
+    <h3 style="${clausH}">QUINTA: INSTRUCCIONES DE PAGO</h3>
+    <p style="${p}">Acepto que todos los pagos derivados del contrato se realizarán exclusivamente en <strong>Dólares Americanos (USD)</strong>, mediante los medios de pago que ${empresaUp} tenga habilitados (transferencia, pago móvil, Zelle, efectivo u otros autorizados). Reconozco que los pagos parciales se aplicarán primero a la cuota más antigua pendiente y luego a la mora generada, y que solo se detendrá el cómputo de mora cuando la cuota vencida quede totalmente cubierta.</p>
+
+    <h3 style="${clausH}">SEXTA: DATOS DE LA UNIDAD ARRENDADA</h3>
+    <p style="${p}">Declaro haber recibido a mi entera satisfacción, en buen estado de funcionamiento, limpieza y conservación, la unidad que se describe a continuación:</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Modelo:</td><td style="${valCell}">${V(mModelo)}</td><td style="${lblCell}">Color:</td><td style="${valCell}">${V(mColor)}</td></tr>
+      <tr><td style="${lblCell}">Año:</td><td style="${valCell}">${V(mAnio)}</td><td style="${lblCell}">Placa:</td><td style="${valCell}">${V(mPlaca)}</td></tr>
+      <tr><td style="${lblCell}">Serial de Chasis:</td><td style="${valCell}" colspan="3">${V(mSerialChasis)}</td></tr>
+    </table>
+
+    <h3 style="${clausH}">SÉPTIMA: DECLARACIÓN DE VERACIDAD</h3>
+    <p style="${p}">Declaro bajo juramento que toda la información suministrada a ${empresaUp} para la evaluación y suscripción del contrato es veraz, exacta y actualizada, y asumo la responsabilidad civil y penal por cualquier falsedad o información incompleta.</p>
+
+    <!-- Cierre formal -->
+    <p style="${p};margin-top:18px">La presente carta se emite en <strong>${emp.ciudad||'Caracas'}</strong>, a los <strong>${hoy}</strong>, a los efectos y consecuencias legales que correspondan.</p>
+    <p style="${p}">Atentamente,</p>
+
+    <!-- Firma -->
+    <div style="margin-top:28px;border-top:2px solid ${purple};padding-top:18px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
+          <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL ARRENDATARIO</div>
+          <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
+            <div style="text-align:center;padding-top:46px">
+              <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
+                Firma<br>
+                Nombre: ${cli.nombre||c.cli||'________________'}<br>
+                C.I.: ${cli.cedula||'__________________'}
+              </div>
+            </div>
+            <div>
+              <div style="border:1px dashed #666;background:#fff;height:70px;border-radius:3px"></div>
+              <div style="text-align:center;font-size:9px;color:#555;margin-top:3px;font-weight:700">HUELLA</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
+          <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:56px;text-align:center">RECIBIDO POR ${empresaUp}</div>
+          <div style="border-top:1px solid #333;padding-top:6px;font-size:10.5px;text-align:center">
+            <strong>${empresaUp}</strong><br>
+            Representante Legal<br>
+            ${emp.representante?'Nombre: '+emp.representante:''}<br>
+            C.I.: ${emp.repCI||'_______________'}<br>
+            Fecha de recepción: ____________
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top:22px;padding-top:10px;border-top:1px solid #ccc;text-align:center;font-size:9.5px;color:#888">
+      ${empresaUp} · Carta de Instrucciones · Instrumento complementario al Contrato N° ${c.id} · Venezuela
     </div>
   </div>`;
 }
@@ -13697,48 +13991,120 @@ function openAddPlan(){
 // PUNTO 1 — FINIQUITO DE CONTRATO
 // ══════════════════════════════════════════
 function abrirFiniquito(credId){
-  var c=S.creds.find(function(x){return x.id===credId;}); if(!c) return;
+  var c=S.creds.find(function(x){return String(x.id)===String(credId);}); if(!c) return;
   var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
+  var moto = S.motos.find(function(m){return String(m.id)===String(c.motoId);}) || {};
+  var emp = (typeof getEmpresa==='function') ? getEmpresa() : {nombre:'Pagasi',rif:'',ciudad:'Caracas',tel:'',email:'',direccion:'',representante:'',repCI:''};
+  var empresaUp = (emp.nombre||'PAGASI').toUpperCase();
   var totalPagado=getCreditoPagosConfirmados(c);
   var fechaFin=c.fechaCompletado||new Date().toISOString().split('T')[0];
+  var totalCuotas = c.totalCuotas||c.plazo*2;
+  var mModelo = c.modelo || moto.modelo || '';
+  var mVin    = c.vin    || moto.vin    || '';
+  var mColor  = c.color  || moto.color  || '';
+  var mAnio   = c.anio   || moto.anio   || '';
+  var mPlaca  = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
+  var mSerialChasis = moto.serialChasis || mVin;
+  var hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
+  var purple = '#5E3BEE';
+  var purpleDark = '#4C2ED0';
+  var purpleLight = '#F2EEFF';
 
   $('mic').textContent='';
   $('mtt').textContent='¡Contrato Finalizado!';
-  $('msb').textContent=c.cli+' completó su financiamiento';
+  $('msb').textContent=c.cli+' completó su arrendamiento';
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
     <div style="text-align:center;padding:16px 0 20px">
-      <div style="font-size:52px;margin-bottom:8px"></div>
       <div style="font-size:18px;font-weight:900;color:var(--p1);margin-bottom:4px">${c.cli}</div>
-      <div style="font-size:13px;color:var(--ink3)">ha completado el financiamiento de su motocicleta</div>
+      <div style="font-size:13px;color:var(--ink3)">ha cancelado la totalidad de los cánones del arrendamiento</div>
     </div>
-    <div id="finiquito-doc" style="background:#fff;border:2px solid var(--rim2);border-radius:12px;padding:28px;font-family:Georgia,serif;color:#111;margin-bottom:16px">
-      <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:14px;margin-bottom:18px">
-        <div style="font-size:20px;font-weight:900;letter-spacing:1px">CARTA DE LIBERACIÓN DE CONTRATO</div>
-        <div style="font-size:12px;margin-top:4px;color:#555">Finiquito de Obligación Financiera</div>
+    <div id="finiquito-doc" style="background:#fff;border:2px solid ${purple};border-radius:12px;padding:28px;font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;margin-bottom:16px;max-width:820px">
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:22px;font-weight:900;color:${purple}">${empresaUp}</div>
+        <div style="font-size:11px;color:#555"><strong>Ref. Contrato:</strong> <span style="border-bottom:1px solid #888;padding:0 24px 2px">${c.id||'________'}</span></div>
       </div>
-      <div style="font-size:12.5px;line-height:1.9">
-        <p>Por medio de la presente, <strong>Pagasi</strong> hace constar que el ciudadano(a) <strong>${c.cli}</strong>, titular de la cédula de identidad <strong>${cl.cedula||'—'}</strong>, ha cumplido satisfactoriamente con la totalidad de las obligaciones de pago derivadas del contrato de financiamiento <strong>${c.id}</strong>, correspondiente a la adquisición de la motocicleta:</p>
-        <div style="background:#f8f8f8;border-left:4px solid #6C5CE7;padding:10px 16px;margin:14px 0;border-radius:4px">
-          <div><strong>Modelo:</strong> ${c.modelo}</div>
-          <div><strong>VIN / Serial:</strong> ${c.vin||'—'}</div>
-          <div><strong>Color:</strong> ${c.color||'—'}</div>
-          <div><strong>Año:</strong> ${c.anio||'—'}</div>
-          ${c.placa&&c.placa!=='—'?`<div><strong>Placa:</strong> ${c.placa}</div>`:''}
-        </div>
-        <p>El monto total financiado fue de <strong>${fmt(c.total)}</strong>, con una inicial de <strong>${fmt(c.ini)}</strong>, abonado en <strong>${c.totalCuotas||c.plazo*2} cuotas quincenales</strong>. El total cancelado asciende a <strong>${fmt(c.ini+totalPagado)}</strong>.</p>
-        <p>La fecha de inicio del contrato fue el <strong>${c.fecha}</strong> y la fecha de cancelación total es el <strong>${fechaFin}</strong>.</p>
-        <p>En virtud de lo anterior, se declara que el beneficiario queda <strong>libre de toda obligación</strong> con respecto al presente contrato, siendo pleno propietario de la unidad descrita.</p>
+
+      <!-- Título -->
+      <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #E8C842">
+        <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">CONSTANCIA DE FINALIZACIÓN Y TRANSFERENCIA DE PROPIEDAD</div>
+        <div style="font-size:10.5px;margin-top:3px;opacity:.9">Ejercicio de la Opción a Compra — Cláusula Séptima del Contrato</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px;padding-top:20px;border-top:1px solid #ccc">
-        <div style="text-align:center">
-          <div style="border-top:1px solid #111;margin-top:50px;padding-top:8px;font-size:11px">Representante Pagasi</div>
-        </div>
-        <div style="text-align:center">
-          <div style="border-top:1px solid #111;margin-top:50px;padding-top:8px;font-size:11px">${c.cli} — C.I. ${cl.cedula||'—'}</div>
+
+      <!-- Datos superiores -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 10px;font-size:11.5px">
+        <div><strong style="color:${purple}">Ciudad / Estado:</strong> ${emp.ciudad||'Caracas'}</div>
+        <div><strong style="color:${purple}">Fecha de emisión:</strong> ${hoy}</div>
+      </div>
+      <div style="border-bottom:1px solid #ccc;margin-bottom:12px"></div>
+
+      <!-- Texto principal -->
+      <p style="font-size:11.5px;line-height:1.6;margin:10px 0;text-align:justify">Por medio del presente documento, <strong>${empresaUp}</strong>, inscrita bajo el RIF <strong>${emp.rif||'—'}</strong>, con domicilio en <strong>${emp.direccion||emp.ciudad||'Caracas'}</strong>, en su condición de <strong>EL ARRENDADOR</strong>, deja formal constancia de que el(la) ciudadano(a) <strong>${c.cli}</strong>, titular de la cédula de identidad N° <strong>${cl.cedula||'—'}</strong>, en su condición de <strong>EL ARRENDATARIO</strong> del contrato de arrendamiento con opción a compra N° <strong>${c.id}</strong>, ha cancelado satisfactoriamente la totalidad de los <strong>${totalCuotas} cánones quincenales</strong> acordados, así como el pago simbólico de la opción a compra por USD 1.00.</p>
+
+      <!-- Datos del vehículo -->
+      <h3 style="color:${purple};font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid ${purple}">VEHÍCULO OBJETO DEL CONTRATO</h3>
+      <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px;width:32%">Modelo:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mModelo||'—'}</td><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px;width:32%">Color:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mColor||'—'}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Año:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mAnio||'—'}</td><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Placa:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mPlaca||'—'}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Serial de Chasis / VIN:</td><td colspan="3" style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mSerialChasis||'—'}</td></tr>
+      </table>
+
+      <!-- Resumen económico -->
+      <h3 style="color:${purple};font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid ${purple}">RESUMEN DEL ARRENDAMIENTO CANCELADO</h3>
+      <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px;width:55%">Depósito inicial pagado:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;text-align:right;font-weight:700">${fmt(c.ini)}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Cánones quincenales cancelados:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;text-align:right;font-weight:700">${totalCuotas} de ${totalCuotas}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Total abonado en cánones:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;text-align:right;font-weight:700">${fmt(totalPagado)}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Monto total del contrato:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;text-align:right;font-weight:700">${fmt((parseFloat(c.ini)||0)+(parseFloat(c.total)||0))}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Fecha de inicio del contrato:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;text-align:right">${c.fecha}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Fecha de cancelación total:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;text-align:right;font-weight:700">${fechaFin}</td></tr>
+        <tr style="background:${purpleLight}"><td style="padding:9px 10px;font-size:11.5px;font-weight:800;color:${purpleDark}">Pago de opción a compra (Cláusula Séptima):</td><td style="padding:9px 10px;text-align:right;font-weight:900;color:${purpleDark}">$ 1.00</td></tr>
+      </table>
+
+      <!-- Declaración formal -->
+      <h3 style="color:${purple};font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid ${purple}">DECLARACIÓN DE FINALIZACIÓN</h3>
+      <div style="background:#F0FFF4;border:1px solid #4CAF50;border-left:4px solid #2E7D32;border-radius:4px;padding:12px 14px;margin-top:6px">
+        <p style="font-size:11.5px;line-height:1.6;margin:0;text-align:justify">En virtud del cumplimiento íntegro de las obligaciones derivadas del contrato, y en ejercicio de la opción a compra prevista en la <strong>Cláusula Séptima</strong> del mismo, <strong>${empresaUp}</strong> declara resuelto el vínculo arrendaticio y procederá a realizar el <strong>traspaso legal de la propiedad</strong> del vehículo descrito a favor de <strong>${c.cli}</strong>, dentro de los <strong>treinta (30) días hábiles</strong> siguientes a la emisión del presente documento, previo cumplimiento de los trámites correspondientes ante el Instituto Nacional de Transporte Terrestre (INTT).</p>
+      </div>
+      <p style="font-size:11.5px;line-height:1.6;margin:10px 0;text-align:justify">En consecuencia, una vez perfeccionado el traspaso, <strong>${c.cli}</strong> quedará como <strong>único y legítimo propietario</strong> del vehículo, sin que subsistan obligaciones económicas o contractuales pendientes entre las partes derivadas del contrato N° ${c.id}.</p>
+
+      <!-- Firmas -->
+      <div style="margin-top:24px;border-top:2px solid ${purple};padding-top:18px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
+            <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:56px;text-align:center">POR EL ARRENDADOR</div>
+            <div style="border-top:1px solid #333;padding-top:6px;font-size:10.5px;text-align:center">
+              <strong>${empresaUp}</strong><br>
+              Representante Legal<br>
+              ${emp.representante?'Nombre: '+emp.representante:''}<br>
+              C.I.: ${emp.repCI||'_______________'}
+            </div>
+          </div>
+          <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
+            <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL EX-ARRENDATARIO / NUEVO PROPIETARIO</div>
+            <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
+              <div style="text-align:center;padding-top:46px">
+                <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
+                  Firma<br>
+                  Nombre: ${c.cli||'________________'}<br>
+                  C.I.: ${cl.cedula||'__________________'}
+                </div>
+              </div>
+              <div>
+                <div style="border:1px dashed #666;background:#fff;height:70px;border-radius:3px"></div>
+                <div style="text-align:center;font-size:9px;color:#555;margin-top:3px;font-weight:700">HUELLA</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div style="text-align:center;margin-top:18px;font-size:10px;color:#888">Documento generado el ${new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'})} · ${c.id}</div>
+
+      <!-- Footer -->
+      <div style="margin-top:22px;padding-top:10px;border-top:1px solid #ccc;text-align:center;font-size:9.5px;color:#888">
+        ${empresaUp} · Constancia de Finalización de Arrendamiento y Traspaso de Propiedad · Documento N° FIN-${c.id} · Venezuela
+      </div>
     </div>`;
   $('mft').innerHTML=`
     <button class="btn btn-g" onclick="closeM()">Cerrar</button>
@@ -13750,7 +14116,7 @@ function imprimirFiniquito(){
   var doc=$('finiquito-doc');
   if(!doc){window.print();return;}
   var w=window.open('','_blank','width=800,height=600');
-  w.document.write('<html><head><title>Finiquito</title><style>body{font-family:Georgia,serif;padding:40px;color:#111}@media print{body{padding:20px}}</style></head><body>'+doc.outerHTML+'<script>window.onload=function(){window.print();}<\/script></body></html>');
+  w.document.write('<html><head><title>Constancia de Finalización</title><style>body{font-family:\'Segoe UI\',Roboto,Arial,sans-serif;padding:30px;color:#222;background:#fff}@media print{body{padding:12px}}</style></head><body>'+doc.outerHTML+'<script>window.onload=function(){window.print();}<\/script></body></html>');
   w.document.close();
 }
 
