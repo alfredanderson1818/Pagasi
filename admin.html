@@ -4337,7 +4337,7 @@ function renderClienteList(q=''){
 }
 
 function verCliente(id){
-  const c = S.clientes.find(x=>x.id===id);if(!c)return;
+  const c = S.clientes.find(x=>String(x.id)===String(id));if(!c)return;
   // Fusionar documentos locales con los remotos (por si hubo fallback)
   if(typeof _cliDocMergeInto === 'function') _cliDocMergeInto(c);
   const creditos = getCreditosCliente(c);
@@ -8417,6 +8417,7 @@ function _cliInitFromCliente(c){
   _wzLoadDocsUpFromCliente(c);
   WZ.docsCount = WZ.wz_docsCount = (c.documentos&&c.documentos.length) || c.docs_count || 0;
   WZ.impresion = WZ.wz_impresion = c.impresion || '';
+  WZ.obs = WZ.wz_obs = c.notas || c.obs || '';
   WZ.score = c.score_indexa || 0;
   WZ.f1 = c.f1 || 0; WZ.f2 = c.f2 || 0; WZ.f3 = c.f3 || 0; WZ.f4 = c.f4 || 0; WZ.f5 = c.f5 || 0;
   WZ['_chip_wz_emp_g'] = WZ.emp || '';
@@ -8804,6 +8805,7 @@ function _cliGuardar(){
     docs_count: WZ.docsCount||0,
     documentos: _wzGetClientDocsArray(),
     impresion: WZ.impresion||'',
+    notas: WZ.obs||'',
     conocio: WZ.conocio||'',
     score_indexa: WZ.score||0,
     f1:WZ.f1||0, f2:WZ.f2||0, f3:WZ.f3||0, f4:WZ.f4||0, f5:WZ.f5||0,
