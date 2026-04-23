@@ -419,18 +419,18 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
         <div class="sim-result-card reveal">
           <div class="src-label">Cuota quincenal</div>
           <div class="src-amount"><span class="src-sym">$</span><span id="simQuincenal">75</span></div>
-          <div class="src-period">cada 15 dias &middot; 20 pagos</div>
+          <div class="src-period">cada 15 dias &middot; 24 pagos</div>
         </div>
         <div class="sim-result-card highlight reveal d1">
           <div class="src-label">Cuota mensual</div>
           <div class="src-amount"><span class="src-sym">$</span><span id="simMensual">150</span></div>
-          <div class="src-period">cada mes &middot; 10 cuotas</div>
+          <div class="src-period">cada mes &middot; 12 cuotas</div>
         </div>
       </div>
 
       <!-- Plan details strip -->
       <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:20px;" class="reveal">
-        <div class="bd-pill" style="text-align:center;"><div class="bd-l">Plazo</div><div class="bd-v">10 meses</div></div>
+        <div class="bd-pill" style="text-align:center;"><div class="bd-l">Plazo</div><div class="bd-v">12 meses</div></div>
       </div>
 
       <!-- CTA -->
@@ -458,22 +458,25 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
   <a class="wa-btn" href="https://wa.me/584140000000" target="_blank" rel="noopener">&#128172;</a>
 </div>
 <script>
+// Valores exactos del folleto Pagasi - sin decimales
 const CATALOG = [
-  {name:"New Horse 150",cc:"150cc",type:"Carga · Urbana",price:1320.0,badge:"Más vendida",badgeCls:"bg",minIni:462.0},
-  {name:"EK Xpress 150",cc:"150cc",type:"Clásica · Trabajo",price:1099.0,badge:"Disponible",badgeCls:"bv",minIni:384.65},
-  {name:"EK Xpress II 150",cc:"150cc",type:"Café Racer · Urbana",price:1126.0,badge:"Disponible",badgeCls:"bv",minIni:394.1},
-  {name:"EK Xpress 200S",cc:"200cc",type:"Deportiva · Urbana",price:1360.0,badge:"Nuevo",badgeCls:"bg",minIni:476.0},
-  {name:"EK Xpress 150 Lite",cc:"150cc",type:"Clásica · Económica",price:1020.0,badge:"Disponible",badgeCls:"bv",minIni:357.0},
-  {name:"New Owen II 150",cc:"150cc",type:"Custom · Clásica",price:1255.0,badge:"Disponible",badgeCls:"bv",minIni:439.25},
-  {name:"Owen 200S",cc:"200cc",type:"Custom · Deportiva",price:1550.0,badge:"Nuevo",badgeCls:"bg",minIni:542.5},
-  {name:"RK 200",cc:"200cc",type:"Deportiva · Naked",price:1750.0,badge:"Premium",badgeCls:"bp",minIni:612.5},
-  {name:"RK 250",cc:"250cc",type:"Supersport · Racing",price:2075.0,badge:"Premium",badgeCls:"bp",minIni:726.25},
-  {name:"TX 250 GS",cc:"250cc",type:"Adventure · Enduro",price:2599.0,badge:"Premium",badgeCls:"bp",minIni:909.65},
-  {name:"Matrix 150 Lite",cc:"150cc",type:"Doble propósito",price:1290.0,badge:"Disponible",badgeCls:"bv",minIni:451.5},
-  {name:"Matrix 150",cc:"150cc",type:"Doble propósito",price:1499.0,badge:"Disponible",badgeCls:"bv",minIni:524.65},
-  {name:"New Outlook 175",cc:"175cc",type:"Custom · Clásica",price:2450.0,badge:"Nuevo",badgeCls:"bg",minIni:857.5},
-  {name:"Outlook XL Paleta",cc:"175cc",type:"Custom · Premium",price:4851.0,badge:"Premium",badgeCls:"bp",minIni:1697.85},
-  {name:"Atlas 200HD",cc:"200cc",type:"Carga pesada · Work",price:4600.0,badge:"Heavy Duty",badgeCls:"ba",minIni:1610.0}
+  {name:"New Horse 150",cc:"150cc",type:"Carga · Urbana",inicial:594,quincenal:65,meses:12},
+  {name:"EK Xpress 150",cc:"150cc",type:"Clásica · Trabajo",inicial:495,quincenal:56,meses:12},
+  {name:"EK Xpress II 150",cc:"150cc",type:"Café Racer · Urbana",inicial:507,quincenal:57,meses:12},
+  {name:"EK Xpress 200S",cc:"200cc",type:"Deportiva · Urbana",inicial:612,quincenal:67,meses:12},
+  {name:"EK Xpress 150 Lite",cc:"150cc",type:"Clásica · Económica",inicial:459,quincenal:52,meses:12},
+  {name:"New Owen II 150",cc:"150cc",type:"Custom · Clásica",inicial:569,quincenal:63,meses:12},
+  {name:"Owen 200S",cc:"200cc",type:"Custom · Deportiva",inicial:698,quincenal:75,meses:12},
+  {name:"RK 200",cc:"200cc",type:"Deportiva · Naked",inicial:788,quincenal:83,meses:12},
+  {name:"RK 250",cc:"250cc",type:"Supersport · Racing",inicial:934,quincenal:97,meses:12},
+  {name:"TX 250 GS",cc:"250cc",type:"Adventure · Enduro",inicial:1193,quincenal:122,meses:12},
+  {name:"Matrix 150 Lite",cc:"150cc",type:"Doble propósito",inicial:581,quincenal:64,meses:12},
+  {name:"Matrix 150",cc:"150cc",type:"Doble propósito",inicial:698,quincenal:75,meses:12},
+  {name:"New Outlook 175",cc:"175cc",type:"Custom · Clásica",inicial:1103,quincenal:113,meses:12},
+  {name:"Outlook XL Paleta",cc:"175cc",type:"Custom · Premium",inicial:2183,quincenal:216,meses:12},
+  {name:"Atlas 200HD",cc:"200cc",type:"Carga pesada · Work",inicial:2070,quincenal:205,meses:12},
+  {name:"Owen 200S Amarillo",cc:"200cc",type:"Custom · Deportiva",inicial:675,quincenal:73,meses:12},
+  {name:"Arsen",cc:"200cc",type:"Naked · Deportiva",inicial:878,quincenal:92,meses:12}
 ]
 window.addEventListener('scroll',function(){document.getElementById('nav').classList.toggle('s',scrollY>20);});
 function openMob(){document.getElementById('mob').classList.add('open');}
@@ -495,13 +498,10 @@ function calcPagasi(){
     return;
   }
   var m=CATALOG[idx];
-  var precio=m.price;
-  var factor=1.90;
-  var inicial=precio*0.40;
-  var financiado=precio*0.60;
-  var totalPagar=financiado*factor;
-  var mensual=totalPagar/10;
-  var quincenal=mensual/2;
+  // Valores directos del folleto Pagasi (sin decimales)
+  var inicial=m.inicial;
+  var quincenal=m.quincenal;
+  var mensual=quincenal*2;
 
   document.getElementById('simBadge').textContent=m.name;
   document.getElementById('simInicial').textContent=fmt(inicial);
