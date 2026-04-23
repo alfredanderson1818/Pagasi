@@ -3210,10 +3210,7 @@ function upsertMotoCache(moto){
   try{
     var arr=loadMotosCache();
     var i=arr.findIndex(function(x){ return String(x.id)===String(moto.id); });
-    // Marcar timestamp de cacheado para saber qué tan reciente es (permite reconciliar con Firebase)
-    var m2 = clean(moto);
-    m2._cachedAt = Date.now();
-    if(i>=0) arr[i]=m2; else arr.push(m2);
+    if(i>=0) arr[i]=clean(moto); else arr.push(clean(moto));
     saveMotosCache(arr);
   }catch(e){}
 }
@@ -3223,29 +3220,11 @@ function delMotoCache(id){
     saveMotosCache(arr);
   }catch(e){}
 }
-// Estrategia de merge:
-// - Si Firebase está disponible (tenemos `remote`), Firebase manda: tomamos todo de remote.
-// - Solo preservamos motos locales que NO están en Firebase Y fueron cacheadas hace < 10 min
-//   (esto cubre el caso: acabas de crear una moto offline y aún no se subió).
-// - Esto evita que motos borradas de Firebase vuelvan a aparecer por el caché viejo.
 function mergeMotosPreferLocal(remote, local){
-  var remoteArr = Array.isArray(remote) ? remote : [];
-  var localArr  = Array.isArray(local)  ? local  : [];
-  var remoteIds = {};
-  remoteArr.forEach(function(x){ if(x&&x.id!=null) remoteIds[String(x.id)]=true; });
-  // Si no hay ningún remote, probablemente estamos offline o Firebase falló → usar local
-  if(remoteArr.length===0 && localArr.length>0){
-    return localArr.slice();
-  }
-  var TEN_MIN = 10*60*1000;
-  var now = Date.now();
-  var preservarLocal = localArr.filter(function(x){
-    if(!x || x.id==null) return false;
-    if(remoteIds[String(x.id)]) return false; // ya existe en Firebase, usar la versión de Firebase
-    // No está en Firebase → solo preservar si se cacheó muy recientemente (offline create)
-    return x._cachedAt && (now - x._cachedAt) < TEN_MIN;
-  });
-  return remoteArr.concat(preservarLocal);
+  var map={};
+  (Array.isArray(remote)?remote:[]).forEach(function(x){ if(x&&x.id!=null) map[String(x.id)]=x; });
+  (Array.isArray(local)?local:[]).forEach(function(x){ if(x&&x.id!=null) map[String(x.id)]=x; });
+  return Object.keys(map).map(function(k){ return map[k]; });
 }
 
 // ── DB — persistencia con Firestore ──
@@ -5670,7 +5649,6 @@ motos(){
       ${tabs.map(([k,l,n])=>`<button class="btn btn-sm${S.mTab===k?' btn-p':' btn-g'}" onclick="setMTab('${k}')">${l} <span style="opacity:0.7;font-size:10px">${n}</span></button>`).join('')}
     </div>
     <div style="display:flex;gap:6px">
-      <button class="btn btn-g btn-sm" onclick="resyncMotosConFirebase()" title="Descarta el caché local y recarga las motos solo desde Firebase">⟳ Resincronizar</button>
       <button class="btn btn-g btn-sm" onclick="exportarCSV('motos')">↓ CSV</button>
       <button class="btn btn-p btn-sm" onclick="openAddMoto()">＋ Nueva Unidad</button>
     </div>
@@ -8296,30 +8274,6 @@ function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
 function setCredTab(t){S.credTab=t;window._pages={};nav('creditos');}
 function setPagosTab(t){S.pagosTab=t;window._pages={};nav('pagos');}
-
-// Resincroniza S.motos con Firebase, descartando el caché local.
-// Útil cuando el caché local tiene motos "fantasma" que ya no existen en Firebase
-// (p.ej. duplicados creados por un bug antiguo, o motos borradas manualmente desde la consola de Firebase).
-function resyncMotosConFirebase(){
-  if(!db){ toast('No hay conexión con Firebase','error'); return; }
-  var countAntes = (S.motos||[]).length;
-  if(!confirm('¿Descartar el caché local de motos y recargar solo las que estén en Firebase?\n\nMotos actualmente visibles: '+countAntes+'\n\nEsto borrará cualquier moto local que no esté también en Firebase.')) return;
-  // Limpiar el caché local
-  try{ localStorage.removeItem(MOTOS_CACHE_KEY); }catch(e){}
-  // Volver a leer desde Firebase
-  toast('Resincronizando motos...','info');
-  db.collection('motos').get().then(function(snap){
-    var motosRemotas = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
-    S.motos = motosRemotas.map(mapMoto);
-    saveMotosCache(S.motos);
-    var countDespues = S.motos.length;
-    toast('✓ Resincronizado: '+countDespues+' moto(s) en Firebase'+(countAntes!==countDespues?' (antes: '+countAntes+')':''),'success');
-    nav('motos');
-  }).catch(function(e){
-    toast('Error al resincronizar: '+(e.message||e),'error');
-  });
-}
-
 function delMoto(id){
   if(!requireDeletePermission()) return;
   const m=S.motos.find(x=>String(x.id)===String(id));if(!m)return;
