@@ -3279,7 +3279,7 @@ var DB = {
       db.collection('config').doc('planes').get(),
     ]).then(function(snaps){
       function read(snap, withId){return snap.docs.map(function(d){return withId ? Object.assign({id:d.id}, d.data()) : d.data();});}
-      var m=read(snaps[0]),cl=read(snaps[1], true),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
+      var m=read(snaps[0], true),cl=read(snaps[1], true),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
       var planDoc = snaps[8], catalogoDoc = snaps[9], planesDoc = snaps[10];
       if(planDoc && planDoc.exists){
         var pd = planDoc.data() || {};
@@ -4234,6 +4234,28 @@ function renderMotoGrid(){
   const fil = f==='todas'?S.motos.filter(m=>!m.eliminado):S.motos.filter(m=>!m.eliminado&&m.estado===f);
   return fil.length?`<div class="moto-plan-grid">${fil.map(motoCard).join('')}</div>`:
     `<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin motos en esta categoría</div></div>`;
+}
+
+// Bloque de motos eliminadas con opción de restaurarlas
+function renderMotosEliminadasBloque(){
+  var eliminadas = (S.motos||[]).filter(function(m){return m.eliminado;});
+  if(!eliminadas.length) return '';
+  return '<div style="margin-top:18px;padding:12px 14px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.25)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--red);letter-spacing:.4px">Motos eliminadas ('+eliminadas.length+')</div>'
+    +'<button class="btn btn-s btn-xs" onclick="restaurarTodasLasMotosEliminadas()" title="Reactivar todas las motos eliminadas">⟲ Restaurar todas</button>'
+    +'</div>'
+    + eliminadas.map(function(m){
+        var fecha = m.eliminadoEn ? m.eliminadoEn.split('T')[0] : '';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:7px 6px;border-bottom:1px solid var(--rim)">'
+          +'<div style="flex:1">'
+          +  '<div style="font-size:12.5px;font-weight:700;opacity:.75;text-decoration:line-through">'+(m.modelo||'—')+'</div>'
+          +  '<div style="font-size:10.5px;color:var(--ink3)">VIN: '+(m.vin||'—')+' · por '+(m.eliminadoPor||'Admin')+(fecha?' · '+fecha:'')+(m.eliminadoRazon?' · '+m.eliminadoRazon:'')+'</div>'
+          +'</div>'
+          +'<button class="btn btn-s btn-xs" onclick="restaurarMoto(\''+m.id+'\')" title="Volver a activar esta moto">⟲ Restaurar</button>'
+          +'</div>';
+      }).join('')
+    +'</div>';
 }
 
 function filterMotos(q){
@@ -5661,6 +5683,7 @@ motos(){
   </div>
   <!-- GRID -->
   <div id="mgr">${renderMotoGrid()}</div>
+  ${renderMotosEliminadasBloque()}
   </div>`;
 },
 
@@ -8287,21 +8310,68 @@ function setPagosTab(t){S.pagosTab=t;window._pages={};nav('pagos');}
 function resyncMotosConFirebase(){
   if(!db){ toast('No hay conexión con Firebase','error'); return; }
   var countAntes = (S.motos||[]).length;
-  if(!confirm('¿Descartar el caché local de motos y recargar solo las que estén en Firebase?\n\nMotos actualmente visibles: '+countAntes+'\n\nEsto borrará cualquier moto local que no esté también en Firebase.')) return;
+  var activasAntes = (S.motos||[]).filter(function(m){return !m.eliminado;}).length;
+  var eliminadasAntes = countAntes - activasAntes;
+  var msg = '¿Descartar el caché local de motos y recargar solo las que estén en Firebase?\n\n';
+  msg += 'Visibles actualmente: '+countAntes+' total\n';
+  msg += '  · Activas: '+activasAntes+'\n';
+  msg += '  · Marcadas como eliminadas: '+eliminadasAntes+'\n\n';
+  msg += 'Esto borrará cualquier moto local que no esté también en Firebase.';
+  if(!confirm(msg)) return;
   // Limpiar el caché local
   try{ localStorage.removeItem(MOTOS_CACHE_KEY); }catch(e){}
-  // Volver a leer desde Firebase
   toast('Resincronizando motos...','info');
   db.collection('motos').get().then(function(snap){
     var motosRemotas = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
     S.motos = motosRemotas.map(mapMoto);
     saveMotosCache(S.motos);
-    var countDespues = S.motos.length;
-    toast('✓ Resincronizado: '+countDespues+' moto(s) en Firebase'+(countAntes!==countDespues?' (antes: '+countAntes+')':''),'success');
+    var total = S.motos.length;
+    var activas = S.motos.filter(function(m){return !m.eliminado;}).length;
+    var eliminadas = total - activas;
+    var infoMsg = '✓ '+total+' moto(s) en Firebase — '+activas+' activa(s)'+(eliminadas?', '+eliminadas+' marcada(s) como eliminada(s)':'');
+    toast(infoMsg,'success');
     nav('motos');
+    // Si hay eliminadas, ofrecer restaurarlas
+    if(eliminadas>0){
+      setTimeout(function(){
+        if(confirm('Hay '+eliminadas+' moto(s) marcada(s) como eliminada(s) en Firebase.\n\n¿Quieres restaurarlas (quitarles el flag de eliminado) para que vuelvan a ser visibles?')){
+          restaurarTodasLasMotosEliminadas();
+        }
+      }, 400);
+    }
   }).catch(function(e){
     toast('Error al resincronizar: '+(e.message||e),'error');
   });
+}
+
+// Restaura todas las motos que tienen el flag eliminado:true (las reactiva)
+function restaurarTodasLasMotosEliminadas(){
+  var eliminadas = (S.motos||[]).filter(function(m){return m.eliminado;});
+  if(eliminadas.length===0){ toast('No hay motos eliminadas','info'); return; }
+  eliminadas.forEach(function(m){
+    m.eliminado = false;
+    m.eliminadoPor = null;
+    m.eliminadoEn = null;
+    m.eliminadoRazon = null;
+    m.eliminadoPorUid = null;
+    DB.saveMoto(m);
+  });
+  nav('motos');
+  toast('✓ '+eliminadas.length+' moto(s) restaurada(s)','success');
+}
+
+// Restaura una sola moto por id
+function restaurarMoto(id){
+  var m = S.motos.find(function(x){return String(x.id)===String(id);});
+  if(!m){ toast('Moto no encontrada','error'); return; }
+  m.eliminado = false;
+  m.eliminadoPor = null;
+  m.eliminadoEn = null;
+  m.eliminadoRazon = null;
+  m.eliminadoPorUid = null;
+  DB.saveMoto(m);
+  nav('motos');
+  toast('✓ Moto "'+m.modelo+'" restaurada','success');
 }
 
 function delMoto(id){
