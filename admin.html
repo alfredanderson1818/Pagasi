@@ -5880,6 +5880,23 @@ pagos(){
   if(tab==='confirmados') filtered = confs;
   if(tab==='pendientes')  filtered = pends;
 
+  // Cuotas próximas (mismo criterio que dashboard) — créditos activos con cuota próxima o vencida
+  const proximasCuotas = S.creds.filter(function(c){
+    if(c.eliminado) return false;
+    if(c.estado!=='activo'||!c.fecha) return false;
+    const start=new Date(c.fecha);
+    const cuotaNum=(c.pagado||0)+1;
+    const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
+    const diff=Math.round((vence-new Date())/(24*60*60*1000));
+    return diff<=7 && diff>=-30; // muestra hasta 30 días de atraso y próximas 7 días
+  }).map(function(c){
+    const start=new Date(c.fecha);
+    const cuotaNum=(c.pagado||0)+1;
+    const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
+    const diff=Math.round((vence-new Date())/(24*60*60*1000));
+    return { cred:c, cuotaNum:cuotaNum, diff:diff };
+  }).sort(function(a,b){ return a.diff-b.diff; }); // los más urgentes/atrasados primero
+
   return`<div class="page">
 
   <!-- Header -->
@@ -5955,6 +5972,41 @@ pagos(){
         </div>`;
       }).join('') : '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:20px 0">Sin pagos registrados aún</div>'}
     </div>
+  </div>
+
+  <!-- Cuotas Próximas -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="ch" style="margin-bottom:10px">
+      <div><div class="ct">Cuotas Próximas</div><div class="cs">Clientes a cobrar esta semana · atrasados primero</div></div>
+      <span class="bdg ${proximasCuotas.length>0?'b-a':'b-g'}">${proximasCuotas.length}</span>
+    </div>
+    ${proximasCuotas.length===0 ? '<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">Sin cuotas próximas ni atrasadas</div>' :
+      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:300px;overflow-y:auto">
+      ${proximasCuotas.map(function(item){
+        const c=item.cred, diff=item.diff;
+        const col = diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';
+        const lbl = diff<0?`${Math.abs(diff)}d de atraso`:diff===0?'Vence hoy':diff===1?'Vence mañana':`Vence en ${diff}d`;
+        const badge = diff<0?'ATRASO':diff<=1?'URGENTE':'PRÓXIMO';
+        return `<div style="background:var(--surf2);border:1px solid var(--rim);border-left:3px solid ${col};border-radius:9px;padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cli}</div>
+              <div style="font-size:10px;color:var(--ink3);margin-top:1px">${c.id} · Cuota ${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</div>
+            </div>
+            <span style="background:${col};color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:4px;letter-spacing:.3px">${badge}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:10.5px;color:${col};font-weight:700">${lbl}</div>
+            <div style="font-weight:800;font-family:var(--fd);font-size:14px;color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</div>
+          </div>
+          <div style="display:flex;gap:5px">
+            <button class="btn btn-p btn-xs" style="flex:1" onclick="openAddPago()">Cobrar</button>
+            <button class="btn btn-g btn-xs" style="flex:1" onclick="avisarCuotaProxima('${c.id}')" title="Enviar recordatorio al cliente por WhatsApp">Avisar</button>
+          </div>
+        </div>`;
+      }).join('')}
+      </div>`
+    }
   </div>
 
   <!-- Filter tabs -->
@@ -15739,6 +15791,38 @@ function setNotifDestQuick(dest){
   nxAcRender();
   actualizarPreviewNotif();
   actualizarContadoresNotif();
+}
+
+// Helper: desde el módulo de Pagos, abrir Notificaciones con el recordatorio de cuota preseleccionado
+// para un crédito/cliente específico.
+function avisarCuotaProxima(credId){
+  var c = S.creds.find(function(x){return String(x.id)===String(credId);});
+  if(!c){ toast('Crédito no encontrado','error'); return; }
+  var cli = S.clientes.find(function(x){return x.nombre===c.cli;}) ||
+            S.clientes.find(function(x){return String(x.id)===String(c.clienteId);});
+  if(!cli){ toast('Cliente no encontrado — asegúrate de que esté registrado','error'); return; }
+  if(!cli.tel || cli.tel.replace(/[^0-9]/g,'').length<7){
+    toast('⚠ '+cli.nombre+' no tiene teléfono válido registrado','warn');
+  }
+  // Navegar a notificaciones
+  nav('notif');
+  // Después de que se renderice, seleccionar plantilla + cliente
+  setTimeout(function(){
+    // Seleccionar la plantilla "Recordatorio cuota"
+    if(typeof setNotifTipo==='function') setNotifTipo('cuota');
+    // Cambiar destinatario a "Cuotas próximas" para que encaje mejor con la plantilla
+    var destSel = document.getElementById('notif-dest');
+    if(destSel){ destSel.value='proximas'; }
+    // Preseleccionar el cliente específico
+    if(typeof nxAcPick==='function'){ nxAcPick(cli.id); }
+    // Refrescar contadores y preview
+    if(typeof actualizarContadoresNotif==='function') actualizarContadoresNotif();
+    if(typeof actualizarPreviewNotif==='function') actualizarPreviewNotif();
+    // Scroll al preview para que el usuario lo vea
+    var preview = document.getElementById('notif-preview');
+    if(preview && preview.scrollIntoView){ preview.scrollIntoView({behavior:'smooth',block:'center'}); }
+    toast('Plantilla "Recordatorio de cuota" lista para '+cli.nombre,'success');
+  }, 250);
 }
 
 function setNotifTipo(tipo){
