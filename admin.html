@@ -2853,6 +2853,10 @@ tbody tr:hover td {
   .up-stats { grid-template-columns: 1fr; }
 }
 
+
+@keyframes pulse-border{0%,100%{border-left-width:3px}50%{border-left-width:5px;box-shadow:0 0 0 3px rgba(91,78,212,.15)}}
+@keyframes pulse-notif{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+.pulse-notif{animation:pulse-notif .4s ease 3!important}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -2930,6 +2934,7 @@ tbody tr:hover td {
     <div class="sb-grp">
       <div class="sb-lbl">Principal</div>
       <button type="button" class="si" data-nav="dash" onclick="nav('dash')"><span class="sic nav-ic">DB</span><span>Dashboard</span></button>
+      <button type="button" class="si" data-nav="centro" onclick="nav('centro')"><span class="sic nav-ic">WK</span><span>Centro de trabajo</span><span class="si-bx" id="sb-badge-wt"></span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Gestión</div>
@@ -3447,10 +3452,15 @@ DB.delCuenta = function(id){ if(!db)return; _dbSilent(function(){ return db.coll
 DB.updateCuenta = function(id,u){ if(!db)return; _dbSilent(function(){ return db.collection('cuentas').doc(String(id)).update(u); }); };
 DB.saveMovimiento = function(o){ if(!db)return; _dbSilent(function(){ return db.collection('movimientos').doc(o.id).set(clean(o)); }); };
 DB.delMovimiento = function(id){ if(!db)return; _dbSilent(function(){ return db.collection('movimientos').doc(id).delete(); }); };
+DB.saveTarea = function(o){ if(!db)return; _dbSilent(function(){ return db.collection('tareas').doc(String(o.id)).set(clean(o),{merge:true}); }); };
+DB.delTarea = function(id){ if(!db)return; _dbSilent(function(){ return db.collection('tareas').doc(String(id)).delete(); }); };
+DB.getTareas = function(){ if(!db) return Promise.resolve([]); return db.collection('tareas').get().then(function(s){return s.docs.map(function(d){return Object.assign({id:d.id},d.data());});}); };
+
 
 // ── Lista de módulos disponibles ──
 var MODULOS = [
   {id:'dash', label:'Dashboard', grupo:'Principal'},
+  {id:'centro', label:'Centro de trabajo', grupo:'Principal'},
   {id:'clientes', label:'Clientes', grupo:'Gestión'},
   {id:'motos', label:'Motocicletas', grupo:'Gestión'},
   {id:'creditos', label:'Créditos', grupo:'Gestión'},
@@ -3649,7 +3659,8 @@ const S = {
   movimientos:[],
   cuentasPendientes:[],
   page:'dash', mTab:'todas', credTab:'todos', pagosTab:'todos', saveFn:null, clienteFiltro:'',
-  currentUser: null
+  currentUser: null,
+  tareas: []
 };
 
 const $=id=>document.getElementById(id);
@@ -3679,7 +3690,7 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Finanzas',cuentas:'Cuentas',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Finanzas',cuentas:'Cuentas',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
 function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
@@ -3689,17 +3700,17 @@ function isAdminUser(){ return !!(S.currentUser && S.currentUser.rol==='Administ
 // ══════════════════════════════════════════
 var ROL_PERMISOS = {
   // Acceso total: dueño del sistema
-  Administrador: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','plan','config','users','perm_delete'],
+  Administrador: ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','plan','config','users','perm_delete'],
   // Supervisa operaciones, ve reportes, NO toca config ni usuarios
-  Gerente: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas'],
+  Gerente: ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas'],
   // Cobra en la oficina: ve todos los clientes, registra pagos, ve cobranza y deudores
-  Cobrador: ['dash','clientes','cobranza','pagos','creditos'],
+  Cobrador: ['dash','centro','clientes','cobranza','pagos','creditos'],
   // Capta clientes, hace solicitudes, NO toca pagos ni cobranza
-  Vendedor: ['dash','clientes','creditos','motos'],
+  Vendedor: ['dash','centro','clientes','creditos','motos'],
   // Solo finanzas: reportes, pagos, cuentas y contabilidad
-  Contador: ['dash','pagos','reportes','cuentas'],
+  Contador: ['dash','centro','pagos','reportes','cuentas'],
   // Empleado general: hace casi todo excepto config/users
-  Empleado: ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif'],
+  Empleado: ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif'],
 };
 
 // Roles disponibles para invitar (el nombre visible y su descripción)
@@ -3723,7 +3734,7 @@ function isEmpleadoRole(){
 function getPermsEfectivos(){
   if(isAdminUser()) return Object.keys(PGL).concat(['perm_delete']);
   // Empleado / Cobrador / Vendedor: solo dashboard, cobranza y solicitudes (creditos)
-  if(isEmpleadoRole()) return ['dash','cobranza','creditos'];
+  if(isEmpleadoRole()) return ['dash','centro','cobranza','creditos'];
   return getCurrentPerms();
 }
 
@@ -3748,6 +3759,7 @@ function renderSidebar(){
       +'<div class="sb-grp">'
       +'<div class="sb-lbl">Mi Trabajo</div>'
       +'<button type="button" class="si" data-nav="dash" onclick="nav(\'dash\')"><span class="sic nav-ic">DB</span><span>Mi Dashboard</span></button>'
+      +'<button type="button" class="si" data-nav="centro" onclick="nav(\'centro\')"><span class="sic nav-ic">WK</span><span>Centro de trabajo</span><span class="si-bx" id="sb-badge-wt"></span></button>'
       +'<button type="button" class="si" data-nav="cobranza" onclick="nav(\'cobranza\')"><span class="sic nav-ic">COB</span><span>Cobranza</span><span class="si-bx" id="sb-badge-cob"></span></button>'
       +'<button type="button" class="si" data-nav="creditos" onclick="nav(\'creditos\')"><span class="sic nav-ic">SOL</span><span>Solicitudes</span></button>'
       +'</div>'
@@ -3758,18 +3770,18 @@ function renderSidebar(){
   // Otros roles: filtrar módulos según permisos
   var perms = getCurrentPerms();
   var grupos = [
-    {label:'Principal', keys:['dash']},
+    {label:'Principal', keys:['dash','centro']},
     {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
     {label:'Operaciones',keys:['cobranza','contratos','notif']},
     {label:'Análisis', keys:['reportes','cuentas']},
     {label:'Sistema', keys:['plan','config','scores','users']},
   ];
   var iconMap = {
-    dash:'DB',clientes:'CLI',motos:'MOT',creditos:'FIN',pagos:'PAG',
+    dash:'DB',centro:'WK',clientes:'CLI',motos:'MOT',creditos:'FIN',pagos:'PAG',
     cobranza:'COB',contratos:'CTR',notif:'NOT',reportes:'RPT',
     cuentas:'CTA',conta:'CNT',plan:'PLN',config:'CFG',scores:'SCR',users:'USR'
   };
-  var extraMap = {cobranza:'<span class="si-bx" id="sb-badge-cob"></span>'};
+  var extraMap = {cobranza:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
 
   sb.innerHTML = grupos.map(function(g){
     var items = g.keys.filter(function(k){ return isAdminUser() || perms.includes(k); });
@@ -3923,6 +3935,12 @@ function renderCobradores(lista){
 function updateBadge(){
   const b=$('mora-badge');
   if(b) b.textContent=S.creds.filter(c=>c.mora>0).length;
+  var wb=$('sb-badge-wt');
+  if(wb){
+    var n=(S.tareas||[]).filter(function(t){return !t.eliminado && t.estado!=='completada' && (typeof wtIsMine!=='function' || wtIsMine(t));}).length;
+    wb.textContent=n||'';
+    wb.style.display=n?'inline-flex':'none';
+  }
 }
 
 // ══════════════════════════════════════════
@@ -5841,7 +5859,7 @@ function pageBanner(tagline, title, subtitle, actions){
       return '<button class="btn btn-sm" onclick="'+(a.onclick||'')+'" style="'+st+'">'+a.label+'</button>';
     }).join('') + '</div>';
   }
-  return '<div style="background:linear-gradient(135deg,#5b4ed4 0%,#7c6dff 55%,#9788ff 100%);border-radius:18px;padding:20px 24px;margin-bottom:14px;color:#fff;position:relative;overflow:hidden">'
+  return '<div style="background:var(--grad);border-radius:var(--r16);padding:20px 24px;margin-bottom:14px;color:#fff;position:relative;overflow:hidden">'
     +'<div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.08)"></div>'
     +'<div style="position:absolute;bottom:-60px;right:60px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.06)"></div>'
     +'<div style="position:relative;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap">'
@@ -5854,7 +5872,142 @@ function pageBanner(tagline, title, subtitle, actions){
     +'</div></div>';
 }
 
+
+
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// CENTRO DE TRABAJO — tareas + checklist + comentarios
+// Versión v3: modal profesional, archivados y acciones funcionales
+// ══════════════════════════════════════════
+var WT_LS_KEY='pagasi_workcenter_tasks_v3';
+var WT_FILTER='hoy';
+var WT_LOADED=false;
+function wtEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+function wtToday(){ return new Date().toISOString().slice(0,10); }
+function wtDateAdd(days){ var d=new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+function wtUserName(){ return (S.currentUser && (S.currentUser.nombre||S.currentUser.email||S.currentUser.uid)) || 'Administrador'; }
+function wtIsMine(t){ if(isAdminUser()) return true; var me=wtUserName().toLowerCase(); var ass=String(t.asignadoA||'').toLowerCase(); return !ass || ass===me || ass.indexOf(me)>=0 || me.indexOf(ass)>=0; }
+function wtDemoTasks(){ var me=wtUserName(); return [
+  {id:'WT-DEMO-1',titulo:'Llamar leads aprobados de hoy',descripcion:'Contactar a los clientes aprobados y empujarlos a reservar la moto con inicial.',asignadoA:me,fecha:wtToday(),prioridad:'alta',estado:'pendiente',tipo:'Seguimiento',checklist:[{txt:'Revisar leads aprobados',done:true},{txt:'Enviar WhatsApp de aprobación rápida',done:false},{txt:'Agendar visita o cierre',done:false}],comentarios:[{user:'Sistema',fecha:new Date().toISOString(),txt:'Tarea sugerida para comenzar el día.'}],createdAt:new Date().toISOString()},
+  {id:'WT-DEMO-2',titulo:'Validar documentos pendientes',descripcion:'Revisar cédula, referencia, contrato y soporte de inicial antes de entregar.',asignadoA:me,fecha:wtToday(),prioridad:'media',estado:'proceso',tipo:'Documentos',checklist:[{txt:'Verificar cédula',done:true},{txt:'Confirmar comprobante de inicial',done:true},{txt:'Subir contrato firmado',done:false}],comentarios:[],createdAt:new Date().toISOString()},
+  {id:'WT-DEMO-3',titulo:'Cobranza preventiva',descripcion:'Clientes con cuota próxima: enviar recordatorio suave por WhatsApp.',asignadoA:me,fecha:wtDateAdd(1),prioridad:'media',estado:'pendiente',tipo:'Cobranza',checklist:[{txt:'Filtrar cuotas próximas',done:false},{txt:'Enviar mensaje de recordatorio',done:false}],comentarios:[],createdAt:new Date().toISOString()},
+  {id:'WT-DEMO-4',titulo:'Cerrar entrega de moto',descripcion:'Checklist final antes de entregar una unidad financiada.',asignadoA:me,fecha:wtDateAdd(-1),prioridad:'alta',estado:'pendiente',tipo:'Entrega',checklist:[{txt:'Pago inicial confirmado',done:true},{txt:'Seguro / póliza registrado',done:false},{txt:'Fotos de entrega',done:false}],comentarios:[{user:'Sistema',fecha:new Date().toISOString(),txt:'Esta tarea aparece vencida para probar la alerta.'}],createdAt:new Date().toISOString()}
+]; }
+function wtLoadLocal(){ try{ S.tareas=JSON.parse(localStorage.getItem(WT_LS_KEY)||'[]')||[]; }catch(e){ S.tareas=[]; } if(!S.tareas || !S.tareas.length){ S.tareas=wtDemoTasks(); wtSaveLocal(); } }
+function wtSaveLocal(){ try{ localStorage.setItem(WT_LS_KEY, JSON.stringify(S.tareas||[])); }catch(e){} }
+function wtLoadRemote(){ if(WT_LOADED) return; WT_LOADED=true; wtLoadLocal(); if(typeof DB!=='undefined' && DB.getTareas){ DB.getTareas().then(function(arr){ if(Array.isArray(arr) && arr.length){ S.tareas=arr; wtSaveLocal(); if(S.page==='centro') nav('centro'); updateBadge(); } }).catch(function(){}); } }
+function wtPersist(t){ wtSaveLocal(); if(t && typeof DB!=='undefined' && DB.saveTarea) DB.saveTarea(t); updateBadge(); }
+function wtStats(){ var today=wtToday(); var mine=(S.tareas||[]).filter(function(t){return !t.eliminado && wtIsMine(t);}); var active=mine.filter(function(t){return !t.archivado;}); return {hoy:active.filter(function(t){return t.estado!=='completada' && (t.fecha===today || !t.fecha);}).length,vencidas:active.filter(function(t){return t.estado!=='completada' && t.fecha && t.fecha<today;}).length,proceso:active.filter(function(t){return t.estado==='proceso';}).length,completadas:active.filter(function(t){return t.estado==='completada';}).length,archivadas:mine.filter(function(t){return !!t.archivado;}).length,total:active.length}; }
+function wtFiltered(){ var today=wtToday(); return (S.tareas||[]).filter(function(t){ if(t.eliminado || !wtIsMine(t)) return false; if(WT_FILTER==='archivadas') return !!t.archivado; if(t.archivado) return false; if(WT_FILTER==='hoy') return t.estado!=='completada' && (t.fecha===today || !t.fecha); if(WT_FILTER==='vencidas') return t.estado!=='completada' && t.fecha && t.fecha<today; if(WT_FILTER==='proceso') return t.estado==='proceso'; if(WT_FILTER==='completadas') return t.estado==='completada'; return true; }).sort(function(a,b){ var pa={alta:0,media:1,baja:2}[a.prioridad||'media']; var pb={alta:0,media:1,baja:2}[b.prioridad||'media']; return (a.fecha||'9999').localeCompare(b.fecha||'9999') || pa-pb; }); }
+function wtPill(t){ var today=wtToday(); if(t.archivado) return '<span class="bdg b-n">Archivada</span>'; if(t.estado==='completada') return '<span class="bdg b-g">Completada</span>'; if(t.fecha && t.fecha<today) return '<span class="bdg b-r">Vencida</span>'; if(t.estado==='proceso') return '<span class="bdg b-a">En proceso</span>'; return '<span class="bdg b-p">Pendiente</span>'; }
+function wtMetric(t,n,ic,col){ return '<div class="card" style="padding:16px"><div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:15px;background:'+col+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:950;box-shadow:0 10px 24px rgba(0,0,0,.10)">'+ic+'</div><div><div style="font-size:11px;color:var(--ink3);font-weight:900;text-transform:uppercase;letter-spacing:.7px">'+t+'</div><div style="font-size:27px;font-weight:950;font-family:var(--fd);letter-spacing:-.8px">'+n+'</div></div></div></div>'; }
+function wtHTML(){ wtLoadRemote(); var st=wtStats(); var rows=wtFiltered(); var html='';
+  html += pageBanner('Centro de trabajo','Lo que hay que ejecutar hoy','Tareas internas, checklist, comentarios, vencidas y archivadas para que nada se pierda.',[{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true},{label:'Cargar demo',onclick:'wtResetDemo()'}]);
+  html += '<div class="grid cols-4" style="margin-bottom:14px">'+wtMetric('Hoy',st.hoy,'HOY','var(--p1)')+wtMetric('Vencidas',st.vencidas,'!','var(--red)')+wtMetric('Proceso',st.proceso,'→','var(--amber)')+wtMetric('Archivadas',st.archivadas,'AR','var(--ink3)')+'</div>';
+  html += '<div class="card" style="margin-bottom:14px;padding:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div style="display:flex;gap:7px;flex-wrap:wrap">'+['hoy','vencidas','proceso','completadas','todas','archivadas'].map(function(k){var lbl={hoy:'Hoy',vencidas:'Vencidas',proceso:'En proceso',completadas:'Completadas',todas:'Todas',archivadas:'Archivadas'}[k];return '<button class="btn '+(WT_FILTER===k?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';}).join('')+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800">Vista: '+wtEsc(isAdminUser()?'equipo completo':wtUserName())+'</div></div></div>';
+  if(!rows.length){ return html+'<div class="empty"><div class="e-ic">✓</div><div class="e-tt">Sin tareas en esta vista</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Crea una tarea o cambia el filtro para ver otras.</div><button class="btn btn-p" style="margin-top:14px" onclick="openWtTask()">+ Nueva tarea</button></div>'; }
+  html+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">'; rows.forEach(function(t){ html+=wtTaskCard(t); }); return html+'</div>'; }
+function wtTaskCard(t){ var total=(t.checklist||[]).length, done=(t.checklist||[]).filter(function(c){return c.done;}).length, pct=total?Math.round(done/total*100):0; var pr={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[t.prioridad||'media']; var comments=(t.comentarios||[]).length; var act=t.archivado?'<button class="btn btn-g btn-sm" onclick="wtRestore(\''+t.id+'\')">Restaurar</button>':'<button class="btn btn-g btn-sm" onclick="wtNextStatus(\''+t.id+'\')">Avanzar</button><button class="btn btn-g btn-sm" onclick="openWtTask(\''+t.id+'\')">Editar</button><button class="btn btn-g btn-sm" onclick="wtArchive(\''+t.id+'\')">Archivar</button>'; return '<div class="card" style="border-left:4px solid '+pr+';padding:15px;position:relative;overflow:hidden"><div style="position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:rgba(91,78,212,.06)"></div><div style="position:relative"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px"><div><div style="font-weight:950;font-size:15px;color:var(--ink);line-height:1.2">'+wtEsc(t.titulo)+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800;margin-top:4px">'+wtEsc(t.tipo||'Tarea')+' · '+wtEsc(t.asignadoA||'Sin asignar')+' · '+wtEsc(t.fecha||'Sin fecha')+'</div></div>'+wtPill(t)+'</div><div style="font-size:12px;color:var(--ink2);line-height:1.45;min-height:34px">'+wtEsc(t.descripcion||'Sin descripción')+'</div><div style="margin:12px 0 9px"><div style="height:8px;border-radius:99px;background:var(--soft);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:99px"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);font-weight:800;margin-top:5px"><span>Checklist '+done+'/'+total+'</span><span>'+pct+'%</span></div></div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:space-between"><div style="font-size:11px;color:var(--ink3);font-weight:900">💬 '+comments+' comentarios</div><div style="display:flex;gap:7px;flex-wrap:wrap">'+act+'</div></div></div></div>'; }
+function wtSetFilter(k){ WT_FILTER=k; nav('centro'); }
+function wtField(label,html){ return '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"><label style="display:block;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3)">'+label+'</label>'+html+'</div>'; }
+function wtInput(id,val,ph){ return '<input class="inp" id="'+id+'" value="'+wtEsc(val||'')+'" placeholder="'+wtEsc(ph||'')+'" style="width:100%;height:44px;border-radius:14px;padding:0 13px;background:#fff;color:var(--ink);border:1px solid var(--rim);font-size:14px;box-shadow:0 6px 16px rgba(20,24,40,.04)">'; }
+function wtSelect(id,opts,val){ return '<select class="inp" id="'+id+'" style="width:100%;height:44px;border-radius:14px;padding:0 13px;background:#fff;color:var(--ink);border:1px solid var(--rim);font-size:14px">'+opts.map(function(o){return '<option value="'+wtEsc(o)+'" '+(o===val?'selected':'')+'>'+wtEsc(o.charAt(0).toUpperCase()+o.slice(1))+'</option>';}).join('')+'</select>'; }
+function openWtTask(id){
+  var t=id?(S.tareas||[]).find(function(x){return x.id===id;}):null; var isNew=!t;
+  if(!t){ t={id:'T'+Date.now(),titulo:'',descripcion:'',asignadoA:wtUserName(),fecha:wtToday(),prioridad:'media',estado:'pendiente',tipo:'Seguimiento',checklist:[{txt:'Llamar / escribir al cliente',done:false},{txt:'Registrar resultado',done:false}],comentarios:[],createdAt:new Date().toISOString()}; }
+  var ck=(t.checklist||[]).map(function(c,i){return '<div class="wt-check-row" style="display:grid;grid-template-columns:22px 1fr;gap:9px;margin-bottom:8px;align-items:center"><input type="checkbox" id="wtck_'+i+'" '+(c.done?'checked':'')+' style="width:20px;height:20px;accent-color:#5b4ed4"><input class="inp" id="wtcktxt_'+i+'" value="'+wtEsc(c.txt||'')+'" placeholder="Paso del checklist" style="width:100%;height:40px;border-radius:12px;padding:0 12px;background:#fff;color:var(--ink);border:1px solid var(--rim)"></div>';}).join('');
+  if(!ck) ck='<div class="wt-check-row" style="display:grid;grid-template-columns:22px 1fr;gap:9px;margin-bottom:8px;align-items:center"><input type="checkbox" id="wtck_0" style="width:20px;height:20px;accent-color:#5b4ed4"><input class="inp" id="wtcktxt_0" placeholder="Ej: llamar al cliente" style="width:100%;height:40px;border-radius:12px;padding:0 12px;background:#fff;color:var(--ink);border:1px solid var(--rim)"></div>';
+  var comments=(t.comentarios||[]).map(function(c){return '<div style="padding:10px;border:1px solid var(--rim);border-radius:13px;margin-bottom:8px;background:#fff"><div style="font-size:10px;color:var(--ink3);font-weight:900;margin-bottom:3px">'+wtEsc(c.user||'Usuario')+' · '+(typeof fmtFechaHora==='function'?fmtFechaHora(c.fecha):wtEsc(c.fecha||''))+'</div><div style="font-size:12px;color:var(--ink2);line-height:1.45">'+wtEsc(c.txt)+'</div></div>';}).join('') || '<div style="font-size:12px;color:var(--ink3);padding:16px;text-align:center;border:1px dashed var(--rim);border-radius:14px;background:#fff">Sin comentarios todavía</div>';
+  var titleEl=$('mtt')||$('mttl'); if(titleEl) titleEl.textContent=isNew?'Nueva tarea':'Editar tarea'; var subEl=$('msb'); if(subEl) subEl.textContent='Centro de trabajo · checklist · comentarios'; var ic=$('mic'); if(ic) ic.textContent='WK';
+  $('mbd').innerHTML='<div style="background:linear-gradient(135deg,rgba(91,78,212,.10),rgba(124,109,255,.04));border:1px solid rgba(91,78,212,.16);border-radius:18px;padding:16px;margin-bottom:16px"><div style="font-size:15px;font-weight:950;color:var(--ink);margin-bottom:4px">Ejecuta sin perder seguimiento</div><div style="font-size:12.5px;color:var(--ink3);line-height:1.5">Asigna responsable, fecha, prioridad y pasos. Al eliminar, la tarea ahora va a Archivadas para no perder historial.</div></div><div style="display:grid;grid-template-columns:minmax(0,1.12fr) minmax(280px,.88fr);gap:18px;align-items:start"><div style="background:#fff;border:1px solid var(--rim);border-radius:18px;padding:16px;box-shadow:0 10px 28px rgba(20,24,40,.05)">'+wtField('Título',wtInput('wttitulo',t.titulo,'Ej: Seguimiento a cliente aprobado'))+wtField('Descripción','<textarea class="inp" id="wtdesc" rows="4" placeholder="Detalles de la tarea" style="width:100%;border-radius:14px;padding:12px 13px;background:#fff;color:var(--ink);border:1px solid var(--rim);font-size:14px;resize:vertical">'+wtEsc(t.descripcion||'')+'</textarea>')+'<div style="display:grid;grid-template-columns:1fr 150px;gap:12px">'+wtField('Asignado a',wtInput('wtasig',t.asignadoA,''))+wtField('Fecha','<input class="inp" id="wtfecha" type="date" value="'+wtEsc(t.fecha||'')+'" style="width:100%;height:44px;border-radius:14px;padding:0 13px;background:#fff;color:var(--ink);border:1px solid var(--rim);font-size:14px">')+'</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'+wtField('Prioridad',wtSelect('wtprio',['alta','media','baja'],t.prioridad||'media'))+wtField('Estado',wtSelect('wtest',['pendiente','proceso','completada'],t.estado||'pendiente'))+wtField('Tipo','<select class="inp" id="wttipo" style="width:100%;height:44px;border-radius:14px;padding:0 13px;background:#fff;color:var(--ink);border:1px solid var(--rim);font-size:14px"><option '+(t.tipo==='Seguimiento'?'selected':'')+'>Seguimiento</option><option '+(t.tipo==='Cobranza'?'selected':'')+'>Cobranza</option><option '+(t.tipo==='Documentos'?'selected':'')+'>Documentos</option><option '+(t.tipo==='Entrega'?'selected':'')+'>Entrega</option><option '+(t.tipo==='Interno'?'selected':'')+'>Interno</option></select>')+'</div><div style="margin-top:2px"><div style="font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px">Checklist</div><div id="wtchecks">'+ck+'</div><button type="button" class="btn btn-g btn-sm" onclick="wtAddCheckRow()">+ Agregar paso</button></div></div><div style="background:#fff;border:1px solid var(--rim);border-radius:18px;padding:16px;box-shadow:0 10px 28px rgba(20,24,40,.05)"><div style="font-size:14px;font-weight:950;margin-bottom:10px;color:var(--ink)">Comentarios internos</div><div style="max-height:260px;overflow:auto;margin-bottom:12px;background:var(--soft);border-radius:14px;padding:8px">'+comments+'</div><textarea class="inp" id="wtcomment" rows="4" placeholder="Escribe un comentario interno..." style="width:100%;border-radius:14px;padding:12px 13px;background:#fff;color:var(--ink);border:1px solid var(--rim);font-size:14px;resize:vertical"></textarea><div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.4">Tip: úsalo como mini chat para dejar contexto entre vendedor, cobranza y administración.</div></div></div>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'+(!isNew&&!t.archivado?'<button class="btn btn-g" onclick="wtArchive(\''+t.id+'\')">Archivar</button>':'')+'<button class="btn btn-p" onclick="saveWtTask(\''+t.id+'\')">Guardar tarea</button>';
+  $('ov').style.display='flex'; S._wtEditing=t;
+}
+function wtAddCheckRow(){ var box=$('wtchecks'); if(!box) return; var i=box.querySelectorAll('.wt-check-row').length; var d=document.createElement('div'); d.className='wt-check-row'; d.style.cssText='display:grid;grid-template-columns:22px 1fr;gap:9px;margin-bottom:8px;align-items:center'; d.innerHTML='<input type="checkbox" id="wtck_'+i+'" style="width:20px;height:20px;accent-color:#5b4ed4"><input class="inp" id="wtcktxt_'+i+'" placeholder="Paso del checklist" style="width:100%;height:40px;border-radius:12px;padding:0 12px;background:#fff;color:var(--ink);border:1px solid var(--rim)">'; box.appendChild(d); }
+function saveWtTask(id){ var old=S._wtEditing||{}; var t=Object.assign({},old); t.id=id||old.id||('T'+Date.now()); t.titulo=(($('wttitulo')||{}).value||'Tarea sin título').trim(); t.descripcion=(($('wtdesc')||{}).value)||''; t.asignadoA=(($('wtasig')||{}).value)||wtUserName(); t.fecha=(($('wtfecha')||{}).value)||''; t.prioridad=(($('wtprio')||{}).value)||'media'; t.estado=(($('wtest')||{}).value)||'pendiente'; t.tipo=(($('wttipo')||{}).value)||'Seguimiento'; t.archivado=!!old.archivado; t.updatedAt=new Date().toISOString(); if(!t.createdAt) t.createdAt=new Date().toISOString(); t.checklist=[]; var box=$('wtchecks'); if(box){ box.querySelectorAll('.wt-check-row').forEach(function(row){ var txt=(row.querySelector('.inp')||{}).value||''; if(txt.trim()) t.checklist.push({txt:txt.trim(),done:!!(row.querySelector('input[type="checkbox"]')||{}).checked}); }); } t.comentarios=Array.isArray(old.comentarios)?old.comentarios.slice():[]; var cm=(($('wtcomment')||{}).value||'').trim(); if(cm) t.comentarios.push({txt:cm,user:wtUserName(),fecha:new Date().toISOString()}); var idx=(S.tareas||[]).findIndex(function(x){return x.id===t.id;}); if(idx>=0) S.tareas[idx]=t; else S.tareas.push(t); wtPersist(t); closeM(); nav('centro'); toast('Tarea guardada','ok'); }
+function wtNextStatus(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; t.estado=t.estado==='pendiente'?'proceso':(t.estado==='proceso'?'completada':'pendiente'); t.updatedAt=new Date().toISOString(); wtPersist(t); nav('centro'); }
+function wtArchive(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; if(!confirm('¿Archivar esta tarea? Quedará guardada en Archivadas.')) return; t.archivado=true; t.archivedAt=new Date().toISOString(); t.updatedAt=new Date().toISOString(); wtPersist(t); closeM(); nav('centro'); toast('Tarea archivada','info'); }
+function wtRestore(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; t.archivado=false; t.updatedAt=new Date().toISOString(); wtPersist(t); nav('centro'); toast('Tarea restaurada','ok'); }
+function wtDelete(id){ wtArchive(id); }
+function wtResetDemo(){ S.tareas=wtDemoTasks(); wtSaveLocal(); updateBadge(); nav('centro'); toast('Data demo cargada','ok'); }
+
+
+// ══════════════════════════════════════════
+// CENTRO DE TRABAJO — OVERRIDE v4
+// UI rediseñada + asignación a usuarios + notificaciones personales
+// ══════════════════════════════════════════
+var WT_LS_KEY='pagasi_workcenter_tasks_v4';
+var WT_NOTIFIED=false;
+function wtInjectStyle(){
+  if(document.getElementById('wt-v4-style')) return;
+  var st=document.createElement('style'); st.id='wt-v4-style';
+  st.textContent='\n.wt-modal-shell{max-width:1040px!important;width:calc(100vw - 36px)!important;max-height:92vh!important;border-radius:30px!important;overflow:hidden!important;background:#f8f8ff!important;}\n.wt-modal-body{padding:0!important;overflow:auto!important;max-height:calc(92vh - 146px)!important;}\n.wt-top{background:linear-gradient(135deg,#241b72,#5b4ed4 55%,#7c6dff);padding:22px 24px;color:white;position:relative;overflow:hidden}\n.wt-top:before{content:\"\";position:absolute;right:-80px;top:-90px;width:240px;height:240px;border-radius:999px;background:rgba(255,255,255,.14)}\n.wt-top:after{content:\"\";position:absolute;left:48%;bottom:-80px;width:180px;height:180px;border-radius:999px;background:rgba(255,255,255,.08)}\n.wt-formwrap{padding:22px;background:#f8f8ff;display:grid;grid-template-columns:minmax(0,1.08fr) 360px;gap:18px}\n.wt-panel{background:white;border:1px solid #e8e6fb;border-radius:24px;padding:20px;box-shadow:0 18px 45px rgba(22,24,52,.08)}\n.wt-label{display:block;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.8px;color:#8c88b0;margin:0 0 7px}\n.wt-input,.wt-select,.wt-textarea{width:100%;border:1px solid #e6e4f6;background:#fff;color:#14142b;border-radius:16px;box-shadow:0 8px 22px rgba(20,24,40,.04);font-size:14px;outline:none;transition:.18s ease;box-sizing:border-box}\n.wt-input,.wt-select{height:48px;padding:0 14px}\n.wt-textarea{min-height:118px;padding:13px 14px;resize:vertical;line-height:1.35}\n.wt-input:focus,.wt-select:focus,.wt-textarea:focus{border-color:#5b4ed4;box-shadow:0 0 0 4px rgba(91,78,212,.12),0 12px 26px rgba(20,24,40,.07)}\n.wt-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}\n.wt-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}\n.wt-check-row{display:grid;grid-template-columns:28px 1fr 34px;gap:9px;align-items:center;margin-bottom:9px}\n.wt-check-row input[type=checkbox]{width:22px;height:22px;accent-color:#5b4ed4}\n.wt-mini{font-size:12px;color:#8581a7;line-height:1.4}\n.wt-comment{padding:12px;border:1px solid #eeeafb;background:#fbfbff;border-radius:16px;margin-bottom:9px}\n.wt-alert{margin-bottom:14px;border:1px solid rgba(255,107,107,.22);background:linear-gradient(135deg,rgba(255,107,107,.10),rgba(91,78,212,.06));border-radius:22px;padding:14px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}\n.wt-assign-note{display:flex;gap:8px;align-items:center;background:#f4f2ff;border:1px solid #e5e1ff;border-radius:16px;padding:10px 12px;color:#5b4ed4;font-weight:850;font-size:12px}\n@media(max-width:860px){.wt-formwrap{grid-template-columns:1fr}.wt-grid3{grid-template-columns:1fr}.wt-grid2{grid-template-columns:1fr}.wt-modal-shell{width:calc(100vw - 18px)!important;border-radius:22px!important}}\n';
+  document.head.appendChild(st);
+}
+function wtCurrentUserKey(){ return String((S.currentUser&&(S.currentUser.email||S.currentUser.nombre||S.currentUser.uid))||wtUserName()).toLowerCase(); }
+function wtUserName(){ return (S.currentUser && (S.currentUser.nombre||S.currentUser.name||S.currentUser.email||S.currentUser.uid)) || 'Administrador'; }
+function wtIsMine(t){
+  if(isAdminUser()) return true;
+  var me=wtCurrentUserKey();
+  var keys=[t.asignadoA,t.asignadoEmail,t.asignadoUid].map(function(x){return String(x||'').toLowerCase();});
+  return !keys.join('') || keys.some(function(k){return k===me || k.indexOf(me)>=0 || me.indexOf(k)>=0;});
+}
+function wtLoadUsers(){
+  var base=[];
+  if(S.currentUser) base.push({uid:S.currentUser.uid||'',nombre:S.currentUser.nombre||S.currentUser.name||S.currentUser.email||'Usuario actual',email:S.currentUser.email||''});
+  if(Array.isArray(S.usuarios)) base=base.concat(S.usuarios);
+  if(Array.isArray(window.USERS_CACHE)) base=base.concat(window.USERS_CACHE);
+  try{ var cached=JSON.parse(localStorage.getItem('pagasi_users_cache')||'[]'); if(Array.isArray(cached)) base=base.concat(cached); }catch(e){}
+  var seen={}; base=base.filter(function(u){ var k=String(u.email||u.uid||u.nombre||u.name||'').toLowerCase(); if(!k||seen[k]) return false; seen[k]=1; return true; });
+  S.wtUsers=base;
+  if(typeof DB!=='undefined' && DB.getUsuarios){ DB.getUsuarios().then(function(arr){ if(Array.isArray(arr)&&arr.length){ S.wtUsers=arr.map(function(u){return {uid:u.uid||u.id||'',nombre:u.nombre||u.name||u.displayName||u.email||'Usuario',email:u.email||'',rol:u.rol||u.role||''};}); try{localStorage.setItem('pagasi_users_cache',JSON.stringify(S.wtUsers));}catch(e){} var sel=document.getElementById('wtasig'); if(sel){ var old=sel.value; sel.innerHTML=wtUserOptions(old); } } }).catch(function(){}); }
+}
+function wtUserOptions(selected){
+  var users=S.wtUsers||[]; if(!users.length) users=[{nombre:wtUserName(),email:(S.currentUser&&S.currentUser.email)||''},{nombre:'Vendedor',email:''},{nombre:'Cobranza',email:''},{nombre:'Administración',email:''}];
+  var html='<option value="">Seleccionar usuario</option>';
+  users.forEach(function(u){ var label=(u.nombre||u.name||u.email||'Usuario')+(u.email?' · '+u.email:''); var val=u.email||u.uid||u.nombre||u.name||label; html+='<option value="'+wtEsc(val)+'" '+(String(val)===String(selected)?'selected':'')+'>'+wtEsc(label)+'</option>'; });
+  return html;
+}
+function wtDemoTasks(){ var me=wtUserName(); var em=(S.currentUser&&S.currentUser.email)||me; return [
+  {id:'WT-DEMO-1',titulo:'Llamar leads aprobados de hoy',descripcion:'Contactar aprobados y llevarlos a reservar la moto con inicial.',asignadoA:me,asignadoEmail:em,fecha:wtToday(),prioridad:'alta',estado:'pendiente',tipo:'Seguimiento',checklist:[{txt:'Revisar leads aprobados',done:true},{txt:'Enviar WhatsApp de aprobación rápida',done:false},{txt:'Agendar visita o cierre',done:false}],comentarios:[{user:'Sistema',fecha:new Date().toISOString(),txt:'Tarea sugerida para comenzar el día.'}],createdAt:new Date().toISOString()},
+  {id:'WT-DEMO-2',titulo:'Validar documentos pendientes',descripcion:'Revisar cédula, referencia, contrato y soporte de inicial antes de entregar.',asignadoA:'Administración',fecha:wtToday(),prioridad:'media',estado:'proceso',tipo:'Documentos',checklist:[{txt:'Verificar cédula',done:true},{txt:'Confirmar comprobante de inicial',done:true},{txt:'Subir contrato firmado',done:false}],comentarios:[],createdAt:new Date().toISOString()},
+  {id:'WT-DEMO-3',titulo:'Cobranza preventiva',descripcion:'Clientes con cuota próxima: enviar recordatorio suave por WhatsApp.',asignadoA:'Cobranza',fecha:wtDateAdd(1),prioridad:'media',estado:'pendiente',tipo:'Cobranza',checklist:[{txt:'Filtrar cuotas próximas',done:false},{txt:'Enviar mensaje de recordatorio',done:false}],comentarios:[],createdAt:new Date().toISOString()},
+  {id:'WT-DEMO-4',titulo:'Cerrar entrega de moto',descripcion:'Checklist final antes de entregar una unidad financiada.',asignadoA:me,asignadoEmail:em,fecha:wtDateAdd(-1),prioridad:'alta',estado:'pendiente',tipo:'Entrega',checklist:[{txt:'Pago inicial confirmado',done:true},{txt:'Seguro / póliza registrado',done:false},{txt:'Fotos de entrega',done:false}],comentarios:[{user:'Sistema',fecha:new Date().toISOString(),txt:'Esta tarea aparece vencida para probar la alerta.'}],createdAt:new Date().toISOString()}
+]; }
+function wtStats(){ var today=wtToday(); var mine=(S.tareas||[]).filter(function(t){return !t.eliminado && wtIsMine(t);}); var active=mine.filter(function(t){return !t.archivado;}); return {hoy:active.filter(function(t){return t.estado!=='completada' && (t.fecha===today || !t.fecha);}).length,vencidas:active.filter(function(t){return t.estado!=='completada' && t.fecha && t.fecha<today;}).length,proceso:active.filter(function(t){return t.estado==='proceso';}).length,completadas:active.filter(function(t){return t.estado==='completada';}).length,archivadas:mine.filter(function(t){return !!t.archivado;}).length,total:active.length}; }
+function wtNotificationHTML(st){
+  if(!st) st=wtStats();
+  var total=st.hoy+st.vencidas;
+  if(!total) return '';
+  return '<div class="wt-alert"><div style="display:flex;gap:12px;align-items:center"><div style="width:42px;height:42px;border-radius:15px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:950">'+total+'</div><div><div style="font-weight:950;color:var(--ink);font-size:14px">Tienes tareas que requieren atención</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">'+st.hoy+' para hoy · '+st.vencidas+' vencidas</div></div></div><button class="btn btn-p btn-sm" onclick="wtSetFilter(\'hoy\')">Ver mis tareas</button></div>';
+}
+function wtMaybeNotify(){
+  if(WT_NOTIFIED) return; var st=wtStats(); var total=st.hoy+st.vencidas; if(!total) return; WT_NOTIFIED=true;
+  setTimeout(function(){ if(typeof toast==='function') toast('Tienes '+total+' tarea(s) pendientes en Centro de trabajo','info'); },350);
+}
+function wtHTML(){ wtInjectStyle(); wtLoadRemote(); wtLoadUsers(); wtMaybeNotify(); var st=wtStats(); var rows=wtFiltered(); var html='';
+  html += pageBanner('Centro de trabajo','Lo que hay que ejecutar hoy','Cada usuario ve sus tareas, puede asignar trabajo a otros usuarios, comentar y archivar sin perder historial.',[{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true},{label:'Cargar demo',onclick:'wtResetDemo()'}]);
+  html += wtNotificationHTML(st);
+  html += '<div class="grid cols-4" style="margin-bottom:14px">'+wtMetric('Hoy',st.hoy,'HOY','var(--p1)')+wtMetric('Vencidas',st.vencidas,'!','var(--red)')+wtMetric('Proceso',st.proceso,'→','var(--amber)')+wtMetric('Archivadas',st.archivadas,'AR','var(--ink3)')+'</div>';
+  html += '<div class="card" style="margin-bottom:14px;padding:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div style="display:flex;gap:7px;flex-wrap:wrap">'+['hoy','vencidas','proceso','completadas','todas','archivadas'].map(function(k){var lbl={hoy:'Hoy',vencidas:'Vencidas',proceso:'En proceso',completadas:'Completadas',todas:'Todas',archivadas:'Archivadas'}[k];return '<button class="btn '+(WT_FILTER===k?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';}).join('')+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800">Vista: '+wtEsc(isAdminUser()?'equipo completo':wtUserName())+'</div></div></div>';
+  if(!rows.length){ return html+'<div class="empty"><div class="e-ic">✓</div><div class="e-tt">Sin tareas en esta vista</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Crea una tarea o cambia el filtro.</div><button class="btn btn-p" style="margin-top:14px" onclick="openWtTask()">+ Nueva tarea</button></div>'; }
+  html+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">'; rows.forEach(function(t){ html+=wtTaskCard(t); }); return html+'</div>'; }
+function wtCheckRow(c,i){ return '<div class="wt-check-row"><input type="checkbox" id="wtck_'+i+'" '+(c&&c.done?'checked':'')+'><input class="wt-input" id="wtcktxt_'+i+'" value="'+wtEsc(c&&c.txt||'')+'" placeholder="Paso del checklist" style="height:42px"><button type="button" class="btn btn-g btn-sm" onclick="this.closest(\'.wt-check-row\').remove()">×</button></div>'; }
+function openWtTask(id){
+  wtInjectStyle(); wtLoadUsers(); var isNew=!id; var t=isNew?{id:'T'+Date.now(),titulo:'',descripcion:'',asignadoA:(S.currentUser&&S.currentUser.email)||wtUserName(),fecha:wtToday(),prioridad:'media',estado:'pendiente',tipo:'Seguimiento',checklist:[{txt:'Llamar / escribir al cliente',done:false},{txt:'Registrar resultado',done:false}],comentarios:[]}:((S.tareas||[]).find(function(x){return x.id===id;})||{});
+  var ck=(t.checklist&&t.checklist.length?t.checklist:[{txt:'',done:false}]).map(wtCheckRow).join('');
+  var comments=(t.comentarios||[]).map(function(c){return '<div class="wt-comment"><div style="font-size:10px;color:#8c88b0;font-weight:950;margin-bottom:4px">'+wtEsc(c.user||'Usuario')+' · '+(typeof fmtFechaHora==='function'?fmtFechaHora(c.fecha):wtEsc(c.fecha||''))+'</div><div style="font-size:12px;color:#38364d;line-height:1.45">'+wtEsc(c.txt)+'</div></div>';}).join('') || '<div style="font-size:12px;color:#8c88b0;padding:18px;text-align:center;border:1px dashed #dedaf7;border-radius:16px;background:#fbfbff">Sin comentarios todavía</div>';
+  var titleEl=$('mtt')||$('mttl'); if(titleEl) titleEl.textContent=isNew?'Nueva tarea':'Editar tarea'; var subEl=$('msb'); if(subEl) subEl.textContent='Centro de trabajo · asignación · checklist'; var ic=$('mic'); if(ic) ic.textContent='WK'; var modal=document.querySelector('#ov .modal')||document.querySelector('#ov [class*=modal]'); if(modal) modal.classList.add('wt-modal-shell'); var mbd=$('mbd'); if(mbd) mbd.classList.add('wt-modal-body');
+  $('mbd').innerHTML='<div class="wt-top"><div style="position:relative;z-index:2;display:flex;justify-content:space-between;gap:16px;align-items:flex-start"><div><div style="font-size:11px;font-weight:900;opacity:.78;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Centro de trabajo</div><div style="font-size:24px;font-weight:950;letter-spacing:-.7px">'+(isNew?'Nueva tarea para el equipo':'Editar tarea')+'</div><div style="font-size:13px;opacity:.82;margin-top:4px;max-width:620px;line-height:1.45">Asigna tareas a cualquier usuario, deja checklist y comentarios internos. Si se archiva, queda guardada en historial.</div></div><div class="wt-assign-note">🔔 Al usuario asignado le aparecerá al abrir su sistema</div></div></div><div class="wt-formwrap"><div class="wt-panel"><label class="wt-label">Título</label><input class="wt-input" id="wttitulo" value="'+wtEsc(t.titulo||'')+'" placeholder="Ej: Seguimiento a cliente aprobado"><div style="height:12px"></div><label class="wt-label">Descripción</label><textarea class="wt-textarea" id="wtdesc" placeholder="Detalles claros de lo que debe hacerse">'+wtEsc(t.descripcion||'')+'</textarea><div style="height:12px"></div><div class="wt-grid2"><div><label class="wt-label">Asignar a usuario</label><select class="wt-select" id="wtasig">'+wtUserOptions(t.asignadoEmail||t.asignadoA)+'</select></div><div><label class="wt-label">Fecha límite</label><input class="wt-input" id="wtfecha" type="date" value="'+wtEsc(t.fecha||'')+'"></div></div><div style="height:12px"></div><div class="wt-grid3"><div><label class="wt-label">Prioridad</label>'+wtSelect('wtprio',['alta','media','baja'],t.prioridad||'media')+'</div><div><label class="wt-label">Estado</label>'+wtSelect('wtest',['pendiente','proceso','completada'],t.estado||'pendiente')+'</div><div><label class="wt-label">Tipo</label><select class="wt-select" id="wttipo"><option '+(t.tipo==='Seguimiento'?'selected':'')+'>Seguimiento</option><option '+(t.tipo==='Cobranza'?'selected':'')+'>Cobranza</option><option '+(t.tipo==='Documentos'?'selected':'')+'>Documentos</option><option '+(t.tipo==='Entrega'?'selected':'')+'>Entrega</option><option '+(t.tipo==='Interno'?'selected':'')+'>Interno</option></select></div></div><div style="height:15px"></div><label class="wt-label">Checklist</label><div id="wtchecks">'+ck+'</div><button type="button" class="btn btn-g btn-sm" onclick="wtAddCheckRow()">+ Agregar paso</button></div><div class="wt-panel"><div style="font-size:16px;font-weight:950;margin-bottom:4px;color:#15142b">Comentarios internos</div><div class="wt-mini" style="margin-bottom:12px">Historial tipo mini chat para que ventas, cobranza y administración sepan qué pasó.</div><div style="max-height:285px;overflow:auto;margin-bottom:12px;background:#f7f6ff;border-radius:18px;padding:10px">'+comments+'</div><label class="wt-label">Nuevo comentario</label><textarea class="wt-textarea" id="wtcomment" placeholder="Escribe un comentario interno..."></textarea></div></div>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'+(!isNew&&!t.archivado?'<button class="btn btn-g" onclick="wtArchive(\''+t.id+'\')">Archivar</button>':'')+'<button class="btn btn-p" onclick="saveWtTask(\''+t.id+'\')">Guardar tarea</button>';
+  $('ov').style.display='flex'; S._wtEditing=t;
+}
+function wtAddCheckRow(){ var box=$('wtchecks'); if(!box) return; var i=box.querySelectorAll('.wt-check-row').length; var d=document.createElement('div'); d.className='wt-check-row'; d.innerHTML='<input type="checkbox" id="wtck_'+i+'"><input class="wt-input" id="wtcktxt_'+i+'" placeholder="Paso del checklist" style="height:42px"><button type="button" class="btn btn-g btn-sm" onclick="this.closest(\'.wt-check-row\').remove()">×</button>'; box.appendChild(d); }
+function saveWtTask(id){ var old=S._wtEditing||{}; var t=Object.assign({},old); t.id=id||old.id||('T'+Date.now()); t.titulo=(($('wttitulo')||{}).value||'Tarea sin título').trim(); t.descripcion=(($('wtdesc')||{}).value)||''; var sel=$('wtasig'); var opt=sel&&sel.options?sel.options[sel.selectedIndex]:null; t.asignadoEmail=(sel&&sel.value)||''; t.asignadoA=(opt&&opt.textContent?opt.textContent.split(' · ')[0]:'') || t.asignadoEmail || wtUserName(); t.fecha=(($('wtfecha')||{}).value)||''; t.prioridad=(($('wtprio')||{}).value)||'media'; t.estado=(($('wtest')||{}).value)||'pendiente'; t.tipo=(($('wttipo')||{}).value)||'Seguimiento'; t.archivado=!!old.archivado; t.updatedAt=new Date().toISOString(); if(!t.createdAt) t.createdAt=new Date().toISOString(); t.creadaPor=old.creadaPor||wtUserName(); t.checklist=[]; var box=$('wtchecks'); if(box){ box.querySelectorAll('.wt-check-row').forEach(function(row){ var txt=(row.querySelector('.wt-input')||{}).value||''; if(txt.trim()) t.checklist.push({txt:txt.trim(),done:!!(row.querySelector('input[type="checkbox"]')||{}).checked}); }); } t.comentarios=Array.isArray(old.comentarios)?old.comentarios.slice():[]; var cm=(($('wtcomment')||{}).value||'').trim(); if(cm) t.comentarios.push({txt:cm,user:wtUserName(),fecha:new Date().toISOString()}); var idx=(S.tareas||[]).findIndex(function(x){return x.id===t.id;}); if(idx>=0) S.tareas[idx]=t; else S.tareas.push(t); wtPersist(t); closeM(); nav('centro'); toast('Tarea guardada y asignada','ok'); }
+
+
 const PG={
+centro(){ return wtHTML(); },
 dash(){
   // Los empleados ven un dashboard especializado
   if(isEmpleadoRole()) return empleadoDashHTML();
@@ -15769,6 +15922,7 @@ function topAct(){
   var p=S.page;
   // Solicitud es el punto de entrada único para clientes + motos + financiamientos
   if(p==='dash') openAddCred();
+  else if(p==='centro') openWtTask();
   else if(p==='clientes') openAddCred();
   else if(p==='creditos') openAddCred();
   // Inventario de motos: sí se pueden agregar unidades sueltas al stock
@@ -15785,6 +15939,7 @@ function topAct(){
 // Map pages to button labels (empty = hide button)
 var TOP_BTN_LABELS = {
   dash: 'Nueva Solicitud',
+  centro: 'Nueva tarea',
   clientes: 'Nueva Solicitud',
   creditos: 'Nueva Solicitud',
   contratos: 'Nueva Solicitud',
@@ -20604,6 +20759,600 @@ window.addEventListener('resize', function(){
 });
 
 setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.isArray(S.creds)) syncTodosEstadosClientes(); }catch(e){} }, 1200);
+
+</script>
+
+<script>
+// ══════════════════════════════════════════
+// CENTRO DE TRABAJO — OVERRIDE v5 (unified design)
+// ══════════════════════════════════════════
+(function(){
+  var WT_V5_NOTIFIED=false;
+
+  // ── Helper utilities ──────────────────────────────────────
+  function esc(v){ return (window.wtEsc?wtEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];})); }
+  function today(){ return (window.wtToday?wtToday():new Date().toISOString().slice(0,10)); }
+  function dateAdd(days){ if(window.wtDateAdd) return wtDateAdd(days); var d=new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+  function currentUser(){ return (window.wtUserName?wtUserName():'Administrador'); }
+  function userInitials(name){ name=String(name||'U').trim(); return name.split(/\s+/).slice(0,2).map(function(x){return x[0]||''}).join('').toUpperCase(); }
+  function prioColor(p){ return {alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[p||'media']||'var(--p1)'; }
+  function prioBadge(p){ var m={alta:['b-r','Alta'],media:['b-a','Media'],baja:['b-g','Baja']}[p||'media']||['b-p',p]; return '<span class="bdg '+m[0]+'">'+m[1]+'</span>'; }
+  function statusBadge(t){ var td=today(); if(t.archivado) return '<span class="bdg b-x">Archivada</span>'; if(t.estado==='completada') return '<span class="bdg b-g">Completada</span>'; if(t.fecha&&t.fecha<td) return '<span class="bdg b-r">Vencida</span>'; if(t.estado==='proceso') return '<span class="bdg b-a">En proceso</span>'; return '<span class="bdg b-p">Pendiente</span>'; }
+  function mine(t){ if(typeof isAdminUser==='function'&&isAdminUser()) return true; var me=String((S.currentUser&&(S.currentUser.email||S.currentUser.nombre||S.currentUser.name||S.currentUser.uid))||currentUser()).toLowerCase(); var keys=[t.asignadoEmail,t.asignadoA].map(function(x){return String(x||'').toLowerCase();}); return !keys.join('')||keys.some(function(k){return k&&(k===me||k.indexOf(me)>=0||me.indexOf(k)>=0);}); }
+  function checklist(t){ var total=(t.checklist||[]).length,done=(t.checklist||[]).filter(function(c){return c.done;}).length,pct=total?Math.round(done/total*100):0; return {total:total,done:done,pct:pct}; }
+
+  // ── Demo tasks ─────────────────────────────────────────────
+  window.wtDemoTasks=function(){
+    var me=currentUser(),em=(S.currentUser&&S.currentUser.email)||'admin@pagasi.io';
+    return [
+      {id:'WT-001',titulo:'Contactar leads aprobados de hoy',descripcion:'Enviar WhatsApp de aprobación y agendar cita para reserva.',asignadoA:me,asignadoEmail:em,fecha:today(),prioridad:'alta',estado:'pendiente',tipo:'Ventas',checklist:[{txt:'Revisar leads aprobados',done:true},{txt:'Enviar mensaje de aprobación',done:false},{txt:'Agendar visita o llamada',done:false}],comentarios:[{user:'Sistema',fecha:new Date().toISOString(),txt:'Tarea automática para arrancar el día.'}],createdAt:new Date().toISOString()},
+      {id:'WT-002',titulo:'Validar documentos pendientes',descripcion:'Cédula, comprobante de inicial, referencias y contrato antes de aprobar entrega.',asignadoA:'Administración',asignadoEmail:'admin@pagasi.io',fecha:today(),prioridad:'media',estado:'proceso',tipo:'Documentos',checklist:[{txt:'Cédula recibida',done:true},{txt:'Comprobante de inicial',done:true},{txt:'Contrato firmado',done:false}],comentarios:[{user:'Ventas',fecha:new Date().toISOString(),txt:'Cliente quiere retirar mañana.'}],createdAt:new Date().toISOString()},
+      {id:'WT-003',titulo:'Cobranza preventiva — cuotas próximas',descripcion:'Recordatorio suave por WhatsApp a clientes con pago próximo.',asignadoA:'Cobranza',asignadoEmail:'cobranza@pagasi.io',fecha:dateAdd(1),prioridad:'media',estado:'pendiente',tipo:'Cobranza',checklist:[{txt:'Filtrar cuotas próximas',done:false},{txt:'Enviar recordatorio',done:false}],comentarios:[],createdAt:new Date().toISOString()},
+      {id:'WT-004',titulo:'Cerrar entrega de moto',descripcion:'Checklist operativo antes de entregar unidad financiada. No entregar sin póliza.',asignadoA:me,asignadoEmail:em,fecha:dateAdd(-1),prioridad:'alta',estado:'pendiente',tipo:'Entrega',checklist:[{txt:'Inicial confirmada',done:true},{txt:'Póliza registrada',done:false},{txt:'Fotos de entrega',done:false}],comentarios:[{user:'Sistema',fecha:new Date().toISOString(),txt:'Aparece vencida para probar alertas.'}],createdAt:new Date().toISOString()},
+      {id:'WT-005',titulo:'Conciliar pagos del día',descripcion:'Verificar transferencias pendientes contra cuentas antes del cierre.',asignadoA:'Administración',asignadoEmail:'admin@pagasi.io',fecha:today(),prioridad:'alta',estado:'proceso',tipo:'Pagos',checklist:[{txt:'Revisar transferencias',done:false},{txt:'Confirmar pagos válidos',done:false}],comentarios:[],createdAt:new Date().toISOString()}
+    ];
+  };
+
+  // ── Stats & filter ─────────────────────────────────────────
+  window.wtStats=function(){
+    var td=today(),mineRows=(S.tareas||[]).filter(function(t){return !t.eliminado&&mine(t);}),active=mineRows.filter(function(t){return !t.archivado;});
+    return {hoy:active.filter(function(t){return t.estado!=='completada'&&(t.fecha===td||!t.fecha);}).length,vencidas:active.filter(function(t){return t.estado!=='completada'&&t.fecha&&t.fecha<td;}).length,proceso:active.filter(function(t){return t.estado==='proceso';}).length,pendientes:active.filter(function(t){return t.estado==='pendiente';}).length,completadas:active.filter(function(t){return t.estado==='completada';}).length,archivadas:mineRows.filter(function(t){return !!t.archivado;}).length,total:active.length};
+  };
+  window.wtFiltered=function(){
+    var td=today(); return (S.tareas||[]).filter(function(t){
+      if(t.eliminado||!mine(t)) return false;
+      if(WT_FILTER==='archivadas') return !!t.archivado;
+      if(t.archivado) return false;
+      if(WT_FILTER==='hoy') return t.estado!=='completada'&&(t.fecha===td||!t.fecha);
+      if(WT_FILTER==='vencidas') return t.estado!=='completada'&&t.fecha&&t.fecha<td;
+      if(WT_FILTER==='proceso') return t.estado==='proceso';
+      if(WT_FILTER==='completadas') return t.estado==='completada';
+      if(WT_FILTER==='pendientes') return t.estado==='pendiente';
+      return true;
+    }).sort(function(a,b){ var pa={alta:0,media:1,baja:2}[a.prioridad||'media'],pb={alta:0,media:1,baja:2}[b.prioridad||'media']; return (a.fecha||'9999').localeCompare(b.fecha||'9999')||pa-pb; });
+  };
+
+  // ── Task card (same card class as rest of system) ──────────
+  window.wtTaskCard=function(t){
+    var cl=checklist(t),comments=(t.comentarios||[]).length,isVencida=t.fecha&&t.fecha<today()&&t.estado!=='completada';
+    var borderColor=t.archivado?'var(--ink3)':isVencida?'var(--red)':{alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[t.prioridad]||'var(--p1)';
+    var pct=cl.pct;
+    return '<div class="card" style="padding:14px;border-left:3px solid '+borderColor+';cursor:default;margin-bottom:0">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-weight:800;font-size:13px;color:var(--ink);line-height:1.3;margin-bottom:3px">'+esc(t.titulo||'Tarea sin título')+'</div>'+
+          '<div style="font-size:11px;color:var(--ink3);font-weight:600">'+esc(t.tipo||'Tarea')+' · '+(t.fecha?esc(t.fecha):'Sin fecha')+'</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
+          statusBadge(t)+
+          prioBadge(t.prioridad)+
+        '</div>'+
+      '</div>'+
+      (t.descripcion?'<div style="font-size:12px;color:var(--ink2);line-height:1.45;margin-bottom:10px">'+esc(t.descripcion)+'</div>':'<div style="height:4px"></div>')+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">'+
+        '<div style="font-size:11px;color:var(--ink3);font-weight:600">'+
+          '<span style="color:var(--ink2);font-weight:700">'+esc(t.asignadoA||t.asignadoEmail||'Sin asignar')+'</span>'+
+          (comments?' · 💬 '+comments:'')+(cl.total?' · ✓ '+cl.done+'/'+cl.total:'')+'</div>'+
+      '</div>'+
+      (cl.total?'<div class="prog" style="margin-bottom:10px"><div class="pf p-p" style="width:'+pct+'%"></div></div>':'')+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        (t.archivado
+          ?'<button class="btn btn-g btn-xs" onclick="wtRestore(\''+t.id+'\')">Restaurar</button>'
+          :'<button class="btn btn-g btn-xs" onclick="wtNextStatus(\''+t.id+'\')">Avanzar</button>'+
+           '<button class="btn btn-p btn-xs" onclick="openWtTask(\''+t.id+'\')">Editar</button>'+
+           '<button class="btn btn-d btn-xs" onclick="wtArchive(\''+t.id+'\')">Archivar</button>')+
+      '</div>'+
+    '</div>';
+  };
+
+  // ── Main page ──────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // CENTRO DE TRABAJO v7 — sistema, notificaciones in-app, modal rico
+  // ═══════════════════════════════════════════════════════════
+
+  // ── In-app notification store ──
+  var WT_NOTIFS_KEY = 'pagasi_wt_notifs_v1';
+  function wtGetNotifs(){
+    try{ return JSON.parse(localStorage.getItem(WT_NOTIFS_KEY)||'[]'); }catch(e){ return []; }
+  }
+  function wtSaveNotif(notif){
+    var all = wtGetNotifs(); all.unshift(notif); if(all.length>50) all=all.slice(0,50);
+    try{ localStorage.setItem(WT_NOTIFS_KEY, JSON.stringify(all)); }catch(e){}
+  }
+  function wtMarkNotifsRead(){
+    var all=wtGetNotifs().map(function(n){ return Object.assign({},n,{leida:true}); });
+    try{ localStorage.setItem(WT_NOTIFS_KEY, JSON.stringify(all)); }catch(e){}
+  }
+  function wtUnreadCount(){ return wtGetNotifs().filter(function(n){ return !n.leida; }).length; }
+
+  // ── Push a notification to a user (persisted in localStorage, shown as bell) ──
+  function wtNotifyUser(tarea){
+    var notif = {
+      id: 'N'+Date.now(), tareaId: tarea.id, titulo: tarea.titulo,
+      tipo: tarea.tipo||'Tarea', prioridad: tarea.prioridad||'media',
+      asignadoPor: (typeof wtUserName==='function'?wtUserName():'Sistema'),
+      para: tarea.asignadoA||'', fecha: tarea.fecha||'',
+      createdAt: new Date().toISOString(), leida: false
+    };
+    wtSaveNotif(notif);
+    // Visual bell pulse on sidebar badge
+    var badge = typeof $==='function' ? $('sb-badge-wt') : null;
+    if(badge){
+      var cnt = wtUnreadCount();
+      badge.textContent = cnt||'';
+      badge.style.display = cnt>0?'inline-flex':'none';
+      badge.classList.add('pulse-notif');
+      setTimeout(function(){ badge.classList.remove('pulse-notif'); }, 2000);
+    }
+    // Browser notification if permitted
+    if(typeof Notification!=='undefined' && Notification.permission==='granted'){
+      new Notification('📋 Nueva tarea asignada — '+tarea.titulo, {
+        body: 'Para: '+tarea.asignadoA+' · Prioridad: '+tarea.prioridad+' · '+tarea.tipo,
+        tag: notif.id
+      });
+    }
+  }
+
+  // ── Main page ──
+  window.wtHTML=function(){
+    if(typeof wtLoadRemote==='function') wtLoadRemote();
+    if(typeof wtLoadUsers==='function') wtLoadUsers();
+    var st=(typeof wtStats==='function'?wtStats():{hoy:0,vencidas:0,proceso:0,completadas:0,archivadas:0,total:0});
+    var rows=(typeof wtFiltered==='function'?wtFiltered():[]);
+    var today=(typeof wtToday==='function'?wtToday():new Date().toISOString().slice(0,10));
+    var tareas=S.tareas||[];
+    var html='';
+
+    // ── BANNER ──
+    html += pageBanner('Centro de trabajo','Tu operación diaria, ordenada.','Tareas por usuario · checklist · comentarios · vencidas · archivadas. Cada usuario ve lo suyo al abrir el sistema.',[
+      {label:'🔔 '+wtUnreadCount()+' notif.',onclick:'wtShowNotifs()'},
+      {label:'Cargar demo',onclick:'wtResetDemo()'},
+      {label:'+ Nueva tarea',onclick:'openWtTask()',primary:true}
+    ]);
+
+    // ── ALERTA urgente ──
+    if(st.hoy+st.vencidas>0){
+      html+='<div class="card" style="margin-bottom:14px;border-left:4px solid var(--red);background:var(--reds)">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
+        +'<div style="display:flex;align-items:center;gap:12px">'
+        +'<div style="width:42px;height:42px;border-radius:12px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⚠️</div>'
+        +'<div><div style="font-size:13px;font-weight:800;color:var(--red)">Atención requerida</div>'
+        +'<div style="font-size:11.5px;color:var(--ink2)">'+(st.hoy>0?st.hoy+' tareas para hoy':'')+''+(st.hoy>0&&st.vencidas>0?' · ':'')+''+(st.vencidas>0?'<b>'+st.vencidas+' vencidas</b>':'')+'</div></div></div>'
+        +'<div style="display:flex;gap:8px">'
+        +'<button class="btn btn-p btn-sm" onclick="wtSetFilter(\'hoy\')">Ver hoy</button>'
+        +'<button class="btn btn-g btn-sm" onclick="wtSetFilter(\'vencidas\')" style="border-left:3px solid var(--red)">Vencidas</button>'
+        +'</div></div></div>';
+    }
+
+    // ── KPI STATS (6 cards) ──
+    html+='<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-bottom:14px">';
+    [{l:'Hoy',v:st.hoy,s:'para ejecutar',c:'var(--p1)',bg:'var(--gs)',ic:'HOY',f:'hoy'},
+     {l:'Vencidas',v:st.vencidas,s:'con atraso',c:'var(--red)',bg:'var(--reds)',ic:'!',f:'vencidas'},
+     {l:'En proceso',v:st.proceso,s:'en ejecución',c:'var(--amber)',bg:'var(--ambers)',ic:'▶',f:'proceso'},
+     {l:'Pendientes',v:st.total-st.proceso-st.completadas,s:'sin iniciar',c:'var(--p2)',bg:'var(--blues)',ic:'◷',f:'pendientes'},
+     {l:'Completadas',v:st.completadas,s:'este período',c:'var(--green)',bg:'var(--greens)',ic:'✓',f:'completadas'},
+     {l:'Archivadas',v:st.archivadas,s:'guardadas',c:'var(--ink3)',bg:'var(--lift)',ic:'▣',f:'archivadas'}
+    ].forEach(function(k){
+      html+='<div class="stat" style="cursor:pointer;border-left:3px solid '+k.c+'" onclick="wtSetFilter(\''+k.f+'\')">'
+        +'<div class="st-ic" style="background:'+k.bg+';color:'+k.c+';font-size:9px;font-weight:900">'+k.ic+'</div>'
+        +'<div class="st-v" style="color:'+k.c+';font-size:22px">'+k.v+'</div>'
+        +'<div class="st-l">'+k.l+'<div style="font-size:10px;color:var(--ink3)">'+k.s+'</div></div>'
+        +'</div>';
+    });
+    html+='</div>';
+
+    // ── LAYOUT: board (2/3) + sidebar (1/3) ──
+    html+='<div style="display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:12px;align-items:start">';
+
+    // ─── BOARD ───
+    html+='<div>';
+
+    // Filtros
+    html+='<div class="card" style="padding:11px 14px;margin-bottom:12px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    ['hoy','vencidas','pendientes','proceso','completadas','todas','archivadas'].forEach(function(k){
+      var lbl={hoy:'Hoy',vencidas:'Vencidas',pendientes:'Pendientes',proceso:'Proceso',completadas:'Completadas',todas:'Todas',archivadas:'Archivadas'}[k];
+      html+='<button class="btn btn-sm '+(WT_FILTER===k?'btn-p':'btn-g')+'" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';
+    });
+    html+='</div>'
+      +'<div style="font-size:11px;color:var(--ink3);font-weight:700">'+esc((typeof isAdminUser==='function'&&isAdminUser())?'Equipo completo':currentUser())+'</div>'
+      +'</div></div>';
+
+    // Tarjetas
+    if(!rows.length){
+      html+='<div class="card" style="padding:48px 20px;text-align:center">'
+        +'<div style="font-size:40px;margin-bottom:8px">✓</div>'
+        +'<div style="font-weight:800;color:var(--ink);font-size:14px">Sin tareas en esta vista</div>'
+        +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">Cambia el filtro o crea una nueva tarea.</div>'
+        +'<button class="btn btn-p" style="margin-top:16px" onclick="openWtTask()">+ Nueva tarea</button>'
+        +'</div>';
+    } else {
+      html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px">';
+      rows.forEach(function(t){ html+=wtTaskCard7(t); });
+      html+='</div>';
+    }
+
+    // ── Gráfico: distribución por tipo (barras inline) ──
+    var tipoMap={};
+    tareas.filter(function(t){return !t.eliminado&&!t.archivado;}).forEach(function(t){
+      var k=t.tipo||'Tarea'; tipoMap[k]=(tipoMap[k]||0)+1;
+    });
+    var tipoList=Object.keys(tipoMap).sort(function(a,b){return tipoMap[b]-tipoMap[a];}).slice(0,6);
+    var tipoMax=tipoList.reduce(function(m,k){return Math.max(m,tipoMap[k]);},1);
+    if(tipoList.length){
+      html+='<div class="card" style="margin-top:12px">'
+        +'<div class="ch" style="margin-bottom:10px"><div class="ct">Distribución por tipo</div><div class="cs">Tareas activas en el sistema</div></div>';
+      tipoList.forEach(function(k){
+        var pct=Math.round(tipoMap[k]/tipoMax*100);
+        html+='<div style="margin-bottom:9px">'
+          +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'
+          +'<span style="font-weight:700;color:var(--ink)">'+esc(k)+'</span>'
+          +'<span style="color:var(--ink3)">'+tipoMap[k]+' tareas</span></div>'
+          +'<div style="height:7px;background:var(--rim);border-radius:4px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pct+'%;background:var(--p1);border-radius:4px;transition:width .4s"></div>'
+          +'</div></div>';
+      });
+      html+='</div>';
+    }
+    html+='</div>'; // close board
+
+    // ─── SIDEBAR ───
+    html+='<div style="display:grid;gap:12px">';
+
+    // Panel: notificaciones recientes
+    var notifs=wtGetNotifs().slice(0,5);
+    html+='<div class="card">'
+      +'<div class="ch"><div class="ct">🔔 Notificaciones</div>'
+      +(wtUnreadCount()>0?'<span class="bdg b-r" onclick="wtMarkNotifsRead();nav(\'centro\')" style="cursor:pointer">'+wtUnreadCount()+' nuevas</span>':'<span class="bdg b-g">Al día</span>')
+      +'</div>';
+    if(!notifs.length){
+      html+='<div style="font-size:12px;color:var(--ink3);padding:10px;text-align:center">Sin notificaciones aún</div>';
+    } else {
+      notifs.forEach(function(n){
+        var prCol={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[n.prioridad||'media'];
+        html+='<div class="li" style="cursor:pointer;opacity:'+(n.leida?.65:1)+'" onclick="openWtTask(\''+esc(n.tareaId)+'\')">'
+          +'<div style="width:8px;height:8px;border-radius:50%;background:'+prCol+';flex-shrink:0;margin-top:3px"></div>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n.titulo)+'</div>'
+          +'<div class="tds">'+esc(n.tipo)+' · Asignado por '+esc(n.asignadoPor)+'</div>'
+          +'</div>'
+          +(n.leida?'':'<div style="width:7px;height:7px;border-radius:50%;background:var(--p1);flex-shrink:0"></div>')
+          +'</div>';
+      });
+    }
+    html+='<button class="btn btn-g btn-sm" style="width:100%;margin-top:8px" onclick="wtMarkNotifsRead();nav(\'centro\')">Marcar todas leídas</button>'
+      +'</div>';
+
+    // Panel: carga por usuario
+    var users={};
+    tareas.filter(function(t){return !t.eliminado&&!t.archivado;}).forEach(function(t){
+      var k=String(t.asignadoA||t.asignadoEmail||'Sin asignar');
+      if(!users[k]) users[k]={name:k,n:0,v:0,h:0,c:0};
+      users[k].n++;
+      if(t.estado!=='completada'&&t.fecha&&t.fecha<today) users[k].v++;
+      if(t.fecha===today) users[k].h++;
+      if(t.estado==='completada') users[k].c++;
+    });
+    var uList=Object.keys(users).slice(0,6);
+    html+='<div class="card">'
+      +'<div class="ch"><div class="ct">Carga por usuario</div></div>'
+      +'<div class="lst">';
+    uList.forEach(function(k){
+      var u=users[k];
+      var initials=k.trim().split(/\s+/).slice(0,2).map(function(x){return (x[0]||'').toUpperCase();}).join('');
+      var load=u.n>=5?'var(--red)':u.n>=3?'var(--amber)':'var(--green)';
+      html+='<div class="li">'
+        +'<div style="width:34px;height:34px;border-radius:10px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">'+esc(initials)+'</div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(u.name)+'</div>'
+        +'<div class="tds">'+u.h+' hoy · '+u.v+' venc.</div>'
+        +'</div>'
+        +'<div style="font-size:16px;font-weight:900;color:'+load+'">'+u.n+'</div>'
+        +'</div>';
+    });
+    if(!uList.length) html+='<div style="font-size:12px;color:var(--ink3);padding:10px;text-align:center">Sin asignaciones</div>';
+    html+='</div></div>';
+
+    // Panel: actividad reciente
+    var recent=tareas.filter(function(t){return !t.eliminado;})
+      .sort(function(a,b){return String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));})
+      .slice(0,5);
+    html+='<div class="card">'
+      +'<div class="ch"><div class="ct">Actividad reciente</div></div>'
+      +'<div class="lst">';
+    recent.forEach(function(t){
+      var pill=t.archivado?'<span class="bdg b-x">AR</span>':t.estado==='completada'?'<span class="bdg b-g">OK</span>':t.estado==='proceso'?'<span class="bdg b-a">▶</span>':'<span class="bdg b-p">PND</span>';
+      html+='<div class="li" style="cursor:pointer" onclick="openWtTask(\''+t.id+'\''+')">'
+        +'<div style="width:8px;height:8px;border-radius:50%;background:var(--p1);flex-shrink:0;margin-top:3px"></div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(t.titulo)+'</div>'
+        +'<div class="tds">'+esc(t.asignadoA||'—')+'</div>'
+        +'</div>'+pill+'</div>';
+    });
+    if(!recent.length) html+='<div style="font-size:12px;color:var(--ink3);padding:10px;text-align:center">Sin actividad</div>';
+    html+='</div></div>';
+
+    // Panel: accesos rápidos (tareas frecuentes)
+    html+='<div class="card">'
+      +'<div class="ch"><div class="ct">Accesos rápidos</div><div class="cs">Click para crear</div></div>'
+      +'<div style="display:grid;gap:6px">';
+    [{ic:'📞',l:'Llamar lead aprobado',t:'Seguimiento',p:'alta'},
+     {ic:'📋',l:'Validar documentos',t:'Documentos',p:'alta'},
+     {ic:'💰',l:'Cobranza preventiva',t:'Cobranza',p:'media'},
+     {ic:'🏍️',l:'Checklist entrega moto',t:'Entrega',p:'alta'},
+     {ic:'💬',l:'Recordatorio WhatsApp',t:'Notificaciones',p:'media'},
+     {ic:'🔄',l:'Conciliar pagos del día',t:'Pagos',p:'alta'}
+    ].forEach(function(q){
+      html+='<button class="btn btn-g btn-sm" style="justify-content:flex-start;gap:8px;text-align:left;width:100%"'
+        +' onclick="openWtTask(null,'+JSON.stringify(q.l)+','+JSON.stringify(q.t)+','+JSON.stringify(q.p)+')">'+q.ic+' '+esc(q.l)+'</button>';
+    });
+    html+='</div></div>';
+
+    html+='</div>'; // close sidebar
+    html+='</div>'; // close grid
+    return html;
+  };
+
+  // ── Tarjeta de tarea mejorada ──
+  window.wtTaskCard7=function(t){
+    var today=(typeof wtToday==='function'?wtToday():new Date().toISOString().slice(0,10));
+    var total=(t.checklist||[]).length, done=(t.checklist||[]).filter(function(c){return c.done;}).length, pct=total?Math.round(done/total*100):0;
+    var comments=(t.comentarios||[]).length;
+    var pCol={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[t.prioridad||'media'];
+    var pill=(typeof wtPill==='function'?wtPill(t):'');
+    var act=t.archivado
+      ?'<button class="btn btn-g btn-xs" onclick="wtRestore(\''+t.id+'\')">Restaurar</button>'
+      :'<button class="btn btn-g btn-xs" onclick="wtNextStatus(\''+t.id+'\')">Avanzar</button>'
+       +'<button class="btn btn-g btn-xs" onclick="openWtTask(\''+t.id+'\')">Abrir</button>'
+       +'<button class="btn btn-g btn-xs" onclick="wtArchive(\''+t.id+'\')">Archivar</button>';
+    var urgente=!t.archivado&&t.estado!=='completada'&&t.fecha&&t.fecha<today;
+    return '<div class="card" style="padding:13px;border-left:3px solid '+pCol+(urgente?';animation:pulse-border 2s infinite':'')+'">'
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div class="tdm" style="font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(t.titulo||'Tarea sin título')+'</div>'
+      +'<div class="tds" style="margin-top:3px">'+esc(t.tipo||'Tarea')+' · '+esc(t.fecha||'Sin fecha')+'</div>'
+      +'</div>'+pill+'</div>'
+      +(t.descripcion?'<div style="font-size:12px;color:var(--ink2);line-height:1.45;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+esc(t.descripcion)+'</div>':'')
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
+      +'<div style="width:26px;height:26px;border-radius:8px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">'+esc(String(t.asignadoA||'?').trim().split(/\s+/).slice(0,2).map(function(x){return (x[0]||'').toUpperCase();}).join(''))+'</div>'
+      +'<div style="font-size:11.5px;font-weight:700;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(t.asignadoA||'Sin asignar')+'</div>'
+      +'</div>'
+      +'<div class="prog" style="margin-bottom:6px"><div class="pf p-p" style="width:'+pct+'%"></div></div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
+      +'<div class="tds">✓ '+done+'/'+total+' · 💬 '+comments+'</div>'
+      +'<div style="display:flex;gap:5px">'+act+'</div>'
+      +'</div></div>';
+  };
+
+  // ── wtShowNotifs: panel modal de notificaciones ──
+  window.wtShowNotifs=function(){
+    if(typeof openM==='function') openM();
+    var titleEl=typeof $==='function'?$('mtt'):null; if(titleEl) titleEl.textContent='Notificaciones';
+    var subEl=typeof $==='function'?$('msb'):null; if(subEl) subEl.textContent='Tareas asignadas a ti';
+    var ic=typeof $==='function'?$('mic'):null; if(ic) ic.textContent='🔔';
+    var mbd=typeof $==='function'?$('mbd'):null;
+    if(!mbd) return;
+    var notifs=wtGetNotifs();
+    mbd.innerHTML='<div style="display:flex;flex-direction:column;gap:0">'
+      +(notifs.length?notifs.map(function(n){
+        var prCol={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[n.prioridad||'media'];
+        var dt=n.createdAt?new Date(n.createdAt).toLocaleDateString('es-VE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+        return '<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--rim);cursor:pointer;opacity:'+(n.leida?.65:1)+'" onclick="closeM();openWtTask(\''+esc(n.tareaId)+'\')">'
+          +'<div style="width:36px;height:36px;border-radius:10px;background:'+prCol+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📋</div>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:13px;font-weight:800;color:var(--ink)">'+esc(n.titulo)+'</div>'
+          +'<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">'+esc(n.tipo)+' · Prio: '+esc(n.prioridad)+' · Asignado por '+esc(n.asignadoPor)+'</div>'
+          +'<div style="font-size:11px;color:var(--ink3);margin-top:3px">'+esc(dt)+(n.fecha?' · Vence: '+esc(n.fecha):'')+'</div>'
+          +'</div>'
+          +(n.leida?'':'<div style="width:9px;height:9px;border-radius:50%;background:var(--p1);flex-shrink:0;margin-top:4px"></div>')
+          +'</div>';
+      }).join(''):'<div style="text-align:center;padding:40px 20px;color:var(--ink3)">🔔<br><br>Sin notificaciones aún</div>')
+      +'</div>';
+    var mft=typeof $==='function'?$('mft'):null;
+    if(mft) mft.innerHTML='<button class="btn btn-g" onclick="wtMarkNotifsRead();closeM();nav(\'centro\')">Marcar todas leídas</button><button class="btn btn-p" onclick="closeM()">Cerrar</button>';
+    if(typeof $==='function'&&$('ov')) $('ov').style.display='flex';
+  };
+
+  // ── MODAL: openWtTask — rico, 3 columnas, múltiples secciones ──
+  function wtLoadAssignableUsers(selected){
+    var base=[];
+    if(S.currentUser) base.push({name:S.currentUser.nombre||S.currentUser.name||S.currentUser.email||'Yo',email:S.currentUser.email||''});
+    ['Administración','Vendedor','Cobranza','Gerencia','Operaciones'].forEach(function(n){base.push({name:n,email:n.toLowerCase()+'@pagasi.io'});});
+    if(Array.isArray(S.usuarios)) S.usuarios.forEach(function(u){base.push({name:u.nombre||u.name||u.email||'Usuario',email:u.email||''}); });
+    if(Array.isArray(S.wtUsers)) S.wtUsers.forEach(function(u){base.push({name:u.nombre||u.name||u.email||'Usuario',email:u.email||''}); });
+    var seen={};
+    return base.filter(function(u){var k=(u.email||u.name).toLowerCase(); if(seen[k]) return false; seen[k]=1; return true;})
+      .map(function(u){var val=u.email||u.name; var label=u.name+(u.email?' — '+u.email:'');
+        return '<option value="'+esc(val)+'" data-name="'+esc(u.name)+'" '+(String(val)===String(selected)||String(u.name)===String(selected)?'selected':'')+'>'+esc(label)+'</option>';
+      }).join('');
+  }
+  function wtCkRow(c,i){
+    return '<div style="display:grid;grid-template-columns:22px 1fr 30px;gap:8px;align-items:center;margin-bottom:8px">'
+      +'<input type="checkbox" id="wtck_'+i+'" '+(c.done?'checked':'')+' style="width:18px;height:18px;accent-color:var(--p1)">'
+      +'<input class="fi" id="wtcktxt_'+i+'" value="'+esc(c.txt||'')+'" placeholder="Paso del checklist" style="height:36px">'
+      +'<button type="button" class="btn btn-g btn-xs btn-ic" onclick="this.closest(\'div\').remove()" style="padding:0;width:28px;height:28px">×</button>'
+      +'</div>';
+  }
+  function wtSelectFi(id,opts,val){
+    return '<select class="fs" id="'+id+'">'+opts.map(function(o){
+      return '<option value="'+esc(o)+'" '+(o===val?'selected':'')+'>'+esc(o.charAt(0).toUpperCase()+o.slice(1))+'</option>';
+    }).join('')+'</select>';
+  }
+
+  window.openWtTask=function(id, prefTitulo, prefTipo, prefPrio){
+    if(typeof openM==='function') openM();
+    var old=id?(S.tareas||[]).find(function(x){return x.id===id;}):null;
+    var isNew=!old;
+    var t=old||{
+      id:'T'+Date.now(), titulo:prefTitulo||'', descripcion:'', notas:'',
+      asignadoA:(typeof currentUser==='function'?currentUser():''),
+      asignadoEmail:(S.currentUser&&S.currentUser.email)||'',
+      fecha:(function(){var d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);})(),
+      fechaRecordatorio:'', prioridad:prefPrio||'media', estado:'pendiente',
+      tipo:prefTipo||'Seguimiento', cliente:'', credito:'', monto:'', contacto:'',
+      canal:'llamada', resultado:'', checklist:[{txt:'Llamar / contactar',done:false},{txt:'Registrar resultado',done:false}],
+      comentarios:[], etiquetas:[], createdAt:new Date().toISOString()
+    };
+    var ck=(t.checklist&&t.checklist.length?t.checklist:[{txt:'',done:false}]).map(wtCkRow).join('');
+    var comments=(t.comentarios||[]).map(function(c){
+      return '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:var(--r8);padding:10px;margin-bottom:8px">'
+        +'<div style="font-size:10px;color:var(--ink3);font-weight:800;margin-bottom:3px">'+esc(c.user||'Usuario')+' · '+(typeof fmtFechaHora==='function'?fmtFechaHora(c.fecha):esc(c.fecha||''))+'</div>'
+        +'<div style="font-size:12px;color:var(--ink2);line-height:1.45">'+esc(c.txt)+'</div></div>';
+    }).join('') || '<div style="font-size:12px;color:var(--ink3);padding:14px;text-align:center;border:1px dashed var(--rim2);border-radius:var(--r8)">Sin comentarios todavía</div>';
+
+    var titleEl=typeof $==='function'?$('mtt'):null; if(titleEl) titleEl.textContent=isNew?'Nueva tarea':'Editar tarea';
+    var subEl=typeof $==='function'?$('msb'):null; if(subEl) subEl.textContent='Centro de trabajo · checklist · comentarios';
+    var ic=typeof $==='function'?$('mic'):null; if(ic) ic.textContent='✓';
+    var modal=document.querySelector('#ov .modal')||document.querySelector('#ov [class*=modal]');
+    if(modal){ modal.classList.remove('wt5-modal-shell','wt-modal-shell'); modal.style.maxWidth='780px'; }
+    var mbd=typeof $==='function'?$('mbd'):null;
+    if(mbd){ mbd.classList.remove('wt5-modal-body','wt-modal-body'); mbd.style.maxHeight=''; }
+    if(!mbd) return;
+
+    // Prioridad color strip en el top
+    var prioGrad={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[t.prioridad||'media'];
+
+    mbd.innerHTML=
+      // Banner superior del modal
+      '<div style="background:var(--grad);border-radius:var(--r12);padding:14px 18px;margin-bottom:18px;color:#fff;position:relative;overflow:hidden">'
+      +'<div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)"></div>'
+      +'<div style="position:relative;display:flex;align-items:center;gap:14px">'
+      +'<div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:20px">📋</div>'
+      +'<div><div style="font-size:16px;font-weight:900;letter-spacing:-.3px">'+(isNew?'Nueva tarea para el equipo':'Editando tarea del equipo')+'</div>'
+      +'<div style="font-size:12px;opacity:.85;margin-top:2px">La tarea aparecerá en la bandeja del usuario asignado con notificación.</div></div>'
+      +'</div></div>'
+      // Notice notificación
+      +'<div style="background:var(--gs);border:1px solid var(--rim2);border-left:4px solid var(--p1);border-radius:var(--r8);padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:var(--p1)">🔔 El usuario asignado recibirá una notificación en el sistema + campana lateral.</div>'
+
+      // ── SECCIÓN 1: Datos principales (2 col) ──
+      +'<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px">📝 Datos de la tarea</div>'
+      +'<div class="fgr" style="gap:14px;margin-bottom:14px">'
+      +'<div style="display:flex;flex-direction:column;gap:10px">'
+      +'<div class="fg"><label>Título de la tarea <span style="color:var(--red)">*</span></label><input class="fi" id="wttitulo" value="'+esc(t.titulo||'')+'" placeholder="Ej: Llamar cliente aprobado para entrega"></div>'
+      +'<div class="fg"><label>Descripción detallada</label><textarea class="fta" id="wtdesc" rows="3" placeholder="Qué debe hacer, con qué cliente, resultado esperado, contexto adicional">'+esc(t.descripcion||'')+'</textarea></div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:10px">'
+      +'<div class="fg"><label>Notas internas</label><textarea class="fta" id="wtnotes" rows="2" placeholder="Información adicional, instrucciones especiales...">'+esc(t.notas||'')+'</textarea></div>'
+      +'<div class="fg"><label>Etiquetas (separadas por coma)</label><input class="fi" id="wtetiquetas" value="'+esc((t.etiquetas||[]).join(', '))+'" placeholder="ej: urgente, cliente-vip, documentación"></div>'
+      +'</div>'
+      +'</div>'
+
+      // ── SECCIÓN 2: Asignación y fechas ──
+      +'<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px">👤 Asignación y fechas</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">'
+      +'<div class="fg"><label>Asignar a <span style="color:var(--red)">*</span></label><select class="fs" id="wtasig">'+wtLoadAssignableUsers(t.asignadoEmail||t.asignadoA)+'</select></div>'
+      +'<div class="fg"><label>Fecha límite</label><input class="fi" type="date" id="wtfecha" value="'+esc(t.fecha||'')+'"></div>'
+      +'<div class="fg"><label>Recordatorio</label><input class="fi" type="date" id="wtfechaRecordatorio" value="'+esc(t.fechaRecordatorio||'')+'"></div>'
+      +'</div>'
+
+      // ── SECCIÓN 3: Clasificación ──
+      +'<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px">🏷️ Clasificación</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">'
+      +'<div class="fg"><label>Tipo</label><select class="fs" id="wttipo">'+['Seguimiento','Ventas','Cobranza','Pagos','Documentos','Entrega','Notificaciones','Interno','Legal','Postventa'].map(function(x){return '<option '+(t.tipo===x?'selected':'')+'>'+x+'</option>';}).join('')+'</select></div>'
+      +'<div class="fg"><label>Prioridad</label>'+wtSelectFi('wtprio',['alta','media','baja'],t.prioridad||'media')+'</div>'
+      +'<div class="fg"><label>Estado</label>'+wtSelectFi('wtest',['pendiente','proceso','completada'],t.estado||'pendiente')+'</div>'
+      +'<div class="fg"><label>Canal preferido</label>'+wtSelectFi('wtcanal',['llamada','whatsapp','visita','email','sistema','otro'],t.canal||'llamada')+'</div>'
+      +'</div>'
+
+      // ── SECCIÓN 4: Contexto del cliente/crédito ──
+      +'<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px">🏍️ Contexto (opcional)</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">'
+      +'<div class="fg"><label>Cliente relacionado</label><input class="fi" id="wtcliente" value="'+esc(t.cliente||'')+'" placeholder="Nombre del cliente"></div>'
+      +'<div class="fg"><label>Crédito / Expediente</label><input class="fi" id="wtcredito" value="'+esc(t.credito||'')+'" placeholder="ID del crédito"></div>'
+      +'<div class="fg"><label>Teléfono / Contacto</label><input class="fi" id="wtcontacto" value="'+esc(t.contacto||'')+'" placeholder="+58 424..."></div>'
+      +'</div>'
+
+      // ── SECCIÓN 5: Checklist + Resultado ──
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'
+      +'<div class="fg"><label>Checklist de pasos</label><div id="wtchecks" style="margin-bottom:8px">'+ck+'</div>'
+      +'<button type="button" class="btn btn-g btn-sm" onclick="wtAddCheckRow()">+ Agregar paso</button></div>'
+      +'<div style="display:flex;flex-direction:column;gap:10px">'
+      +'<div class="fg"><label>Resultado / Cierre</label><textarea class="fta" id="wtresultado" rows="3" placeholder="¿Qué pasó? ¿Cuál fue el resultado obtenido?">'+esc(t.resultado||'')+'</textarea></div>'
+      +'</div>'
+      +'</div>'
+
+      // ── SECCIÓN 6: Comentarios ──
+      +'<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px">💬 Comentarios internos</div>'
+      +'<div style="max-height:200px;overflow-y:auto;margin-bottom:10px">'+comments+'</div>'
+      +'<div class="fg"><label>Agregar comentario</label><textarea class="fta" id="wtcomment" rows="2" placeholder="Escribe un comentario o nota interna..."></textarea></div>';
+
+    var mft=typeof $==='function'?$('mft'):null;
+    if(mft) mft.innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+      +(!isNew&&!t.archivado?'<button class="btn btn-g" style="border-left:3px solid var(--amber)" onclick="wtArchive(\''+t.id+'\')">Archivar</button>':'')
+      +'<button class="btn btn-p" onclick="saveWtTask(\''+t.id+'\')">💾 Guardar y notificar</button>';
+    if(typeof $==='function'&&$('ov')) $('ov').style.display='flex';
+    S._wtEditing=t;
+  };
+
+  window.wtAddCheckRow=function(){
+    var box=typeof $==='function'?$('wtchecks'):null; if(!box) return;
+    var i=box.querySelectorAll('[id^=wtcktxt_]').length;
+    var d=document.createElement('div');
+    d.style.cssText='display:grid;grid-template-columns:22px 1fr 30px;gap:8px;align-items:center;margin-bottom:8px';
+    d.innerHTML='<input type="checkbox" id="wtck_'+i+'" style="width:18px;height:18px;accent-color:var(--p1)">'
+      +'<input class="fi" id="wtcktxt_'+i+'" placeholder="Paso del checklist" style="height:36px">'
+      +'<button type="button" class="btn btn-g btn-xs btn-ic" onclick="this.closest(\'div\').remove()" style="padding:0;width:28px;height:28px">×</button>';
+    box.appendChild(d);
+  };
+
+  window.saveWtTask=function(id){
+    var $ = typeof window.$==='function'?window.$:function(i){return document.getElementById(i);};
+    var old=S._wtEditing||{}; var t=Object.assign({},old);
+    t.id=id||old.id||('T'+Date.now());
+    t.titulo=(($('wttitulo')||{}).value||'Tarea sin título').trim();
+    t.descripcion=(($('wtdesc')||{}).value)||'';
+    t.notas=(($('wtnotes')||{}).value)||'';
+    var etStr=(($('wtetiquetas')||{}).value)||'';
+    t.etiquetas=etStr.split(',').map(function(x){return x.trim();}).filter(Boolean);
+    var sel=$('wtasig'); var opt=sel&&sel.options?sel.options[sel.selectedIndex]:null;
+    t.asignadoEmail=(sel&&sel.value)||'';
+    t.asignadoA=(opt&&(opt.getAttribute('data-name')||opt.textContent.split(' — ')[0]))||t.asignadoEmail||(typeof currentUser==='function'?currentUser():'');
+    t.fecha=(($('wtfecha')||{}).value)||'';
+    t.fechaRecordatorio=(($('wtfechaRecordatorio')||{}).value)||'';
+    t.prioridad=(($('wtprio')||{}).value)||'media';
+    t.estado=(($('wtest')||{}).value)||'pendiente';
+    t.tipo=(($('wttipo')||{}).value)||'Seguimiento';
+    t.canal=(($('wtcanal')||{}).value)||'llamada';
+    t.cliente=(($('wtcliente')||{}).value)||'';
+    t.credito=(($('wtcredito')||{}).value)||'';
+    t.contacto=(($('wtcontacto')||{}).value)||'';
+    t.resultado=(($('wtresultado')||{}).value)||'';
+    t.archivado=!!old.archivado;
+    t.updatedAt=new Date().toISOString();
+    if(!t.createdAt) t.createdAt=new Date().toISOString();
+    t.creadaPor=old.creadaPor||(typeof currentUser==='function'?currentUser():'');
+    t.checklist=[];
+    var box=$('wtchecks');
+    if(box){ box.querySelectorAll('[id^=wtcktxt_]').forEach(function(inp,i){
+      var txt=inp.value||''; var cb=box.querySelector('#wtck_'+i);
+      if(txt.trim()) t.checklist.push({txt:txt.trim(),done:!!(cb&&cb.checked)});
+    }); }
+    t.comentarios=Array.isArray(old.comentarios)?old.comentarios.slice():[];
+    var cm=(($('wtcomment')||{}).value||'').trim();
+    if(cm) t.comentarios.push({txt:cm,user:(typeof currentUser==='function'?currentUser():'Usuario'),fecha:new Date().toISOString()});
+    var idx=(S.tareas||[]).findIndex(function(x){return x.id===t.id;});
+    if(idx>=0) S.tareas[idx]=t; else S.tareas.push(t);
+    if(typeof wtPersist==='function') wtPersist(t);
+    else{try{localStorage.setItem(WT_LS_KEY,JSON.stringify(S.tareas||[]));}catch(e){}}
+    // ── NOTIFICACIÓN al usuario asignado ──
+    wtNotifyUser(t);
+    if(typeof closeM==='function') closeM();
+    nav('centro');
+    if(typeof toast==='function') toast('✅ Tarea guardada · '+t.asignadoA+' fue notificado','ok');
+  };
+
+  window.wtSetFilter=function(k){ WT_FILTER=k; nav('centro'); };
+  window.wtResetDemo=function(){
+    S.tareas=(typeof wtDemoTasks==='function'?wtDemoTasks():[]);
+    if(typeof wtSaveLocal==='function') wtSaveLocal(); else{try{localStorage.setItem(WT_LS_KEY,JSON.stringify(S.tareas||[]));}catch(e){}}
+    if(typeof updateBadge==='function') updateBadge();
+    nav('centro');
+    if(typeof toast==='function') toast('Centro de trabajo cargado con demo','ok');
+  };
+
+  if(window.PG) PG.centro=function(){ return wtHTML(); };
+})();
 
 </script>
 </body>
