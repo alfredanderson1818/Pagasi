@@ -3729,8 +3729,8 @@ function isEmpleadoRole(){
 // Permisos efectivos del usuario actual
 function getPermsEfectivos(){
   if(isAdminUser()) return Object.keys(PGL).concat(['perm_delete']);
-  // Empleado / Cobrador / Vendedor: solo dashboard, cobranza y solicitudes (creditos)
-  if(isEmpleadoRole()) return ['dash','centro','cobranza','creditos'];
+  // Todos los demás roles (incluido Empleado / Cobrador / Vendedor):
+  // respetar los permisos configurados por el administrador
   return getCurrentPerms();
 }
 
@@ -3745,21 +3745,44 @@ function renderSidebar(){
   if(!sb) return;
   if(!S.currentUser){ return; }
 
-  // Empleado (o legacy Cobrador/Vendedor): sidebar especializado
+  // Empleado (o legacy Cobrador/Vendedor): sidebar especializado con Nueva Solicitud
+  // pero respetando los permisos configurados por el administrador
   if(isEmpleadoRole()){
-    sb.innerHTML = '<div style="padding:10px 8px">'
+    var permsEmp = getCurrentPerms();
+    var grposEmp = [
+      {label:'Mi Trabajo', keys:['dash','centro']},
+      {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
+      {label:'Operaciones',keys:['cobranza','contratos','notif']},
+      {label:'Análisis', keys:['reportes','cuentas']},
+      {label:'Sistema', keys:['plan','config','scores','users']},
+    ];
+    var iconMapEmp = {
+      dash:'DB',centro:'WK',clientes:'CLI',motos:'MOT',creditos:'SOL',pagos:'PAG',
+      cobranza:'COB',contratos:'CTR',notif:'NOT',reportes:'RPT',
+      cuentas:'CTA',conta:'CNT',plan:'PLN',config:'CFG',scores:'SCR',users:'USR'
+    };
+    var nameMapEmp = { dash:'Mi Dashboard', creditos:'Solicitudes' };
+    var extraMapEmp = {cobranza:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
+
+    var sidebarEmp = '<div style="padding:10px 8px">'
       +'<div style="margin-bottom:6px">'
       +'<button type="button" style="display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:12px;background:var(--p1);color:#fff;border:none;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;width:100%" onclick="openAddCred()">'
       +'<span style="font-size:16px;font-weight:900;line-height:1">＋</span><span>Nueva Solicitud</span></button>'
       +'</div>'
-      +'<div class="sb-grp">'
-      +'<div class="sb-lbl">Mi Trabajo</div>'
-      +'<button type="button" class="si" data-nav="dash" onclick="nav(\'dash\')"><span class="sic nav-ic">DB</span><span>Mi Dashboard</span></button>'
-      +'<button type="button" class="si" data-nav="centro" onclick="nav(\'centro\')"><span class="sic nav-ic">WK</span><span>Centro de trabajo</span><span class="si-bx" id="sb-badge-wt"></span></button>'
-      +'<button type="button" class="si" data-nav="cobranza" onclick="nav(\'cobranza\')"><span class="sic nav-ic">COB</span><span>Cobranza</span><span class="si-bx" id="sb-badge-cob"></span></button>'
-      +'<button type="button" class="si" data-nav="creditos" onclick="nav(\'creditos\')"><span class="sic nav-ic">SOL</span><span>Solicitudes</span></button>'
-      +'</div>'
+      + grposEmp.map(function(g){
+          var items = g.keys.filter(function(k){ return permsEmp.includes(k); });
+          if(!items.length) return '';
+          return '<div class="sb-grp"><div class="sb-lbl">'+g.label+'</div>'
+            +items.map(function(k){
+              var label = nameMapEmp[k] || PGL[k];
+              return '<button type="button" class="si" data-nav="'+k+'" onclick="nav(\''+k+'\')">'
+                +'<span class="sic nav-ic">'+iconMapEmp[k]+'</span><span>'+label+'</span>'+(extraMapEmp[k]||'')+'</button>';
+            }).join('')
+            +'</div>';
+        }).join('')
       +'</div>';
+    sb.innerHTML = sidebarEmp;
+    updateSidebarFooter();
     return;
   }
 
