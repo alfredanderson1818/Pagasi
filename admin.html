@@ -14152,7 +14152,7 @@ function openAmort(id){
       <div>#</div><div>Fecha</div><div>Estado</div><div>Abonos</div><div>Monto</div><div>Interés</div><div>Capital</div><div>Saldo</div>
     </div>
     <div style="max-height:280px;overflow-y:auto;margin-top:3px;border:1px solid var(--rim);border-radius:8px;padding:2px">${rows}</div>`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${estadoCred==='activo'?`<button class="btn btn-g" onclick="closeM();openPagoRapido('${c.id}')">Registrar pago</button>`:''}<button class="btn btn-p" onclick="descargarAmortPDF()">↓ Descargar PDF</button>`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${estadoCred==='activo'?`<button class="btn btn-g" onclick="closeM();openPagoRapido('${c.id}')">Registrar pago</button>`:''}<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-p" onclick="descargarAmortPDF()">↓ Descargar PDF</button>`;
   $('ov').style.display='flex';
 }
 
@@ -17255,6 +17255,102 @@ function descargarAmortPDF(){
   `;
 
   _abrirVentanaImpresion('Ficha de Crédito '+c.id+' — '+c.cli, html);
+}
+
+function descargarEstadoPDF(){
+  var credId = window._currentAmortCredId;
+  if(!credId){ toast('Abre primero la tabla de amortización','error'); return; }
+  var c = S.creds.find(function(x){return x.id===credId;});
+  if(!c){ toast('Crédito no encontrado','error'); return; }
+  var emp = (typeof getEmpresa==='function') ? getEmpresa() : {nombre:'Pagasi',rif:'',ciudad:'',tel:'',email:''};
+
+  var totalCuotas = getCreditoTotalCuotas(c);
+  var cuota = getCreditoCuotaBase(c);
+  var cuotasPag = getCreditoCuotasPagadas(c);
+  var hoy = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
+
+  var fechaInicio = c.fecha || '—';
+  var startDate = new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
+
+  // Pagos por cuota (para columna Abonos)
+  var historial = c.pagosRegistrados||[];
+  var pagosPorCuota = {};
+  historial.forEach(function(h){
+    if(!pagosPorCuota[h.cuota]) pagosPorCuota[h.cuota]=[];
+    pagosPorCuota[h.cuota].push(h);
+  });
+
+  // Construir filas solo con #, Fecha, Estado, Abonos, Monto
+  var rowsHTML = '';
+  for(var i=1;i<=totalCuotas;i++){
+    var pd = i<=cuotasPag;
+    var esProx = i===cuotasPag+1;
+    var fd = new Date(startDate.getTime()+(i*15*24*60*60*1000));
+    var fechaStr = fd.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    var estadoTxt = pd ? '✓ Pagada' : (esProx ? 'Próxima' : 'Pendiente');
+    var estadoColor = pd ? '#0a7a3f' : (esProx ? '#6C5CE7' : '#888');
+
+    var histCuota = pagosPorCuota[i]||[];
+    var abonosTxt = '—';
+    if(histCuota.length>0){
+      abonosTxt = histCuota.map(function(h){
+        return '+'+fmt(h.montoPagado)+' · '+h.fecha;
+      }).join('<br>');
+    }
+
+    rowsHTML += '<tr style="'+(pd?'opacity:.6;background:#fafafa':'')+'">'
+      + '<td style="text-align:center;font-weight:700">'+i+'</td>'
+      + '<td>'+fechaStr+'</td>'
+      + '<td style="font-weight:700;color:'+estadoColor+'">'+estadoTxt+'</td>'
+      + '<td style="font-size:10.5px;color:'+(histCuota.length>0?'#0a7a3f':'#999')+'">'+abonosTxt+'</td>'
+      + '<td style="text-align:right;font-weight:700;color:'+(pd?'#888':esProx?'#6C5CE7':'#111')+'">'+fmt(cuota)+'</td>'
+      + '</tr>';
+  }
+
+  var html = `
+    <!-- Cabecera empresa -->
+    <div style="text-align:center;margin-bottom:6px;padding-bottom:12px;border-bottom:2px solid #111">
+      <div style="font-size:18px;font-weight:900;letter-spacing:1.5px;color:#111">${emp.nombre.toUpperCase()}</div>
+      <div style="font-size:10px;color:#666;margin-top:3px">
+        RIF ${emp.rif||'—'}${emp.ciudad?' · '+emp.ciudad:''}${emp.tel?' · Tel: '+emp.tel:''}${emp.email?' · '+emp.email:''}
+      </div>
+    </div>
+
+    <!-- Título -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin:14px 0 10px 0">
+      <div>
+        <div style="font-size:15px;font-weight:900;letter-spacing:.3px">ESTADO DE CUENTA · ${c.id}</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">${c.cli} · Inicio ${fechaInicio} · ${totalCuotas} cuotas quincenales</div>
+        <div style="font-size:10.5px;color:#666;margin-top:2px">Documento generado el ${hoy}</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#666">
+        <div><strong>Cuota:</strong> ${fmt(cuota)}</div>
+        <div><strong>Progreso:</strong> ${cuotasPag} de ${totalCuotas}</div>
+      </div>
+    </div>
+
+    <!-- TABLA DE AMORTIZACIÓN -->
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:center;width:40px">#</th>
+          <th style="text-align:left">Fecha</th>
+          <th style="text-align:left">Estado</th>
+          <th style="text-align:left">Abonos</th>
+          <th style="text-align:right">Monto</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHTML}</tbody>
+    </table>
+
+    <!-- Pie -->
+    <div style="margin-top:24px;padding-top:12px;border-top:1px solid #ccc;text-align:right;font-size:10.5px;color:#666">
+      Documento emitido por ${emp.nombre.toUpperCase()} · Generado el ${hoy} · Cuenta N° ${c.id}
+    </div>
+  `;
+
+  _abrirVentanaImpresion('Estado de Cuenta '+c.id+' — '+c.cli, html);
 }
 
 function descargarContratoPDF(){
