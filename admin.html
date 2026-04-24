@@ -4839,7 +4839,37 @@ function changeMotoStatus(id, newStatus){
   if(g) g.innerHTML=renderMotoGrid();
 }
 
+
+function esCreditoVigenteParaInventario(c){
+  if(!c || c.eliminado) return false;
+  var st = String(c.estado||'activo').toLowerCase();
+  return !['cancelado','liquidado','cerrado','anulado','archivado','eliminado'].includes(st);
+}
+
+function sincronizarInventarioConCreditos(opts){
+  opts = opts || {};
+  if(!S || !Array.isArray(S.motos) || !Array.isArray(S.creds)) return;
+  var usados = {};
+  S.creds.forEach(function(c){
+    if(!esCreditoVigenteParaInventario(c) || c.motoId==null || c.motoId==='') return;
+    usados[String(c.motoId)] = c;
+  });
+  S.motos.forEach(function(m){
+    if(!m || m.eliminado) return;
+    var c = usados[String(m.id)];
+    if(c && m.estado !== 'financiada'){
+      m.estado = 'financiada';
+      m.cliente = c.cli || c.cliente || m.cliente || null;
+      if(!m.vin && c.vin) m.vin = c.vin;
+      if(!m.color && c.color) m.color = c.color;
+      if(!m.placa && c.placa) m.placa = c.placa;
+      if(opts.save && DB && DB.saveMoto) DB.saveMoto(m);
+    }
+  });
+}
+
 function renderMotoGrid(){
+  sincronizarInventarioConCreditos({save:true});
   const f=S.mTab;
   const fil = f==='todas'?S.motos.filter(m=>!m.eliminado):S.motos.filter(m=>!m.eliminado&&m.estado===f);
   return fil.length?`<div class="moto-plan-grid">${fil.map(motoCard).join('')}</div>`:
@@ -6446,6 +6476,7 @@ clientes(){
 },
 
 motos(){
+  sincronizarInventarioConCreditos({save:true});
   const total = S.motos.filter(m=>!m.eliminado).length;
   const dispN = S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
   const finN = S.motos.filter(m=>!m.eliminado&&m.estado==='financiada').length;
@@ -11446,6 +11477,7 @@ function _wzClose(){
 }
 
 function _wzRender(motoId){
+  sincronizarInventarioConCreditos({save:true});
   var ov = document.getElementById('wz-overlay');
   var motosDisp = S.motos.filter(function(m){ return !m.eliminado && m.estado==='disponible'; });
 
@@ -20939,62 +20971,52 @@ setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.is
   window.openWtTask=function(id){
     if(typeof wtLoadUsers==='function') wtLoadUsers();
     var isNew=!id,old=id?(S.tareas||[]).find(function(x){return x.id===id;}):null;
-    var t=old||{id:'T'+Date.now(),titulo:'',descripcion:'',asignadoA:currentUser(),asignadoEmail:(S.currentUser&&S.currentUser.email)||'',fecha:today(),prioridad:'media',estado:'pendiente',tipo:'Seguimiento',checklist:[{txt:'Realizar acción principal',done:false},{txt:'Registrar resultado',done:false}],comentarios:[],createdAt:new Date().toISOString()};
+    var t=old||{id:'T'+Date.now(),titulo:'',descripcion:'',asignadoA:currentUser(),asignadoEmail:(S.currentUser&&S.currentUser.email)||'',fecha:today(),prioridad:'media',estado:'pendiente',tipo:'Logística / Compras',categoria:'Suministros de oficina',checklist:[{txt:'Definir qué se necesita comprar',done:false},{txt:'Comparar precios y opciones',done:false},{txt:'Realizar compra y confirmar entrega',done:false}],comentarios:[],createdAt:new Date().toISOString()};
     var ck=(t.checklist&&t.checklist.length?t.checklist:[{txt:'',done:false}]).map(checkRowHtml).join('');
-    var comments=(t.comentarios||[]).map(function(c){
-      return '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:var(--r8);padding:9px 11px;margin-bottom:7px">'+
-        '<div style="font-size:10px;color:var(--ink3);font-weight:800;margin-bottom:3px">'+esc(c.user||'Usuario')+' · '+(typeof fmtFechaHora==='function'?fmtFechaHora(c.fecha):esc(c.fecha||''))+'</div>'+
-        '<div style="font-size:12px;color:var(--ink2);line-height:1.45">'+esc(c.txt)+'</div>'+
-      '</div>';
-    }).join('')||'<div style="font-size:12px;color:var(--ink3);padding:14px;text-align:center;border:1px dashed var(--rim2);border-radius:var(--r8)">Sin comentarios todavía</div>';
+    var done=(t.checklist||[]).filter(function(c){return c.done;}).length,total=(t.checklist||[]).length;
+    var comments=(t.comentarios||[]).map(function(c){return '<div class="wtx-comment"><div class="wtx-comment-meta">'+esc(c.user||'Usuario')+' · '+(typeof fmtFechaHora==='function'?fmtFechaHora(c.fecha):esc(c.fecha||''))+'</div><div>'+esc(c.txt)+'</div></div>';}).join('')||'<div class="wtx-empty-comment">Sin comentarios todavía</div>';
 
-    // Set modal header
     var titleEl=$('mtt')||$('mttl'); if(titleEl) titleEl.textContent=isNew?'Nueva tarea':'Editar tarea';
-    var subEl=$('msb'); if(subEl) subEl.textContent='Centro de trabajo · asignación · checklist';
-    var ic=$('mic'); if(ic) ic.textContent='✓';
+    var subEl=$('msb'); if(subEl) subEl.textContent='Centro de trabajo · Asignación · Checklist · Seguimiento';
+    var ic=$('mic'); if(ic) ic.textContent='♢';
+    var modal=document.querySelector('#ov .modal')||document.querySelector('#ov [class*=modal]'); if(modal) modal.classList.add('wtx-modal-shell');
+    var body=$('mbd'); body.classList.add('wtx-modal-body');
 
-    $('mbd').innerHTML=
-      // Template suggestions (NEW: compact dropdown)
-      (isNew?'<div style="background:var(--gs);border:1px solid var(--rim2);border-radius:var(--r12);padding:11px 14px;margin-bottom:14px">'+
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">'+
-          '<div style="font-size:11px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px">⚡ Tareas frecuentes</div>'+
-          '<span style="font-size:10px;color:var(--ink3)">Aplica una plantilla</span>'+
-        '</div>'+
-        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
-          TASK_TEMPLATES.map(function(tpl,i){
-            return '<button type="button" class="btn btn-g btn-xs" onclick="applyWtTemplate('+i+')" style="font-size:11px">'+esc(tpl.titulo)+'</button>';
-          }).join('')+
-        '</div>'+
-      '</div>':'')
-      +
-      // Form grid
-      '<div class="fgr" style="margin-bottom:12px">'+
-        '<div class="fg"><label>Título</label><input class="fi" id="wttitulo" value="'+esc(t.titulo||'')+'" placeholder="Ej: Seguimiento a cliente aprobado"></div>'+
-        '<div class="fg"><label>Asignar a</label><select class="fs" id="wtasig">'+loadUsers(t.asignadoEmail||t.asignadoA)+'</select></div>'+
-      '</div>'+
-      '<div class="fg" style="margin-bottom:12px"><label>Descripción</label><textarea class="fta" id="wtdesc" placeholder="Detalles de la tarea">'+esc(t.descripcion||'')+'</textarea></div>'+
-      '<div class="fgr c3" style="margin-bottom:12px">'+
-        '<div class="fg"><label>Fecha límite</label><input class="fi" type="date" id="wtfecha" value="'+esc(t.fecha||'')+'"></div>'+
-        '<div class="fg"><label>Prioridad</label><select class="fs" id="wtprio"><option value="alta" '+(t.prioridad==='alta'?'selected':'')+'>Alta</option><option value="media" '+(t.prioridad==='media'?'selected':'')+'>Media</option><option value="baja" '+(t.prioridad==='baja'?'selected':'')+'>Baja</option></select></div>'+
-        '<div class="fg"><label>Estado</label><select class="fs" id="wtest"><option value="pendiente" '+(t.estado==='pendiente'?'selected':'')+'>Pendiente</option><option value="proceso" '+(t.estado==='proceso'?'selected':'')+'>En proceso</option><option value="completada" '+(t.estado==='completada'?'selected':'')+'>Completada</option></select></div>'+
-      '</div>'+
-      '<div class="fgr" style="margin-bottom:14px">'+
-        '<div class="fg"><label>Tipo</label><select class="fs" id="wttipo">'+
-          ['Seguimiento','Ventas','Cobranza','Pagos','Documentos','Entrega','Notificaciones','Interno'].map(function(x){return '<option '+(t.tipo===x?'selected':'')+'>'+x+'</option>';}).join('')+
-        '</select></div>'+
-        '<div></div>'+
-      '</div>'+
-      '<div class="fsec">Checklist</div>'+
-      '<div id="wtchecks" style="margin-bottom:8px">'+ck+'</div>'+
-      '<button type="button" class="btn btn-g btn-sm" style="margin-bottom:16px" onclick="wtAddCheckRow()">+ Agregar paso</button>'+
-      '<div class="fsec">Comentarios internos</div>'+
-      '<div style="max-height:200px;overflow-y:auto;margin-bottom:8px">'+comments+'</div>'+
-      '<div class="fg"><label>Nuevo comentario</label><textarea class="fta" id="wtcomment" placeholder="Escribe un comentario..." style="min-height:60px"></textarea></div>';
+    body.innerHTML='<style id="wtx-modal-style">'
+      +'#ov .wtx-modal-shell{width:min(1180px,96vw)!important;max-width:1180px!important;border-radius:24px!important;overflow:hidden!important;background:#fbfbff!important;box-shadow:0 28px 80px rgba(20,22,55,.28)!important}'
+      +'#ov .wtx-modal-body{padding:0!important;background:#fbfbff!important;max-height:calc(100vh - 185px);overflow:auto}'
+      +'.wtx-wrap{display:grid;grid-template-columns:270px 1fr;min-height:720px;border-top:1px solid rgba(96,101,180,.10)}.wtx-side{background:linear-gradient(180deg,#fbfbff,#f7f8ff);border-right:1px solid rgba(108,113,190,.14);padding:26px 24px;display:flex;flex-direction:column;justify-content:space-between;gap:20px}'
+      +'.wtx-steps{display:flex;flex-direction:column;gap:12px}.wtx-step{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:center;padding:11px;border-radius:12px;color:#444b7a}.wtx-step.active{background:#f0efff;border:1px solid #d9d6ff;color:#6254e9}.wtx-step-ico{width:36px;height:36px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(30,34,90,.06);font-size:17px}.wtx-step.active .wtx-step-ico{background:#6254e9;color:#fff}.wtx-step-title{font-weight:850;font-size:14px}.wtx-step-sub{font-size:12px;color:#9095bc;margin-top:3px}'
+      +'.wtx-tip{border:1px solid #dedfff;border-radius:16px;background:#fff;padding:18px;color:#575d90;font-size:13px;line-height:1.5}.wtx-tip b{display:block;color:#6254e9;margin-bottom:8px}.wtx-save-template{height:44px;border-radius:14px;border:1px solid #dfe1ff;background:#fff;color:#4c5280;font-weight:800;padding:0 16px;text-align:left;width:100%}'
+      +'.wtx-main{padding:26px 28px 34px}.wtx-templates{border:1px solid #dcdcff;border-radius:20px;background:#fafaff;padding:20px;margin-bottom:24px}.wtx-temp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;color:#6254e9;font-weight:950;text-transform:uppercase;letter-spacing:.6px;font-size:13px}.wtx-temp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.wtx-temp-btn{height:44px;border-radius:22px;border:1px solid #e1e3fb;background:#fff;color:#59608d;font-weight:750;display:flex;align-items:center;gap:10px;padding:0 15px;cursor:pointer}.wtx-temp-btn:hover{border-color:#aaa7ff;box-shadow:0 8px 24px rgba(98,84,233,.10);transform:translateY(-1px)}'
+      +'.wtx-grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}.wtx-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px}.wtx-field{margin-bottom:18px}.wtx-label{display:block;font-size:12px;letter-spacing:1.8px;text-transform:uppercase;color:#565b8b;font-weight:950;margin-bottom:10px}.wtx-input,.wtx-select,.wtx-textarea{width:100%;border:1px solid #e0e3fb;background:#fff;border-radius:12px;color:#40476f;font-size:15px;outline:none}.wtx-input,.wtx-select{height:51px;padding:0 16px}.wtx-textarea{min-height:126px;padding:14px 16px;resize:vertical}.wtx-input:focus,.wtx-select:focus,.wtx-textarea:focus{border-color:#8f86ff;box-shadow:0 0 0 4px rgba(98,84,233,.10)}'
+      +'.wtx-editor{border:1px solid #e0e3fb;border-radius:14px;background:#fff;overflow:hidden}.wtx-toolbar{height:45px;border-bottom:1px solid #e8e9fa;display:flex;align-items:center;gap:18px;padding:0 18px;color:#4d5482;font-weight:900}.wtx-editor textarea{border:0!important;border-radius:0!important;box-shadow:none!important;min-height:100px}.wtx-help{border:1px solid #e4e5fb;background:#f7f8ff;border-radius:10px;color:#9aa0c9;font-size:12px;padding:12px 14px;margin-top:2px}'
+      +'.wtx-check-card{border:1px solid #dfe1fb;border-radius:16px;background:#fff;overflow:hidden;margin-top:24px}.wtx-check-head{height:48px;padding:0 16px;border-bottom:1px solid #eceefa;display:flex;align-items:center;justify-content:space-between}.wtx-check-title{font-size:12px;letter-spacing:1.7px;text-transform:uppercase;color:#59608d;font-weight:950}.wtx-progress-pill{font-size:12px;color:#6254e9;background:#f1f0ff;border-radius:999px;padding:4px 9px;margin-left:8px}.wtx-add{border:0;background:transparent;color:#6254e9;font-weight:850;cursor:pointer}.wtx-check-card #wtchecks>div{grid-template-columns:18px 26px 1fr 32px!important;margin:0!important;border-bottom:1px solid #eef0fa;padding:8px 14px;align-items:center}.wtx-check-card #wtchecks>div:before{content:"⋮⋮";color:#b7bddc;font-weight:900;font-size:14px}.wtx-check-card input[type=checkbox]{width:22px!important;height:22px!important}.wtx-check-card .fi{height:32px!important;border:0!important;background:transparent!important;box-shadow:none!important}.wtx-check-card button{color:#ef4b65!important;background:#fff2f4!important;border:0!important;border-radius:10px!important}'
+      +'.wtx-comment{background:#f8f8ff;border:1px solid #e4e6fb;border-radius:14px;padding:12px 14px;margin-bottom:9px;color:#4c527d;font-size:13px}.wtx-comment-meta{font-size:11px;color:#969bc1;font-weight:850;margin-bottom:4px}.wtx-empty-comment{text-align:center;border:1px dashed #dfe1fb;border-radius:14px;padding:16px;color:#969bc1;font-size:13px}.wtx-footer-note{font-size:12px;color:#9aa0c9;margin-top:10px}@media(max-width:900px){.wtx-wrap{grid-template-columns:1fr}.wtx-side{display:none}.wtx-temp-grid,.wtx-grid2,.wtx-grid3{grid-template-columns:1fr}.wtx-main{padding:20px}}'
+      +'</style>'
+      +'<div class="wtx-wrap"><aside class="wtx-side"><div class="wtx-steps">'
+      +'<div class="wtx-step active"><div class="wtx-step-ico">△</div><div><div class="wtx-step-title">Información general</div><div class="wtx-step-sub">Detalles principales</div></div></div>'
+      +'<div class="wtx-step"><div class="wtx-step-ico">👤</div><div><div class="wtx-step-title">Asignación</div><div class="wtx-step-sub">Personas y equipos</div></div></div>'
+      +'<div class="wtx-step"><div class="wtx-step-ico">▤</div><div><div class="wtx-step-title">Detalles</div><div class="wtx-step-sub">Descripción y contexto</div></div></div>'
+      +'<div class="wtx-step"><div class="wtx-step-ico">🗓</div><div><div class="wtx-step-title">Fechas y prioridad</div><div class="wtx-step-sub">Planificación</div></div></div>'
+      +'<div class="wtx-step"><div class="wtx-step-ico">☷</div><div><div class="wtx-step-title">Tipo y categoría</div><div class="wtx-step-sub">Clasificación</div></div></div>'
+      +'<div class="wtx-step"><div class="wtx-step-ico">☑</div><div><div class="wtx-step-title">Checklist</div><div class="wtx-step-sub">Pasos y verificación</div></div></div>'
+      +'<div class="wtx-step"><div class="wtx-step-ico">🔗</div><div><div class="wtx-step-title">Archivos y enlaces</div><div class="wtx-step-sub">Documentos adjuntos</div></div></div>'
+      +'<div class="wtx-step"><div class="wtx-step-ico">🔔</div><div><div class="wtx-step-title">Recordatorios</div><div class="wtx-step-sub">Notificaciones</div></div></div>'
+      +'<div class="wtx-step"><div class="wtx-step-ico">💬</div><div><div class="wtx-step-title">Comentarios</div><div class="wtx-step-sub">Colaboración</div></div></div>'
+      +'</div><div><div class="wtx-tip"><b>💡 Consejo</b>Una tarea bien detallada se completa 3× más rápido. Mientras más información agregues, mejor.</div><button class="wtx-save-template" type="button">▱ Guardar como plantilla</button></div></aside>'
+      +'<main class="wtx-main">'
+      +(isNew?'<section class="wtx-templates"><div class="wtx-temp-head"><span>⚡ Tareas frecuentes</span><span style="font-weight:650;color:#9fa3cb;text-transform:none;letter-spacing:0">Aplica una plantilla</span></div><div class="wtx-temp-grid">'+TASK_TEMPLATES.map(function(tpl,i){var icons=['📞','🪙','📋','🏍️','👤','🧾'];return '<button type="button" class="wtx-temp-btn" onclick="applyWtTemplate('+i+')"><span>'+icons[i%icons.length]+'</span>'+esc(tpl.titulo)+'</button>';}).join('')+'</div></section>':'')
+      +'<div class="wtx-grid2"><div class="wtx-field"><label class="wtx-label">Título de la tarea *</label><input class="wtx-input" id="wttitulo" value="'+esc(t.titulo||'')+'" placeholder="Ej: Comprar impresora para la oficina"></div><div class="wtx-field"><label class="wtx-label">Asignar a *</label><select class="wtx-select" id="wtasig">'+loadUsers(t.asignadoEmail||t.asignadoA)+'</select></div></div>'
+      +'<div class="wtx-field"><label class="wtx-label">Descripción</label><div class="wtx-editor"><div class="wtx-toolbar"><span>B</span><span><i>I</i></span><span><u>U</u></span><span>☷</span><span>☰</span><span>🔗</span><span>☺</span><span>▧</span><span>”</span></div><textarea class="wtx-textarea" id="wtdesc" placeholder="Describe la tarea con el mayor detalle posible...">'+esc(t.descripcion||'')+'</textarea></div></div>'
+      +'<div class="wtx-grid3"><div class="wtx-field"><label class="wtx-label">Fecha límite *</label><input class="wtx-input" type="date" id="wtfecha" value="'+esc(t.fecha||'')+'"></div><div class="wtx-field"><label class="wtx-label">Prioridad</label><select class="wtx-select" id="wtprio"><option value="alta" '+(t.prioridad==='alta'?'selected':'')+'>🚩 Alta</option><option value="media" '+(t.prioridad==='media'?'selected':'')+'>⚐ Media</option><option value="baja" '+(t.prioridad==='baja'?'selected':'')+'>✅ Baja</option></select></div><div class="wtx-field"><label class="wtx-label">Estado</label><select class="wtx-select" id="wtest"><option value="pendiente" '+(t.estado==='pendiente'?'selected':'')+'>🔴 Pendiente</option><option value="proceso" '+(t.estado==='proceso'?'selected':'')+'>🟠 En proceso</option><option value="completada" '+(t.estado==='completada'?'selected':'')+'>🟢 Completada</option></select></div></div>'
+      +'<div class="wtx-grid2"><div class="wtx-field"><label class="wtx-label">Tipo de tarea</label><select class="wtx-select" id="wttipo">'+['Logística / Compras','Seguimiento','Ventas','Cobranza','Pagos','Documentos','Entrega','Notificaciones','Interno'].map(function(x){return '<option '+(t.tipo===x?'selected':'')+'>'+x+'</option>';}).join('')+'</select></div><div class="wtx-field"><label class="wtx-label">Categoría</label><select class="wtx-select" id="wtcat">'+['Suministros de oficina','Compras operativas','Documentos','Cliente','Cobranza','Inventario','Mantenimiento','Capacitación'].map(function(x){return '<option '+((t.categoria||'Suministros de oficina')===x?'selected':'')+'>'+x+'</option>';}).join('')+'</select></div></div>'
+      +'<div class="wtx-help">Ejemplos: Comprar impresora, comprar hojas, llevar documentos a oficina, pagar servicio, mantenimiento, etc.</div>'
+      +'<div class="wtx-check-card"><div class="wtx-check-head"><div><span class="wtx-check-title">Checklist de tarea</span><span class="wtx-progress-pill" id="wtckpill">'+done+'/'+total+'</span></div><button class="wtx-add" type="button" onclick="wtAddCheckRow()">+ Agregar ítem</button></div><div id="wtchecks">'+ck+'</div></div>'
+      +'<div class="wtx-field" style="margin-top:20px"><label class="wtx-label">Comentarios internos</label><div style="max-height:170px;overflow:auto;margin-bottom:10px">'+comments+'</div><textarea class="wtx-textarea" id="wtcomment" placeholder="Escribe un comentario interno..." style="min-height:70px"></textarea><div class="wtx-footer-note">Al guardar, el usuario asignado recibirá una notificación al abrir su sistema.</div></div>'
+      +'</main></div>';
 
-    $('mft').innerHTML=
-      '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'+
-      (!isNew&&!t.archivado?'<button class="btn btn-a btn-sm" onclick="wtArchive(\''+t.id+'\')">Archivar</button>':'')+
-      '<button class="btn btn-p" onclick="saveWtTask(\''+t.id+'\')">Guardar tarea</button>';
+    $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'+(!isNew&&!t.archivado?'<button class="btn btn-a btn-sm" onclick="wtArchive(\''+t.id+'\')">Archivar</button>':'')+'<button class="btn btn-g" onclick="saveWtTask(\''+t.id+'\'); if(typeof toast===\'function\') toast(\'Borrador guardado\',\'info\')">Guardar borrador</button><button class="btn btn-p" onclick="saveWtTask(\''+t.id+'\')">✓ Crear tarea</button>';
     $('ov').style.display='flex'; S._wtEditing=t;
   };
 
@@ -21002,9 +21024,16 @@ setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.is
     var box=$('wtchecks'); if(!box) return;
     var i=box.querySelectorAll('[id^="wtck_"]').length;
     var d=document.createElement('div');
-    d.style.cssText='display:grid;grid-template-columns:22px 1fr 28px;gap:8px;align-items:center;margin-bottom:7px';
-    d.innerHTML='<input type="checkbox" id="wtck_'+i+'" style="width:18px;height:18px;accent-color:var(--p1)"><input class="fi" id="wtcktxt_'+i+'" placeholder="Paso del checklist" style="height:36px"><button type="button" class="btn btn-g btn-xs btn-ic" onclick="this.closest(\'div\').remove()" style="padding:0;width:26px;height:26px">×</button>';
+    d.style.cssText='display:grid;grid-template-columns:18px 26px 1fr 32px;gap:8px;align-items:center;margin:0;border-bottom:1px solid #eef0fa;padding:8px 14px';
+    d.innerHTML='<input type="checkbox" id="wtck_'+i+'" style="width:22px;height:22px;accent-color:var(--p1)" onchange="if(typeof wtUpdateCheckPill===\'function\') wtUpdateCheckPill()"><input class="fi" id="wtcktxt_'+i+'" placeholder="Nuevo paso del checklist" style="height:32px;border:0;background:transparent;box-shadow:none"><button type="button" class="btn btn-g btn-xs btn-ic" onclick="this.closest(\'div\').remove(); if(typeof wtUpdateCheckPill===\'function\') wtUpdateCheckPill();" style="padding:0;width:28px;height:28px;color:#ef4b65;background:#fff2f4;border:0;border-radius:10px">🗑</button>';
     box.appendChild(d);
+    if(typeof wtUpdateCheckPill==='function') wtUpdateCheckPill();
+  };
+  window.wtUpdateCheckPill=function(){
+    var box=$('wtchecks'),pill=$('wtckpill'); if(!box||!pill) return;
+    var total=box.querySelectorAll('[id^="wtcktxt_"]').length;
+    var done=Array.prototype.slice.call(box.querySelectorAll('[id^="wtck_"]')).filter(function(x){return x.checked;}).length;
+    pill.textContent=done+'/'+total;
   };
 
   window.saveWtTask=function(id){
@@ -21019,6 +21048,7 @@ setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.is
     t.prioridad=(($('wtprio')||{}).value)||'media';
     t.estado=(($('wtest')||{}).value)||'pendiente';
     t.tipo=(($('wttipo')||{}).value)||'Seguimiento';
+    t.categoria=(($('wtcat')||{}).value)||t.categoria||'';
     t.archivado=!!old.archivado; t.updatedAt=new Date().toISOString();
     if(!t.createdAt) t.createdAt=new Date().toISOString();
     t.creadaPor=old.creadaPor||currentUser();
