@@ -3739,6 +3739,79 @@ function hasModuleAccess(key){
   return getPermsEfectivos().includes(key);
 }
 
+// ══════════════════════════════════════════
+// LISTENER EN TIEMPO REAL DEL USUARIO ACTUAL
+// Cuando el admin cambia rol/permisos en Firestore, el usuario afectado
+// recibe la actualización al instante: sidebar se redibuja, módulos
+// nuevos aparecen y los retirados desaparecen sin necesidad de re-login.
+// ══════════════════════════════════════════
+window._currentUserUnsub = null;
+function _detachCurrentUserListener(){
+  if(typeof window._currentUserUnsub === 'function'){
+    try{ window._currentUserUnsub(); }catch(e){}
+    window._currentUserUnsub = null;
+  }
+}
+function _attachCurrentUserListener(uid){
+  if(!db || !uid) return;
+  _detachCurrentUserListener();
+  try{
+    window._currentUserUnsub = db.collection('usuarios').doc(uid).onSnapshot(function(doc){
+      if(!doc || !doc.exists) return;
+      if(!S.currentUser || S.currentUser.uid !== uid) return;
+      var data = doc.data() || {};
+      var prevRol = S.currentUser.rol;
+      var prevPerms = (S.currentUser.permisos||[]).slice().sort().join('|');
+      var nuevoRol = data.rol || S.currentUser.rol;
+      var nuevosPerms = Array.isArray(data.permisos) ? data.permisos.slice() : (S.currentUser.permisos||[]);
+      var newPermsKey = nuevosPerms.slice().sort().join('|');
+      // Si nada cambió, salir
+      if(prevRol === nuevoRol && prevPerms === newPermsKey){
+        // Solo actualizar nombre si cambió
+        if(data.nombre && data.nombre !== S.currentUser.nombre){
+          S.currentUser.nombre = data.nombre;
+          if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
+        }
+        return;
+      }
+      // Si fue suspendido por admin, cerrar sesión
+      if(data.suspendido === true && typeof auth !== 'undefined' && auth){
+        try{ toast('Tu cuenta ha sido suspendida','error'); }catch(e){}
+        setTimeout(function(){ try{ auth.signOut(); }catch(e){} }, 1200);
+        return;
+      }
+      // Aplicar cambios al usuario en memoria
+      S.currentUser.rol = nuevoRol;
+      S.currentUser.permisos = nuevosPerms;
+      if(data.nombre) S.currentUser.nombre = data.nombre;
+      // Avisar al usuario
+      try{
+        if(prevRol !== nuevoRol){
+          toast('Tu rol fue actualizado a '+nuevoRol,'info');
+        } else {
+          toast('Tus permisos fueron actualizados','info');
+        }
+      }catch(e){}
+      // Redibujar sidebar (mostrará/ocultará módulos según los nuevos permisos)
+      if(typeof renderSidebar === 'function') renderSidebar();
+      if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
+      // Si la página actual ya no es accesible, mover al dashboard (o primer módulo permitido)
+      if(S.page && typeof hasModuleAccess === 'function' && !hasModuleAccess(S.page)){
+        var fallback = ['dash','centro','clientes','creditos','pagos','cobranza'].find(function(k){ return hasModuleAccess(k); });
+        if(fallback && typeof nav === 'function') nav(fallback);
+      } else if(S.page && typeof nav === 'function'){
+        // Repintar la página actual por si depende de permisos (ej. botones de eliminar)
+        try{ nav(S.page); }catch(e){}
+      }
+    }, function(err){
+      // Errores silenciosos: el usuario ya verá los cambios al refrescar
+      console&&console.warn&&console.warn('Listener usuario:', err && err.message);
+    });
+  }catch(e){
+    // Si falla, no rompemos nada — la sesión continúa funcionando
+  }
+}
+
 // ── Sidebar dinámico: solo muestra módulos con acceso ──
 function renderSidebar(){
   var sb = document.querySelector('.sb-nav');
@@ -9922,6 +9995,90 @@ function setUsersTab(tab){
   setTimeout(usersReload, 50);
 }
 
+// ══════════════════════════════════════════
+// MATRIZ DE ROLES — toggle de permiso por rol
+// Al hacer clic en una celda de la matriz:
+//  1. Se invierte el permiso de ese rol en memoria (ROL_PERMISOS).
+//  2. Se persiste ROL_PERMISOS en Firestore (config/rolesPermisos) para que
+//     sobreviva recargas del navegador.
+//  3. Se actualiza el campo "permisos" de TODOS los usuarios con ese rol
+//     (excepto aquellos cuya configuración fue personalizada manualmente,
+//     pero como el flujo del sistema asigna ROL_PERMISOS al cambiar el rol,
+//     consideramos que todos los usuarios con ese rol siguen el preset).
+//  4. Se redibuja la matriz para reflejar el nuevo estado.
+// El listener en tiempo real se encarga de notificar a los usuarios afectados
+// que tienen sesión activa.
+// ══════════════════════════════════════════
+function toggleRolePerm(rol, modKey){
+  if(!isAdminUser()){ toast('Solo administradores pueden modificar la matriz','error'); return; }
+  if(rol === 'Administrador'){ toast('El Administrador siempre tiene acceso total','info'); return; }
+  if(!db){ toast('Requiere conexión','error'); return; }
+  if(!Array.isArray(ROL_PERMISOS[rol])) ROL_PERMISOS[rol] = [];
+  var idx = ROL_PERMISOS[rol].indexOf(modKey);
+  var dando = idx < 0; // true si se está concediendo el permiso
+  if(dando){
+    ROL_PERMISOS[rol].push(modKey);
+  } else {
+    ROL_PERMISOS[rol].splice(idx, 1);
+  }
+  // Persistir el preset del rol
+  try{
+    var payload = {};
+    payload[rol] = ROL_PERMISOS[rol];
+    db.collection('config').doc('rolesPermisos').set(payload, {merge:true}).catch(function(){});
+  }catch(e){}
+  // Propagar a usuarios existentes con ese rol
+  try{
+    var lista = (typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)) ? _usersCache : [];
+    var afectados = lista.filter(function(u){ return u.rol === rol; });
+    afectados.forEach(function(u){
+      var perms = Array.isArray(u.permisos) ? u.permisos.slice() : [];
+      var i = perms.indexOf(modKey);
+      if(dando && i < 0) perms.push(modKey);
+      else if(!dando && i >= 0) perms.splice(i, 1);
+      // Actualizar en Firestore
+      db.collection('usuarios').doc(u.uid).update({ permisos: perms }).catch(function(){});
+      // Actualizar cache local
+      u.permisos = perms;
+    });
+    if(afectados.length){
+      toast((dando?'Permiso concedido a ':'Permiso retirado de ')+rol+' ('+afectados.length+' usuario'+(afectados.length===1?'':'s')+')','success');
+    } else {
+      toast(dando?'Permiso concedido al rol '+rol:'Permiso retirado del rol '+rol,'success');
+    }
+  }catch(e){}
+  // Repintar matriz para mostrar el nuevo estado visual
+  if(S.usersTab === 'roles'){
+    var host = $('users-tab-content');
+    if(host) host.innerHTML = _usersTabRolesHTML();
+    // Restaurar contadores de usuarios por rol
+    Object.keys(ROLES_INFO).forEach(function(r){
+      var count = (typeof _usersCache !== 'undefined' ? _usersCache : []).filter(function(u){return u.rol===r;}).length;
+      var el = $('role-count-'+r);
+      if(el) el.textContent = count;
+    });
+  }
+}
+
+// Cargar preset ROL_PERMISOS desde Firestore (si fue personalizado antes)
+function _cargarRolesPermisosFirestore(){
+  if(!db) return;
+  try{
+    db.collection('config').doc('rolesPermisos').get().then(function(doc){
+      if(!doc || !doc.exists) return;
+      var data = doc.data() || {};
+      Object.keys(ROL_PERMISOS).forEach(function(r){
+        if(Array.isArray(data[r])) ROL_PERMISOS[r] = data[r].slice();
+      });
+      // Si el usuario está viendo la pestaña Roles, refrescar
+      if(S.usersTab === 'roles'){
+        var host = $('users-tab-content');
+        if(host) host.innerHTML = _usersTabRolesHTML();
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+
 // TAB 1: Lista de usuarios
 function _usersTabUsuariosHTML(){
   return '<div class="card" style="margin-bottom:12px">'
@@ -9974,7 +10131,11 @@ function _usersTabRolesHTML(){
              +roles.map(function(r){
                var hasAccess = (ROL_PERMISOS[r]||[]).indexOf(m.id)>=0;
                var isAdmin = r==='Administrador';
-               return '<td style="text-align:center;padding:8px">'
+               // El rol Administrador siempre tiene acceso a todo: no se puede editar.
+               var clickAttr = isAdmin ? '' : ' onclick="toggleRolePerm(\''+r+'\',\''+m.id+'\')"';
+               var cellCursor = isAdmin ? 'default' : 'pointer';
+               var cellTitle = isAdmin ? 'Administrador siempre tiene acceso' : (hasAccess?'Quitar acceso':'Conceder acceso');
+               return '<td style="text-align:center;padding:8px;cursor:'+cellCursor+'" title="'+cellTitle+'"'+clickAttr+'>'
                  +(hasAccess
                    ? '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:'+ROLES_INFO[r].color+';color:#fff;align-items:center;justify-content:center;font-size:13px;font-weight:900" title="Con acceso">✓</div>'
                    : '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--surf2);color:var(--ink3);align-items:center;justify-content:center;font-size:12px;border:1px solid var(--rim)" title="Sin acceso">–</div>')
@@ -9989,7 +10150,11 @@ function _usersTabRolesHTML(){
     + '<td style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--ink);position:sticky;left:0;background:inherit;border-right:1px solid var(--rim)">Eliminar registros</td>'
     + roles.map(function(r){
         var hasDelete = (ROL_PERMISOS[r]||[]).indexOf('perm_delete')>=0;
-        return '<td style="text-align:center;padding:8px">'
+        var isAdmin = r==='Administrador';
+        var clickAttr = isAdmin ? '' : ' onclick="toggleRolePerm(\''+r+'\',\'perm_delete\')"';
+        var cellCursor = isAdmin ? 'default' : 'pointer';
+        var cellTitle = isAdmin ? 'Administrador siempre puede eliminar' : (hasDelete?'Quitar permiso de eliminar':'Conceder permiso de eliminar');
+        return '<td style="text-align:center;padding:8px;cursor:'+cellCursor+'" title="'+cellTitle+'"'+clickAttr+'>'
           +(hasDelete
              ? '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--red);color:#fff;align-items:center;justify-content:center;font-size:13px;font-weight:900">✓</div>'
              : '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--surf2);color:var(--ink3);align-items:center;justify-content:center;font-size:12px;border:1px solid var(--rim)">–</div>')
@@ -10035,6 +10200,8 @@ function usersReload(){
     var ul=$('users-list'); if(ul) ul.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:12px">Sin conexión a Firebase</div>';
     return;
   }
+  // Cargar preset de roles personalizado (si existe)
+  if(typeof _cargarRolesPermisosFirestore === 'function') _cargarRolesPermisosFirestore();
   DB.getUsuarios().then(function(lista){
     _usersCache = lista || [];
     // KPIs
@@ -20409,6 +20576,13 @@ function editarUsuario(uid){
       var permisos=[];
       document.querySelectorAll('#mbd input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
       DB.updateUsuario(uid,{rol:rol,permisos:permisos});
+      // Mantener cache local sincronizado para que la UI refleje los cambios al instante.
+      try{
+        if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
+          var cached = _usersCache.find(function(x){ return x.uid === uid; });
+          if(cached){ cached.rol = rol; cached.permisos = permisos; }
+        }
+      }catch(e){}
       closeM(); nav('users'); toast('Permisos actualizados','success'); return true;
     };
     $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
@@ -20745,6 +20919,9 @@ if (auth) {
           var sbAv = document.querySelector('.sb-av');
           if (sbAv) sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
           if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
+          // ── Listener en tiempo real sobre el documento del usuario actual ──
+          // Si el admin cambia rol o permisos desde otra sesión, se reflejan al instante.
+          if(typeof _attachCurrentUserListener === 'function') _attachCurrentUserListener(user.uid);
         }).catch(function(){
           S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: ['perm_delete'] };
         }).finally(function(){
@@ -20756,6 +20933,8 @@ if (auth) {
       }
     } else {
       window._appInited = false;
+      // Desuscribir listener del documento del usuario al cerrar sesión
+      if(typeof _detachCurrentUserListener === 'function') _detachCurrentUserListener();
       var inviteToken = _getInviteToken();
       if (inviteToken) {
         var appRoot = $('app-root');
