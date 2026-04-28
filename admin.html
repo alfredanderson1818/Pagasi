@@ -9868,6 +9868,17 @@ config(){
 
   </div>
 
+  <!-- Recargar desde Firebase -->
+  <div style="background:var(--surf);border:1.5px solid rgba(33,148,255,.35);border-radius:12px;padding:16px;margin-bottom:12px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px">
+        <div style="font-weight:800;font-size:14px;color:#2194ff;margin-bottom:3px">Sincronizar con Firebase</div>
+        <div style="font-size:12px;color:var(--ink3);line-height:1.5">Limpia el caché local del sistema y vuelve a cargar todos los valores directamente desde Firebase (empresa, plan financiero, tasa, cuentas bancarias, cobradores, clientes, créditos, pagos, etc.).</div>
+      </div>
+      <button class="btn btn-p btn-sm" onclick="recargarDesdeFirebase()" style="flex-shrink:0">↻ Limpiar y recargar</button>
+    </div>
+  </div>
+
   <!-- Seguridad Firebase -->
   <div style="background:var(--surf);border:1.5px solid rgba(232,152,10,.35);border-radius:12px;padding:16px;margin-bottom:12px">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
@@ -16331,6 +16342,126 @@ function guardarTasaBs(){
     .then(function(){ toast('✓ Tasa actualizada: '+t+' Bs./$','success'); })
     .catch(function(e){ toast('Error guardando tasa: '+e.message,'error'); });
   else { toast('✓ Tasa actualizada: '+t+' Bs./$','success'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// LIMPIAR CACHÉ LOCAL Y RECARGAR TODOS LOS VALORES DESDE FIREBASE
+// Resetea los valores en memoria (PLAN, _empresa, _cuentasBanc,
+// _cobradores, tasa Bs, motos, clientes, créditos, pagos, etc.)
+// y los vuelve a leer de Firestore.
+// ══════════════════════════════════════════════════════════════
+function recargarDesdeFirebase(){
+  if(!db){
+    toast('Firebase no está configurado','error');
+    return;
+  }
+  if(!confirm('¿Limpiar el caché local y recargar todos los valores desde Firebase?\n\nSe descartarán los cambios sin guardar en pantalla.')) return;
+
+  toast('Sincronizando con Firebase...','info');
+
+  // 1) Limpiar caché en memoria de configuración
+  try {
+    _empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'', representante:'', repCI:'' };
+    _cuentasBanc = [];
+    _cobradores = ['Juan Admin'];
+    window._tasaBsGlobal = 1;
+    window._planesExtra = [];
+  } catch(e){ /* variables pueden no estar definidas todavía */ }
+
+  // 2) Limpiar caché de motos en localStorage para forzar lectura limpia
+  try {
+    if(typeof localStorage !== 'undefined'){
+      localStorage.removeItem('motosCache');
+      localStorage.removeItem('motosCacheV2');
+    }
+  } catch(e){}
+
+  // 3) Recargar configuraciones específicas desde Firestore
+  var tareas = [];
+
+  // Empresa
+  tareas.push(
+    db.collection('config').doc('empresa').get().then(function(doc){
+      if(doc.exists){
+        var d = doc.data() || {};
+        _empresa = {
+          nombre: d.nombre || 'Pagasi',
+          rif: d.rif || 'J-00000000-0',
+          ciudad: d.ciudad || 'Caracas',
+          tel: d.tel || '',
+          email: d.email || '',
+          direccion: d.direccion || '',
+          representante: d.representante || '',
+          repCI: d.repCI || ''
+        };
+      }
+    })
+  );
+
+  // Tasa Bs
+  tareas.push(
+    db.collection('config').doc('tasa').get().then(function(doc){
+      if(doc.exists && doc.data().tasaBs) window._tasaBsGlobal = doc.data().tasaBs;
+    })
+  );
+
+  // Cuentas bancarias
+  tareas.push(
+    db.collection('config').doc('cuentasBanc').get().then(function(doc){
+      var lista = (doc.exists && doc.data().lista) ? doc.data().lista : [];
+      if(typeof renderCuentasBanc === 'function') renderCuentasBanc(lista);
+      else _cuentasBanc = lista;
+    })
+  );
+
+  // Cobradores
+  tareas.push(
+    db.collection('config').doc('cobradores').get().then(function(doc){
+      var lista = (doc.exists && doc.data().lista) ? doc.data().lista : ['Juan Admin'];
+      if(typeof renderCobradores === 'function') renderCobradores(lista);
+      else _cobradores = lista;
+    })
+  );
+
+  // Score config
+  tareas.push(
+    db.collection('config').doc('score').get().then(function(doc){
+      if(doc.exists && typeof SCORE_CFG !== 'undefined'){
+        var d = doc.data() || {};
+        Object.keys(d).forEach(function(k){ SCORE_CFG[k] = d[k]; });
+      }
+    }).catch(function(){})
+  );
+
+  // Roles y permisos personalizados
+  tareas.push(
+    db.collection('config').doc('rolesPermisos').get().then(function(doc){
+      if(doc.exists && typeof ROL_PERMISOS !== 'undefined'){
+        var d = doc.data() || {};
+        Object.keys(d).forEach(function(rol){
+          if(Array.isArray(d[rol])) ROL_PERMISOS[rol] = d[rol];
+        });
+      }
+    }).catch(function(){})
+  );
+
+  // 4) Recargar todos los datos principales (motos, clientes, créditos, pagos, etc.)
+  // a través de DB.load() — recarga PLAN, CATALOGO, planes extra, etc.
+  tareas.push(
+    (typeof DB !== 'undefined' && DB.load) ? DB.load() : Promise.resolve()
+  );
+
+  Promise.all(tareas).then(function(){
+    toast('✓ Datos recargados desde Firebase','success');
+    // Re-render de la página actual para reflejar los nuevos valores
+    if(typeof nav === 'function' && S && S.page){
+      nav(S.page);
+    } else if(typeof nav === 'function'){
+      nav('config');
+    }
+  }).catch(function(e){
+    toast('Error al sincronizar: '+(e&&e.message||e),'error');
+  });
 }
 
 function guardarEmpresa(){
