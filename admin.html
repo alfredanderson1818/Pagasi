@@ -15301,7 +15301,7 @@ function _docCtx(){
   var mPlaca = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
   var mMarca = c.marca || moto.marca || '';
   var mSerialMotor = c.serialMotor || moto.serialMotor || '';
-  var mSerialChasis = c.serialChasis || moto.serialChasis || '';
+  var mSerialChasis = c.serialChasis || moto.serialChasis || c.vin || moto.vin || '';
   var mGpsNum = c.gpsNum || moto.gpsNum || moto.gps_id || '';
   var purple = '#5E3BEE';
   var purpleDark = '#4C2ED0';
@@ -17144,7 +17144,7 @@ function abrirFiniquito(credId){
   var mColor = (c.color && c.color!=='—') ? c.color : (moto.color || '');
   var mAnio = c.anio || moto.anio || '';
   var mPlaca = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
-  var mSerialChasis = c.serialChasis || moto.serialChasis || '';
+  var mSerialChasis = c.serialChasis || moto.serialChasis || c.vin || moto.vin || '';
   var hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
   var purple = '#5E3BEE';
   var purpleDark = '#4C2ED0';
