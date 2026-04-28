@@ -10859,12 +10859,21 @@ function openAddMoto(id=null){
     <div id="calc-preview" style="background:var(--gs);border:1px solid var(--rim2);border-radius:var(--r8);padding:13px;margin:12px 0;display:${ed?'grid':'none'};grid-template-columns:repeat(3,1fr);gap:10px"></div>
     <div class="fsec">Identificación y estado</div>
     <div class="fgr">
-      <div class="fg"><label>VIN</label><input class="fi" id="m_vin" value="${(m&&m.vin)||''}" placeholder="VIN-0000"></div>
+      <div class="fg"><label>Marca</label><input class="fi" id="m_marca" value="${(m&&m.marca)||''}" placeholder="Ej: Empire, Bera..."></div>
       <div class="fg"><label>Año</label><input class="fi" id="m_anio" type="number" min="1980" max="2100" step="1" value="${(m&&m.anio)||''}" placeholder="${new Date().getFullYear()}"></div>
       <div class="fg"><label>Color</label><input class="fi" id="m_color" value="${(m&&m.color)||''}" placeholder="Negro, Rojo..."></div>
     </div>
     <div class="fgr">
+      <div class="fg"><label>VIN</label><input class="fi" id="m_vin" value="${(m&&m.vin)||''}" placeholder="VIN-0000"></div>
+      <div class="fg"><label>Serial de Motor</label><input class="fi" id="m_serial_motor" value="${(m&&m.serialMotor)||''}" placeholder="Ej: 162FMJ-..."></div>
+      <div class="fg"><label>Serial de Chasis</label><input class="fi" id="m_serial_chasis" value="${(m&&m.serialChasis)||''}" placeholder="Ej: 8LBCF..."></div>
+    </div>
+    <div class="fgr">
+      <div class="fg"><label>Placa (si aplica)</label><input class="fi" id="m_placa" value="${(m&&m.placa)||''}" placeholder="AA123BC"></div>
+      <div class="fg"><label>N° de GPS</label><input class="fi" id="m_gps_num" value="${(m&&m.gpsNum)||''}" placeholder="Ej: GPS-12345"></div>
       <div class="fg"><label>Estado</label><select class="fs" id="m_est">${['disponible','financiada','recuperada','inventario','propia'].map(s=>`<option ${(m&&m.estado)===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="fgr">
       <div class="fg"><label>Cliente asignado</label><input class="fi" id="m_cli" value="${(m&&m.cliente)||''}" placeholder="Opcional"></div>
     </div>
     <div class="tgl-w" style="margin-top:8px">
@@ -10886,7 +10895,7 @@ function openAddMoto(id=null){
     const planMode=(($('m_plan_mode')&&$('m_plan_mode').value)||'global');
     const precioBaseReal=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||precio))||precio;
     const calc=planMode==='custom' ? calcCustomPlan(precioBaseReal, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo) : Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
-    const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,color:g('m_color')||'',anio:(parseInt(g('m_anio'),10)||null),vin:g('m_vin')||'VIN-'+Date.now().toString().slice(-4),estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
+    const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,marca:g('m_marca')||'',color:g('m_color')||'',anio:(parseInt(g('m_anio'),10)||null),vin:g('m_vin')||'',placa:g('m_placa')||'',serialMotor:g('m_serial_motor')||'',serialChasis:g('m_serial_chasis')||'',gpsNum:g('m_gps_num')||'',estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
     if(ed){const i=S.motos.findIndex(x=>String(x.id)===String(m.id));if(i>=0){S.motos[i]=obj;}else{S.motos.push(obj);}}else S.motos.push(obj);
     DB.saveMoto(obj);
     closeM();nav('motos');toast(ed?'Moto actualizada':'✓ Moto agregada','success');return true;
@@ -11796,9 +11805,18 @@ function _wzRender(motoId){
     + '</div>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">'
+    + _wzFg('Marca','wz_marca','text','Ej: Empire, Bera...')
     + _wzFg('VIN / Serial','wz_vin','text','Ej: 8LBCF...')
     + _wzFg('Color','wz_color','text','Ej: Negro')
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">'
+    + _wzFg('Año','wz_anio','number',new Date().getFullYear())
     + _wzFg('Placa (si aplica)','wz_placa','text','AA123BC')
+    + _wzFg('N° de GPS','wz_gps_num','text','Ej: GPS-12345')
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
+    + _wzFg('Serial de Motor','wz_serial_motor','text','Ej: 162FMJ-...')
+    + _wzFg('Serial de Chasis','wz_serial_chasis','text','Ej: 8LBCF...')
     + '</div>'
     + '<div id="wz-fin-preview" style="margin-top:14px;display:none;background:var(--gs);border:1px solid var(--rim2);border-radius:12px;padding:14px">'
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan de crédito automático</div>'
@@ -13058,6 +13076,9 @@ function _wzValidar(){
   if(s===3){
     WZ.uso = g('wz_uso');
     WZ.vin = g('wz_vin'); WZ.color = g('wz_color'); WZ.placa = g('wz_placa');
+    WZ.marca = g('wz_marca'); WZ.anio = g('wz_anio');
+    WZ.serialMotor = g('wz_serial_motor'); WZ.serialChasis = g('wz_serial_chasis');
+    WZ.gpsNum = g('wz_gps_num');
   }
   if(s===2){
     WZ.obs = g('wz_obs'); WZ.wz_obs = WZ.obs;
@@ -13286,9 +13307,14 @@ function _wzGuardar(){
     clienteId: cliId,
     modelo: WZ.motoModelo||'',
     motoId: WZ.motoInvId||null,
+    marca: WZ.marca||'',
     vin: WZ.vin||'',
-    color: WZ.color||'—',
-    placa: WZ.placa||'—',
+    color: WZ.color||'',
+    anio: WZ.anio||'',
+    placa: WZ.placa||'',
+    serialMotor: WZ.serialMotor||'',
+    serialChasis: WZ.serialChasis||'',
+    gpsNum: WZ.gpsNum||'',
     precio: WZ.precio||0,
     precioBaseReal: r.precioBaseReal||WZ.precio||0,
     ini: r.ini,
@@ -13330,6 +13356,11 @@ function _wzGuardar(){
       if(WZ.vin) S.motos[mi].vin=WZ.vin;
       if(WZ.color) S.motos[mi].color=WZ.color;
       if(WZ.placa) S.motos[mi].placa=WZ.placa;
+      if(WZ.marca) S.motos[mi].marca=WZ.marca;
+      if(WZ.anio) S.motos[mi].anio=WZ.anio;
+      if(WZ.serialMotor) S.motos[mi].serialMotor=WZ.serialMotor;
+      if(WZ.serialChasis) S.motos[mi].serialChasis=WZ.serialChasis;
+      if(WZ.gpsNum) S.motos[mi].gpsNum=WZ.gpsNum;
       DB.saveMoto(S.motos[mi]);
     }
   } else if(WZ.motoModelo){
@@ -13340,9 +13371,14 @@ function _wzGuardar(){
       precio:parseFloat(WZ.precio)||0,
       precioBaseReal:r.precioBaseReal||parseFloat(WZ.precio)||0,
       planModo:r.mode||'global',
+      marca:WZ.marca||'',
       color:WZ.color||'',
-      vin:WZ.vin||('VIN-'+Date.now().toString().slice(-6)),
+      anio:WZ.anio||'',
+      vin:WZ.vin||'',
       placa:WZ.placa||'',
+      serialMotor:WZ.serialMotor||'',
+      serialChasis:WZ.serialChasis||'',
+      gpsNum:WZ.gpsNum||'',
       estado:'financiada',
       cliente:((existing&&existing.nombre)||WZ.nom)||null,
       gps:false,
@@ -13425,13 +13461,21 @@ function openAddCredLegacy(motoId=null){
 
     <div class="fsec" style="margin-top:14px">Motocicleta a Financiar</div>
     <div class="fgr">
-      <div class="fg"><label>Modelo *</label><select class="fs" id="k_moto" onchange="updCredFill(this)">${motosList.length?motosList.map(m=>`<option value="${m.id}" data-precio="${m.precio}" data-vin="${m.vin||''}" data-color="${m.color||''}" ${motoId===m.id?'selected':''}>${m.modelo} — ${fmt(m.precio)}</option>`).join(''):'<option value="">— No hay motos disponibles —</option>'}</select></div>
-      <div class="fg"><label>VIN / Serial *</label><input class="fi" id="k_vin" placeholder="Ej: 8LBCF11B3HY123456"></div>
+      <div class="fg"><label>Modelo *</label><select class="fs" id="k_moto" onchange="updCredFill(this)">${motosList.length?motosList.map(m=>`<option value="${m.id}" data-precio="${m.precio}" data-vin="${m.vin||''}" data-color="${m.color||''}" data-marca="${m.marca||''}" data-anio="${m.anio||''}" data-placa="${m.placa||''}" data-serial-motor="${m.serialMotor||''}" data-serial-chasis="${m.serialChasis||''}" data-gps-num="${m.gpsNum||''}" ${motoId===m.id?'selected':''}>${m.modelo} — ${fmt(m.precio)}</option>`).join(''):'<option value="">— No hay motos disponibles —</option>'}</select></div>
+      <div class="fg"><label>Marca</label><input class="fi" id="k_marca" placeholder="Ej: Empire, Bera..."></div>
     </div>
     <div class="fgr c3">
       <div class="fg"><label>Color</label><input class="fi" id="k_color" placeholder="Ej: Negro, Rojo..."></div>
       <div class="fg"><label>Año</label><input class="fi" id="k_anio" type="number" min="2015" max="2030" placeholder="${new Date().getFullYear()}"></div>
       <div class="fg"><label>Placa (si aplica)</label><input class="fi" id="k_placa" placeholder="Ej: AA123BC"></div>
+    </div>
+    <div class="fgr c3">
+      <div class="fg"><label>VIN / Serial *</label><input class="fi" id="k_vin" placeholder="Ej: 8LBCF11B3HY123456"></div>
+      <div class="fg"><label>Serial de Motor</label><input class="fi" id="k_serial_motor" placeholder="Ej: 162FMJ-..."></div>
+      <div class="fg"><label>Serial de Chasis</label><input class="fi" id="k_serial_chasis" placeholder="Ej: 8LBCF..."></div>
+    </div>
+    <div class="fgr c3">
+      <div class="fg"><label>N° de GPS</label><input class="fi" id="k_gps_num" placeholder="Ej: GPS-12345"></div>
     </div>
 
     <div style="background:var(--gb);border:1px solid var(--rim2);border-radius:var(--r12);padding:16px;margin-top:14px">
@@ -13483,10 +13527,14 @@ function openAddCredLegacy(motoId=null){
       clienteId:($('k_cli')&&$('k_cli').value),
       motoId:moto.id,
       modelo:moto.modelo,
+      marca:($('k_marca')&&$('k_marca').value)||'',
       vin:vin,
-      color:($('k_color')&&$('k_color').value)||'—',
-      anio:($('k_anio')&&$('k_anio').value)||new Date().getFullYear(),
-      placa:($('k_placa')&&$('k_placa').value)||'—',
+      color:($('k_color')&&$('k_color').value)||'',
+      anio:($('k_anio')&&$('k_anio').value)||'',
+      placa:($('k_placa')&&$('k_placa').value)||'',
+      serialMotor:($('k_serial_motor')&&$('k_serial_motor').value)||'',
+      serialChasis:($('k_serial_chasis')&&$('k_serial_chasis').value)||'',
+      gpsNum:($('k_gps_num')&&$('k_gps_num').value)||'',
       polizaSeguro:polizaSeguro||'',
       precio:moto.precio,
       ini:r.ini,
@@ -13508,7 +13556,19 @@ function openAddCredLegacy(motoId=null){
     S.creds.push(newCred);
     DB.saveCred(newCred);
     const mi=S.motos.findIndex(x=>String(x.id)===String(mId));
-    if(mi>=0){S.motos[mi].estado='financiada';S.motos[mi].cliente=newCred.cli;S.motos[mi].vin=vin;DB.saveMoto(S.motos[mi]);}
+    if(mi>=0){
+      S.motos[mi].estado='financiada';
+      S.motos[mi].cliente=newCred.cli;
+      S.motos[mi].vin=vin;
+      if(newCred.marca) S.motos[mi].marca=newCred.marca;
+      if(newCred.color) S.motos[mi].color=newCred.color;
+      if(newCred.anio) S.motos[mi].anio=newCred.anio;
+      if(newCred.placa) S.motos[mi].placa=newCred.placa;
+      if(newCred.serialMotor) S.motos[mi].serialMotor=newCred.serialMotor;
+      if(newCred.serialChasis) S.motos[mi].serialChasis=newCred.serialChasis;
+      if(newCred.gpsNum) S.motos[mi].gpsNum=newCred.gpsNum;
+      DB.saveMoto(S.motos[mi]);
+    }
 
     // ── Registrar pago de la inicial como movimiento en cuentas ──
     var iniMetodo=($('k_ini_metodo')&&$('k_ini_metodo').value)||(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD');
@@ -13821,10 +13881,28 @@ function updCredFill(sel){
   if(!opt) return;
   var vin = opt.dataset.vin || '';
   var color = opt.dataset.color || '';
+  var marca = opt.dataset.marca || '';
+  var anio = opt.dataset.anio || '';
+  var placa = opt.dataset.placa || '';
+  var serialMotor = opt.dataset.serialMotor || '';
+  var serialChasis = opt.dataset.serialChasis || '';
+  var gpsNum = opt.dataset.gpsNum || '';
   var vinEl = $('k_vin');
   var colorEl = $('k_color');
+  var marcaEl = $('k_marca');
+  var anioEl = $('k_anio');
+  var placaEl = $('k_placa');
+  var smEl = $('k_serial_motor');
+  var scEl = $('k_serial_chasis');
+  var gpsNumEl = $('k_gps_num');
   if(vinEl && vin) vinEl.value = vin;
   if(colorEl && color) colorEl.value = color;
+  if(marcaEl && marca) marcaEl.value = marca;
+  if(anioEl && anio) anioEl.value = anio;
+  if(placaEl && placa) placaEl.value = placa;
+  if(smEl && serialMotor) smEl.value = serialMotor;
+  if(scEl && serialChasis) scEl.value = serialChasis;
+  if(gpsNumEl && gpsNum) gpsNumEl.value = gpsNum;
 }
 
 function updCredCalc(sel){
@@ -15214,17 +15292,17 @@ function _docCtx(){
   var cli = S.clientes.find(function(x){return x.nombre===c.cli;}) || S.clientes.find(function(x){return String(x.id)===String(c.clienteId);}) || {};
   var moto = S.motos.find(function(m){return String(m.id)===String(c.motoId);}) || {};
   var hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
-  var V = function(x){ return (x!=null && String(x).trim()!=='') ? String(x).trim() : '________________'; };
-  var Vm = function(n){ return (n!=null && !isNaN(parseFloat(n))) ? '$ '+parseFloat(n).toFixed(2) : '$ _______________'; };
+  var V = function(x){ return (x!=null && String(x).trim()!=='') ? String(x).trim() : ''; };
+  var Vm = function(n){ return (n!=null && !isNaN(parseFloat(n))) ? '$ '+parseFloat(n).toFixed(2) : ''; };
   var mModelo = c.modelo || moto.modelo || '';
   var mVin = c.vin || moto.vin || '';
-  var mColor = c.color || moto.color || '';
+  var mColor = (c.color && c.color!=='—') ? c.color : (moto.color || '');
   var mAnio = c.anio || moto.anio || '';
   var mPlaca = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
-  var mMarca = moto.marca || (mModelo ? mModelo.split(' ')[0] : '');
-  var mSerialMotor = moto.serialMotor || '';
-  var mSerialChasis = moto.serialChasis || mVin;
-  var mGpsNum = moto.gpsNum || moto.gps_id || (moto.gps ? 'Activo' : '');
+  var mMarca = c.marca || moto.marca || '';
+  var mSerialMotor = c.serialMotor || moto.serialMotor || '';
+  var mSerialChasis = c.serialChasis || moto.serialChasis || '';
+  var mGpsNum = c.gpsNum || moto.gpsNum || moto.gps_id || '';
   var purple = '#5E3BEE';
   var purpleDark = '#4C2ED0';
   var purpleLight = '#F2EEFF';
@@ -15356,7 +15434,7 @@ function _renderContratoArrendamiento(){
       <tr><td style="${valCell}">Canon total del período de arrendamiento:</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.total)}</td></tr>
       <tr style="background:${purpleLight}"><td style="padding:9px 10px;font-size:11.5px;font-weight:800;color:${purpleDark}">Precio de ejercicio de la opción a compra</td><td style="padding:9px 10px;text-align:right;font-weight:900;color:${purpleDark}">$ 1.00</td></tr>
     </table>
-    <p style="${p};margin-top:10px">Todos los pagos deberán realizarse <strong>exclusivamente en Dólares Americanos (USD)</strong>. No se aceptarán pagos en moneda nacional, ni ninguna otra divisa. Los cánones se cancelarán los días ________________ y ________________ de cada mes, contados a partir de la fecha de suscripción del presente contrato.</p>
+    <p style="${p};margin-top:10px">Todos los pagos deberán realizarse <strong>exclusivamente en Dólares Americanos (USD)</strong>. No se aceptarán pagos en moneda nacional, ni ninguna otra divisa. Los cánones se cancelarán de manera quincenal, contados a partir de la fecha de suscripción del presente contrato.</p>
 
     <!-- CRONOGRAMA DE PAGOS -->
     <h3 style="${clausH}">CRONOGRAMA DE PAGOS QUINCENALES</h3>
@@ -15394,7 +15472,7 @@ function _renderContratoArrendamiento(){
       }
       html += '</div>';
       html += '</div>';
-      var fechaInicioStr = c.fecha?new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}):'________________';
+      var fechaInicioStr = c.fecha?new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}):'';
       html += '<p style="font-size:10.5px;color:#666;margin:8px 0 0;font-style:italic;text-align:center">Fechas estimadas a partir del inicio del contrato ('+fechaInicioStr+'). Las cuotas vencen cada quince (15) días.</p>';
       return html;
     })()}
@@ -15479,8 +15557,8 @@ function _renderContratoArrendamiento(){
             <div style="text-align:center;padding-top:46px">
               <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
                 Firma<br>
-                Nombre: ${cli.nombre||c.cli||'________________'}<br>
-                C.I.: ${cli.cedula||'__________________'}
+                Nombre: ${cli.nombre||c.cli||''}<br>
+                C.I.: ${cli.cedula||''}
               </div>
             </div>
             <div>
@@ -15495,8 +15573,8 @@ function _renderContratoArrendamiento(){
             <div style="text-align:center;padding-top:46px">
               <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
                 Firma<br>
-                Nombre: ${cli.fiador_nom||'________________'}<br>
-                C.I.: ${cli.fiador_ci||'__________________'}
+                Nombre: ${cli.fiador_nom||''}<br>
+                C.I.: ${cli.fiador_ci||''}
               </div>
             </div>
             <div>
@@ -15609,8 +15687,8 @@ function _renderPagare(){
             <div style="text-align:center;padding-top:46px">
               <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
                 Firma<br>
-                Nombre: ${cli.nombre||c.cli||'________________'}<br>
-                C.I.: ${cli.cedula||'__________________'}
+                Nombre: ${cli.nombre||c.cli||''}<br>
+                C.I.: ${cli.cedula||''}
               </div>
             </div>
             <div>
@@ -15625,8 +15703,8 @@ function _renderPagare(){
             <div style="text-align:center;padding-top:46px">
               <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
                 Firma<br>
-                Nombre: ${cli.fiador_nom||'________________'}<br>
-                C.I.: ${cli.fiador_ci||'__________________'}
+                Nombre: ${cli.fiador_nom||''}<br>
+                C.I.: ${cli.fiador_ci||''}
               </div>
             </div>
             <div>
@@ -15728,8 +15806,8 @@ function _renderCartaInstrucciones(){
             <div style="text-align:center;padding-top:46px">
               <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
                 Firma<br>
-                Nombre: ${cli.nombre||c.cli||'________________'}<br>
-                C.I.: ${cli.cedula||'__________________'}
+                Nombre: ${cli.nombre||c.cli||''}<br>
+                C.I.: ${cli.cedula||''}
               </div>
             </div>
             <div>
@@ -15744,7 +15822,7 @@ function _renderCartaInstrucciones(){
             <strong>${empresaUp}</strong><br>
             Representante Legal<br>
             ${emp.representante?'Nombre: '+emp.representante:''}<br>
-            C.I.: ${emp.repCI||'_______________'}<br>
+            C.I.: ${emp.repCI||''}<br>
             Fecha de recepción: ____________
           </div>
         </div>
@@ -17063,10 +17141,10 @@ function abrirFiniquito(credId){
   var totalCuotas = c.totalCuotas||c.plazo*2;
   var mModelo = c.modelo || moto.modelo || '';
   var mVin = c.vin || moto.vin || '';
-  var mColor = c.color || moto.color || '';
+  var mColor = (c.color && c.color!=='—') ? c.color : (moto.color || '');
   var mAnio = c.anio || moto.anio || '';
   var mPlaca = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
-  var mSerialChasis = moto.serialChasis || mVin;
+  var mSerialChasis = c.serialChasis || moto.serialChasis || '';
   var hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
   var purple = '#5E3BEE';
   var purpleDark = '#4C2ED0';
@@ -17103,14 +17181,14 @@ function abrirFiniquito(credId){
       <div style="border-bottom:1px solid #ccc;margin-bottom:12px"></div>
 
       <!-- Texto principal -->
-      <p style="font-size:11.5px;line-height:1.6;margin:10px 0;text-align:justify">Por medio del presente documento, <strong>${empresaUp}</strong>, inscrita bajo el RIF <strong>${emp.rif||'—'}</strong>, con domicilio en <strong>${emp.direccion||emp.ciudad||'Caracas'}</strong>, en su condición de <strong>EL ARRENDADOR</strong>, deja formal constancia de que el(la) ciudadano(a) <strong>${c.cli}</strong>, titular de la cédula de identidad N° <strong>${cl.cedula||'—'}</strong>, en su condición de <strong>EL ARRENDATARIO</strong> del contrato de arrendamiento con opción a compra N° <strong>${c.id}</strong>, ha cancelado satisfactoriamente la totalidad de los <strong>${totalCuotas} cánones quincenales</strong> acordados, así como el pago simbólico de la opción a compra por USD 1.00.</p>
+      <p style="font-size:11.5px;line-height:1.6;margin:10px 0;text-align:justify">Por medio del presente documento, <strong>${empresaUp}</strong>, inscrita bajo el RIF <strong>${emp.rif||''}</strong>, con domicilio en <strong>${emp.direccion||emp.ciudad||''}</strong>, en su condición de <strong>EL ARRENDADOR</strong>, deja formal constancia de que el(la) ciudadano(a) <strong>${c.cli}</strong>, titular de la cédula de identidad N° <strong>${cl.cedula||''}</strong>, en su condición de <strong>EL ARRENDATARIO</strong> del contrato de arrendamiento con opción a compra N° <strong>${c.id}</strong>, ha cancelado satisfactoriamente la totalidad de los <strong>${totalCuotas} cánones quincenales</strong> acordados, así como el pago simbólico de la opción a compra por USD 1.00.</p>
 
       <!-- Datos del vehículo -->
       <h3 style="color:${purple};font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid ${purple}">VEHÍCULO OBJETO DEL CONTRATO</h3>
       <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
-        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px;width:32%">Modelo:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mModelo||'—'}</td><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px;width:32%">Color:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mColor||'—'}</td></tr>
-        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Año:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mAnio||'—'}</td><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Placa:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mPlaca||'—'}</td></tr>
-        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Serial de Chasis / VIN:</td><td colspan="3" style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mSerialChasis||'—'}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px;width:32%">Modelo:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mModelo||''}</td><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px;width:32%">Color:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mColor||''}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Año:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mAnio||''}</td><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Placa:</td><td style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mPlaca||''}</td></tr>
+        <tr><td style="background:${purpleLight};color:${purpleDark};font-weight:700;font-size:11.5px;padding:7px 10px">Serial de Chasis / VIN:</td><td colspan="3" style="padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7">${mSerialChasis||''}</td></tr>
       </table>
 
       <!-- Resumen económico -->
@@ -17141,7 +17219,7 @@ function abrirFiniquito(credId){
               <strong>${empresaUp}</strong><br>
               Representante Legal<br>
               ${emp.representante?'Nombre: '+emp.representante:''}<br>
-              C.I.: ${emp.repCI||'_______________'}
+              C.I.: ${emp.repCI||''}
             </div>
           </div>
           <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
@@ -17150,8 +17228,8 @@ function abrirFiniquito(credId){
               <div style="text-align:center;padding-top:46px">
                 <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
                   Firma<br>
-                  Nombre: ${c.cli||'________________'}<br>
-                  C.I.: ${cl.cedula||'__________________'}
+                  Nombre: ${c.cli||''}<br>
+                  C.I.: ${cl.cedula||''}
                 </div>
               </div>
               <div>
