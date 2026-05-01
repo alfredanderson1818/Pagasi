@@ -3613,6 +3613,24 @@ function calcCustomPlan(precioBaseReal, inicialReal, cuotaQ, plazoMeses){
   var apy=(Math.pow(1+tasaQ,24)-1)*100;
   return {precioBaseReal:precio, ini:ini, fin:fin, total:total, cuotaQ:cuota, cuotaM:cuota*2, totalPagado:totalPagado, plazo:plazo, totalCuotas:totalCuotas, factor:factor, inicialPct:inicialPct, tasaQuincenal:tasaQ*100, tasaMensual:tasaMensual, apy:apy};
 }
+// ── CALCULADORA APY: dada precio, %inicial, APY objetivo y plazo, calcula la cuota quincenal ──
+function calcApyPlan(precioBaseReal, inicialPct, apyObjetivo, plazoMeses){
+  var precio=parseFloat(precioBaseReal)||0;
+  var iniPct=parseFloat(inicialPct)||0;
+  var apy=parseFloat(apyObjetivo)||0;
+  var plazo=parseInt(plazoMeses,10)||0;
+  var totalCuotas=Math.max(0, plazo*2);
+  var ini=precio*iniPct;
+  var fin=Math.max(0, precio-ini);
+  // tasa quincenal a partir del APY: (1+APY)^(1/24) - 1
+  var tasaQ = Math.pow(1 + apy/100, 1/24) - 1;
+  var cuotaQ = pmtRate(tasaQ, totalCuotas, fin);
+  var total = cuotaQ*totalCuotas;
+  var totalPagado = ini+total;
+  var factor = fin>0 ? (total/fin) : 0;
+  var tasaMensual = tasaQ*2*100;
+  return {precioBaseReal:precio, ini:ini, fin:fin, total:total, cuotaQ:cuotaQ, cuotaM:cuotaQ*2, totalPagado:totalPagado, plazo:plazo, totalCuotas:totalCuotas, factor:factor, inicialPct:iniPct, tasaQuincenal:tasaQ*100, tasaMensual:tasaMensual, apy:apy};
+}
 function getWzPlanConfig(){
   var modo=((document.getElementById('wz_plan_mode')||{}).value)||WZ.planMode||'global';
   var precioBase=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value));
@@ -3620,6 +3638,16 @@ function getWzPlanConfig(){
   if(modo!=='custom'){
     var baseCalc=calcMoto(precioBase||WZ.precio||0);
     return {mode:'global', precioBaseReal:precioBase||parseFloat(WZ.precio)||0, ini:baseCalc.ini, fin:baseCalc.fin, total:baseCalc.total, cuotaQ:baseCalc.cuotaQ, cuotaM:baseCalc.cuotaM, totalPagado:baseCalc.totalPagado, plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2, factor:PLAN.factor, inicialPct:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy, sourcePlan:{plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy}};
+  }
+  if(modo==='apy'){
+    var apyObj=parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
+    var plazoApy=parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
+    var iniSel=parseFloat(((document.getElementById('wz_apy_inicial_sel')||{}).value));
+    if(!(iniSel>0)) iniSel=0.50; // 50% por defecto
+    var apyCalc=calcApyPlan(precioBase||WZ.precio||0, iniSel, apyObj, plazoApy);
+    apyCalc.mode='apy';
+    apyCalc.sourcePlan={plazo:apyCalc.plazo, factor:apyCalc.factor, inicial:apyCalc.inicialPct, tasaMensual:apyCalc.tasaMensual, apy:apyCalc.apy};
+    return apyCalc;
   }
   var inicialReal=parseFloat(((document.getElementById('wz_ini_real')||{}).value));
   if(!(inicialReal>=0)) inicialReal=parseFloat(WZ.ini)||0;
@@ -3636,10 +3664,61 @@ function _wzTogglePlanMode(v){
   WZ.planMode=v||(((document.getElementById('wz_plan_mode')||{}).value)||'global');
   var box=document.getElementById('wz_plan_custom_box');
   if(box) box.style.display=WZ.planMode==='custom'?'block':'none';
+  var boxApy=document.getElementById('wz_plan_apy_box');
+  if(boxApy) boxApy.style.display=WZ.planMode==='apy'?'block':'none';
   var precioBase=document.getElementById('wz_precio_base_real');
   if(precioBase && !precioBase.value && (WZ.precio||0)>0) precioBase.value=(parseFloat(WZ.precio)||0).toFixed(2);
   _wzActualizarFinPreview((document.getElementById('wz_precio')||{}).value || WZ.precio || 0);
   _wzScore();
+}
+
+// ── Comparativo APY: calcula cuotas para iniciales 45%, 50%, 55% ──
+function _wzApyCompare(){
+  var precio=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
+  var apy=parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
+  var plazo=parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
+  var grid=document.getElementById('wz_apy_compare_grid');
+  var box=document.getElementById('wz_apy_compare');
+  if(!grid||!box) return;
+  if(!(precio>0)||!(apy>0)||!(plazo>0)){ box.style.display='none'; _wzActualizarFinPreview(WZ.precio||0); return; }
+  box.style.display='block';
+  var pcts=[0.45,0.50,0.55];
+  grid.innerHTML=pcts.map(function(p){
+    var r=calcApyPlan(precio,p,apy,plazo);
+    return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:10px;padding:10px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p1);margin-bottom:6px">Inicial '+(p*100).toFixed(0)+'%</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Inicial</div>'
+      +'<div style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$'+r.ini.toFixed(2)+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Cuota quincenal</div>'
+      +'<div style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$'+r.cuotaQ.toFixed(2)+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Total a pagar</div>'
+      +'<div style="font-size:13px;font-weight:800;color:var(--ink)">$'+r.totalPagado.toFixed(2)+'</div>'
+      +'</div>';
+  }).join('');
+  _wzActualizarFinPreview(WZ.precio||0);
+  _wzScore();
+}
+
+// ── Guardar el plan APY actual como plan nuevo en planesExtra ──
+function _wzGuardarPlanApy(){
+  var precio=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
+  var apy=parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
+  var plazo=parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
+  var iniSel=parseFloat(((document.getElementById('wz_apy_inicial_sel')||{}).value))||0.50;
+  if(!(precio>0)||!(apy>0)||!(plazo>0)){ if(typeof toast==='function') toast('Completa precio, APY y plazo','error'); return; }
+  var r=calcApyPlan(precio,iniSel,apy,plazo);
+  var nombre='APY '+apy.toFixed(1)+'% · '+plazo+'m · Ini '+(iniSel*100).toFixed(0)+'%';
+  var newPlan={nombre:nombre, plazo:plazo, factor:parseFloat(r.factor.toFixed(4)), inicial:iniSel, tasaMensual:parseFloat(r.tasaMensual.toFixed(2)), apy:apy, moraPct:(PLAN.moraPct||5), diasGracia:(PLAN.diasGracia||5), origen:'apy'};
+  if(!window._planesExtra) window._planesExtra=[];
+  window._planesExtra.push(newPlan);
+  try{ localStorage.setItem('pagasi_planes_extra', JSON.stringify(window._planesExtra)); }catch(_e){}
+  if(typeof db!=='undefined' && db){
+    db.collection('config').doc('planes').set({items:window._planesExtra})
+      .then(function(){ if(typeof toast==='function') toast('Plan "'+nombre+'" guardado','success'); })
+      .catch(function(){ if(typeof toast==='function') toast('Plan guardado localmente','success'); });
+  } else {
+    if(typeof toast==='function') toast('Plan "'+nombre+'" guardado localmente','success');
+  }
 }
 
 // ══════════════════════════════════════════
@@ -10856,7 +10935,7 @@ function openAddMoto(id=null){
     <div style="background:var(--surf);border:1px solid var(--rim);border-radius:var(--r8);padding:12px;margin:12px 0">
       <div class="fsec" style="margin:0 0 8px 0">Plan sugerido</div>
       <div class="fgr">
-        <div class="fg"><label>Tipo de plan</label><select class="fs" id="m_plan_mode" onchange="previewCalc()"><option value="global" ${!(m&&m.planModo==='custom')?'selected':''}>Principal</option><option value="custom" ${(m&&m.planModo==='custom')?'selected':''}>Personalizado</option></select></div>
+        <div class="fg"><label>Tipo de plan</label><select class="fs" id="m_plan_mode" onchange="previewCalc()"><option value="global" ${!(m&&(m.planModo==='custom'||m.planModo==='apy'))?'selected':''}>Principal</option><option value="custom" ${(m&&m.planModo==='custom')?'selected':''}>Personalizado</option><option value="apy" ${(m&&m.planModo==='apy')?'selected':''}>APY / Meses</option></select></div>
         <div class="fg"><label>Precio base real</label><input class="fi" id="m_precio_base" type="number" value="${(m&&(m.precioBaseReal||m.precio))||''}" placeholder="0.00" oninput="previewCalc()"></div>
       </div>
       <div id="m_plan_custom_box" style="display:${(m&&m.planModo==='custom')?'block':'none'};margin-top:8px">
@@ -10865,6 +10944,24 @@ function openAddMoto(id=null){
           <div class="fg"><label>Cuota quincenal</label><input class="fi" id="m_cuota_q_custom" type="number" value="${(m&&m.planModo==='custom'&&(m.cuotaQ||''))||''}" placeholder="0.00" oninput="previewCalc()"></div>
           <div class="fg"><label>Plazo (meses)</label><input class="fi" id="m_plazo_custom" type="number" min="1" step="1" value="${(m&&m.planModo==='custom'&&(m.plazo||''))||PLAN.plazo}" placeholder="12" oninput="previewCalc()"></div>
         </div>
+      </div>
+      <div id="m_plan_apy_box" style="display:${(m&&m.planModo==='apy')?'block':'none'};margin-top:8px">
+        <div class="fgr">
+          <div class="fg"><label>APY objetivo (%)</label><input class="fi" id="m_apy_objetivo" type="number" step="0.01" value="${(m&&m.planModo==='apy'&&(m.apy||(m.plan&&m.plan.apy)||''))||''}" placeholder="413.34" oninput="_mApyCompare()"></div>
+          <div class="fg"><label>Plazo (meses)</label><input class="fi" id="m_apy_plazo" type="number" min="1" step="1" value="${(m&&m.planModo==='apy'&&(m.plazo||''))||PLAN.plazo}" placeholder="12" oninput="_mApyCompare()"></div>
+        </div>
+        <div id="m_apy_compare" style="display:none;margin-top:10px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px">
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">Comparativo de iniciales</div>
+          <div id="m_apy_compare_grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:8px">Selecciona la opción que deseas aplicar:</div>
+          <div class="fg" style="margin-top:6px"><select class="fs" id="m_apy_inicial_sel" onchange="previewCalc()">
+            <option value="0.45" ${(m&&m.planModo==='apy'&&Math.abs((m.inicialPct||0)-0.45)<0.001)?'selected':''}>Inicial 45%</option>
+            <option value="0.50" ${(!m||!(m.planModo==='apy')||Math.abs((m.inicialPct||0)-0.50)<0.001)?'selected':''}>Inicial 50%</option>
+            <option value="0.55" ${(m&&m.planModo==='apy'&&Math.abs((m.inicialPct||0)-0.55)<0.001)?'selected':''}>Inicial 55%</option>
+          </select></div>
+          <button type="button" class="btn btn-g btn-sm" style="margin-top:8px" onclick="_mGuardarPlanApy()">Guardar como plan nuevo</button>
+        </div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:6px">Indicas APY objetivo y plazo. El sistema calcula la cuota quincenal para iniciales de 45%, 50% y 55%.</div>
       </div>
     </div>
     <div id="calc-preview" style="background:var(--gs);border:1px solid var(--rim2);border-radius:var(--r8);padding:13px;margin:12px 0;display:${ed?'grid':'none'};grid-template-columns:repeat(3,1fr);gap:10px"></div>
@@ -10905,7 +11002,17 @@ function openAddMoto(id=null){
     const precio=parseFloat($('m_pr').value)||0;
     const planMode=(($('m_plan_mode')&&$('m_plan_mode').value)||'global');
     const precioBaseReal=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||precio))||precio;
-    const calc=planMode==='custom' ? calcCustomPlan(precioBaseReal, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo) : Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
+    let calc;
+    if(planMode==='custom'){
+      calc=calcCustomPlan(precioBaseReal, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo);
+    } else if(planMode==='apy'){
+      const _apy=parseFloat(($('m_apy_objetivo')&&$('m_apy_objetivo').value)||0)||0;
+      const _plapy=parseInt((($('m_apy_plazo')&&$('m_apy_plazo').value)||PLAN.plazo),10)||PLAN.plazo;
+      const _iniSel=parseFloat(($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||0.50)||0.50;
+      calc=calcApyPlan(precioBaseReal, _iniSel, _apy, _plapy);
+    } else {
+      calc=Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
+    }
     const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,marca:g('m_marca')||'',color:g('m_color')||'',anio:(parseInt(g('m_anio'),10)||null),vin:g('m_vin')||'',placa:g('m_placa')||'',serialMotor:g('m_serial_motor')||'',serialChasis:g('m_serial_chasis')||'',gpsNum:g('m_gps_num')||'',estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
     if(ed){const i=S.motos.findIndex(x=>String(x.id)===String(m.id));if(i>=0){S.motos[i]=obj;}else{S.motos.push(obj);}}else S.motos.push(obj);
     DB.saveMoto(obj);
@@ -10937,14 +11044,74 @@ function onCatalogoSelect(sel){
 function previewCalc(){
   const p=parseFloat(($('m_pr')&&$('m_pr').value))||0;
   const div=$('calc-preview');
-  if($('m_plan_custom_box')) $('m_plan_custom_box').style.display=((($('m_plan_mode')&&$('m_plan_mode').value)||'global')==='custom')?'block':'none';
+  const _mode=(($('m_plan_mode')&&$('m_plan_mode').value)||'global');
+  if($('m_plan_custom_box')) $('m_plan_custom_box').style.display=(_mode==='custom')?'block':'none';
+  if($('m_plan_apy_box')) $('m_plan_apy_box').style.display=(_mode==='apy')?'block':'none';
   if($('m_precio_base') && (!($('m_precio_base').value) || parseFloat($('m_precio_base').value||0)<=0) && p>0){ $('m_precio_base').value=p.toFixed(2); }
+  if(_mode==='apy') _mApyCompare();
   if(!p||!div){ if(div) div.style.display='none'; return; }
   const precioBase=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||p))||p;
-  const mode=(($('m_plan_mode')&&$('m_plan_mode').value)||'global');
-  const r=mode==='custom' ? calcCustomPlan(precioBase, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo) : Object.assign({precioBaseReal:precioBase, plazo:PLAN.plazo}, calcMoto(precioBase));
+  let r;
+  if(_mode==='custom'){
+    r=calcCustomPlan(precioBase, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo);
+  } else if(_mode==='apy'){
+    const _apy=parseFloat(($('m_apy_objetivo')&&$('m_apy_objetivo').value)||0)||0;
+    const _plapy=parseInt((($('m_apy_plazo')&&$('m_apy_plazo').value)||PLAN.plazo),10)||PLAN.plazo;
+    const _iniSel=parseFloat(($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||0.50)||0.50;
+    r=calcApyPlan(precioBase, _iniSel, _apy, _plapy);
+  } else {
+    r=Object.assign({precioBaseReal:precioBase, plazo:PLAN.plazo}, calcMoto(precioBase));
+  }
   div.style.display='grid';
-  div.innerHTML=[['Modo',mode==='custom'?'Personalizado':'Principal'],['Precio base','$'+(r.precioBaseReal||precioBase).toFixed(2)],['Inicial','$'+r.ini.toFixed(2)],['Cuota Q','$'+r.cuotaQ.toFixed(2)],['Plazo',(r.plazo||PLAN.plazo)+' meses'],['Total a pagar','$'+r.totalPagado.toFixed(2)]].map(([l,v])=>`<div><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--p1);margin-bottom:2px">${l}</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--ink)">${v}</div></div>`).join('');
+  const modoLabel = _mode==='custom'?'Personalizado': _mode==='apy'?'APY/Mes':'Principal';
+  div.innerHTML=[['Modo',modoLabel],['Precio base','$'+(r.precioBaseReal||precioBase).toFixed(2)],['Inicial','$'+r.ini.toFixed(2)],['Cuota Q','$'+r.cuotaQ.toFixed(2)],['Plazo',(r.plazo||PLAN.plazo)+' meses'],['Total a pagar','$'+r.totalPagado.toFixed(2)]].map(([l,v])=>`<div><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--p1);margin-bottom:2px">${l}</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--ink)">${v}</div></div>`).join('');
+}
+
+// ── Comparativo APY del modal de motos ──
+function _mApyCompare(){
+  const precio=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||($('m_pr')&&$('m_pr').value)||0))||0;
+  const apy=parseFloat(($('m_apy_objetivo')&&$('m_apy_objetivo').value)||0)||0;
+  const plazo=parseInt((($('m_apy_plazo')&&$('m_apy_plazo').value)||0),10)||0;
+  const grid=$('m_apy_compare_grid');
+  const box=$('m_apy_compare');
+  if(!grid||!box) return;
+  if(!(precio>0)||!(apy>0)||!(plazo>0)){ box.style.display='none'; return; }
+  box.style.display='block';
+  const pcts=[0.45,0.50,0.55];
+  grid.innerHTML=pcts.map(function(pp){
+    const r=calcApyPlan(precio,pp,apy,plazo);
+    return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:10px;padding:10px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p1);margin-bottom:6px">Inicial '+(pp*100).toFixed(0)+'%</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Inicial</div>'
+      +'<div style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$'+r.ini.toFixed(2)+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Cuota quincenal</div>'
+      +'<div style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$'+r.cuotaQ.toFixed(2)+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Total a pagar</div>'
+      +'<div style="font-size:13px;font-weight:800;color:var(--ink)">$'+r.totalPagado.toFixed(2)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Guardar plan APY del modal de motos como plan nuevo ──
+function _mGuardarPlanApy(){
+  const precio=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||($('m_pr')&&$('m_pr').value)||0))||0;
+  const apy=parseFloat(($('m_apy_objetivo')&&$('m_apy_objetivo').value)||0)||0;
+  const plazo=parseInt((($('m_apy_plazo')&&$('m_apy_plazo').value)||0),10)||0;
+  const iniSel=parseFloat(($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||0.50)||0.50;
+  if(!(precio>0)||!(apy>0)||!(plazo>0)){ if(typeof toast==='function') toast('Completa precio, APY y plazo','error'); return; }
+  const r=calcApyPlan(precio,iniSel,apy,plazo);
+  const nombre='APY '+apy.toFixed(1)+'% · '+plazo+'m · Ini '+(iniSel*100).toFixed(0)+'%';
+  const newPlan={nombre:nombre, plazo:plazo, factor:parseFloat(r.factor.toFixed(4)), inicial:iniSel, tasaMensual:parseFloat(r.tasaMensual.toFixed(2)), apy:apy, moraPct:(PLAN.moraPct||5), diasGracia:(PLAN.diasGracia||5), origen:'apy'};
+  if(!window._planesExtra) window._planesExtra=[];
+  window._planesExtra.push(newPlan);
+  try{ localStorage.setItem('pagasi_planes_extra', JSON.stringify(window._planesExtra)); }catch(_e){}
+  if(typeof db!=='undefined' && db){
+    db.collection('config').doc('planes').set({items:window._planesExtra})
+      .then(function(){ if(typeof toast==='function') toast('Plan "'+nombre+'" guardado','success'); })
+      .catch(function(){ if(typeof toast==='function') toast('Plan guardado localmente','success'); });
+  } else {
+    if(typeof toast==='function') toast('Plan "'+nombre+'" guardado localmente','success');
+  }
 }
 function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
@@ -11803,7 +11970,7 @@ function _wzRender(motoId){
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px;margin-top:12px">'
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan del crédito</div>'
     + '<div class="fgr">'
-    + '<div class="fg"><label>Tipo de plan</label><select class="fs" id="wz_plan_mode" onchange="_wzTogglePlanMode(this.value)"><option value="global">Plan principal</option><option value="custom">Plan personalizado</option></select></div>'
+    + '<div class="fg"><label>Tipo de plan</label><select class="fs" id="wz_plan_mode" onchange="_wzTogglePlanMode(this.value)"><option value="global">Plan principal</option><option value="custom">Plan personalizado</option><option value="apy">APY / Meses</option></select></div>'
     + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
     + '</div>'
     + '<div id="wz_plan_custom_box" style="display:none;margin-top:10px">'
@@ -11813,6 +11980,24 @@ function _wzRender(motoId){
     + '<div class="fg"><label>Plazo (meses)</label><input class="fi" id="wz_plazo_custom" type="number" min="1" step="1" placeholder="12" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
     + '</div>'
     + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Solo indicas precio base real, inicial real, cuota quincenal y plazo. El sistema calcula factor y tasa automáticamente.</div>'
+    + '</div>'
+    + '<div id="wz_plan_apy_box" style="display:none;margin-top:10px">'
+    + '<div class="fgr">'
+    + '<div class="fg"><label>APY objetivo (%)</label><input class="fi" id="wz_apy_objetivo" type="number" step="0.01" placeholder="413.34" oninput="_wzApyCompare()"></div>'
+    + '<div class="fg"><label>Plazo (meses)</label><input class="fi" id="wz_apy_plazo" type="number" min="1" step="1" placeholder="12" oninput="_wzApyCompare()"></div>'
+    + '</div>'
+    + '<div id="wz_apy_compare" style="display:none;margin-top:12px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:12px">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">Comparativo de iniciales</div>'
+    + '<div id="wz_apy_compare_grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:8px">Selecciona la opción que deseas aplicar:</div>'
+    + '<div class="fg" style="margin-top:6px"><select class="fs" id="wz_apy_inicial_sel" onchange="_wzActualizarFinPreview(WZ.precio||0);_wzScore()">'
+    + '<option value="0.45">Inicial 45%</option>'
+    + '<option value="0.50" selected>Inicial 50%</option>'
+    + '<option value="0.55">Inicial 55%</option>'
+    + '</select></div>'
+    + '<button type="button" class="btn btn-g btn-sm" style="margin-top:8px" onclick="_wzGuardarPlanApy()">Guardar como plan nuevo</button>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Indicas APY objetivo y plazo. El sistema calcula la cuota quincenal para iniciales de 45%, 50% y 55%.</div>'
     + '</div>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">'
