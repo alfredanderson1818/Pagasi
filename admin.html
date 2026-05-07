@@ -3669,6 +3669,7 @@ function _wzTogglePlanMode(v){
   var precioBase=document.getElementById('wz_precio_base_real');
   if(precioBase && !precioBase.value && (WZ.precio||0)>0) precioBase.value=(parseFloat(WZ.precio)||0).toFixed(2);
   _wzActualizarFinPreview((document.getElementById('wz_precio')||{}).value || WZ.precio || 0);
+  if(typeof _wzMpagoSync==='function') _wzMpagoSync();
   _wzScore();
 }
 
@@ -10949,8 +10950,25 @@ function _mpagoAgregarFila(prefix){
   prefix = prefix || _MPAGO_PREFIX;
   var cont = document.getElementById(prefix+'-rows');
   if(!cont) return;
+  // Calcular restante ANTES de agregar la nueva fila
+  var costoEl = document.getElementById(prefix+'-costo');
+  var costo = costoEl ? (parseFloat((costoEl.textContent||'0').replace(/[^0-9.\-]/g,''))||0) : 0;
+  var asignado = 0;
+  cont.querySelectorAll('.'+prefix+'-monto').forEach(function(inp){
+    asignado += parseFloat(inp.value)||0;
+  });
+  var restante = +(costo - asignado).toFixed(2);
   var idx = cont.querySelectorAll('.mpago-row').length;
   cont.insertAdjacentHTML('beforeend', _mpagoFilaHtml(prefix, idx));
+  // Si hay restante positivo, precargar la nueva fila (que está vacía por ser recién creada)
+  if(restante > 0.005){
+    var rows = cont.querySelectorAll('.mpago-row');
+    var nueva = rows[rows.length-1];
+    if(nueva){
+      var nuevoInp = nueva.querySelector('.'+prefix+'-monto');
+      if(nuevoInp && !nuevoInp.value){ nuevoInp.value = restante.toFixed(2); }
+    }
+  }
   _mpagoActualizarTotales(prefix);
 }
 function _mpagoEliminarFila(btn, prefix){
@@ -10968,10 +10986,28 @@ function _mpagoEliminarFila(btn, prefix){
   btn.parentNode.remove();
   _mpagoActualizarTotales(prefix);
 }
-function _mpagoSetCosto(prefix, costo){
+// Establece el costo objetivo y, opcionalmente, precarga la primera fila si está vacía
+// Si se pasa precargaPrimeraFila se intenta usar ese monto; si no, se usa el costo total
+function _mpagoSetCosto(prefix, costo, precargaPrimeraFila){
   prefix = prefix || _MPAGO_PREFIX;
   var el = document.getElementById(prefix+'-costo');
   if(el) el.textContent = '$'+(parseFloat(costo)||0).toFixed(2);
+  // Precargar primera fila SOLO si está vacía (no pisar lo escrito por el usuario)
+  var cont = document.getElementById(prefix+'-rows');
+  if(cont){
+    var firstRow = cont.querySelector('.mpago-row');
+    if(firstRow){
+      var firstInp = firstRow.querySelector('.'+prefix+'-monto');
+      if(firstInp && !firstInp.value){
+        var sugerido = (precargaPrimeraFila!=null && precargaPrimeraFila>0)
+          ? parseFloat(precargaPrimeraFila)
+          : (parseFloat(costo)||0);
+        if(sugerido > 0.005){
+          firstInp.value = sugerido.toFixed(2);
+        }
+      }
+    }
+  }
   _mpagoActualizarTotales(prefix);
 }
 function _mpagoActualizarTotales(prefix){
@@ -12339,7 +12375,7 @@ function _wzRender(motoId){
     + '</div>'
     + '<div id="wz_plan_custom_box" style="display:none;margin-top:10px">'
     + '<div class="fgr">'
-    + '<div class="fg"><label>Inicial real (USD)</label><input class="fi" id="wz_ini_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
+    + '<div class="fg"><label>Inicial real (USD)</label><input class="fi" id="wz_ini_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzScore()"></div>'
     + '<div class="fg"><label>Cuota quincenal (USD)</label><input class="fi" id="wz_cuota_q_custom" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
     + '<div class="fg"><label>Plazo (meses)</label><input class="fi" id="wz_plazo_custom" type="number" min="1" step="1" placeholder="12" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
     + '</div>'
@@ -12354,7 +12390,7 @@ function _wzRender(motoId){
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">Comparativo de iniciales</div>'
     + '<div id="wz_apy_compare_grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>'
     + '<div style="font-size:11px;color:var(--ink3);margin-top:8px">Selecciona la opción que deseas aplicar:</div>'
-    + '<div class="fg" style="margin-top:6px"><select class="fs" id="wz_apy_inicial_sel" onchange="_wzActualizarFinPreview(WZ.precio||0);_wzScore()">'
+    + '<div class="fg" style="margin-top:6px"><select class="fs" id="wz_apy_inicial_sel" onchange="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzScore()">'
     + '<option value="0.45">Inicial 45%</option>'
     + '<option value="0.50" selected>Inicial 50%</option>'
     + '<option value="0.55">Inicial 55%</option>'
@@ -12644,7 +12680,14 @@ function _wzRender(motoId){
         wrap.style.display='block';
         var pBaseInp = document.getElementById('wz_precio_base_real');
         var costoBase = pBaseInp && parseFloat(pBaseInp.value)>0 ? parseFloat(pBaseInp.value) : (WZ.precio||0);
-        _mpagoSetCosto('wzmpago', costoBase);
+        // Solo precargar si NO hay filas previas (caso primera entrada al paso)
+        if(!Array.isArray(WZ._pagosMoto) || !WZ._pagosMoto.length){
+          var iniReal = 0;
+          try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
+          _mpagoSetCosto('wzmpago', costoBase, iniReal>0 ? iniReal : null);
+        } else {
+          _mpagoSetCosto('wzmpago', costoBase);
+        }
         // Restaurar filas previas si existen
         if(Array.isArray(WZ._pagosMoto) && WZ._pagosMoto.length){
           var cont = document.getElementById('wzmpago-rows');
@@ -12831,7 +12874,10 @@ function _wzMpagoSync(){
   var costo = pBaseInp && parseFloat(pBaseInp.value)>0
     ? parseFloat(pBaseInp.value)
     : (pInp && parseFloat(pInp.value)>0 ? parseFloat(pInp.value) : 0);
-  _mpagoSetCosto('wzmpago', costo);
+  // Si la primera fila aún está vacía, precargar con inicial real
+  var iniReal = 0;
+  try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
+  _mpagoSetCosto('wzmpago', costo, iniReal>0 ? iniReal : null);
 }
 
 // ── Selección de moto del inventario ──
@@ -12881,7 +12927,10 @@ function _wzPickMotoCat(sel){
     wrap.style.display='block';
     var pBaseInp = document.getElementById('wz_precio_base_real');
     var costoBase = pBaseInp && parseFloat(pBaseInp.value)>0 ? parseFloat(pBaseInp.value) : precio;
-    _mpagoSetCosto('wzmpago', costoBase);
+    // Precargar primera fila con la inicial real del wizard (si está disponible)
+    var iniReal = 0;
+    try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
+    _mpagoSetCosto('wzmpago', costoBase, iniReal>0 ? iniReal : null);
   }
   _wzActualizarFinPreview(precio);
   _wzScore();
