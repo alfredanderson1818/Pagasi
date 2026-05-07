@@ -10925,11 +10925,16 @@ function _mpagoFilaHtml(prefix, idx){
   var opts = _mpagoMetodosOpts();
   return '<div class="mpago-row" data-idx="'+idx+'" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">'
     + '<div class="fg" style="margin:0"><label style="font-size:11px">Cuenta / Forma de pago</label>'
-    + '<select class="fs '+prefix+'-cuenta">'+opts+'</select></div>'
+    + '<select class="fs '+prefix+'-cuenta" onchange="_mpagoMarcarTocado(this,\''+prefix+'\')">'+opts+'</select></div>'
     + '<div class="fg" style="margin:0"><label style="font-size:11px">Monto ($)</label>'
-    + '<input class="fi '+prefix+'-monto" type="number" step="0.01" placeholder="0.00" oninput="_mpagoActualizarTotales(\''+prefix+'\')"></div>'
+    + '<input class="fi '+prefix+'-monto" type="number" step="0.01" placeholder="0.00" oninput="_mpagoMarcarTocado(this,\''+prefix+'\');_mpagoActualizarTotales(\''+prefix+'\')"></div>'
     + '<button type="button" class="btn btn-g btn-sm '+prefix+'-del" style="height:38px;padding:0 10px" onclick="_mpagoEliminarFila(this,\''+prefix+'\')" title="Eliminar">×</button>'
     + '</div>';
+}
+// El usuario tocó esta fila → ya no autorellenamos
+function _mpagoMarcarTocado(el, prefix){
+  var row = el.closest('.mpago-row');
+  if(row) row.setAttribute('data-touched','1');
 }
 function _mpagoBloqueHtml(prefix, titulo, descripcion){
   prefix = prefix || _MPAGO_PREFIX;
@@ -10986,24 +10991,26 @@ function _mpagoEliminarFila(btn, prefix){
   btn.parentNode.remove();
   _mpagoActualizarTotales(prefix);
 }
-// Establece el costo objetivo y, opcionalmente, precarga la primera fila si está vacía
+// Establece el costo objetivo y, opcionalmente, precarga la primera fila si NO ha sido tocada
 // Si se pasa precargaPrimeraFila se intenta usar ese monto; si no, se usa el costo total
 function _mpagoSetCosto(prefix, costo, precargaPrimeraFila){
   prefix = prefix || _MPAGO_PREFIX;
   var el = document.getElementById(prefix+'-costo');
   if(el) el.textContent = '$'+(parseFloat(costo)||0).toFixed(2);
-  // Precargar primera fila SOLO si está vacía (no pisar lo escrito por el usuario)
+  // Precargar/actualizar primera fila SOLO si NO fue tocada por el usuario
   var cont = document.getElementById(prefix+'-rows');
   if(cont){
     var firstRow = cont.querySelector('.mpago-row');
-    if(firstRow){
+    if(firstRow && firstRow.getAttribute('data-touched')!=='1'){
       var firstInp = firstRow.querySelector('.'+prefix+'-monto');
-      if(firstInp && !firstInp.value){
+      if(firstInp){
         var sugerido = (precargaPrimeraFila!=null && precargaPrimeraFila>0)
           ? parseFloat(precargaPrimeraFila)
           : (parseFloat(costo)||0);
         if(sugerido > 0.005){
           firstInp.value = sugerido.toFixed(2);
+        } else {
+          firstInp.value = '';
         }
       }
     }
@@ -12698,6 +12705,7 @@ function _wzRender(motoId){
               var rows = cont.querySelectorAll('.mpago-row');
               var row = rows[rows.length-1];
               if(row){
+                row.setAttribute('data-touched','1');
                 var c = row.querySelector('.wzmpago-cuenta');
                 var mt = row.querySelector('.wzmpago-monto');
                 if(c) c.value = p.cuenta;
