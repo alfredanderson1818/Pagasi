@@ -8945,7 +8945,8 @@ reportes(){
     {k:'resumen', lbl:'Resumen', sub:'Estado general · KPIs'},
     {k:'proyecciones', lbl:'Proyecciones', sub:'Flujo futuro · 12 meses'},
     {k:'egresos', lbl:'Egresos', sub:'Gastos · categorías'},
-    {k:'exportar', lbl:'Exportar', sub:'Reportes · CSV · Backup'}
+    {k:'exportar', lbl:'Exportar', sub:'Reportes · CSV · Backup'},
+    {k:'libroseniat', lbl:'Libro SENIAT', sub:'Ventas · IVA · IGTF'}
   ];
 
   return`<div class="page">
@@ -9370,6 +9371,8 @@ reportes(){
     </div>
   </div>
   `}
+
+  ${tab==='libroseniat' ? _renderLibroSeniat() : ''}
 
   </div>`;
 },
@@ -17421,6 +17424,459 @@ function confirmarAnularFactura(facId){
   DB.saveFactura(S.facturas[fi]);
   toast('Factura '+S.facturas[fi].numero+' anulada','info');
   abrirVerFactura(facId);
+}
+
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIBRO DE VENTAS SENIAT                                   ║
+// ║  Reporte fiscal con cálculo de IVA y IGTF para entregar   ║
+// ║  al contador. NO emite facturas legales.                  ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// Configuración (se guarda en localStorage)
+var _libroSeniatCfg = {
+  ivaActivo: false,        // ¿Cobro IVA?
+  ivaAlicuota: 16,          // 16, 8, 0
+  esSPE: false,             // ¿Soy Sujeto Pasivo Especial (cobro IGTF)?
+  igtfAlicuota: 3,          // % IGTF (default 3%)
+  // Métodos que se consideran "moneda extranjera" (gravados con IGTF si esSPE=true)
+  metodosDivisa: ['Zelle','USDT','Efectivo USD','PayPal','Binance','Wise','Cash App'],
+  // Período seleccionado
+  periodoTipo: 'mes',       // 'mes' | 'rango'
+  periodoMes: '',           // YYYY-MM
+  periodoDesde: '',         // YYYY-MM-DD
+  periodoHasta: ''          // YYYY-MM-DD
+};
+
+function _libroSeniatLoadCfg(){
+  try{
+    var raw = localStorage.getItem('libroSeniatCfg_v1');
+    if(raw){
+      var saved = JSON.parse(raw);
+      Object.keys(saved).forEach(function(k){ _libroSeniatCfg[k] = saved[k]; });
+    }
+  }catch(e){}
+  // Default: mes actual si no hay nada
+  if(!_libroSeniatCfg.periodoMes){
+    var d = new Date();
+    _libroSeniatCfg.periodoMes = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
+}
+
+function _libroSeniatSaveCfg(){
+  try{ localStorage.setItem('libroSeniatCfg_v1', JSON.stringify(_libroSeniatCfg)); }catch(e){}
+}
+
+// Determina si un método de pago es divisa (gravado con IGTF)
+function _libroSeniatEsDivisa(metodo){
+  if(!metodo) return false;
+  var m = String(metodo).toLowerCase();
+  return _libroSeniatCfg.metodosDivisa.some(function(d){
+    return m.indexOf(d.toLowerCase()) !== -1;
+  });
+}
+
+// Filtra pagos según período configurado
+function _libroSeniatFiltrarPagos(){
+  var pagos = (S.pagos||[]).filter(function(p){
+    return !p.eliminado && p.estado==='confirmado';
+  });
+  var desde, hasta;
+  if(_libroSeniatCfg.periodoTipo === 'mes'){
+    var ym = _libroSeniatCfg.periodoMes;
+    if(!ym) return pagos;
+    desde = ym + '-01';
+    var partes = ym.split('-');
+    var lastDay = new Date(parseInt(partes[0]), parseInt(partes[1]), 0).getDate();
+    hasta = ym + '-' + String(lastDay).padStart(2,'0');
+  } else {
+    desde = _libroSeniatCfg.periodoDesde;
+    hasta = _libroSeniatCfg.periodoHasta;
+  }
+  if(!desde || !hasta) return pagos;
+  return pagos.filter(function(p){
+    return p.fecha >= desde && p.fecha <= hasta;
+  });
+}
+
+// Calcula desglose fiscal de un pago según configuración actual
+// Asume: monto pagado YA INCLUYE IVA (sacar base dividiendo entre 1+iva%)
+function _libroSeniatDesglose(pago){
+  var total = parseFloat(pago.monto)||0;
+  var aliv = _libroSeniatCfg.ivaActivo ? (parseFloat(_libroSeniatCfg.ivaAlicuota)||0) : 0;
+  var base, iva;
+  if(aliv > 0){
+    base = total / (1 + aliv/100);
+    iva = total - base;
+  } else {
+    base = total;
+    iva = 0;
+  }
+  // IGTF aplica solo si es SPE Y método es divisa. IGTF se calcula adicional al total.
+  // Sin embargo, en práctica el IGTF se documenta sobre el monto pagado en divisas (el total recibido)
+  var igtf = 0;
+  var igtfAplica = false;
+  if(_libroSeniatCfg.esSPE && _libroSeniatEsDivisa(pago.metodo)){
+    igtfAplica = true;
+    igtf = total * (parseFloat(_libroSeniatCfg.igtfAlicuota)||0)/100;
+  }
+  return {
+    total: total,
+    base: base,
+    aliv: aliv,
+    iva: iva,
+    igtf: igtf,
+    igtfAplica: igtfAplica,
+    totalConIgtf: total + igtf  // Lo que el cliente debió pagar realmente con IGTF
+  };
+}
+
+// Busca CI/RIF del cliente (busca en S.clientes por nombre exacto)
+function _libroSeniatGetCI(nombreCliente){
+  if(!nombreCliente) return '';
+  var c = (S.clientes||[]).find(function(x){
+    return (x.nombre||'').trim().toLowerCase() === String(nombreCliente).trim().toLowerCase();
+  });
+  return c ? (c.ci||'') : '';
+}
+
+// Render principal del tab Libro SENIAT
+function _renderLibroSeniat(){
+  _libroSeniatLoadCfg();
+  var cfg = _libroSeniatCfg;
+  var pagos = _libroSeniatFiltrarPagos();
+  // Ordenar por fecha
+  pagos.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
+  // Totales
+  var totBase = 0, totIva = 0, totIgtf = 0, totTotal = 0, totConIgtf = 0;
+  var filas = pagos.map(function(p, idx){
+    var d = _libroSeniatDesglose(p);
+    totBase += d.base;
+    totIva += d.iva;
+    totIgtf += d.igtf;
+    totTotal += d.total;
+    totConIgtf += d.totalConIgtf;
+    var ci = _libroSeniatGetCI(p.cli);
+    var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
+    var nFac = fac && !fac.anulada ? fac.numero : '—';
+    return '<tr style="border-bottom:1px solid var(--rim2)">'
+      + '<td class="tds" style="padding:6px 8px">'+(idx+1)+'</td>'
+      + '<td class="tds" style="padding:6px 8px">'+(p.fecha||'')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);font-size:10.5px">'+(p.id||'')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);font-size:10.5px">'+nFac+'</td>'
+      + '<td class="tds" style="padding:6px 8px">'+(p.cli||'')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);font-size:10.5px">'+(ci||'<span style="color:var(--red)">SIN CI</span>')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right">'+fmt(d.base)+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;color:var(--ink3)">'+(d.aliv>0 ? d.aliv+'%' : '—')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right">'+fmt(d.iva)+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;'+(d.igtfAplica?'color:var(--amber)':'color:var(--ink3)')+'">'+(d.igtfAplica ? fmt(d.igtf) : '—')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;font-weight:700">'+fmt(d.total)+'</td>'
+      + '<td class="tds" style="padding:6px 8px;color:var(--ink3);font-size:10.5px">'+(p.metodo||'—')+'</td>'
+      + '</tr>';
+  }).join('');
+  // Período label
+  var periodoLbl = '';
+  if(cfg.periodoTipo === 'mes' && cfg.periodoMes){
+    var partes = cfg.periodoMes.split('-');
+    var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    periodoLbl = meses[parseInt(partes[1])-1] + ' ' + partes[0];
+  } else if(cfg.periodoTipo === 'rango'){
+    periodoLbl = (cfg.periodoDesde||'?') + ' al ' + (cfg.periodoHasta||'?');
+  }
+  // Mes actual default
+  var mesActual = cfg.periodoMes || (function(){
+    var d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  })();
+  var clientesSinCI = pagos.filter(function(p){ return !_libroSeniatGetCI(p.cli); }).length;
+  return ''
+    + '<div class="card" style="margin-bottom:14px">'
+    + '<div class="ch"><div><div class="ct">⚖ Libro de Ventas SENIAT</div><div class="cs">Reporte fiscal · No es factura legal</div></div></div>'
+    + '<div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.3);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--ink2);line-height:1.55">'
+    + '<strong style="color:var(--amber)">⚠ Importante:</strong> Este reporte es un auxiliar contable para entregar a tu contador o al SENIAT en caso de fiscalización. '
+    + '<strong>No sustituye la facturación legal</strong> (talonarios autorizados, máquina fiscal o sistema certificado SENIAT). '
+    + 'Los cálculos asumen que el monto cobrado <strong>YA INCLUYE IVA</strong> (base = monto / 1.16 si IVA 16%). Verifica con tu contador antes de entregar.'
+    + '</div>'
+    + '</div>'
+    // ════════ CONFIGURACIÓN ════════
+    + '<div class="card" style="margin-bottom:14px">'
+    + '<div class="ch"><div><div class="ct">Configuración fiscal</div><div class="cs">Define cómo calcular impuestos · Pregunta a tu contador</div></div></div>'
+    + '<div class="fgr" style="gap:12px;margin-top:6px">'
+    + '<div class="fg"><label>¿Cobras IVA en tus operaciones?</label>'
+    + '<select class="fs" id="ls_iva_activo" onchange="_libroSeniatChange()">'
+    + '<option value="no" '+(!cfg.ivaActivo?'selected':'')+'>No — Estoy exento o no aplica</option>'
+    + '<option value="si" '+(cfg.ivaActivo?'selected':'')+'>Sí — Cobro IVA</option>'
+    + '</select></div>'
+    + '<div class="fg"><label>Alícuota IVA</label>'
+    + '<select class="fs" id="ls_iva_aliv" onchange="_libroSeniatChange()" '+(cfg.ivaActivo?'':'disabled')+'>'
+    + '<option value="16" '+(cfg.ivaAlicuota==16?'selected':'')+'>16% (general)</option>'
+    + '<option value="8" '+(cfg.ivaAlicuota==8?'selected':'')+'>8% (reducida)</option>'
+    + '<option value="0" '+(cfg.ivaAlicuota==0?'selected':'')+'>0% (exportación)</option>'
+    + '</select></div>'
+    + '<div class="fg"><label>¿Eres Sujeto Pasivo Especial (SPE)?</label>'
+    + '<select class="fs" id="ls_spe" onchange="_libroSeniatChange()">'
+    + '<option value="no" '+(!cfg.esSPE?'selected':'')+'>No — No cobro IGTF</option>'
+    + '<option value="si" '+(cfg.esSPE?'selected':'')+'>Sí — Soy SPE, cobro IGTF en pagos en divisa</option>'
+    + '</select></div>'
+    + '<div class="fg"><label>Alícuota IGTF</label>'
+    + '<select class="fs" id="ls_igtf_aliv" onchange="_libroSeniatChange()" '+(cfg.esSPE?'':'disabled')+'>'
+    + '<option value="3" '+(cfg.igtfAlicuota==3?'selected':'')+'>3% (estándar — divisas)</option>'
+    + '<option value="2" '+(cfg.igtfAlicuota==2?'selected':'')+'>2% (otros casos)</option>'
+    + '</select></div>'
+    + '</div>'
+    + '<div style="margin-top:8px;padding:10px;background:var(--gs);border-radius:8px;font-size:11px;color:var(--ink3);line-height:1.55">'
+    + '<strong style="color:var(--ink2)">Métodos considerados divisa (gravados con IGTF si eres SPE):</strong> Zelle, USDT, Efectivo USD, PayPal, Binance, Wise, Cash App. '
+    + 'Los pagos en bolívares NO causan IGTF.'
+    + '</div>'
+    + '</div>'
+    // ════════ PERÍODO ════════
+    + '<div class="card" style="margin-bottom:14px">'
+    + '<div class="ch"><div><div class="ct">Período del reporte</div><div class="cs">'+periodoLbl+'</div></div></div>'
+    + '<div class="fgr" style="gap:12px">'
+    + '<div class="fg"><label>Tipo de período</label>'
+    + '<select class="fs" id="ls_periodo_tipo" onchange="_libroSeniatChange()">'
+    + '<option value="mes" '+(cfg.periodoTipo==='mes'?'selected':'')+'>Por mes</option>'
+    + '<option value="rango" '+(cfg.periodoTipo==='rango'?'selected':'')+'>Rango personalizado</option>'
+    + '</select></div>'
+    + (cfg.periodoTipo==='mes'
+        ? '<div class="fg"><label>Mes</label><input class="fi" type="month" id="ls_mes" value="'+mesActual+'" onchange="_libroSeniatChange()"></div>'
+        : '<div class="fg"><label>Desde</label><input class="fi" type="date" id="ls_desde" value="'+(cfg.periodoDesde||'')+'" onchange="_libroSeniatChange()"></div>'
+          + '<div class="fg"><label>Hasta</label><input class="fi" type="date" id="ls_hasta" value="'+(cfg.periodoHasta||'')+'" onchange="_libroSeniatChange()"></div>')
+    + '</div>'
+    + '</div>'
+    // ════════ TOTALES ════════
+    + '<div class="card" style="margin-bottom:14px">'
+    + '<div class="ch"><div><div class="ct">Totales del período</div><div class="cs">'+pagos.length+' operaciones</div></div></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:6px">'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--ink3)"><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Base imponible</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totBase)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--p1)"><div style="font-size:9.5px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px">IVA débito fiscal</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIva)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--amber)"><div style="font-size:9.5px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px">IGTF percibido</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIgtf)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--green)"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total cobrado</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totTotal)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--green)"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total + IGTF</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totConIgtf)+'</div></div>'
+    + '</div>'
+    + (clientesSinCI > 0 ? '<div style="margin-top:10px;padding:9px 11px;background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:8px;font-size:11px;color:var(--red)">⚠ Hay <strong>'+clientesSinCI+' pago'+(clientesSinCI>1?'s':'')+'</strong> con cliente sin CI/RIF registrado. SENIAT lo exige para el libro.</div>' : '')
+    + '</div>'
+    // ════════ TABLA ════════
+    + '<div class="card">'
+    + '<div class="ch"><div><div class="ct">Detalle de operaciones</div><div class="cs">Estilo Libro de Ventas SENIAT</div></div>'
+    + '<div style="display:flex;gap:6px">'
+    + '<button class="btn btn-g btn-sm" onclick="_libroSeniatExportarCSV()">📊 Exportar CSV</button>'
+    + '<button class="btn btn-p btn-sm" onclick="_libroSeniatImprimir()">🖨 Imprimir / PDF</button>'
+    + '</div></div>'
+    + (pagos.length === 0
+      ? '<div style="padding:30px 0;text-align:center;color:var(--ink3);font-size:13px">Sin operaciones en este período</div>'
+      : '<div class="tw" style="overflow-x:auto"><table style="font-size:11.5px;min-width:1100px">'
+        + '<thead><tr style="background:var(--gs)">'
+        + '<th style="padding:8px;text-align:left">#</th>'
+        + '<th style="padding:8px;text-align:left">Fecha</th>'
+        + '<th style="padding:8px;text-align:left">Comprob.</th>'
+        + '<th style="padding:8px;text-align:left">N° Factura</th>'
+        + '<th style="padding:8px;text-align:left">Cliente</th>'
+        + '<th style="padding:8px;text-align:left">RIF/C.I.</th>'
+        + '<th style="padding:8px;text-align:right">Base</th>'
+        + '<th style="padding:8px;text-align:right">% IVA</th>'
+        + '<th style="padding:8px;text-align:right">IVA</th>'
+        + '<th style="padding:8px;text-align:right">IGTF</th>'
+        + '<th style="padding:8px;text-align:right">Total</th>'
+        + '<th style="padding:8px;text-align:left">Método</th>'
+        + '</tr></thead>'
+        + '<tbody>'+filas+'</tbody>'
+        + '<tfoot><tr style="background:var(--gs);font-weight:800">'
+        + '<td colspan="6" style="padding:9px 8px;text-align:right">TOTALES:</td>'
+        + '<td style="padding:9px 8px;text-align:right;font-family:var(--fd)">'+fmt(totBase)+'</td>'
+        + '<td></td>'
+        + '<td style="padding:9px 8px;text-align:right;font-family:var(--fd);color:var(--p1)">'+fmt(totIva)+'</td>'
+        + '<td style="padding:9px 8px;text-align:right;font-family:var(--fd);color:var(--amber)">'+fmt(totIgtf)+'</td>'
+        + '<td style="padding:9px 8px;text-align:right;font-family:var(--fd);color:var(--green)">'+fmt(totTotal)+'</td>'
+        + '<td></td></tr></tfoot>'
+        + '</table></div>')
+    + '</div>';
+}
+
+// Maneja cualquier cambio en los selects/inputs de configuración
+function _libroSeniatChange(){
+  var cfg = _libroSeniatCfg;
+  var el;
+  el = $('ls_iva_activo'); if(el) cfg.ivaActivo = (el.value === 'si');
+  el = $('ls_iva_aliv'); if(el) cfg.ivaAlicuota = parseFloat(el.value)||0;
+  el = $('ls_spe'); if(el) cfg.esSPE = (el.value === 'si');
+  el = $('ls_igtf_aliv'); if(el) cfg.igtfAlicuota = parseFloat(el.value)||3;
+  el = $('ls_periodo_tipo'); if(el) cfg.periodoTipo = el.value;
+  el = $('ls_mes'); if(el) cfg.periodoMes = el.value;
+  el = $('ls_desde'); if(el) cfg.periodoDesde = el.value;
+  el = $('ls_hasta'); if(el) cfg.periodoHasta = el.value;
+  _libroSeniatSaveCfg();
+  // Re-render
+  if(typeof nav === 'function') nav('reportes');
+}
+
+// Exportar a CSV (formato Libro de Ventas SENIAT)
+function _libroSeniatExportarCSV(){
+  var pagos = _libroSeniatFiltrarPagos();
+  pagos.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
+  var emp = (typeof getEmpresa === 'function') ? getEmpresa() : {nombre:'',rif:''};
+  var cfg = _libroSeniatCfg;
+  var periodoLbl = '';
+  if(cfg.periodoTipo === 'mes' && cfg.periodoMes){
+    periodoLbl = cfg.periodoMes;
+  } else if(cfg.periodoTipo === 'rango'){
+    periodoLbl = (cfg.periodoDesde||'')+'_a_'+(cfg.periodoHasta||'');
+  }
+  var rows = [];
+  // Encabezado
+  rows.push(['LIBRO DE VENTAS - REPORTE AUXILIAR SENIAT']);
+  rows.push(['Empresa:', emp.nombre||'', 'RIF:', emp.rif||'']);
+  rows.push(['Período:', periodoLbl]);
+  rows.push(['IVA aplicado:', cfg.ivaActivo ? cfg.ivaAlicuota+'%' : 'No aplica']);
+  rows.push(['IGTF (SPE):', cfg.esSPE ? cfg.igtfAlicuota+'% en pagos divisa' : 'No aplica']);
+  rows.push(['Generado:', new Date().toLocaleString('es-VE')]);
+  rows.push([]);
+  // Headers de tabla
+  rows.push(['#','Fecha','N° Comprobante','N° Factura','Cliente','RIF/C.I.','Base Imponible','% IVA','IVA','IGTF','Total','Método de pago']);
+  var totBase=0, totIva=0, totIgtf=0, totTotal=0;
+  pagos.forEach(function(p, idx){
+    var d = _libroSeniatDesglose(p);
+    var ci = _libroSeniatGetCI(p.cli);
+    var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
+    var nFac = fac && !fac.anulada ? fac.numero : '';
+    rows.push([
+      idx+1,
+      p.fecha||'',
+      p.id||'',
+      nFac,
+      p.cli||'',
+      ci,
+      d.base.toFixed(2),
+      d.aliv,
+      d.iva.toFixed(2),
+      d.igtfAplica ? d.igtf.toFixed(2) : '0.00',
+      d.total.toFixed(2),
+      p.metodo||''
+    ]);
+    totBase+=d.base; totIva+=d.iva; totIgtf+=d.igtf; totTotal+=d.total;
+  });
+  rows.push([]);
+  rows.push(['','','','','','TOTALES:', totBase.toFixed(2), '', totIva.toFixed(2), totIgtf.toFixed(2), totTotal.toFixed(2), '']);
+  // Convertir a CSV
+  var csv = rows.map(function(r){
+    return r.map(function(c){
+      var s = String(c==null?'':c);
+      if(s.indexOf(',')>=0 || s.indexOf('"')>=0 || s.indexOf('\n')>=0){
+        s = '"'+s.replace(/"/g,'""')+'"';
+      }
+      return s;
+    }).join(',');
+  }).join('\n');
+  // Descargar (con BOM para que Excel lo abra bien con tildes)
+  var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'libro_ventas_seniat_'+(periodoLbl||'reporte')+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  if(typeof toast === 'function') toast('Libro exportado · CSV','success');
+}
+
+// Imprimir (también permite guardar como PDF desde el diálogo del navegador)
+function _libroSeniatImprimir(){
+  var pagos = _libroSeniatFiltrarPagos();
+  pagos.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
+  var emp = (typeof getEmpresa === 'function') ? getEmpresa() : {nombre:'',rif:'',direccion:''};
+  var cfg = _libroSeniatCfg;
+  var periodoLbl = '';
+  if(cfg.periodoTipo === 'mes' && cfg.periodoMes){
+    var partes = cfg.periodoMes.split('-');
+    var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    periodoLbl = meses[parseInt(partes[1])-1] + ' ' + partes[0];
+  } else if(cfg.periodoTipo === 'rango'){
+    periodoLbl = (cfg.periodoDesde||'')+' al '+(cfg.periodoHasta||'');
+  }
+  var totBase=0, totIva=0, totIgtf=0, totTotal=0;
+  var rowsHtml = pagos.map(function(p, idx){
+    var d = _libroSeniatDesglose(p);
+    var ci = _libroSeniatGetCI(p.cli);
+    var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
+    var nFac = fac && !fac.anulada ? fac.numero : '—';
+    totBase+=d.base; totIva+=d.iva; totIgtf+=d.igtf; totTotal+=d.total;
+    return '<tr>'
+      +'<td>'+(idx+1)+'</td>'
+      +'<td>'+(p.fecha||'')+'</td>'
+      +'<td style="font-family:monospace;font-size:9px">'+(p.id||'')+'</td>'
+      +'<td style="font-family:monospace;font-size:9px">'+nFac+'</td>'
+      +'<td>'+(p.cli||'')+'</td>'
+      +'<td style="font-family:monospace;font-size:9px">'+(ci||'—')+'</td>'
+      +'<td class="num">'+d.base.toFixed(2)+'</td>'
+      +'<td class="num">'+(d.aliv||'—')+(d.aliv>0?'%':'')+'</td>'
+      +'<td class="num">'+d.iva.toFixed(2)+'</td>'
+      +'<td class="num">'+(d.igtfAplica ? d.igtf.toFixed(2) : '—')+'</td>'
+      +'<td class="num"><strong>'+d.total.toFixed(2)+'</strong></td>'
+      +'<td style="font-size:9px">'+(p.metodo||'')+'</td>'
+      +'</tr>';
+  }).join('');
+  var html = '<!doctype html><html><head><meta charset="utf-8"><title>Libro de Ventas SENIAT - '+periodoLbl+'</title>'
+    + '<style>'
+    + '@page{size:Letter landscape;margin:.4in}'
+    + '*{box-sizing:border-box}'
+    + 'body{font-family:Arial,sans-serif;color:#000;font-size:10px;margin:0;padding:0}'
+    + '.hd{border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px}'
+    + '.hd h1{margin:0;font-size:16px;letter-spacing:1px}'
+    + '.hd .sb{font-size:11px;color:#333;margin-top:2px}'
+    + '.meta{display:flex;justify-content:space-between;font-size:10px;margin-bottom:10px}'
+    + '.meta b{font-weight:700}'
+    + 'table{width:100%;border-collapse:collapse;font-size:9.5px;margin-top:6px}'
+    + 'th{background:#e0e0e0;padding:5px 4px;border:1px solid #888;text-align:left;font-size:9px}'
+    + 'td{padding:4px;border:1px solid #ccc}'
+    + '.num{text-align:right;font-family:monospace}'
+    + 'tfoot td{background:#f0f0f0;font-weight:800;border-top:2px solid #000}'
+    + '.disc{margin-top:14px;padding:8px;background:#fff8e0;border:1px solid #d4a843;font-size:9px;color:#444;line-height:1.5}'
+    + '.foot{margin-top:18px;padding-top:8px;border-top:1px solid #999;display:flex;justify-content:space-between;font-size:8.5px;color:#666}'
+    + '.sig{margin-top:30px;display:flex;justify-content:space-around;font-size:10px}'
+    + '.sig .b{border-top:1px solid #000;width:200px;text-align:center;padding-top:3px}'
+    + '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}'
+    + '</style></head><body>'
+    + '<div class="hd">'
+    + '<h1>LIBRO DE VENTAS — REPORTE AUXILIAR</h1>'
+    + '<div class="sb">Documento de uso interno y contable · Período: <b>'+periodoLbl+'</b></div>'
+    + '</div>'
+    + '<div class="meta">'
+    + '<div><b>Razón social:</b> '+(emp.nombre||'—')+'<br><b>RIF:</b> '+(emp.rif||'—')
+    + (emp.direccion?'<br><b>Domicilio fiscal:</b> '+emp.direccion:'')+'</div>'
+    + '<div style="text-align:right">'
+    + '<b>IVA:</b> '+(cfg.ivaActivo?cfg.ivaAlicuota+'%':'No aplica')+'<br>'
+    + '<b>IGTF:</b> '+(cfg.esSPE?cfg.igtfAlicuota+'% (SPE)':'No aplica')+'<br>'
+    + '<b>Operaciones:</b> '+pagos.length+'<br>'
+    + '<b>Generado:</b> '+new Date().toLocaleString('es-VE')
+    + '</div></div>'
+    + (pagos.length === 0
+      ? '<p style="text-align:center;padding:40px;color:#666">Sin operaciones en este período.</p>'
+      : '<table>'
+        + '<thead><tr><th>#</th><th>Fecha</th><th>N° Comprob.</th><th>N° Factura</th><th>Cliente</th><th>RIF/C.I.</th><th class="num">Base</th><th class="num">% IVA</th><th class="num">IVA</th><th class="num">IGTF</th><th class="num">Total</th><th>Método</th></tr></thead>'
+        + '<tbody>'+rowsHtml+'</tbody>'
+        + '<tfoot><tr>'
+        + '<td colspan="6" style="text-align:right">TOTALES:</td>'
+        + '<td class="num">'+totBase.toFixed(2)+'</td>'
+        + '<td></td>'
+        + '<td class="num">'+totIva.toFixed(2)+'</td>'
+        + '<td class="num">'+totIgtf.toFixed(2)+'</td>'
+        + '<td class="num">'+totTotal.toFixed(2)+'</td>'
+        + '<td></td></tr></tfoot></table>')
+    + '<div class="disc"><strong>Aviso legal:</strong> Este reporte es un documento auxiliar de uso interno y contable. '
+    + 'No sustituye la facturación legal exigida por la Providencia Administrativa SNAT/2011/00071 (talonarios autorizados, máquinas fiscales o sistemas de facturación electrónica certificados por SENIAT). '
+    + 'Los cálculos asumen que el monto cobrado YA INCLUYE el IVA. Validar con contador antes de cualquier uso oficial.</div>'
+    + '<div class="sig"><div class="b">Elaborado por</div><div class="b">Revisado por contador</div><div class="b">Firma y sello</div></div>'
+    + '<div class="foot"><div>Pagasi · Sistema de gestión</div><div>'+new Date().toLocaleString('es-VE')+'</div></div>'
+    + '<script>setTimeout(function(){window.print();},300);<\/script>'
+    + '</body></html>';
+  var w = window.open('', '_blank', 'width=1100,height=800');
+  if(!w){
+    if(typeof toast === 'function') toast('Activa los popups para imprimir','error');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
 
 
