@@ -17440,7 +17440,7 @@ var _libroSeniatCfg = {
   esSPE: false,             // ¿Soy Sujeto Pasivo Especial (cobro IGTF)?
   igtfAlicuota: 3,          // % IGTF (default 3%)
   // Métodos que se consideran "moneda extranjera" (gravados con IGTF si esSPE=true)
-  metodosDivisa: ['Zelle','USDT','Efectivo USD','PayPal','Binance','Wise','Cash App'],
+  metodosDivisa: ['Zelle','USDT','Efectivo USD','Efectivo','PayPal','Binance','Wise','Cash App','Dolar','Dólar'],
   // Período seleccionado
   periodoTipo: 'mes',       // 'mes' | 'rango'
   periodoMes: '',           // YYYY-MM
@@ -17468,9 +17468,26 @@ function _libroSeniatSaveCfg(){
 }
 
 // Determina si un método de pago es divisa (gravado con IGTF)
+// Estrategia 1: Si el nombre del método coincide con una cuenta bancaria configurada,
+//   usar el campo `moneda` de esa cuenta (USD = divisa, BS = bolívares)
+// Estrategia 2 (fallback): Si no hay match con cuenta, usar lista de palabras clave
 function _libroSeniatEsDivisa(metodo){
   if(!metodo) return false;
-  var m = String(metodo).toLowerCase();
+  var nombreMetodo = String(metodo).trim();
+  // Buscar cuenta bancaria con ese nombre (insensible a mayúsculas)
+  var cuentas = (typeof _cuentasBanc !== 'undefined' && _cuentasBanc) ? _cuentasBanc : [];
+  var cuenta = cuentas.find(function(c){
+    return (c.nombre||'').trim().toLowerCase() === nombreMetodo.toLowerCase();
+  });
+  if(cuenta){
+    // moneda 'USD' o cualquier cosa distinta a 'BS' se considera divisa
+    return (cuenta.moneda||'USD').toUpperCase() !== 'BS';
+  }
+  // Fallback: palabras clave (por si el método no coincide con cuenta configurada)
+  var m = nombreMetodo.toLowerCase();
+  // "Bs" / "bolívares" / "bolivares" → bolívares (NO divisa)
+  if(m.indexOf('bs') !== -1 || m.indexOf('bolivar') !== -1 || m.indexOf('bolívar') !== -1) return false;
+  // Si contiene palabras de divisa explícitas
   return _libroSeniatCfg.metodosDivisa.some(function(d){
     return m.indexOf(d.toLowerCase()) !== -1;
   });
@@ -17532,12 +17549,13 @@ function _libroSeniatDesglose(pago){
 }
 
 // Busca CI/RIF del cliente (busca en S.clientes por nombre exacto)
+// Campo correcto: 'cedula' (no 'ci')
 function _libroSeniatGetCI(nombreCliente){
   if(!nombreCliente) return '';
   var c = (S.clientes||[]).find(function(x){
     return (x.nombre||'').trim().toLowerCase() === String(nombreCliente).trim().toLowerCase();
   });
-  return c ? (c.ci||'') : '';
+  return c ? (c.cedula||c.ci||'') : '';
 }
 
 // Render principal del tab Libro SENIAT
@@ -17625,8 +17643,10 @@ function _renderLibroSeniat(){
     + '</select></div>'
     + '</div>'
     + '<div style="margin-top:8px;padding:10px;background:var(--gs);border-radius:8px;font-size:11px;color:var(--ink3);line-height:1.55">'
-    + '<strong style="color:var(--ink2)">Métodos considerados divisa (gravados con IGTF si eres SPE):</strong> Zelle, USDT, Efectivo USD, PayPal, Binance, Wise, Cash App. '
-    + 'Los pagos en bolívares NO causan IGTF.'
+    + '<strong style="color:var(--ink2)">¿Cómo se detecta si un pago genera IGTF?</strong> '
+    + 'El sistema usa la <strong>moneda configurada de cada cuenta bancaria</strong> en Configuración: '
+    + 'cuentas en <strong>USD</strong> generan IGTF, cuentas en <strong>Bs</strong> no. '
+    + 'Si un método no coincide con ninguna cuenta configurada, se detecta por palabras clave (Zelle, USDT, etc).'
     + '</div>'
     + '</div>'
     // ════════ PERÍODO ════════
