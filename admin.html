@@ -10909,6 +10909,243 @@ function liveSearchCliente(q){
 }
 
 // ══════════════════════════════════════════
+// PAGO DE COMPRA DE MOTO — helpers compartidos
+// (usado al crear moto en módulo Motocicletas y
+//  al elegir moto del catálogo en wizard de crédito)
+// ══════════════════════════════════════════
+var _MPAGO_PREFIX = 'mpago';
+function _mpagoMetodosOpts(){
+  var opts = (_cuentasBanc&&_cuentasBanc.length)
+    ? _cuentasBanc.map(function(c){return '<option value="'+c.nombre+'">'+c.nombre+'</option>';}).join('')
+    : '<option value="Efectivo USD">Efectivo USD</option>';
+  return opts;
+}
+function _mpagoFilaHtml(prefix, idx){
+  var opts = _mpagoMetodosOpts();
+  return '<div class="mpago-row" data-idx="'+idx+'" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">'
+    + '<div class="fg" style="margin:0"><label style="font-size:11px">Cuenta / Forma de pago</label>'
+    + '<select class="fs '+prefix+'-cuenta">'+opts+'</select></div>'
+    + '<div class="fg" style="margin:0"><label style="font-size:11px">Monto ($)</label>'
+    + '<input class="fi '+prefix+'-monto" type="number" step="0.01" placeholder="0.00" oninput="_mpagoActualizarTotales(\''+prefix+'\')"></div>'
+    + '<button type="button" class="btn btn-g btn-sm '+prefix+'-del" style="height:38px;padding:0 10px" onclick="_mpagoEliminarFila(this,\''+prefix+'\')" title="Eliminar">×</button>'
+    + '</div>';
+}
+function _mpagoBloqueHtml(prefix, titulo, descripcion){
+  prefix = prefix || _MPAGO_PREFIX;
+  return '<div class="fsec" style="margin-top:14px">'+(titulo||'Forma de pago de la moto')+'</div>'
+    + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:var(--r8);padding:12px">'
+    + '<div style="font-size:12px;color:var(--ink3);margin-bottom:10px">'+(descripcion||'Indica de cuál(es) cuenta(s) o efectivo sale el dinero para pagar esta moto. Puedes dividir el pago entre varias.')+'</div>'
+    + '<div id="'+prefix+'-rows">'+_mpagoFilaHtml(prefix,0)+'</div>'
+    + '<button type="button" class="btn btn-g btn-sm" onclick="_mpagoAgregarFila(\''+prefix+'\')" style="margin-top:4px">+ Agregar otra cuenta</button>'
+    + '<div id="'+prefix+'-totales" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--rim)">'
+    +   '<div style="text-align:center"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px">Costo</div><div id="'+prefix+'-costo" style="font-size:14px;font-weight:900;color:var(--ink)">$0.00</div></div>'
+    +   '<div style="text-align:center"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px">Asignado</div><div id="'+prefix+'-asignado" style="font-size:14px;font-weight:900;color:var(--p1)">$0.00</div></div>'
+    +   '<div style="text-align:center"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px">Diferencia</div><div id="'+prefix+'-dif" style="font-size:14px;font-weight:900;color:var(--ink)">$0.00</div></div>'
+    + '</div>'
+    + '<div id="'+prefix+'-msg" style="margin-top:8px;font-size:11px;color:var(--ink3)"></div>'
+    + '</div>';
+}
+function _mpagoAgregarFila(prefix){
+  prefix = prefix || _MPAGO_PREFIX;
+  var cont = document.getElementById(prefix+'-rows');
+  if(!cont) return;
+  var idx = cont.querySelectorAll('.mpago-row').length;
+  cont.insertAdjacentHTML('beforeend', _mpagoFilaHtml(prefix, idx));
+  _mpagoActualizarTotales(prefix);
+}
+function _mpagoEliminarFila(btn, prefix){
+  prefix = prefix || _MPAGO_PREFIX;
+  var cont = document.getElementById(prefix+'-rows');
+  if(!cont) return;
+  var rows = cont.querySelectorAll('.mpago-row');
+  if(rows.length<=1){
+    // No eliminar la última, solo limpiar
+    var inp = btn.parentNode.querySelector('.'+prefix+'-monto');
+    if(inp) inp.value = '';
+    _mpagoActualizarTotales(prefix);
+    return;
+  }
+  btn.parentNode.remove();
+  _mpagoActualizarTotales(prefix);
+}
+function _mpagoSetCosto(prefix, costo){
+  prefix = prefix || _MPAGO_PREFIX;
+  var el = document.getElementById(prefix+'-costo');
+  if(el) el.textContent = '$'+(parseFloat(costo)||0).toFixed(2);
+  _mpagoActualizarTotales(prefix);
+}
+function _mpagoActualizarTotales(prefix){
+  prefix = prefix || _MPAGO_PREFIX;
+  var cont = document.getElementById(prefix+'-rows');
+  if(!cont) return;
+  var asignado = 0;
+  cont.querySelectorAll('.'+prefix+'-monto').forEach(function(inp){
+    asignado += parseFloat(inp.value)||0;
+  });
+  var costoEl = document.getElementById(prefix+'-costo');
+  var costo = costoEl ? (parseFloat((costoEl.textContent||'0').replace(/[^0-9.\-]/g,''))||0) : 0;
+  var dif = +(costo - asignado).toFixed(2);
+  var asEl = document.getElementById(prefix+'-asignado');
+  var dEl  = document.getElementById(prefix+'-dif');
+  var msg  = document.getElementById(prefix+'-msg');
+  if(asEl) asEl.textContent = '$'+asignado.toFixed(2);
+  if(dEl){
+    dEl.textContent = (dif>=0?'$':'-$')+Math.abs(dif).toFixed(2);
+    dEl.style.color = Math.abs(dif)<0.01 ? 'var(--green)' : (dif>0 ? 'var(--amber)' : 'var(--red)');
+  }
+  if(msg){
+    if(costo<=0){ msg.textContent = ''; msg.style.color='var(--ink3)'; }
+    else if(Math.abs(dif)<0.01){ msg.textContent = '✓ Pago cuadrado con el costo de la moto'; msg.style.color='var(--green)'; }
+    else if(dif>0){ msg.textContent = 'Falta asignar $'+dif.toFixed(2); msg.style.color='var(--amber)'; }
+    else { msg.textContent = 'Te excediste por $'+Math.abs(dif).toFixed(2); msg.style.color='var(--red)'; }
+  }
+}
+function _mpagoLeerPagos(prefix){
+  prefix = prefix || _MPAGO_PREFIX;
+  var cont = document.getElementById(prefix+'-rows');
+  var pagos = [];
+  if(!cont) return pagos;
+  cont.querySelectorAll('.mpago-row').forEach(function(row){
+    var cSel = row.querySelector('.'+prefix+'-cuenta');
+    var mInp = row.querySelector('.'+prefix+'-monto');
+    var cuenta = cSel ? cSel.value : '';
+    var monto = parseFloat(mInp&&mInp.value)||0;
+    if(cuenta && monto>0) pagos.push({cuenta:cuenta, monto:+monto.toFixed(2)});
+  });
+  return pagos;
+}
+function _mpagoValidarContraCosto(prefix, costo){
+  var pagos = _mpagoLeerPagos(prefix);
+  var suma = pagos.reduce(function(a,p){return a+p.monto;},0);
+  var costoNum = parseFloat(costo)||0;
+  if(costoNum<=0) return {ok:true, pagos:pagos}; // sin costo no se exige
+  if(pagos.length===0){ return {ok:false, error:'Debes indicar al menos una cuenta o forma de pago para la moto'}; }
+  if(Math.abs(suma-costoNum)>0.01){
+    return {ok:false, error:'La suma de pagos ($'+suma.toFixed(2)+') no coincide con el costo de la moto ($'+costoNum.toFixed(2)+')'};
+  }
+  return {ok:true, pagos:pagos};
+}
+// Crea, para una moto recién creada, los egresos + movimientos de retiro
+// asociados al pago (uno por cada cuenta usada). Los egresos llevan
+// motoIdRef y los movimientos llevan motoIdRef + conceptoEgreso para
+// poder revertirlos en bloque al eliminar la moto.
+function _mpagoCrearGastos(motoObj, pagos, opts){
+  opts = opts || {};
+  if(!motoObj || !Array.isArray(pagos) || !pagos.length) return [];
+  var fecha = opts.fecha || new Date().toISOString().split('T')[0];
+  var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+  var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
+  var conceptoBase = 'Compra de moto · '+(motoObj.modelo||'')+(motoObj.vin?' · VIN '+motoObj.vin:'')+' (Moto #'+motoObj.id+')';
+  var creados = [];
+  pagos.forEach(function(p, idx){
+    // 1) Egreso en Finanzas (categoría inventario)
+    var newEgId = (S.egresos&&S.egresos.length)
+      ? Math.max.apply(null, S.egresos.map(function(x){return x.id;}))+1
+      : 1;
+    // Asegurar que sea único si se crean varios en el mismo tick
+    newEgId += idx;
+    var newEg = {
+      id: newEgId,
+      concepto: conceptoBase + (pagos.length>1 ? ' (parte '+(idx+1)+'/'+pagos.length+')' : ''),
+      monto: p.monto,
+      fecha: fecha,
+      categoria: 'inventario',
+      forma: p.cuenta,
+      notas: opts.notas || '',
+      motoIdRef: motoObj.id,
+      origenAuto: 'compra_moto',
+      eliminado: false
+    };
+    if(S.egresos) S.egresos.push(newEg);
+    if(DB && DB.saveEgreso) DB.saveEgreso(newEg);
+    // 2) Movimiento de retiro en cuentas
+    var mov = {
+      id: 'MOV-MOTO-'+motoObj.id+'-'+idx+'-'+Date.now(),
+      tipo: 'retiro',
+      tipoOperacion: 'compra_moto',
+      concepto: 'Egreso · ' + newEg.concepto,
+      monto: p.monto,
+      cuentaOrigen: p.cuenta,
+      cuentaDestino: null,
+      fecha: fecha,
+      referencia: opts.notas || '',
+      realizadoPor: quien,
+      tasaBs: window._tasaBsGlobal||1,
+      hora: hora,
+      motoIdRef: motoObj.id,
+      conceptoEgreso: newEg.id
+    };
+    if(S.movimientos) S.movimientos.push(mov);
+    if(DB && DB.saveMovimiento) DB.saveMovimiento(mov);
+    creados.push({egreso:newEg, mov:mov});
+  });
+  return creados;
+}
+// Reverso (al eliminar moto): marca como eliminados los egresos y movimientos
+// asociados, y opcionalmente devuelve el dinero a las cuentas creando
+// movimientos de depósito de reverso.
+function _mpagoReversarGastos(motoId, devolver, audit){
+  var quien = (audit&&audit.eliminadoPor) || (S.currentUser&&S.currentUser.nombre)||'Admin';
+  var fechaAudit = (audit&&audit.eliminadoEn) || new Date().toISOString();
+  var razon = (audit&&audit.eliminadoRazon) || '';
+  var afectados = 0;
+  // 1) Egresos
+  (S.egresos||[]).forEach(function(eg){
+    if(!eg.eliminado && String(eg.motoIdRef)===String(motoId) && eg.origenAuto==='compra_moto'){
+      eg.eliminado = true;
+      eg.eliminadoPor = quien;
+      eg.eliminadoEn = fechaAudit;
+      eg.eliminadoRazon = razon;
+      eg.eliminacionReversaCuenta = !!devolver;
+      if(DB && DB.saveEgreso) DB.saveEgreso(eg);
+      afectados++;
+    }
+  });
+  // 2) Movimientos originales — marcar eliminados
+  (S.movimientos||[]).forEach(function(m){
+    if(!m.eliminado && String(m.motoIdRef)===String(motoId) && m.tipoOperacion==='compra_moto' && m.tipo==='retiro'){
+      m.eliminado = true;
+      m.eliminadoPor = quien;
+      m.eliminadoEn = fechaAudit;
+      m.eliminadoRazon = razon;
+      if(DB && DB.saveMovimiento) DB.saveMovimiento(m);
+    }
+  });
+  // 3) Si se devuelve, crear movimientos de reverso (depósito) por cada retiro
+  if(devolver){
+    var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+    (S.movimientos||[]).slice().forEach(function(m){
+      if(m.eliminado && String(m.motoIdRef)===String(motoId) && m.tipoOperacion==='compra_moto' && m.tipo==='retiro' && !m.reversoCreado){
+        var rev = {
+          id:'MOV-REV-MOTO-'+motoId+'-'+Date.now()+'-'+Math.floor(Math.random()*1000),
+          tipo:'deposito',
+          concepto:'Reverso compra de moto eliminada · '+(m.concepto||''),
+          monto: parseFloat(m.monto)||0,
+          cuentaOrigen:null,
+          cuentaDestino: m.cuentaOrigen,
+          fecha: new Date().toISOString().split('T')[0],
+          referencia:'Reverso por eliminación de moto #'+motoId,
+          realizadoPor: quien,
+          tasaBs: window._tasaBsGlobal||1,
+          hora: hora,
+          reversoDe:'compra_moto:'+motoId
+        };
+        m.reversoCreado = true;
+        if(DB && DB.saveMovimiento) DB.saveMovimiento(m);
+        if(S.movimientos) S.movimientos.push(rev);
+        if(DB && DB.saveMovimiento) DB.saveMovimiento(rev);
+      }
+    });
+  }
+  return afectados;
+}
+function _mpagoTieneGastos(motoId){
+  return (S.egresos||[]).some(function(eg){
+    return !eg.eliminado && String(eg.motoIdRef)===String(motoId) && eg.origenAuto==='compra_moto';
+  });
+}
+
+// ══════════════════════════════════════════
 // MOTO CRUD
 // ══════════════════════════════════════════
 function openAddMoto(id=null){
@@ -10990,7 +11227,8 @@ function openAddMoto(id=null){
     </div>
     <div class="fgr c1" style="gap:8px;margin-top:9px">
       <div class="fg"><label>Notas</label><textarea class="fta" id="m_notas">${(m&&m.notas)||''}</textarea></div>
-    </div>`;
+    </div>
+    ${ed ? '' : _mpagoBloqueHtml('mpago','Forma de pago de la moto','Indica de cuál(es) cuenta(s) o efectivo sale el dinero. Puedes dividir el pago entre varias cuentas. La suma debe coincidir con el precio base real (costo).')}`;
   if(ed) previewCalc();
   S.saveFn=()=>{
     const g=i=>{ var el=$(i); return el?el.value.trim():null; };
@@ -11014,8 +11252,20 @@ function openAddMoto(id=null){
       calc=Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
     }
     const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,marca:g('m_marca')||'',color:g('m_color')||'',anio:(parseInt(g('m_anio'),10)||null),vin:g('m_vin')||'',placa:g('m_placa')||'',serialMotor:g('m_serial_motor')||'',serialChasis:g('m_serial_chasis')||'',gpsNum:g('m_gps_num')||'',estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
+    // ── Validar pago de la moto SOLO al crear nueva (no al editar) ──
+    var _pagosMoto = null;
+    if(!ed){
+      var _costoMoto = obj.precioBaseReal || precioBaseReal || 0;
+      var _val = _mpagoValidarContraCosto('mpago', _costoMoto);
+      if(!_val.ok){ toast(_val.error,'error'); return false; }
+      _pagosMoto = _val.pagos;
+    }
     if(ed){const i=S.motos.findIndex(x=>String(x.id)===String(m.id));if(i>=0){S.motos[i]=obj;}else{S.motos.push(obj);}}else S.motos.push(obj);
     DB.saveMoto(obj);
+    // ── Crear egresos + movimientos por la compra de la moto (solo nueva) ──
+    if(!ed && _pagosMoto && _pagosMoto.length){
+      _mpagoCrearGastos(obj, _pagosMoto, {fecha: new Date().toISOString().split('T')[0]});
+    }
     closeM();nav('motos');toast(ed?'Moto actualizada':'✓ Moto agregada','success');return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar</button>`;
@@ -11048,9 +11298,12 @@ function previewCalc(){
   if($('m_plan_custom_box')) $('m_plan_custom_box').style.display=(_mode==='custom')?'block':'none';
   if($('m_plan_apy_box')) $('m_plan_apy_box').style.display=(_mode==='apy')?'block':'none';
   if($('m_precio_base') && (!($('m_precio_base').value) || parseFloat($('m_precio_base').value||0)<=0) && p>0){ $('m_precio_base').value=p.toFixed(2); }
+  // Si está visible el bloque de pago de moto (creación nueva), actualizar el costo objetivo (precio base real)
+  const _precioBaseActual = parseFloat((($('m_precio_base')&&$('m_precio_base').value)||p))||p;
+  if(document.getElementById('mpago-rows')) _mpagoSetCosto('mpago', _precioBaseActual);
   if(_mode==='apy') _mApyCompare();
   if(!p||!div){ if(div) div.style.display='none'; return; }
-  const precioBase=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||p))||p;
+  const precioBase=_precioBaseActual;
   let r;
   if(_mode==='custom'){
     r=calcCustomPlan(precioBase, parseFloat(($('m_ini_real')&&$('m_ini_real').value)||0)||0, parseFloat(($('m_cuota_q_custom')&&$('m_cuota_q_custom').value)||0)||0, parseInt((($('m_plazo_custom')&&$('m_plazo_custom').value)||PLAN.plazo),10)||PLAN.plazo);
@@ -11180,14 +11433,48 @@ function restaurarTodasLasMotosEliminadas(){
 function restaurarMoto(id){
   var m = S.motos.find(function(x){return String(x.id)===String(id);});
   if(!m){ toast('Moto no encontrada','error'); return; }
+  var seDevolvioDinero = !!m.eliminacionReversaCuenta;
   m.eliminado = false;
   m.eliminadoPor = null;
   m.eliminadoEn = null;
   m.eliminadoRazon = null;
   m.eliminadoPorUid = null;
+  m.eliminacionReversaCuenta = null;
   DB.saveMoto(m);
+  // Restaurar egresos y movimientos de compra asociados
+  var egRest=0, movRest=0;
+  (S.egresos||[]).forEach(function(eg){
+    if(eg.eliminado && String(eg.motoIdRef)===String(id) && eg.origenAuto==='compra_moto'){
+      eg.eliminado=false;
+      eg.eliminadoPor=null; eg.eliminadoEn=null; eg.eliminadoRazon=null; eg.eliminacionReversaCuenta=null;
+      if(DB && DB.saveEgreso) DB.saveEgreso(eg);
+      egRest++;
+    }
+  });
+  (S.movimientos||[]).forEach(function(mv){
+    if(mv.eliminado && String(mv.motoIdRef)===String(id) && mv.tipoOperacion==='compra_moto' && mv.tipo==='retiro'){
+      mv.eliminado=false;
+      mv.eliminadoPor=null; mv.eliminadoEn=null; mv.eliminadoRazon=null;
+      mv.reversoCreado=null;
+      if(DB && DB.saveMovimiento) DB.saveMovimiento(mv);
+      movRest++;
+    }
+  });
+  // Si al eliminar se devolvió el dinero, ahora hay que anular esos reversos para que la cuenta vuelva a quedar con el gasto
+  if(seDevolvioDinero){
+    (S.movimientos||[]).forEach(function(mv){
+      if(!mv.eliminado && mv.reversoDe==='compra_moto:'+id){
+        mv.eliminado=true;
+        mv.eliminadoPor=(S.currentUser&&S.currentUser.nombre)||'Admin';
+        mv.eliminadoEn=new Date().toISOString();
+        mv.eliminadoRazon='Restauración de moto — anulación del reverso previo';
+        if(DB && DB.saveMovimiento) DB.saveMovimiento(mv);
+      }
+    });
+  }
   nav('motos');
-  toast('✓ Moto "'+m.modelo+'" restaurada','success');
+  var detalle = (egRest||movRest) ? ' ('+egRest+' gasto(s) y '+movRest+' movimiento(s) restaurados)' : '';
+  toast('✓ Moto "'+m.modelo+'" restaurada'+detalle,'success');
 }
 
 function delMoto(id){
@@ -11273,6 +11560,12 @@ function auditBadge(item){
 function cDel(id){
   var i=S.motos.findIndex(x=>String(x.id)===String(id)); if(i<0) return;
   var m=S.motos[i];
+  // ¿La moto tiene gastos asociados (compra)? Si sí, mostrar modal extendido con opción de devolver
+  if(_mpagoTieneGastos(m.id)){
+    _delMotoConPagos(m, i);
+    return;
+  }
+  // Sin gastos asociados: comportamiento original
   confirmarEliminacion({
     titulo:'Eliminar Moto',
     descripcion:'¿Eliminar '+m.modelo+' — '+m.vin+'?',
@@ -11282,6 +11575,77 @@ function cDel(id){
       nav('motos'); toast('Moto eliminada','info');
     }
   });
+}
+
+// Eliminar moto que tiene gastos de compra asociados — pregunta si devolver dinero a cuentas
+function _delMotoConPagos(m, i){
+  if(!requireDeletePermission()) return;
+  // Resumen de gastos asociados
+  var gastos = (S.egresos||[]).filter(function(eg){
+    return !eg.eliminado && String(eg.motoIdRef)===String(m.id) && eg.origenAuto==='compra_moto';
+  });
+  var totalGastos = gastos.reduce(function(a,g){return a+(parseFloat(g.monto)||0);},0);
+  var listaCuentas = gastos.map(function(g){ return '<li style="margin-bottom:3px">'+g.forma+' — <strong>$'+(parseFloat(g.monto)||0).toFixed(2)+'</strong></li>'; }).join('');
+
+  $('mic').textContent='Del';
+  $('mtt').textContent='Eliminar Moto';
+  $('msb').textContent='El registro quedará auditado';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML=''
+    +'<div style="text-align:center;padding:8px 0 14px">'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">¿Eliminar '+(m.modelo||'')+(m.vin?' — '+m.vin:'')+'?</div>'
+    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:10px">Esta moto tiene <strong>'+gastos.length+' gasto(s)</strong> de compra registrado(s) por <strong>$'+totalGastos.toFixed(2)+'</strong>.</div>'
+    +'</div>'
+    +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 14px;margin-bottom:12px">'
+    +  '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);margin-bottom:6px">Gastos a anular</div>'
+    +  '<ul style="margin:0;padding-left:18px;font-size:12px;color:var(--ink)">'+listaCuentas+'</ul>'
+    +'</div>'
+    +'<div class="fg"><label>Razón de la eliminación (obligatorio)</label>'
+    +'<select class="fs" id="mdel_razon">'
+    +'<option value="">— Seleccionar —</option>'
+    +'<option>Error de captura</option>'
+    +'<option>Moto duplicada</option>'
+    +'<option>Datos incorrectos</option>'
+    +'<option>Operación cancelada</option>'
+    +'<option>Orden del administrador</option>'
+    +'<option>Otro</option>'
+    +'</select></div>'
+    +'<div class="fg" style="margin-top:8px;display:none" id="mdel_otro_wrap">'
+    +'<label>Especifica la razón</label>'
+    +'<input class="fi" id="mdel_otro" placeholder="Describe la razón..."></div>'
+    +'<div class="fg" style="margin-top:10px"><label>¿Qué hacer con el dinero de la(s) cuenta(s)?</label>'
+    +'<div style="display:grid;gap:8px">'
+    +'<label style="display:flex;gap:8px;align-items:flex-start;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px"><input type="radio" name="mdel_retorno" value="si" checked> <span><strong>Regresar el dinero a las cuentas</strong><br><span style="color:var(--ink3);font-size:12px">Crea un movimiento de reverso por cada cuenta y suma los montos de nuevo.</span></span></label>'
+    +'<label style="display:flex;gap:8px;align-items:flex-start;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px"><input type="radio" name="mdel_retorno" value="no"> <span><strong>Eliminar sin regresar el dinero</strong><br><span style="color:var(--ink3);font-size:12px">Solo se anulan los gastos, pero no se compensan las cuentas.</span></span></label>'
+    +'</div></div>';
+  setTimeout(function(){
+    var sel=$('mdel_razon');
+    if(sel) sel.onchange=function(){ var w=$('mdel_otro_wrap'); if(w) w.style.display=sel.value==='Otro'?'block':'none'; };
+  },50);
+  S.saveFn=function(){
+    var razon=($('mdel_razon')&&$('mdel_razon').value)||'';
+    if(razon==='Otro') razon=(($('mdel_otro')&&$('mdel_otro').value)||'').trim()||'Otro';
+    if(!razon){ toast('Debes seleccionar una razón','error'); return false; }
+    var devolver=(document.querySelector('input[name="mdel_retorno"]:checked')||{}).value!=='no';
+    var audit={
+      eliminado:true,
+      eliminadoPor:(S.currentUser&&S.currentUser.nombre)||'Administrador',
+      eliminadoPorUid:(S.currentUser&&S.currentUser.uid)||'',
+      eliminadoEn:new Date().toISOString(),
+      eliminadoRazon:razon,
+      eliminacionReversaCuenta:devolver
+    };
+    Object.assign(S.motos[i],audit);
+    DB.saveMoto(S.motos[i]);
+    // Reverso de gastos y movimientos
+    _mpagoReversarGastos(m.id, devolver, audit);
+    closeM(); nav('motos');
+    toast('Moto eliminada'+(devolver?' · Dinero devuelto a las cuentas':' · Sin reverso a cuentas'),'info');
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn btn-d" onclick="saveM()">Eliminar</button>';
+  $('ov').style.display='flex';
 }
 
 // ══════════════════════════════════════════
@@ -11959,7 +12323,7 @@ function _wzRender(motoId){
     + catOptions
     + '</select></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
-    + _wzFg('Precio (USD)','wz_precio','number','0','oninput="_wzActualizarPrecioBaseDesdePrecio();_wzActualizarFinPreview(this.value);_wzScore()"',true)
+    + _wzFg('Precio (USD)','wz_precio','number','0','oninput="_wzActualizarPrecioBaseDesdePrecio();_wzActualizarFinPreview(this.value);_wzMpagoSync();_wzScore()"',true)
     + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Uso de la moto *</label>'
     + '<select class="fs" id="wz_uso" onchange="_wzScore()">'
     + '<option value="personal">Personal</option>'
@@ -11971,7 +12335,7 @@ function _wzRender(motoId){
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan del crédito</div>'
     + '<div class="fgr">'
     + '<div class="fg"><label>Tipo de plan</label><select class="fs" id="wz_plan_mode" onchange="_wzTogglePlanMode(this.value)"><option value="global">Plan principal</option><option value="custom">Plan personalizado</option><option value="apy">APY / Meses</option></select></div>'
-    + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
+    + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzScore()"></div>'
     + '</div>'
     + '<div id="wz_plan_custom_box" style="display:none;margin-top:10px">'
     + '<div class="fgr">'
@@ -12017,6 +12381,10 @@ function _wzRender(motoId){
     + '<div id="wz-fin-preview" style="margin-top:14px;display:none;background:var(--gs);border:1px solid var(--rim2);border-radius:12px;padding:14px">'
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan de crédito automático</div>'
     + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="wz-fin-cells"></div>'
+    + '</div>'
+    // ── Bloque de pago de la moto (solo cuando se elige del catálogo, no del inventario) ──
+    + '<div id="wz-mpago-wrap" style="display:none;margin-top:14px">'
+    +   _mpagoBloqueHtml('wzmpago','Forma de pago de la moto (compra)','Esta moto se está agregando nueva al sistema desde el catálogo. Indica de cuál(es) cuenta(s) o efectivo sale el dinero del costo (precio base real). Puedes dividir el pago entre varias cuentas.')
     + '</div>';
 
   // ── PASO 3: Perfil crediticio ──
@@ -12268,6 +12636,37 @@ function _wzRender(motoId){
   if(WZ.step===3 && WZ.precio>0){
     setTimeout(function(){ _wzActualizarFinPreview(WZ.precio); }, 50);
   }
+  // Restaurar bloque de pago de moto si veníamos del catálogo (no inventario)
+  if(WZ.step===3 && WZ.precio>0 && !WZ.motoInvId && WZ.motoModelo){
+    setTimeout(function(){
+      var wrap = document.getElementById('wz-mpago-wrap');
+      if(wrap){
+        wrap.style.display='block';
+        var pBaseInp = document.getElementById('wz_precio_base_real');
+        var costoBase = pBaseInp && parseFloat(pBaseInp.value)>0 ? parseFloat(pBaseInp.value) : (WZ.precio||0);
+        _mpagoSetCosto('wzmpago', costoBase);
+        // Restaurar filas previas si existen
+        if(Array.isArray(WZ._pagosMoto) && WZ._pagosMoto.length){
+          var cont = document.getElementById('wzmpago-rows');
+          if(cont){
+            cont.innerHTML='';
+            WZ._pagosMoto.forEach(function(p, idx){
+              cont.insertAdjacentHTML('beforeend', _mpagoFilaHtml('wzmpago', idx));
+              var rows = cont.querySelectorAll('.mpago-row');
+              var row = rows[rows.length-1];
+              if(row){
+                var c = row.querySelector('.wzmpago-cuenta');
+                var mt = row.querySelector('.wzmpago-monto');
+                if(c) c.value = p.cuenta;
+                if(mt) mt.value = p.monto;
+              }
+            });
+            _mpagoActualizarTotales('wzmpago');
+          }
+        }
+      }
+    }, 80);
+  }
   // Renderizar resultado si es paso 4
   if(WZ.step===4){
     setTimeout(function(){ _wzRenderResultado(); }, 50);
@@ -12322,41 +12721,52 @@ function _wzPickCliente(sel){
   var id = String((sel&&sel.value)!=null ? sel.value : '').trim();
   WZ.clienteSel = id || '';
   if(!id){
-    WZ.wz_nom = WZ.wz_ci = WZ.wz_tel = WZ.wz_wa = WZ.wz_email = WZ.wz_ciudad = '';
-    WZ.wz_emp = WZ.wz_ant = WZ.wz_conocio = '';
-    WZ.wz_ing = WZ.wz_ifam = '';
+    // Limpiar TODOS los campos al deseleccionar
+    var keys = ['nom','ci','tel','wa','email','ciudad','emp','ant','ing','ifam','conocio','viv','tdir','estado_ubi','ciudad_res','dir_det','dir_q','empresa','cargo','rem','dep','hist','deuda','banco','banco_nm','banco_cobro','cuenta','ahorro','cashea','cashea_nivel','cashea_pago','cashea_estado','cashea_deuda','cashea_monto','cashea_cuotas_pend','cashea_ultimo_art','cashea_ultimo_monto','cashea_ultima_fecha','cashea_total_compras','cashea_obs','fiador_tiene','fiador_nom','fiador_tel','fiador_ci','fiador_rel','r1n','r1t','r1r','r1obs','r2n','r2t','r2r','r2obs','impresion','obs'];
+    keys.forEach(function(k){ WZ[k]=''; });
+    // Limpiar también todos los aliases wz_*
+    var wzKeys = ['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_viv','wz_tdir','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_impresion','wz_obs'];
+    wzKeys.forEach(function(k){ WZ[k]=''; });
+    // Limpiar chips
+    WZ['_chip_wz_emp_g']=WZ['_chip_wz_dep_g']=WZ['_chip_wz_hist_g']=WZ['_chip_wz_deuda_g']=WZ['_chip_wz_impresion_g']='';
     _wzDocsUp={}; WZ.documentos=[]; WZ.docsCount=0;
     return _wzRender();
   }
   var c = (S.clientes||[]).find(function(x){ return String((x&&x.id)!=null ? x.id : '').trim()===id; });
   if(!c) return;
+  // Datos personales
   WZ.nom = WZ.wz_nom = c.nombre || '';
   WZ.ci = WZ.wz_ci = _wzFmtCedula(c.cedula || '');
   WZ.tel = WZ.wz_tel = c.tel || '';
   WZ.wa = WZ.wz_wa = c.wa || c.tel || '';
   WZ.email = WZ.wz_email = c.email || '';
   WZ.ciudad = WZ.wz_ciudad = c.ciudad || '';
-  WZ.emp = WZ.wz_emp = c.trabajo || '';
-  WZ.ant = WZ.wz_ant = c.antiguedad || '';
-  WZ.ing = WZ.wz_ing = c.ingreso || '';
-  WZ.ifam = WZ.wz_ifam = c.ingreso_familiar || '';
   WZ.conocio = WZ.wz_conocio = c.conocio || '';
+  // Residencia
   WZ.viv = WZ.wz_viv = c.vivienda || '';
   WZ.tdir = WZ.wz_tdir = c.tiempo_dir || '';
   WZ.estado_ubi = WZ.wz_estado = c.estado_ubi || '';
   WZ.ciudad_res = WZ.wz_ciudad_res = c.ciudad || '';
   WZ.dir_det = WZ.wz_dir_det = c.dir || '';
+  WZ.dir_q = WZ.wz_dir_q = c.dir || '';
+  // Empleo / Ingresos
+  WZ.emp = WZ.wz_emp = c.trabajo || '';
   WZ.empresa = WZ.wz_empresa = c.empresa || '';
   WZ.cargo = WZ.wz_cargo = c.cargo || '';
+  WZ.ing = WZ.wz_ing = c.ingreso || '';
+  WZ.ifam = WZ.wz_ifam = c.ingreso_familiar || '';
+  WZ.ant = WZ.wz_ant = c.antiguedad || '';
   WZ.rem = WZ.wz_rem = c.remesas || '';
   WZ.dep = c.dependientes || 0;
   WZ.hist = c.historial || '';
   WZ.deuda = c.deudas || '';
+  // Banco / Ahorro
   WZ.banco = WZ.wz_banco = c.banco_estado || '';
   WZ.banco_nm = WZ.wz_banco_nm = c.banco_nombre || '';
   WZ.banco_cobro = WZ.wz_banco_cobro = c.banco_cobro || '';
   WZ.cuenta = WZ.wz_cuenta = c.cuenta_digitos || '';
   WZ.ahorro = WZ.wz_ahorro = c.ahorro || '';
+  // Cashea
   WZ.cashea = c.cashea || 'no';
   WZ.cashea_nivel = WZ.wz_cashea_nivel = c.cashea_nivel || '';
   WZ.cashea_pago = WZ.wz_cashea_pago = c.cashea_pago || '';
@@ -12369,28 +12779,39 @@ function _wzPickCliente(sel){
   WZ.cashea_ultima_fecha = WZ.wz_cashea_ultima_fecha = c.cashea_ultima_fecha || '';
   WZ.cashea_total_compras = WZ.wz_cashea_total_compras = c.cashea_total_compras || '';
   WZ.cashea_obs = WZ.wz_cashea_obs = c.cashea_obs || '';
+  // Fiador
   WZ.fiador_tiene = c.fiador || 'no';
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
   WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
   WZ.fiador_ci = WZ.wz_fiador_ci = _wzFmtCedula(c.fiador_ci || '');
   WZ.fiador_rel = WZ.wz_fiador_rel = c.fiador_rel || '';
-  WZ.r1n = c.ref1&&c.ref1.nom || '';
-  WZ.r1t = c.ref1&&c.ref1.tel || '';
-  WZ.r1r = c.ref1&&c.ref1.rel || '';
-  WZ.r1obs = c.ref1&&c.ref1.obs || '';
-  WZ.r2n = c.ref2&&c.ref2.nom || '';
-  WZ.r2t = c.ref2&&c.ref2.tel || '';
-  WZ.r2r = c.ref2&&c.ref2.rel || '';
-  WZ.r2obs = c.ref2&&c.ref2.obs || '';
+  // Referencias personales (con aliases wz_* que es lo que _wzHydrate lee)
+  WZ.r1n = WZ.wz_r1n = (c.ref1&&c.ref1.nom) || '';
+  WZ.r1t = WZ.wz_r1t = (c.ref1&&c.ref1.tel) || '';
+  WZ.r1r = WZ.wz_r1r = (c.ref1&&c.ref1.rel) || '';
+  WZ.r1obs = WZ.wz_r1obs = (c.ref1&&c.ref1.obs) || '';
+  WZ.r2n = WZ.wz_r2n = (c.ref2&&c.ref2.nom) || '';
+  WZ.r2t = WZ.wz_r2t = (c.ref2&&c.ref2.tel) || '';
+  WZ.r2r = WZ.wz_r2r = (c.ref2&&c.ref2.rel) || '';
+  WZ.r2obs = WZ.wz_r2obs = (c.ref2&&c.ref2.obs) || '';
+  // Documentos / impresión / observaciones
   _wzLoadDocsUpFromCliente(c);
   WZ.docsCount = (c.documentos&&c.documentos.length) || c.docs_count || 0;
-  WZ.impresion = c.impresion || '';
+  WZ.impresion = WZ.wz_impresion = c.impresion || '';
+  WZ.obs = WZ.wz_obs = c.notas || c.obs || '';
+  // Score / factores (si el cliente ya tenía un score guardado)
   WZ.score = c.score_indexa || WZ.score || 0;
   WZ.f1 = c.f1 || WZ.f1 || 0;
   WZ.f2 = c.f2 || WZ.f2 || 0;
   WZ.f3 = c.f3 || WZ.f3 || 0;
   WZ.f4 = c.f4 || WZ.f4 || 0;
   WZ.f5 = c.f5 || WZ.f5 || 0;
+  // Chips (la hidratación los lee de estos para pintarlos)
+  WZ['_chip_wz_emp_g'] = WZ.emp || '';
+  WZ['_chip_wz_dep_g'] = String(WZ.dep || 0);
+  WZ['_chip_wz_hist_g'] = WZ.hist || '';
+  WZ['_chip_wz_deuda_g'] = WZ.deuda || '';
+  WZ['_chip_wz_impresion_g'] = WZ.impresion || '';
   _wzRender();
 }
 
@@ -12401,9 +12822,26 @@ function _wzActualizarPrecioBaseDesdePrecio(){
   if((!baseInp.value || parseFloat(baseInp.value||0)<=0) && pInp && parseFloat(pInp.value||0)>0){ baseInp.value=parseFloat(pInp.value).toFixed(2); }
 }
 
+// ── Sincronizar costo objetivo del bloque de pago de moto del wizard ──
+function _wzMpagoSync(){
+  var wrap = document.getElementById('wz-mpago-wrap');
+  if(!wrap || wrap.style.display==='none') return;
+  var pBaseInp = document.getElementById('wz_precio_base_real');
+  var pInp = document.getElementById('wz_precio');
+  var costo = pBaseInp && parseFloat(pBaseInp.value)>0
+    ? parseFloat(pBaseInp.value)
+    : (pInp && parseFloat(pInp.value)>0 ? parseFloat(pInp.value) : 0);
+  _mpagoSetCosto('wzmpago', costo);
+}
+
 // ── Selección de moto del inventario ──
 function _wzPickMotoInv(sel){
-  if(!sel.value){ WZ.precio=0; WZ.motoInvId=null; _wzScore(); return; }
+  var wrap = document.getElementById('wz-mpago-wrap');
+  if(!sel.value){
+    WZ.precio=0; WZ.motoInvId=null;
+    if(wrap) wrap.style.display='none';
+    _wzScore(); return;
+  }
   var opt = sel.options[sel.selectedIndex];
   var precio = parseFloat(opt.getAttribute('data-precio')||0);
   var moto = S.motos.find(function(m){ return String(m.id)===String(sel.value); });
@@ -12415,13 +12853,19 @@ function _wzPickMotoInv(sel){
   _wzActualizarPrecioBaseDesdePrecio();
   WZ.motoInvId = sel.value;
   WZ.motoModelo = moto ? moto.modelo : opt.text.split(' —')[0].trim();
+  // Inventario existente: NO mostrar bloque de pago (la moto ya fue pagada al ingresarla)
+  if(wrap) wrap.style.display='none';
   _wzActualizarFinPreview(precio);
   _wzScore();
 }
 
 // ── Selección de moto del catálogo ──
 function _wzPickMotoCat(sel){
-  if(!sel.value){ return; }
+  var wrap = document.getElementById('wz-mpago-wrap');
+  if(!sel.value){
+    if(wrap) wrap.style.display='none';
+    return;
+  }
   var precio = parseFloat(sel.value);
   var opt = sel.options[sel.selectedIndex];
   var invSel = document.getElementById('wz_moto_inv');
@@ -12432,6 +12876,13 @@ function _wzPickMotoCat(sel){
   _wzActualizarPrecioBaseDesdePrecio();
   WZ.motoInvId = null;
   WZ.motoModelo = opt.getAttribute('data-modelo')||opt.text.split(' —')[0].trim();
+  // Catálogo: SÍ mostrar bloque de pago (se está creando una moto nueva)
+  if(wrap){
+    wrap.style.display='block';
+    var pBaseInp = document.getElementById('wz_precio_base_real');
+    var costoBase = pBaseInp && parseFloat(pBaseInp.value)>0 ? parseFloat(pBaseInp.value) : precio;
+    _mpagoSetCosto('wzmpago', costoBase);
+  }
   _wzActualizarFinPreview(precio);
   _wzScore();
 }
@@ -13256,6 +13707,15 @@ function _wzValidar(){
       if(precioBase<=0){ toast('El precio base real es obligatorio','error'); return false; }
       if(iniReal>precioBase){ toast('La inicial real no puede ser mayor al precio base real','error'); return false; }
     }
+    // Validar pago de la moto SOLO si se eligió del catálogo (no del inventario existente)
+    if(!WZ.motoInvId){
+      var _precioBase = parseFloat((document.getElementById('wz_precio_base_real')||{}).value)||precio;
+      var _val = _mpagoValidarContraCosto('wzmpago', _precioBase);
+      if(!_val.ok){ toast(_val.error,'error'); return false; }
+      WZ._pagosMoto = _val.pagos;
+    } else {
+      WZ._pagosMoto = null; // viene del inventario, no se cobra de nuevo
+    }
     _wzActualizarFinPreview(precio);
   }
   // Guardar valores antes de avanzar
@@ -13590,6 +14050,10 @@ function _wzGuardar(){
     DB.saveMoto(motoInvNueva);
     newCred.motoId = motoInvNueva.id;
     DB.saveCred(newCred);
+    // ── Crear egresos + movimientos por la compra de la moto (catálogo) ──
+    if(WZ._pagosMoto && WZ._pagosMoto.length){
+      _mpagoCrearGastos(motoInvNueva, WZ._pagosMoto, {fecha: newCred.fecha});
+    }
   }
 
   // Registrar la inicial también en Pagos
