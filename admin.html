@@ -3647,7 +3647,14 @@ function getWzPlanConfig(){
   if(modo==='apy'){
     var apyObj=parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
     var plazoApy=parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
-    var iniSel=parseFloat(((document.getElementById('wz_apy_inicial_sel')||{}).value));
+    var iniSelEl = document.getElementById('wz_apy_inicial_sel');
+    var iniSelRaw = iniSelEl ? iniSelEl.value : '0.50';
+    var iniSel;
+    if(iniSelRaw === 'custom'){
+      iniSel = parseFloat(window._wzCustomPct)||0.50;
+    } else {
+      iniSel = parseFloat(iniSelRaw);
+    }
     if(!(iniSel>0)) iniSel=0.50; // 50% por defecto
     var apyCalc=calcApyPlan(precioBase||WZ.precio||0, iniSel, apyObj, plazoApy);
     apyCalc.mode='apy';
@@ -3689,7 +3696,7 @@ function _wzApyCompare(){
   if(!(precio>0)||!(apy>0)||!(plazo>0)){ box.style.display='none'; _wzActualizarFinPreview(WZ.precio||0); return; }
   box.style.display='block';
   var pcts=[0.45,0.50,0.55];
-  grid.innerHTML=pcts.map(function(p){
+  var fixedCards = pcts.map(function(p){
     var r=calcApyPlan(precio,p,apy,plazo);
     return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:10px;padding:10px">'
       +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p1);margin-bottom:6px">Inicial '+(p*100).toFixed(0)+'%</div>'
@@ -3701,8 +3708,87 @@ function _wzApyCompare(){
       +'<div style="font-size:13px;font-weight:800;color:var(--ink)">$'+r.totalPagado.toFixed(2)+'</div>'
       +'</div>';
   }).join('');
+  var prevMode = (window._wzCustomMode === '$') ? '$' : '%';
+  var prevVal = (window._wzCustomVal != null) ? window._wzCustomVal : '';
+  var customCard = ''
+    +'<div style="background:var(--surf);border:2px dashed var(--p1);border-radius:10px;padding:10px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p1)">Personalizada</div>'
+    +'<div style="display:flex;gap:2px;background:var(--gs);border-radius:6px;padding:2px">'
+    +'<button type="button" id="wz_cust_btn_pct" onclick="_wzApyCustomSetMode(\'%\')" style="border:none;background:'+(prevMode==='%'?'var(--p1)':'transparent')+';color:'+(prevMode==='%'?'#fff':'var(--ink2)')+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;cursor:pointer">%</button>'
+    +'<button type="button" id="wz_cust_btn_dol" onclick="_wzApyCustomSetMode(\'$\')" style="border:none;background:'+(prevMode==='$'?'var(--p1)':'transparent')+';color:'+(prevMode==='$'?'#fff':'var(--ink2)')+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;cursor:pointer">$</button>'
+    +'</div>'
+    +'</div>'
+    +'<input type="number" id="wz_cust_input" value="'+prevVal+'" placeholder="'+(prevMode==='%'?'Ej: 60':'Ej: 800')+'" oninput="_wzApyCustomCalc()" style="width:100%;border:1px solid var(--rim);border-radius:6px;padding:5px 8px;font-size:13px;font-weight:700;font-family:var(--fd);margin-bottom:6px">'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Inicial</div>'
+    +'<div id="wz_cust_ini" style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$0.00</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Cuota quincenal</div>'
+    +'<div id="wz_cust_cuota" style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$0.00</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Total a pagar</div>'
+    +'<div id="wz_cust_total" style="font-size:13px;font-weight:800;color:var(--ink)">$0.00</div>'
+    +'</div>';
+  grid.innerHTML = fixedCards + customCard;
+  setTimeout(_wzApyCustomCalc, 0);
   _wzActualizarFinPreview(WZ.precio||0);
   _wzScore();
+}
+
+// Toggle entre % y $ del cuadro personalizado (wizard crédito)
+function _wzApyCustomSetMode(mode){
+  window._wzCustomMode = mode;
+  var bp = document.getElementById('wz_cust_btn_pct'), bd = document.getElementById('wz_cust_btn_dol'), inp = document.getElementById('wz_cust_input');
+  if(bp && bd){
+    bp.style.background = (mode==='%')?'var(--p1)':'transparent';
+    bp.style.color = (mode==='%')?'#fff':'var(--ink2)';
+    bd.style.background = (mode==='$')?'var(--p1)':'transparent';
+    bd.style.color = (mode==='$')?'#fff':'var(--ink2)';
+  }
+  if(inp){ inp.placeholder = (mode==='%')?'Ej: 60':'Ej: 800'; }
+  _wzApyCustomCalc();
+}
+
+// Recalcula el cuadro de inicial personalizada (wizard crédito)
+function _wzApyCustomCalc(){
+  var precio = parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
+  var apy = parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
+  var plazo = parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
+  var inp = document.getElementById('wz_cust_input');
+  var raw = inp ? inp.value : '';
+  window._wzCustomVal = raw;
+  var iniDol = document.getElementById('wz_cust_ini');
+  var cuoEl = document.getElementById('wz_cust_cuota');
+  var totEl = document.getElementById('wz_cust_total');
+  if(!iniDol || !cuoEl || !totEl) return;
+  if(!(precio>0) || !(apy>0) || !(plazo>0) || raw==='' || isNaN(parseFloat(raw))){
+    iniDol.textContent='$0.00'; cuoEl.textContent='$0.00'; totEl.textContent='$0.00';
+    return;
+  }
+  var val = parseFloat(raw)||0;
+  var mode = (window._wzCustomMode==='$')?'$':'%';
+  var pct;
+  if(mode==='%'){
+    pct = val/100;
+  } else {
+    pct = (precio>0) ? (val/precio) : 0;
+  }
+  if(pct < 0) pct = 0;
+  if(pct > 1) pct = 1;
+  try{
+    var r = calcApyPlan(precio, pct, apy, plazo);
+    iniDol.textContent = '$'+r.ini.toFixed(2);
+    cuoEl.textContent = '$'+r.cuotaQ.toFixed(2);
+    totEl.textContent = '$'+r.totalPagado.toFixed(2);
+    window._wzCustomPct = pct;
+    // Actualizar también el preview financiero del wizard si la inicial seleccionada es "custom"
+    var sel = document.getElementById('wz_apy_inicial_sel');
+    if(sel && sel.value === 'custom'){
+      _wzActualizarFinPreview(WZ.precio||0);
+      _wzMpagoSync();
+      _wzScore();
+    }
+  }catch(e){
+    iniDol.textContent='—'; cuoEl.textContent='—'; totEl.textContent='—';
+  }
 }
 
 // ── Guardar el plan APY actual como plan nuevo en planesExtra ──
@@ -3710,7 +3796,15 @@ function _wzGuardarPlanApy(){
   var precio=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
   var apy=parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
   var plazo=parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
-  var iniSel=parseFloat(((document.getElementById('wz_apy_inicial_sel')||{}).value))||0.50;
+  var iniSelEl = document.getElementById('wz_apy_inicial_sel');
+  var iniSelRaw = iniSelEl ? iniSelEl.value : '0.50';
+  var iniSel;
+  if(iniSelRaw === 'custom'){
+    iniSel = parseFloat(window._wzCustomPct)||0;
+    if(!(iniSel>0)){ if(typeof toast==='function') toast('Ingresa un valor para la inicial personalizada','error'); return; }
+  } else {
+    iniSel = parseFloat(iniSelRaw)||0.50;
+  }
   if(!(precio>0)||!(apy>0)||!(plazo>0)){ if(typeof toast==='function') toast('Completa precio, APY y plazo','error'); return; }
   var r=calcApyPlan(precio,iniSel,apy,plazo);
   var nombre='APY '+apy.toFixed(1)+'% · '+plazo+'m · Ini '+(iniSel*100).toFixed(0)+'%';
@@ -11288,12 +11382,13 @@ function openAddMoto(id=null){
         </div>
         <div id="m_apy_compare" style="display:none;margin-top:10px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px">
           <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">Comparativo de iniciales</div>
-          <div id="m_apy_compare_grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+          <div id="m_apy_compare_grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
           <div style="font-size:11px;color:var(--ink3);margin-top:8px">Selecciona la opción que deseas aplicar:</div>
           <div class="fg" style="margin-top:6px"><select class="fs" id="m_apy_inicial_sel" onchange="previewCalc()">
             <option value="0.45" ${(m&&m.planModo==='apy'&&Math.abs((m.inicialPct||0)-0.45)<0.001)?'selected':''}>Inicial 45%</option>
             <option value="0.50" ${(!m||!(m.planModo==='apy')||Math.abs((m.inicialPct||0)-0.50)<0.001)?'selected':''}>Inicial 50%</option>
             <option value="0.55" ${(m&&m.planModo==='apy'&&Math.abs((m.inicialPct||0)-0.55)<0.001)?'selected':''}>Inicial 55%</option>
+            <option value="custom">Inicial personalizada</option>
           </select></div>
           <button type="button" class="btn btn-g btn-sm" style="margin-top:8px" onclick="_mGuardarPlanApy()">Guardar como plan nuevo</button>
         </div>
@@ -11345,7 +11440,14 @@ function openAddMoto(id=null){
     } else if(planMode==='apy'){
       const _apy=parseFloat(($('m_apy_objetivo')&&$('m_apy_objetivo').value)||0)||0;
       const _plapy=parseInt((($('m_apy_plazo')&&$('m_apy_plazo').value)||PLAN.plazo),10)||PLAN.plazo;
-      const _iniSel=parseFloat(($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||0.50)||0.50;
+      var _iniSelRaw = ($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||'0.50';
+      var _iniSel;
+      if(_iniSelRaw === 'custom'){
+        _iniSel = parseFloat(window._mCustomPct)||0;
+        if(!(_iniSel>0)){ toast('Ingresa un valor para la inicial personalizada','error'); return false; }
+      } else {
+        _iniSel = parseFloat(_iniSelRaw)||0.50;
+      }
       calc=calcApyPlan(precioBaseReal, _iniSel, _apy, _plapy);
     } else {
       calc=Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
@@ -11409,7 +11511,8 @@ function previewCalc(){
   } else if(_mode==='apy'){
     const _apy=parseFloat(($('m_apy_objetivo')&&$('m_apy_objetivo').value)||0)||0;
     const _plapy=parseInt((($('m_apy_plazo')&&$('m_apy_plazo').value)||PLAN.plazo),10)||PLAN.plazo;
-    const _iniSel=parseFloat(($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||0.50)||0.50;
+    var _iniSelRaw = ($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||'0.50';
+    var _iniSel = (_iniSelRaw === 'custom') ? (parseFloat(window._mCustomPct)||0.50) : (parseFloat(_iniSelRaw)||0.50);
     r=calcApyPlan(precioBase, _iniSel, _apy, _plapy);
   } else {
     r=Object.assign({precioBaseReal:precioBase, plazo:PLAN.plazo}, calcMoto(precioBase));
@@ -11430,7 +11533,8 @@ function _mApyCompare(){
   if(!(precio>0)||!(apy>0)||!(plazo>0)){ box.style.display='none'; return; }
   box.style.display='block';
   const pcts=[0.45,0.50,0.55];
-  grid.innerHTML=pcts.map(function(pp){
+  // 3 cuadros fijos
+  var fixedCards = pcts.map(function(pp){
     const r=calcApyPlan(precio,pp,apy,plazo);
     return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:10px;padding:10px">'
       +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p1);margin-bottom:6px">Inicial '+(pp*100).toFixed(0)+'%</div>'
@@ -11442,6 +11546,78 @@ function _mApyCompare(){
       +'<div style="font-size:13px;font-weight:800;color:var(--ink)">$'+r.totalPagado.toFixed(2)+'</div>'
       +'</div>';
   }).join('');
+  // 4to cuadro: personalizada (con inputs)
+  var prevMode = (window._mCustomMode === '$') ? '$' : '%';
+  var prevVal = (window._mCustomVal != null) ? window._mCustomVal : '';
+  var customCard = ''
+    +'<div style="background:var(--surf);border:2px dashed var(--p1);border-radius:10px;padding:10px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p1)">Personalizada</div>'
+    +'<div style="display:flex;gap:2px;background:var(--gs);border-radius:6px;padding:2px">'
+    +'<button type="button" id="m_cust_btn_pct" onclick="_mApyCustomSetMode(\'%\')" style="border:none;background:'+(prevMode==='%'?'var(--p1)':'transparent')+';color:'+(prevMode==='%'?'#fff':'var(--ink2)')+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;cursor:pointer">%</button>'
+    +'<button type="button" id="m_cust_btn_dol" onclick="_mApyCustomSetMode(\'$\')" style="border:none;background:'+(prevMode==='$'?'var(--p1)':'transparent')+';color:'+(prevMode==='$'?'#fff':'var(--ink2)')+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;cursor:pointer">$</button>'
+    +'</div>'
+    +'</div>'
+    +'<input type="number" id="m_cust_input" value="'+prevVal+'" placeholder="'+(prevMode==='%'?'Ej: 60':'Ej: 800')+'" oninput="_mApyCustomCalc()" style="width:100%;border:1px solid var(--rim);border-radius:6px;padding:5px 8px;font-size:13px;font-weight:700;font-family:var(--fd);margin-bottom:6px">'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Inicial</div>'
+    +'<div id="m_cust_ini" style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$0.00</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Cuota quincenal</div>'
+    +'<div id="m_cust_cuota" style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$0.00</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Total a pagar</div>'
+    +'<div id="m_cust_total" style="font-size:13px;font-weight:800;color:var(--ink)">$0.00</div>'
+    +'</div>';
+  grid.innerHTML = fixedCards + customCard;
+  // Recalcular el cuadro custom si ya tenía valor
+  setTimeout(_mApyCustomCalc, 0);
+}
+
+// Toggle entre % y $ del cuadro personalizado (motos)
+function _mApyCustomSetMode(mode){
+  window._mCustomMode = mode;
+  var bp = $('m_cust_btn_pct'), bd = $('m_cust_btn_dol'), inp = $('m_cust_input');
+  if(bp && bd){
+    bp.style.background = (mode==='%')?'var(--p1)':'transparent';
+    bp.style.color = (mode==='%')?'#fff':'var(--ink2)';
+    bd.style.background = (mode==='$')?'var(--p1)':'transparent';
+    bd.style.color = (mode==='$')?'#fff':'var(--ink2)';
+  }
+  if(inp){ inp.placeholder = (mode==='%')?'Ej: 60':'Ej: 800'; }
+  _mApyCustomCalc();
+}
+
+// Recalcula el cuadro de inicial personalizada (motos)
+function _mApyCustomCalc(){
+  var precio = parseFloat(($('m_precio_base')&&$('m_precio_base').value)||($('m_pr')&&$('m_pr').value)||0)||0;
+  var apy = parseFloat(($('m_apy_objetivo')&&$('m_apy_objetivo').value)||0)||0;
+  var plazo = parseInt(($('m_apy_plazo')&&$('m_apy_plazo').value)||0,10)||0;
+  var inp = $('m_cust_input');
+  var raw = inp ? inp.value : '';
+  window._mCustomVal = raw;
+  var iniDol = $('m_cust_ini'), cuoEl = $('m_cust_cuota'), totEl = $('m_cust_total');
+  if(!iniDol || !cuoEl || !totEl) return;
+  if(!(precio>0) || !(apy>0) || !(plazo>0) || raw==='' || isNaN(parseFloat(raw))){
+    iniDol.textContent='$0.00'; cuoEl.textContent='$0.00'; totEl.textContent='$0.00';
+    return;
+  }
+  var val = parseFloat(raw)||0;
+  var mode = (window._mCustomMode==='$')?'$':'%';
+  var pct;
+  if(mode==='%'){
+    pct = val/100;
+  } else {
+    pct = (precio>0) ? (val/precio) : 0;
+  }
+  if(pct < 0) pct = 0;
+  if(pct > 1) pct = 1;
+  try{
+    var r = calcApyPlan(precio, pct, apy, plazo);
+    iniDol.textContent = '$'+r.ini.toFixed(2);
+    cuoEl.textContent = '$'+r.cuotaQ.toFixed(2);
+    totEl.textContent = '$'+r.totalPagado.toFixed(2);
+    window._mCustomPct = pct;
+  }catch(e){
+    iniDol.textContent='—'; cuoEl.textContent='—'; totEl.textContent='—';
+  }
 }
 
 // ── Guardar plan APY del modal de motos como plan nuevo ──
@@ -11449,7 +11625,14 @@ function _mGuardarPlanApy(){
   const precio=parseFloat((($('m_precio_base')&&$('m_precio_base').value)||($('m_pr')&&$('m_pr').value)||0))||0;
   const apy=parseFloat(($('m_apy_objetivo')&&$('m_apy_objetivo').value)||0)||0;
   const plazo=parseInt((($('m_apy_plazo')&&$('m_apy_plazo').value)||0),10)||0;
-  const iniSel=parseFloat(($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||0.50)||0.50;
+  var iniSelRaw = ($('m_apy_inicial_sel')&&$('m_apy_inicial_sel').value)||'0.50';
+  var iniSel;
+  if(iniSelRaw === 'custom'){
+    iniSel = parseFloat(window._mCustomPct)||0;
+    if(!(iniSel>0)){ if(typeof toast==='function') toast('Ingresa un valor para la inicial personalizada','error'); return; }
+  } else {
+    iniSel = parseFloat(iniSelRaw)||0.50;
+  }
   if(!(precio>0)||!(apy>0)||!(plazo>0)){ if(typeof toast==='function') toast('Completa precio, APY y plazo','error'); return; }
   const r=calcApyPlan(precio,iniSel,apy,plazo);
   const nombre='APY '+apy.toFixed(1)+'% · '+plazo+'m · Ini '+(iniSel*100).toFixed(0)+'%';
@@ -12451,12 +12634,13 @@ function _wzRender(motoId){
     + '</div>'
     + '<div id="wz_apy_compare" style="display:none;margin-top:12px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:12px">'
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">Comparativo de iniciales</div>'
-    + '<div id="wz_apy_compare_grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>'
+    + '<div id="wz_apy_compare_grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>'
     + '<div style="font-size:11px;color:var(--ink3);margin-top:8px">Selecciona la opción que deseas aplicar:</div>'
     + '<div class="fg" style="margin-top:6px"><select class="fs" id="wz_apy_inicial_sel" onchange="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzScore()">'
     + '<option value="0.45">Inicial 45%</option>'
     + '<option value="0.50" selected>Inicial 50%</option>'
     + '<option value="0.55">Inicial 55%</option>'
+    + '<option value="custom">Inicial personalizada</option>'
     + '</select></div>'
     + '<button type="button" class="btn btn-g btn-sm" style="margin-top:8px" onclick="_wzGuardarPlanApy()">Guardar como plan nuevo</button>'
     + '</div>'
