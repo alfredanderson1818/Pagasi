@@ -3488,6 +3488,7 @@ var MODULOS = [
   {id:'cuentas', label:'Cuentas', grupo:'Análisis'},
   {id:'comisiones', label:'Comisiones', grupo:'Análisis'},
   {id:'concesionarios', label:'Concesionarios', grupo:'Sistema'},
+  {id:'aprobaciones', label:'Aprobaciones', grupo:'Operaciones'},
   {id:'plan', label:'Plan & Precios', grupo:'Sistema'},
   {id:'config', label:'Configuración', grupo:'Sistema'},
   {id:'users', label:'Usuarios', grupo:'Sistema'},
@@ -3884,7 +3885,7 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
 function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
@@ -3924,6 +3925,12 @@ function isEmpleadoRole(){
   return r === 'Empleado' || r === 'Cobrador' || r === 'Vendedor';
 }
 
+// Vendedor Concesionario: rol especial con sidebar reducido (solo 3 módulos)
+function isVendedorConcesionarioRole(){
+  if(!S.currentUser) return false;
+  return S.currentUser.rol === 'Vendedor Concesionario';
+}
+
 // Permisos efectivos del usuario actual
 function getPermsEfectivos(){
   if(isAdminUser()) return Object.keys(PGL).concat(['perm_delete']);
@@ -3934,6 +3941,10 @@ function getPermsEfectivos(){
 
 function hasModuleAccess(key){
   if(isAdminUser()) return true;
+  // Vendedor Concesionario: solo 3 módulos permitidos
+  if(isVendedorConcesionarioRole()){
+    return key === 'motos' || key === 'clientes' || key === 'creditos';
+  }
   return getPermsEfectivos().includes(key);
 }
 
@@ -4060,18 +4071,37 @@ function renderSidebar(){
     return;
   }
 
+  // Vendedor Concesionario: sidebar MUY reducido (solo 3 módulos esenciales)
+  // No ve admin, finanzas, GPS, otros concesionarios — nada de eso
+  if(isVendedorConcesionarioRole()){
+    var sidebarVC = '<div style="padding:10px 8px">'
+      +'<div style="margin-bottom:6px">'
+      +'<button type="button" style="display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:12px;background:var(--p1);color:#fff;border:none;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;width:100%" onclick="openAddCred()">'
+      +'<span style="font-size:16px;font-weight:900;line-height:1">＋</span><span>Nueva Solicitud</span></button>'
+      +'</div>'
+      +'<div class="sb-grp"><div class="sb-lbl">Mi Trabajo</div>'
+      +'<button type="button" class="si" data-nav="motos" onclick="nav(\'motos\')"><span class="sic nav-ic">CAL</span><span>Calculadora</span></button>'
+      +'<button type="button" class="si" data-nav="clientes" onclick="nav(\'clientes\')"><span class="sic nav-ic">CLI</span><span>Clientes</span></button>'
+      +'<button type="button" class="si" data-nav="creditos" onclick="nav(\'creditos\')"><span class="sic nav-ic">SOL</span><span>Solicitudes</span></button>'
+      +'</div>'
+      +'</div>';
+    sb.innerHTML = sidebarVC;
+    updateSidebarFooter();
+    return;
+  }
+
   // Otros roles: filtrar módulos según permisos
   var perms = getCurrentPerms();
   var grupos = [
     {label:'Principal', keys:['dash','centro']},
     {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-    {label:'Operaciones',keys:['cobranza','contratos','notif']},
+    {label:'Operaciones',keys:['cobranza','contratos','notif','aprobaciones']},
     {label:'Análisis', keys:['reportes','cuentas','comisiones']},
     {label:'Sistema', keys:['plan','config','concesionarios','scores','users']},
   ];
   var iconMap = {
     dash:'DB',centro:'WK',clientes:'CLI',motos:'MOT',creditos:'FIN',pagos:'PAG',
-    cobranza:'COB',contratos:'CTR',notif:'NOT',reportes:'RPT',
+    cobranza:'COB',contratos:'CTR',notif:'NOT',reportes:'RPT',aprobaciones:'APR',
     cuentas:'CTA',comisiones:'CMS',conta:'CNT',plan:'PLN',config:'CFG',scores:'SCR',users:'USR',concesionarios:'CNC'
   };
   var extraMap = {cobranza:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
@@ -6335,6 +6365,7 @@ function saveWtTask(id){ var old=S._wtEditing||{}; var t=Object.assign({},old); 
 const PG={
 centro(){ return wtHTML(); },
 comisiones(){ return _comisionesRender(); },
+aprobaciones(){ return _aprRender(); },
 concesionarios(){ return _concRender(); },
 dash(){
   // Los empleados ven un dashboard especializado
@@ -14237,13 +14268,62 @@ function _wzRenderResultado(){
       +'</div>'
       +'<div style="font-size:11px;color:var(--ink3);margin-top:6px">La inicial se acreditará a la cuenta seleccionada al guardar el crédito.</div>'
       +'</div>'
-    :'');
+    :'')
+    // Selector de concesionario (siempre visible en el último paso, si hay concesionarios creados)
+    + (function(){
+        var u = S.currentUser || {};
+        var asignados = u.concesionarios || [];
+        var todasSedes = (S.concesionarios||[]).filter(function(c){return !c.eliminado && c.activo!==false;});
+        if(!todasSedes.length) return ''; // sin concesionarios creados, no mostrar
+        // Determinar qué sedes puede ver: si tiene asignaciones específicas → solo esas; si no → todas
+        var disponibles;
+        if(asignados.length){
+          disponibles = todasSedes.filter(function(c){ return asignados.indexOf(c.id) !== -1; });
+        } else {
+          disponibles = todasSedes; // admin total
+        }
+        if(!disponibles.length) return '';
+        // Si tiene UNA sola sede asignada → input oculto (forzado a esa)
+        if(disponibles.length === 1){
+          // Pre-asignar en WZ
+          WZ.concesionarioId = disponibles[0].id;
+          return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:14px 16px;margin-bottom:12px">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center">'
+            + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1)">Concesionario</div>'
+            + '<div style="font-size:13.5px;font-weight:700;margin-top:3px">'+disponibles[0].nombre+(disponibles[0].ciudad?' · '+disponibles[0].ciudad:'')+'</div></div>'
+            + '<span style="background:rgba(0,184,118,.15);color:var(--green);padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700">SEDE ÚNICA</span>'
+            + '</div>'
+            + '<input type="hidden" id="wz_concesionario_id" value="'+disponibles[0].id+'">'
+            + '</div>';
+        }
+        // Selector cuando puede elegir entre varias
+        // Pre-seleccionado: el del switcher si está dentro de sus disponibles, sino el primero
+        var preSel = S.concesionarioActivo;
+        if(preSel && !disponibles.find(function(c){return c.id===preSel;})){ preSel = disponibles[0].id; }
+        if(!preSel) preSel = disponibles[0].id;
+        WZ.concesionarioId = preSel;
+        return '<div style="background:var(--surf);border:1.5px solid var(--p1);border-radius:14px;padding:14px 16px;margin-bottom:12px">'
+          + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:9px">¿En qué concesionario se hace este crédito?</div>'
+          + '<select class="fs" id="wz_concesionario_id" onchange="WZ.concesionarioId=this.value" style="font-size:13px;font-weight:700">'
+          + disponibles.map(function(c){
+              return '<option value="'+c.id+'" '+(preSel===c.id?'selected':'')+'>'+c.nombre+(c.ciudad?' · '+c.ciudad:'')+'</option>';
+            }).join('')
+          + '</select>'
+          + '<div style="font-size:11px;color:var(--ink3);margin-top:6px;line-height:1.5">El crédito quedará registrado en esta sede. Predeterminado: el concesionario activo en el switcher de arriba.</div>'
+          + '</div>';
+      })();
 }
 
 // ── Guardar solicitud ──
 function _wzGuardar(){
   var btn = document.querySelector('#wz-overlay button[onclick="_wzGuardar()"]');
   if(btn){ btn.textContent='Guardando...'; btn.disabled=true; }
+
+  // Leer concesionario seleccionado en el último paso (si existe)
+  var _selConc = document.getElementById('wz_concesionario_id');
+  if(_selConc && _selConc.value){
+    WZ.concesionarioId = _selConc.value;
+  }
 
   var r = WZ.precio>0 ? getWzPlanConfig() : {mode:'global',precioBaseReal:0,ini:0,fin:0,total:0,cuotaQ:0,totalPagado:0,cuotaM:0,plazo:PLAN.plazo,totalCuotas:PLAN.plazo*2,factor:PLAN.factor,inicialPct:PLAN.inicial,tasaMensual:PLAN.tasaMensual,apy:PLAN.apy,sourcePlan:{plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy}};
 
@@ -14352,7 +14432,7 @@ function _wzGuardar(){
     plan: {plazo:r.plazo||PLAN.plazo, factor:r.factor||PLAN.factor, inicial:(typeof r.inicialPct==='number') ? r.inicialPct : PLAN.inicial, tasaMensual:(typeof r.tasaMensual==='number') ? r.tasaMensual : PLAN.tasaMensual, apy:(typeof r.apy==='number') ? r.apy : PLAN.apy, precioBaseReal:r.precioBaseReal||WZ.precio||0},
     frecuencia: 'quincenal',
     fecha: new Date().toISOString().split('T')[0],
-    estado: 'activo',
+    estado: ((S.currentUser&&S.currentUser.rol)==='Vendedor Concesionario') ? 'pendiente_revision' : 'activo',
     pagado: 0,
     mora: 0,
     cobrador: (_cobradores&&_cobradores[0])||'Admin',
@@ -14425,6 +14505,15 @@ function _wzGuardar(){
     if(WZ._pagosMoto && WZ._pagosMoto.length){
       _mpagoCrearGastos(motoInvNueva, WZ._pagosMoto, {fecha: newCred.fecha});
     }
+  }
+
+  // Si el crédito quedó como pendiente_revision (Vendedor Concesionario),
+  // NO crear pago de inicial ni movimientos — eso se hará al aprobar
+  if(newCred.estado === 'pendiente_revision'){
+    _wzClose();
+    toast('Solicitud enviada para revisión','success');
+    if(typeof nav==='function') nav('creditos');
+    return;
   }
 
   // Registrar la inicial también en Pagos
@@ -19552,6 +19641,130 @@ function _concAsignarUno(tipo, id, sedeId){
 }
 
 
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  BANDEJA DE APROBACIONES (Entrega 3)                      ║
+// ║  Créditos creados por Vendedores Concesionario en estado  ║
+// ║  'pendiente_revision' que requieren tu visto bueno.       ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// Cuenta créditos pendientes de revisión (visibles según concesionario activo)
+function _aprGetPendientes(){
+  return _concFiltrar(S.creds||[]).filter(function(c){
+    return !c.eliminado && c.estado === 'pendiente_revision';
+  });
+}
+
+// Render del módulo Aprobaciones
+function _aprRender(){
+  var pendientes = _aprGetPendientes();
+  // Ordenar más recientes primero
+  pendientes.sort(function(a,b){ return (b.creado||'').localeCompare(a.creado||''); });
+
+  var html = '<div class="page">'
+    + (typeof pageBanner === 'function'
+      ? pageBanner(
+          'Revisión de solicitudes · Aprobaciones pendientes',
+          'Aprobaciones',
+          '<b>'+pendientes.length+'</b> crédito'+(pendientes.length===1?'':'s')+' pendiente'+(pendientes.length===1?'':'s')+' de revisión.',
+          [{label:'↻ Actualizar', onclick:"nav('aprobaciones')"}]
+        )
+      : '<h1 style="font-size:22px;margin:0 0 14px">Aprobaciones</h1>'
+    )
+    // KPI
+    + '<div style="background:rgba(255,165,0,0.07);border:1px solid rgba(255,165,0,0.3);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
+    + '<strong style="color:var(--amber)">Bandeja de aprobaciones.</strong> '
+    + 'Los vendedores en modo concesionario crean créditos que aparecen aquí. Revísalos y aprueba para que pasen a estado activo, o rechaza con una razón.'
+    + '</div>';
+
+  if(pendientes.length === 0){
+    html += '<div style="padding:60px 20px;text-align:center;background:var(--surf);border-radius:14px;border:1px dashed var(--rim2)">'
+      + '<div style="font-size:36px;margin-bottom:12px;opacity:.4">✓</div>'
+      + '<div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px">Todo al día</div>'
+      + '<div style="font-size:11.5px;color:var(--ink3);max-width:380px;margin:0 auto;line-height:1.55">No hay créditos pendientes de revisión.</div>'
+      + '</div>';
+  } else {
+    html += '<div style="display:grid;gap:12px">';
+    pendientes.forEach(function(c){
+      var sede = c.concesionarioId ? (_concGetById ? _concGetById(c.concesionarioId) : null) : null;
+      var sedeName = sede ? sede.nombre : (c.concesionarioId ? '(eliminada)' : '— sin sede —');
+      var score = c.score_indexa || 0;
+      var scoreCol = score >= 625 ? 'var(--green)' : score >= 450 ? 'var(--amber)' : 'var(--red)';
+      var scoreLbl = score >= 750 ? 'Excelente' : score >= 625 ? 'Bueno' : score >= 450 ? 'Regular' : 'Bajo';
+      html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start">'
+        + '<div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        + '<span style="font-family:var(--fd);font-weight:800;font-size:14px">'+c.id+'</span>'
+        + '<span style="background:rgba(255,165,0,.18);color:var(--amber);padding:3px 9px;border-radius:9px;font-size:9.5px;font-weight:800;letter-spacing:.4px">PENDIENTE REVISIÓN</span>'
+        + '<span style="font-size:11px;color:var(--ink3)">creado '+(c.creado||'').slice(0,10)+'</span>'
+        + '</div>'
+        + '<div style="font-size:16px;font-weight:700;margin-bottom:4px">'+(c.cli||'—')+'</div>'
+        + '<div style="font-size:12px;color:var(--ink2);margin-bottom:8px">'+(c.modelo||'—')+' · $'+(parseFloat(c.precio)||0).toFixed(2)+'</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(4,auto);gap:18px;font-size:11px;margin-top:9px">'
+        + '<div><div style="color:var(--ink3);font-weight:700;font-size:9.5px;text-transform:uppercase">Sede</div><div style="font-weight:700;margin-top:1px">'+sedeName+'</div></div>'
+        + '<div><div style="color:var(--ink3);font-weight:700;font-size:9.5px;text-transform:uppercase">Vendedor</div><div style="font-weight:700;margin-top:1px">'+(c.creadoPor||'—')+'</div></div>'
+        + '<div><div style="color:var(--ink3);font-weight:700;font-size:9.5px;text-transform:uppercase">Score</div><div style="font-weight:800;margin-top:1px;color:'+scoreCol+'">'+score+' · '+scoreLbl+'</div></div>'
+        + '<div><div style="color:var(--ink3);font-weight:700;font-size:9.5px;text-transform:uppercase">Cuota Q.</div><div style="font-family:var(--fd);font-weight:800;margin-top:1px">$'+(parseFloat(c.cuotaQ||c.cuota||0)).toFixed(2)+'</div></div>'
+        + '</div>'
+        + '</div>'
+        + '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">'
+        + '<button class="btn btn-s btn-sm" onclick="_aprAprobar(\''+c.id+'\')" style="min-width:120px">✓ Aprobar</button>'
+        + '<button class="btn btn-d btn-sm" onclick="_aprRechazar(\''+c.id+'\')" style="min-width:120px">✕ Rechazar</button>'
+        + '<button class="btn btn-g btn-sm" onclick="_aprVerDetalle(\''+c.id+'\')" style="min-width:120px">Ver Detalle</button>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// Aprobar un crédito → pasa a 'activo'
+function _aprAprobar(credId){
+  var c = (S.creds||[]).find(function(x){return x.id === credId;});
+  if(!c){ toast('Crédito no encontrado','error'); return; }
+  if(c.estado !== 'pendiente_revision'){ toast('Este crédito no está pendiente','error'); return; }
+  if(!confirm('¿Aprobar el crédito '+credId+' de '+(c.cli||'—')+'?\n\nPasará a estado ACTIVO y se cobrarán comisiones al vendedor (si aplica).')) return;
+  c.estado = 'activo';
+  c.aprobadoEn = new Date().toISOString();
+  c.aprobadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+  if(DB && DB.saveCred) DB.saveCred(c);
+  toast('Crédito aprobado · '+credId,'success');
+  nav('aprobaciones');
+}
+
+// Rechazar un crédito → estado 'cancelado' con razón
+function _aprRechazar(credId){
+  var c = (S.creds||[]).find(function(x){return x.id === credId;});
+  if(!c){ toast('Crédito no encontrado','error'); return; }
+  if(c.estado !== 'pendiente_revision'){ toast('Este crédito no está pendiente','error'); return; }
+  var razon = prompt('Razón para rechazar el crédito '+credId+':');
+  if(!razon || !razon.trim()){
+    if(razon !== null) toast('Debes indicar una razón','error');
+    return;
+  }
+  c.estado = 'cancelado';
+  c.rechazadoEn = new Date().toISOString();
+  c.rechazadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+  c.razonRechazo = razon.trim();
+  if(DB && DB.saveCred) DB.saveCred(c);
+  toast('Crédito rechazado · '+credId,'info');
+  nav('aprobaciones');
+}
+
+// Ver detalle: redirige al módulo de créditos con el ID
+function _aprVerDetalle(credId){
+  // Si existe función abrirDetalleCredito, úsala. Si no, navega a créditos
+  if(typeof abrirDetalleCredito === 'function'){
+    abrirDetalleCredito(credId);
+  } else {
+    nav('creditos');
+  }
+}
+
+
 function closeM(){
   $('ov').style.display='none';
   $('modal-box').className='modal';
@@ -24152,7 +24365,7 @@ function editarUsuario(uid){
       +'<div class="fg"><label>Rol</label><select class="fs" id="eu_rol">'
       +(function(){
         // Oferta de roles disponibles — incluimos el rol actual aunque sea legacy, para no perderlo por error
-        var roles = ['Administrador','Gerente','Empleado','Contador'];
+        var roles = ['Administrador','Gerente','Empleado','Contador','Vendedor Concesionario'];
         if(u.rol && roles.indexOf(u.rol)===-1) roles.push(u.rol); // preservar legacy Cobrador/Vendedor si aplica
         return roles.map(function(r){
           var label = r;
@@ -24160,6 +24373,7 @@ function editarUsuario(uid){
           else if(r==='Administrador') label = 'Administrador — acceso total';
           else if(r==='Gerente') label = 'Gerente — gestión operativa';
           else if(r==='Contador') label = 'Contador — reportes y contabilidad';
+          else if(r==='Vendedor Concesionario') label = 'Vendedor Concesionario — solo calculadora, clientes y solicitudes';
           else if(r==='Cobrador'||r==='Vendedor') label = r+' (legacy — migra a Empleado)';
           return '<option value="'+r+'" '+(u.rol===r?'selected':'')+'>'+label+'</option>';
         }).join('');
