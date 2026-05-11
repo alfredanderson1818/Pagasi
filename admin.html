@@ -12663,8 +12663,17 @@ function _wzRender(motoId){
 
   // ── PASO 1: Datos del cliente ──
   var step1 = '<div class="fg" style="margin-bottom:10px"><label class="fsec" style="display:block;margin-bottom:5px">Cliente registrado</label>'
-    + '<select class="fs" id="wz_cliente_sel" onchange="_wzPickCliente(this)">'+_wzClienteOptions()+'</select>'
-    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Puedes elegir un cliente ya registrado o dejarlo en nuevo cliente y escribir los datos manualmente.</div></div>'
+    + '<div id="wz_cli_search_wrap" style="position:relative">'
+    + '<div id="wz_cli_chip" style="display:none;align-items:center;gap:8px;padding:9px 11px;background:rgba(74,107,255,.1);border:1.5px solid var(--p1);border-radius:9px">'
+    + '<span style="width:8px;height:8px;border-radius:50%;background:var(--p1);flex-shrink:0"></span>'
+    + '<div style="flex:1;min-width:0"><div id="wz_cli_chip_nom" style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div><div id="wz_cli_chip_ci" style="font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div></div>'
+    + '<button type="button" onclick="_wzCliClear()" style="border:none;background:rgba(255,71,87,.12);color:var(--red);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700">×</button>'
+    + '</div>'
+    + '<input type="text" class="fi" id="wz_cli_search" autocomplete="off" placeholder="Buscar cliente por nombre o cédula..." oninput="_wzCliSearch()" onfocus="_wzCliSearch()" onblur="setTimeout(_wzCliBlur,200)">'
+    + '<input type="hidden" id="wz_cliente_sel" value="">'
+    + '<div id="wz_cli_dd" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--surf);border:1px solid var(--rim);border-radius:9px;max-height:280px;overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:100"></div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Busca un cliente existente o deja vacío para crear uno nuevo con los datos de abajo.</div></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     + _wzFg('Nombre completo *','wz_nom','text','Ej: Carlos Pérez','',true)
     + _wzFg('N° Cédula *','wz_ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"',true)
@@ -13113,6 +13122,123 @@ function _wzClienteOptions(){
   }).join('');
 }
 
+// ── Buscador de cliente (reemplaza el viejo select) ──
+// Filtra en vivo S.clientes por nombre o cédula y muestra dropdown
+function _wzCliSearch(){
+  var inp = document.getElementById('wz_cli_search');
+  var dd = document.getElementById('wz_cli_dd');
+  if(!inp || !dd) return;
+  var q = (inp.value||'').toLowerCase().trim();
+  // Normalizar: quitar puntos, guiones, espacios, V/E (para que cédulas se busquen libremente)
+  var qNorm = q.replace(/[.\-\s]/g,'').replace(/^[ve]/,'');
+  var list = (S.clientes||[]).filter(function(c){ return c && !c.eliminado; });
+  // Si no hay texto, mostrar primeros 8
+  var resultados;
+  if(!q){
+    resultados = list.slice(0, 8);
+  } else {
+    resultados = list.filter(function(c){
+      var nombre = (c.nombre||'').toLowerCase();
+      var ced = (c.cedula||'').toLowerCase().replace(/[.\-\s]/g,'').replace(/^[ve]/,'');
+      var tel = (c.tel||'').replace(/[.\-\s]/g,'');
+      return nombre.indexOf(q) !== -1
+        || (qNorm && ced.indexOf(qNorm) !== -1)
+        || (qNorm && tel.indexOf(qNorm) !== -1);
+    }).slice(0, 30);
+  }
+  if(resultados.length === 0){
+    dd.innerHTML = '<div style="padding:14px;color:var(--ink3);font-size:12px;text-align:center">'
+      + (q ? 'Sin resultados — el cliente se creará como nuevo' : 'Sin clientes registrados')
+      + '</div>';
+  } else {
+    dd.innerHTML = resultados.map(function(c){
+      var nombreEsc = (c.nombre||'(sin nombre)').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+      return '<button type="button" onmousedown="event.preventDefault();_wzCliPick(\''+String(c.id).replace(/'/g,'')+'\')" '
+        + 'style="display:block;width:100%;text-align:left;padding:9px 12px;background:none;border:none;border-bottom:1px solid var(--rim2);cursor:pointer;font-family:var(--f)" '
+        + 'onmouseover="this.style.background=\'var(--gs)\'" onmouseout="this.style.background=\'none\'">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--ink)">'+nombreEsc+'</div>'
+        + '<div style="font-size:11px;color:var(--ink3);margin-top:1px">C.I.: '+(c.cedula||'—')+(c.tel?' · '+c.tel:'')+(c.ciudad?' · '+c.ciudad:'')+'</div>'
+        + '</button>';
+    }).join('');
+  }
+  dd.style.display = 'block';
+}
+
+// Cuando el input pierde foco, ocultar el dropdown (con un delay para permitir click en opción)
+function _wzCliBlur(){
+  var dd = document.getElementById('wz_cli_dd');
+  if(dd) dd.style.display = 'none';
+}
+
+// Cuando el usuario elige un cliente del dropdown
+function _wzCliPick(id){
+  // Cerrar dropdown
+  var dd = document.getElementById('wz_cli_dd');
+  if(dd) dd.style.display = 'none';
+  // Buscar cliente
+  var c = (S.clientes||[]).find(function(x){ return String(x.id) === String(id); });
+  if(!c){ if(typeof toast === 'function') toast('Cliente no encontrado','error'); return; }
+  // Mostrar el chip con el cliente seleccionado, ocultar input
+  var inp = document.getElementById('wz_cli_search');
+  var chip = document.getElementById('wz_cli_chip');
+  var chipNom = document.getElementById('wz_cli_chip_nom');
+  var chipCi = document.getElementById('wz_cli_chip_ci');
+  var hidden = document.getElementById('wz_cliente_sel');
+  if(inp){ inp.style.display='none'; inp.value=''; }
+  if(chip){ chip.style.display='flex'; }
+  if(chipNom){ chipNom.textContent = c.nombre || '(sin nombre)'; }
+  if(chipCi){ chipCi.textContent = 'C.I.: '+(c.cedula||'—')+(c.tel?' · '+c.tel:''); }
+  if(hidden){ hidden.value = String(id); }
+  // Invocar la lógica existente que hidrata los demás campos
+  if(typeof _wzPickCliente === 'function'){
+    _wzPickCliente({ value: String(id) });
+  }
+}
+
+// Limpiar la selección de cliente (volver al modo búsqueda)
+function _wzCliClear(){
+  var inp = document.getElementById('wz_cli_search');
+  var chip = document.getElementById('wz_cli_chip');
+  var hidden = document.getElementById('wz_cliente_sel');
+  if(inp){ inp.style.display=''; inp.value=''; setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 50); }
+  if(chip){ chip.style.display='none'; }
+  if(hidden){ hidden.value=''; }
+  // Limpiar campos como hace _wzPickCliente con valor vacío
+  if(typeof _wzPickCliente === 'function'){
+    _wzPickCliente({ value: '' });
+  }
+}
+
+// Hidratar el chip si ya había un cliente seleccionado (al volver al paso 1)
+function _wzCliHidratar(){
+  var hidden = document.getElementById('wz_cliente_sel');
+  if(!hidden) return;
+  var id = WZ.clienteSel || '';
+  if(!id){
+    // Asegurar input visible, chip oculto
+    var inp = document.getElementById('wz_cli_search');
+    var chip = document.getElementById('wz_cli_chip');
+    if(inp) inp.style.display='';
+    if(chip) chip.style.display='none';
+    hidden.value = '';
+    return;
+  }
+  var c = (S.clientes||[]).find(function(x){ return String(x.id) === String(id); });
+  if(!c){
+    hidden.value = '';
+    return;
+  }
+  hidden.value = String(id);
+  var inp = document.getElementById('wz_cli_search');
+  var chip = document.getElementById('wz_cli_chip');
+  var chipNom = document.getElementById('wz_cli_chip_nom');
+  var chipCi = document.getElementById('wz_cli_chip_ci');
+  if(inp){ inp.style.display='none'; }
+  if(chip){ chip.style.display='flex'; }
+  if(chipNom){ chipNom.textContent = c.nombre || '(sin nombre)'; }
+  if(chipCi){ chipCi.textContent = 'C.I.: '+(c.cedula||'—')+(c.tel?' · '+c.tel:''); }
+}
+
 function _wzHydrate(){
   var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
   ids.forEach(function(id){
@@ -13134,6 +13260,8 @@ function _wzHydrate(){
   pick('wz_dep_g', String(WZ.dep||WZ['_chip_wz_dep_g']||''));
   if(WZ.step===3 && WZ.precio){ var pInp=document.getElementById('wz_precio'); if(pInp) pInp.value=WZ.precio; }
   _wzScore();
+  // Sincronizar el buscador de cliente (mostrar chip si ya había selección)
+  if(typeof _wzCliHidratar === 'function') _wzCliHidratar();
 }
 
 function _wzPickCliente(sel){
