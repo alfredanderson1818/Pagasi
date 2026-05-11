@@ -3906,6 +3906,9 @@ var ROL_PERMISOS = {
   Contador: ['dash','centro','pagos','reportes','cuentas'],
   // Empleado general: hace casi todo excepto config/users
   Empleado: ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif'],
+  // Vendedor Concesionario: solo calculadora (motos), clientes y solicitudes (creditos)
+  // Los créditos que crea quedan en estado 'pendiente_revision' hasta que admin apruebe
+  'Vendedor Concesionario': ['motos','clientes','creditos'],
 };
 
 // Roles disponibles para invitar (el nombre visible y su descripción)
@@ -3915,7 +3918,8 @@ var ROLES_INFO = {
   Cobrador: { desc:'Cobra y registra pagos. Ve todos los clientes y la cartera de cobranza.', color:'#06b06a', icon:'COB' },
   Vendedor: { desc:'Capta clientes y crea solicitudes de crédito. No ve cobranza ni pagos.', color:'#2194ff', icon:'VEN' },
   Contador: { desc:'Acceso exclusivo a pagos, reportes financieros, cuentas y contabilidad.', color:'#9c64ff', icon:'CNT' },
-  Empleado: { desc:'Empleado general. Hace casi todo menos configuración y gestión de usuarios.', color:'#ff6b6b', icon:'EMP' }
+  Empleado: { desc:'Empleado general. Hace casi todo menos configuración y gestión de usuarios.', color:'#ff6b6b', icon:'EMP' },
+  'Vendedor Concesionario': { desc:'Vendedor de un concesionario externo. Solo calculadora, clientes y solicitudes. Los créditos requieren aprobación del admin.', color:'#0ea5e9', icon:'VCO' }
 };
 
 // Helper: devuelve true si el usuario es un Empleado (o legacy Cobrador/Vendedor)
@@ -10339,7 +10343,7 @@ function toggleRolePerm(rol, modKey){
     // Restaurar contadores de usuarios por rol
     Object.keys(ROLES_INFO).forEach(function(r){
       var count = (typeof _usersCache !== 'undefined' ? _usersCache : []).filter(function(u){return u.rol===r;}).length;
-      var el = $('role-count-'+r);
+      var el = $('role-count-'+r.replace(/\s+/g,'_'));
       if(el) el.textContent = count;
     });
   }
@@ -10456,7 +10460,7 @@ function _usersTabRolesHTML(){
         return '<div style="background:var(--surf);border:1px solid var(--rim);border-left:4px solid '+info.color+';border-radius:10px;padding:14px">'
           +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
           + '<div style="width:36px;height:36px;border-radius:9px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">'+info.icon+'</div>'
-          + '<div><div style="font-weight:800;font-size:14px">'+r+'</div><div style="font-size:10px;color:var(--ink3);font-weight:600">'+count+' módulos · <span id="role-count-'+r+'">0</span> usuarios</div></div>'
+          + '<div><div style="font-weight:800;font-size:14px">'+r+'</div><div style="font-size:10px;color:var(--ink3);font-weight:600">'+count+' módulos · <span id="role-count-'+r.replace(/\s+/g,'_')+'">0</span> usuarios</div></div>'
           +'</div>'
           +'<div style="font-size:11.5px;color:var(--ink2);line-height:1.5">'+info.desc+'</div>'
           +'</div>';
@@ -10501,7 +10505,7 @@ function usersReload(){
     // Role counts (para las tarjetas de roles)
     Object.keys(ROLES_INFO).forEach(function(r){
       var count = _usersCache.filter(function(u){return u.rol===r;}).length;
-      var el = $('role-count-'+r);
+      var el = $('role-count-'+r.replace(/\s+/g,'_'));
       if(el) el.textContent = count;
     });
     // Render según tab activo
