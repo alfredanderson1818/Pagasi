@@ -2985,7 +2985,7 @@ tbody tr:hover td {
   <span id="topNewLabel" style="display:none"></span>
   <span id="notif-dot" style="display:none"></span>
 
-  <div id="desktop-topbar" style="display:flex;align-items:center;padding:10px 20px 0 20px;flex-shrink:0">
+  <div id="desktop-topbar" style="display:flex;align-items:center;padding:10px 20px 0 20px;flex-shrink:0;gap:14px">
     <div class="tb-search-wrap" id="gs-wrap" style="width:100%;max-width:480px;margin:0 auto;position:relative">
       <div class="srch" style="width:100%">
         <span class="srch-i">◆</span>
@@ -2998,6 +2998,9 @@ tbody tr:hover td {
         <button id="gs-clear" class="gs-clear-btn" onclick="document.getElementById('globalSearch').value='';closeGlobalSearch()" style="display:none">✕</button>
       </div>
       <div id="gs-panel" class="gs-dropdown"></div>
+    </div>
+    <div id="conc-switcher" style="display:none;flex-shrink:0">
+      <!-- Switcher de concesionario · se rellena con _renderConcSwitcher() -->
     </div>
   </div>
   <div class="content" id="cnt"></div>
@@ -3309,11 +3312,13 @@ var DB = {
       db.collection('config').doc('catalogo').get(),
       db.collection('config').doc('planes').get(),
       db.collection('facturas').get(),
+      db.collection('concesionarios').get(),
     ]).then(function(snaps){
       function read(snap, withId){return snap.docs.map(function(d){return withId ? Object.assign({id:d.id}, d.data()) : d.data();});}
       var m=read(snaps[0], true),cl=read(snaps[1], true),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
       var planDoc = snaps[8], catalogoDoc = snaps[9], planesDoc = snaps[10];
       var fac = snaps[11] ? read(snaps[11]) : [];
+      var conc = snaps[12] ? read(snaps[12], true) : [];
       if(planDoc && planDoc.exists){
         var pd = planDoc.data() || {};
         if(Object.prototype.hasOwnProperty.call(pd,'factor')) PLAN.factor = pd.factor;
@@ -3410,6 +3415,14 @@ var DB = {
       S.movimientos = mv;
       S.cuentasPendientes = pnd;
       S.facturas = fac;
+      S.concesionarios = conc;
+      // Restaurar el concesionario activo desde localStorage si existe
+      try{
+        var savedConc = localStorage.getItem('concesionarioActivo');
+        if(savedConc && conc.find(function(c){return c.id === savedConc;})){
+          S.concesionarioActivo = savedConc;
+        }
+      }catch(e){}
       calcularMoraAuto();
       cargarCuentasBanc();
       cargarEmpresa();
@@ -3437,6 +3450,8 @@ var DB = {
   saveEgreso: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('egresos').doc(String(o.id)).set(clean(o)); }); },
   delEgreso: function(id){ if(!db)return; _dbSilent(function(){ return db.collection('egresos').doc(String(id)).delete(); }); },
   saveFactura: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('facturas').doc(String(o.id)).set(clean(o)); }); },
+  saveConcesionario: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('concesionarios').doc(String(o.id)).set(clean(o)); }); },
+  delConcesionario: function(id){ if(!db)return; _dbSilent(function(){ return db.collection('concesionarios').doc(String(id)).delete(); }); },
 };
 
 // Usuarios e invitaciones en Firestore
@@ -3472,6 +3487,7 @@ var MODULOS = [
   {id:'reportes', label:'Finanzas', grupo:'Análisis'},
   {id:'cuentas', label:'Cuentas', grupo:'Análisis'},
   {id:'comisiones', label:'Comisiones', grupo:'Análisis'},
+  {id:'concesionarios', label:'Concesionarios', grupo:'Sistema'},
   {id:'plan', label:'Plan & Precios', grupo:'Sistema'},
   {id:'config', label:'Configuración', grupo:'Sistema'},
   {id:'users', label:'Usuarios', grupo:'Sistema'},
@@ -3834,6 +3850,8 @@ const S = {
   movimientos:[],
   cuentasPendientes:[],
   facturas: [],
+  concesionarios: [],
+  concesionarioActivo: null, // null = "Todos" / id = trabajando en un concesionario
   page:'dash', mTab:'todas', credTab:'todos', pagosTab:'todos', saveFn:null, clienteFiltro:'',
   currentUser: null,
   tareas: []
@@ -3866,7 +3884,7 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS — Rastreo',notif:'Notificaciones',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
 function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
@@ -3964,6 +3982,9 @@ function _attachCurrentUserListener(uid){
       S.currentUser.rol = nuevoRol;
       S.currentUser.permisos = nuevosPerms;
       if(data.nombre) S.currentUser.nombre = data.nombre;
+      S.currentUser.concesionarios = data.concesionarios || [];
+      S.currentUser.comisiones = data.comisiones || null;
+      if(typeof _renderConcSwitcher === 'function') _renderConcSwitcher();
       // Avisar al usuario
       try{
         if(prevRol !== nuevoRol){
@@ -4046,12 +4067,12 @@ function renderSidebar(){
     {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
     {label:'Operaciones',keys:['cobranza','contratos','notif']},
     {label:'Análisis', keys:['reportes','cuentas','comisiones']},
-    {label:'Sistema', keys:['plan','config','scores','users']},
+    {label:'Sistema', keys:['plan','config','concesionarios','scores','users']},
   ];
   var iconMap = {
     dash:'DB',centro:'WK',clientes:'CLI',motos:'MOT',creditos:'FIN',pagos:'PAG',
     cobranza:'COB',contratos:'CTR',notif:'NOT',reportes:'RPT',
-    cuentas:'CTA',comisiones:'CMS',conta:'CNT',plan:'PLN',config:'CFG',scores:'SCR',users:'USR'
+    cuentas:'CTA',comisiones:'CMS',conta:'CNT',plan:'PLN',config:'CFG',scores:'SCR',users:'USR',concesionarios:'CNC'
   };
   var extraMap = {cobranza:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
 
@@ -4295,6 +4316,7 @@ function nav(p){
   document.querySelectorAll('.si[data-nav]').forEach(e=>{if(e.dataset.nav===p)e.classList.add('on');});
   $('pgT').textContent=PGL[p]||p; if($('pgT-mob')) $('pgT-mob').textContent=PGL[p]||p;
   updateTopbar();
+  if(typeof _renderConcSwitcher === 'function') _renderConcSwitcher();
   if(window.innerWidth<=820) updateMobileNav();
   const fn=PG[p];
   if(fn){
@@ -6311,6 +6333,7 @@ function saveWtTask(id){ var old=S._wtEditing||{}; var t=Object.assign({},old); 
 const PG={
 centro(){ return wtHTML(); },
 comisiones(){ return _comisionesRender(); },
+concesionarios(){ return _concRender(); },
 dash(){
   // Los empleados ven un dashboard especializado
   if(isEmpleadoRole()) return empleadoDashHTML();
@@ -18749,6 +18772,370 @@ function _euComToggle(){
 }
 
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  MÓDULO CONCESIONARIOS                                    ║
+// ║  - CRUD de sedes/puntos de venta                          ║
+// ║  - Asignación de usuarios a múltiples concesionarios      ║
+// ║  - Switcher en header para alternar concesionario activo  ║
+// ║  ENTREGA 1: Solo infraestructura. Filtros vienen en E2.   ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// ── Helpers ──
+
+// Devuelve un concesionario por id (ó null)
+function _concGetById(id){
+  if(!id) return null;
+  return (S.concesionarios||[]).find(function(c){return c.id===id;}) || null;
+}
+
+// Devuelve los concesionarios que el usuario actual puede ver
+// Admin (sin restricciones de concesionario) ve todos
+function _concGetVisibles(){
+  var all = (S.concesionarios||[]).filter(function(c){return !c.eliminado;});
+  var u = S.currentUser;
+  if(!u) return all;
+  // Si el usuario tiene rol Administrador y no tiene asignaciones específicas, ve todos
+  var asignados = u.concesionarios || [];
+  if((u.rol === 'Administrador' || u.rol === 'Gerente') && (!asignados.length)){
+    return all;
+  }
+  // Si tiene asignaciones explícitas, filtramos
+  if(asignados.length){
+    return all.filter(function(c){ return asignados.indexOf(c.id) !== -1; });
+  }
+  // Sin asignaciones y no admin → ve todos por compatibilidad (mientras está en transición)
+  return all;
+}
+
+// Cambia el concesionario activo y guarda en localStorage
+function _concSetActivo(id){
+  S.concesionarioActivo = id || null;
+  try{
+    if(id) localStorage.setItem('concesionarioActivo', id);
+    else localStorage.removeItem('concesionarioActivo');
+  }catch(e){}
+  if(typeof toast === 'function'){
+    var nombre = id ? ((_concGetById(id)||{}).nombre || id) : 'Todos los concesionarios';
+    toast('Trabajando en: '+nombre,'info');
+  }
+  // Re-render página actual
+  if(typeof nav === 'function' && S.page) nav(S.page);
+}
+
+// Renderiza el switcher en el header
+function _renderConcSwitcher(){
+  var wrap = document.getElementById('conc-switcher');
+  if(!wrap) return;
+  var visibles = _concGetVisibles();
+  // Si no hay concesionarios creados todavía, ocultamos el switcher
+  if(!visibles.length){
+    wrap.style.display = 'none';
+    return;
+  }
+  var activo = S.concesionarioActivo;
+  // Verificar que el activo siga siendo visible
+  if(activo && !visibles.find(function(c){return c.id===activo;})){
+    S.concesionarioActivo = null;
+    activo = null;
+  }
+  var u = S.currentUser || {};
+  var esAdmin = (u.rol === 'Administrador' || u.rol === 'Gerente');
+  // Admin con permiso amplio ve "Todos" como opción; usuarios con restricciones solo sus concesionarios
+  var puedeVerTodos = esAdmin && (!u.concesionarios || u.concesionarios.length === 0 || u.concesionarios.length === visibles.length);
+  var labelActivo = activo ? ((_concGetById(activo)||{}).nombre || '?') : 'Todos';
+  wrap.style.display = 'flex';
+  wrap.style.alignItems = 'center';
+  wrap.innerHTML = ''
+    + '<button type="button" id="conc-sw-btn" onclick="_concToggleDropdown()" '
+    + 'style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surf2);border:1px solid var(--rim2);border-radius:9px;cursor:pointer;font-family:var(--f);font-size:12.5px;font-weight:700;color:var(--ink);transition:.15s">'
+    + '<span style="width:7px;height:7px;border-radius:50%;background:'+(activo?'var(--p1)':'var(--green)')+'"></span>'
+    + '<span style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Sede</span>'
+    + '<span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+labelActivo+'</span>'
+    + '<span style="font-size:9px;color:var(--ink3)">▾</span>'
+    + '</button>'
+    + '<div id="conc-sw-menu" style="display:none;position:absolute;top:48px;right:20px;background:var(--surf);border:1px solid var(--rim);border-radius:11px;padding:6px;min-width:240px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:9999">'
+      + (puedeVerTodos
+        ? '<button type="button" onclick="_concSetActivo(null);_concCloseDropdown()" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 11px;background:'+(!activo?'rgba(0,184,118,.1)':'transparent')+';border:none;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--ink);font-weight:'+(!activo?'700':'500')+'">'
+          + '<span style="width:6px;height:6px;border-radius:50%;background:var(--green)"></span>'
+          + '<span>Todos los concesionarios</span>'
+          + (!activo ? '<span style="margin-left:auto;color:var(--green);font-size:10px">✓</span>' : '')
+          + '</button>'
+          + '<div style="height:1px;background:var(--rim2);margin:4px 0"></div>'
+        : '')
+      + visibles.map(function(c){
+        var sel = activo === c.id;
+        return '<button type="button" onclick="_concSetActivo(\''+c.id+'\');_concCloseDropdown()" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 11px;background:'+(sel?'rgba(74,107,255,.13)':'transparent')+';border:none;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--ink);font-weight:'+(sel?'700':'500')+'">'
+          + '<span style="width:6px;height:6px;border-radius:50%;background:var(--p1)"></span>'
+          + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.nombre+'</span>'
+          + (sel ? '<span style="color:var(--p1);font-size:10px">✓</span>' : '')
+          + '</button>';
+      }).join('')
+    + '</div>';
+}
+
+function _concToggleDropdown(){
+  var menu = document.getElementById('conc-sw-menu');
+  if(!menu) return;
+  if(menu.style.display === 'block'){
+    menu.style.display = 'none';
+  } else {
+    menu.style.display = 'block';
+    // Click outside cierra
+    setTimeout(function(){
+      function close(e){
+        if(e.target.closest && (e.target.closest('#conc-sw-menu') || e.target.closest('#conc-sw-btn'))) return;
+        _concCloseDropdown();
+        document.removeEventListener('click', close);
+      }
+      document.addEventListener('click', close);
+    }, 50);
+  }
+}
+
+function _concCloseDropdown(){
+  var menu = document.getElementById('conc-sw-menu');
+  if(menu) menu.style.display = 'none';
+}
+
+// ════════ MÓDULO CRUD DE CONCESIONARIOS ════════
+
+function _concRender(){
+  var lista = (S.concesionarios||[]).filter(function(c){return !c.eliminado;});
+  // Stats por concesionario (motos, créditos, clientes, pagos)
+  function statsDe(cid){
+    return {
+      motos: (S.motos||[]).filter(function(m){return !m.eliminado && m.concesionarioId === cid;}).length,
+      creds: (S.creds||[]).filter(function(cr){return !cr.eliminado && cr.concesionarioId === cid;}).length,
+      clis:  (S.clientes||[]).filter(function(cl){return !cl.eliminado && cl.concesionarioId === cid;}).length,
+      pagos: (S.pagos||[]).filter(function(p){return !p.eliminado && p.concesionarioId === cid;}).length
+    };
+  }
+  // Sin asignar (histórico)
+  var sinAsig = {
+    motos: (S.motos||[]).filter(function(m){return !m.eliminado && !m.concesionarioId;}).length,
+    creds: (S.creds||[]).filter(function(cr){return !cr.eliminado && !cr.concesionarioId;}).length,
+    clis:  (S.clientes||[]).filter(function(cl){return !cl.eliminado && !cl.concesionarioId;}).length,
+    pagos: (S.pagos||[]).filter(function(p){return !p.eliminado && !p.concesionarioId;}).length
+  };
+  var html = '<div class="page">'
+    + (typeof pageBanner === 'function'
+      ? pageBanner(
+          'Sedes y puntos de venta · Multi-sucursal',
+          'Concesionarios',
+          'Define cada sede física donde operas. Asigna usuarios y filtra datos por concesionario para mantener cada operación clara y separada.',
+          [{label:'+ Nuevo concesionario', onclick:'_concOpenEdit(null)', primary:true}]
+        )
+      : '<div style="margin-bottom:14px"><h1 style="font-size:22px;margin:0">Concesionarios</h1></div>'
+    )
+    // KPIs
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'
+    + '<div style="background:var(--surf);padding:14px 16px;border-radius:12px;border:1px solid var(--rim)">'
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Sedes activas</div>'
+    + '<div style="font-family:var(--fd);font-weight:800;font-size:22px;margin-top:4px">'+lista.filter(function(c){return c.activo!==false;}).length+'</div>'
+    + '</div>'
+    + '<div style="background:var(--surf);padding:14px 16px;border-radius:12px;border:1px solid var(--rim)">'
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Total sedes</div>'
+    + '<div style="font-family:var(--fd);font-weight:800;font-size:22px;margin-top:4px">'+lista.length+'</div>'
+    + '</div>'
+    + '<div style="background:var(--surf);padding:14px 16px;border-radius:12px;border:1px solid var(--rim)">'
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Sin asignar (histórico)</div>'
+    + '<div style="font-family:var(--fd);font-weight:800;font-size:22px;margin-top:4px;color:var(--amber)">'+(sinAsig.creds+sinAsig.motos+sinAsig.clis+sinAsig.pagos)+'</div>'
+    + '<div style="font-size:10px;color:var(--ink3);margin-top:2px">registros</div>'
+    + '</div>'
+    + '<div style="background:var(--surf);padding:14px 16px;border-radius:12px;border:1px solid var(--rim)">'
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Usuarios asignados</div>'
+    + '<div style="font-family:var(--fd);font-weight:800;font-size:22px;margin-top:4px">'+((typeof _usersCache!=='undefined'&&_usersCache)?_usersCache.filter(function(u){return u.concesionarios && u.concesionarios.length;}).length:0)+'</div>'
+    + '</div>'
+    + '</div>';
+  // Mensaje informativo
+  html += ''
+    + '<div style="background:rgba(74,107,255,0.07);border:1px solid rgba(74,107,255,0.2);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
+    + '<strong style="color:var(--p1)">Entrega 1 — Infraestructura activa.</strong> '
+    + 'Ya puedes crear concesionarios y asignarles usuarios. El switcher en el header te deja cambiar entre sedes. '
+    + 'En la <b>Entrega 2</b> habilitaremos los filtros automáticos en cada módulo (Motos, Créditos, Pagos...) y el modo concesionario para vendedores externos.'
+    + '</div>';
+  // Lista de concesionarios
+  if(lista.length === 0){
+    html += '<div style="padding:60px 20px;text-align:center;background:var(--surf);border-radius:14px;border:1px dashed var(--rim2)">'
+      + '<div style="font-size:36px;margin-bottom:12px;opacity:.4">⌂</div>'
+      + '<div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px">Sin concesionarios creados</div>'
+      + '<div style="font-size:11.5px;color:var(--ink3);max-width:380px;margin:0 auto;line-height:1.55">Crea tu primer concesionario para empezar a separar la operación por sede.</div>'
+      + '<button class="btn btn-p btn-sm" style="margin-top:14px" onclick="_concOpenEdit(null)">+ Crear primer concesionario</button>'
+      + '</div>';
+  } else {
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px">';
+    lista.forEach(function(c){
+      var st = statsDe(c.id);
+      var inactivoBadge = c.activo === false ? '<span style="background:rgba(255,71,87,.18);color:var(--red);padding:2px 8px;border-radius:9px;font-size:10px;font-weight:700;letter-spacing:.3px">INACTIVO</span>' : '<span style="background:rgba(0,184,118,.18);color:var(--green);padding:2px 8px;border-radius:9px;font-size:10px;font-weight:700;letter-spacing:.3px">ACTIVO</span>';
+      var nUsuarios = ((typeof _usersCache!=='undefined'&&_usersCache)?_usersCache.filter(function(u){return (u.concesionarios||[]).indexOf(c.id)!==-1;}).length:0);
+      html += ''
+        + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;overflow:hidden">'
+        + '<div style="padding:14px 16px 10px;border-bottom:1px solid var(--rim2)">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:5px">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">CONCESIONARIO</div>'
+        + '<div style="font-family:var(--fs,serif);font-weight:700;font-size:18px;margin-top:2px;line-height:1.2">'+(c.nombre||'—')+'</div>'
+        + '</div>'
+        + '<div>'+inactivoBadge+'</div>'
+        + '</div>'
+        + (c.ciudad ? '<div style="font-size:11.5px;color:var(--ink3);margin-top:3px">'+c.ciudad+(c.direccion?' · '+c.direccion:'')+'</div>' : '')
+        + (c.telefono ? '<div style="font-size:11px;color:var(--ink3);margin-top:1px">Tel: '+c.telefono+'</div>' : '')
+        + '</div>'
+        + '<div style="padding:11px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-bottom:1px solid var(--rim2)">'
+        + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase">Motos</div><div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px">'+st.motos+'</div></div>'
+        + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase">Créditos</div><div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px;color:var(--p1)">'+st.creds+'</div></div>'
+        + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase">Clientes</div><div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px">'+st.clis+'</div></div>'
+        + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase">Pagos</div><div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px;color:var(--green)">'+st.pagos+'</div></div>'
+        + '</div>'
+        + '<div style="padding:9px 16px;font-size:11px;color:var(--ink3);border-bottom:1px solid var(--rim2)">'
+        + (nUsuarios > 0 ? '<b style="color:var(--ink2)">'+nUsuarios+'</b> usuario'+(nUsuarios===1?'':'s')+' asignado'+(nUsuarios===1?'':'s') : 'Sin usuarios asignados')
+        + '</div>'
+        + '<div style="padding:11px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+        + '<button class="btn btn-p btn-sm" onclick="_concOpenEdit(\''+c.id+'\')">Editar</button>'
+        + '<button class="btn btn-g btn-sm" onclick="_concAbrirDetalle(\''+c.id+'\')">Ver Detalle</button>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// Modal: crear / editar concesionario
+function _concOpenEdit(id){
+  var existing = id ? _concGetById(id) : null;
+  var c = existing || { id:'', nombre:'', direccion:'', ciudad:'', telefono:'', activo:true };
+  $('mic').textContent='CNC';
+  $('mtt').textContent= existing ? 'Editar Concesionario' : 'Nuevo Concesionario';
+  $('msb').textContent= existing ? c.id : 'Sede o punto de venta';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = ''
+    + '<div class="fgr c1" style="gap:10px">'
+    + '<div class="fg"><label>Nombre del concesionario <span style="color:var(--red)">*</span></label>'
+    + '<input class="fi" id="conc_nombre" value="'+(c.nombre||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Maracay Centro" maxlength="80"></div>'
+    + '<div class="fgr" style="gap:10px">'
+    + '<div class="fg"><label>Ciudad</label><input class="fi" id="conc_ciudad" value="'+(c.ciudad||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Maracay"></div>'
+    + '<div class="fg"><label>Teléfono</label><input class="fi" id="conc_telefono" value="'+(c.telefono||'').replace(/"/g,'&quot;')+'" placeholder="Ej: 0414-1234567"></div>'
+    + '</div>'
+    + '<div class="fg"><label>Dirección</label><textarea class="fi" id="conc_direccion" rows="2" placeholder="Av. Bolívar, c/c Av. Sucre...">'+(c.direccion||'').replace(/</g,'&lt;')+'</textarea></div>'
+    + '<div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="conc_activo" '+(c.activo!==false?'checked':'')+' style="accent-color:var(--green);transform:scale(1.15)"> Concesionario activo</label>'
+    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Si está inactivo, no aparecerá en los selectores de creación de motos/créditos.</div></div>'
+    + '</div>';
+  S.saveFn = function(){
+    var nombre = (($('conc_nombre')&&$('conc_nombre').value)||'').trim();
+    if(!nombre){ toast('El nombre es obligatorio','error'); return false; }
+    var newConc = existing ? Object.assign({}, existing) : { id: 'CONC-'+Date.now() };
+    newConc.nombre = nombre;
+    newConc.ciudad = (($('conc_ciudad')&&$('conc_ciudad').value)||'').trim();
+    newConc.telefono = (($('conc_telefono')&&$('conc_telefono').value)||'').trim();
+    newConc.direccion = (($('conc_direccion')&&$('conc_direccion').value)||'').trim();
+    newConc.activo = !!($('conc_activo')&&$('conc_activo').checked);
+    if(!existing){
+      newConc.createdAt = new Date().toISOString();
+      newConc.creadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+      S.concesionarios.push(newConc);
+    } else {
+      newConc.updatedAt = new Date().toISOString();
+      var idx = S.concesionarios.findIndex(function(x){return x.id===existing.id;});
+      if(idx>=0) S.concesionarios[idx] = newConc;
+    }
+    if(DB && DB.saveConcesionario) DB.saveConcesionario(newConc);
+    closeM();
+    toast(existing ? 'Concesionario actualizado' : 'Concesionario creado','success');
+    nav('concesionarios');
+    return true;
+  };
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + (existing ? '<button class="btn btn-d btn-sm" onclick="_concEliminar(\''+existing.id+'\')">Eliminar</button>' : '')
+    + '<button class="btn btn-p" onclick="saveM()">'+(existing?'Guardar cambios':'Crear concesionario')+'</button>';
+  $('ov').style.display='flex';
+}
+
+function _concEliminar(id){
+  var c = _concGetById(id);
+  if(!c){ toast('No encontrado','error'); return; }
+  // Verificar dependencias
+  var nMotos = (S.motos||[]).filter(function(m){return !m.eliminado && m.concesionarioId===id;}).length;
+  var nCreds = (S.creds||[]).filter(function(cr){return !cr.eliminado && cr.concesionarioId===id;}).length;
+  var nClis = (S.clientes||[]).filter(function(cl){return !cl.eliminado && cl.concesionarioId===id;}).length;
+  var nUsr = ((typeof _usersCache!=='undefined'&&_usersCache)?_usersCache.filter(function(u){return (u.concesionarios||[]).indexOf(id)!==-1;}).length:0);
+  if(nMotos > 0 || nCreds > 0 || nClis > 0 || nUsr > 0){
+    var msg = 'Este concesionario tiene datos asociados:\n\n';
+    if(nMotos) msg += '• '+nMotos+' moto(s)\n';
+    if(nCreds) msg += '• '+nCreds+' crédito(s)\n';
+    if(nClis) msg += '• '+nClis+' cliente(s)\n';
+    if(nUsr) msg += '• '+nUsr+' usuario(s) asignado(s)\n';
+    msg += '\nMejor desactívalo en lugar de eliminarlo. ¿Marcar como inactivo?';
+    if(confirm(msg)){
+      c.activo = false;
+      c.updatedAt = new Date().toISOString();
+      if(DB && DB.saveConcesionario) DB.saveConcesionario(c);
+      closeM();
+      toast('Concesionario marcado como inactivo','info');
+      nav('concesionarios');
+    }
+    return;
+  }
+  if(confirm('¿Eliminar concesionario "'+c.nombre+'"? Esta acción no se puede deshacer.')){
+    c.eliminado = true;
+    c.eliminadoEn = new Date().toISOString();
+    c.eliminadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+    if(DB && DB.saveConcesionario) DB.saveConcesionario(c);
+    closeM();
+    toast('Concesionario eliminado','info');
+    nav('concesionarios');
+  }
+}
+
+function _concAbrirDetalle(id){
+  var c = _concGetById(id);
+  if(!c){ toast('No encontrado','error'); return; }
+  var st = {
+    motos: (S.motos||[]).filter(function(m){return !m.eliminado && m.concesionarioId===id;}),
+    creds: (S.creds||[]).filter(function(cr){return !cr.eliminado && cr.concesionarioId===id;}),
+    clis:  (S.clientes||[]).filter(function(cl){return !cl.eliminado && cl.concesionarioId===id;}),
+    pagos: (S.pagos||[]).filter(function(p){return !p.eliminado && p.concesionarioId===id;})
+  };
+  var usuarios = (typeof _usersCache!=='undefined'&&_usersCache) ? _usersCache.filter(function(u){return (u.concesionarios||[]).indexOf(id)!==-1;}) : [];
+  $('mic').textContent='CNC';
+  $('mtt').textContent= c.nombre;
+  $('msb').textContent= 'Detalle del concesionario';
+  $('modal-box').className='modal modal-lg';
+  $('mbd').innerHTML = ''
+    + '<div style="background:var(--gs);padding:13px 15px;border-radius:10px;margin-bottom:13px">'
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">INFORMACIÓN</div>'
+    + '<div style="margin-top:6px;font-size:12.5px;line-height:1.6">'
+    + (c.ciudad ? '<div><b>Ciudad:</b> '+c.ciudad+'</div>' : '')
+    + (c.direccion ? '<div><b>Dirección:</b> '+c.direccion+'</div>' : '')
+    + (c.telefono ? '<div><b>Teléfono:</b> '+c.telefono+'</div>' : '')
+    + '<div><b>Estado:</b> '+(c.activo!==false?'<span style="color:var(--green);font-weight:700">Activo</span>':'<span style="color:var(--red);font-weight:700">Inactivo</span>')+'</div>'
+    + (c.createdAt?'<div style="color:var(--ink3);font-size:10.5px;margin-top:3px">Creado: '+(c.createdAt||'').slice(0,10)+'</div>':'')
+    + '</div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
+    + '<div style="background:var(--surf);padding:12px;border-radius:9px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Motos</div><div style="font-family:var(--fd);font-weight:800;font-size:20px;margin-top:3px">'+st.motos.length+'</div></div>'
+    + '<div style="background:var(--surf);padding:12px;border-radius:9px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Créditos</div><div style="font-family:var(--fd);font-weight:800;font-size:20px;margin-top:3px;color:var(--p1)">'+st.creds.length+'</div></div>'
+    + '<div style="background:var(--surf);padding:12px;border-radius:9px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Clientes</div><div style="font-family:var(--fd);font-weight:800;font-size:20px;margin-top:3px">'+st.clis.length+'</div></div>'
+    + '<div style="background:var(--surf);padding:12px;border-radius:9px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Pagos</div><div style="font-family:var(--fd);font-weight:800;font-size:20px;margin-top:3px;color:var(--green)">'+st.pagos.length+'</div></div>'
+    + '</div>'
+    // Usuarios asignados
+    + '<div style="margin-top:10px"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Usuarios asignados ('+usuarios.length+')</div>'
+    + (usuarios.length === 0
+        ? '<div style="padding:18px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px">Sin usuarios asignados. Asigna usuarios desde el módulo <b>Usuarios</b> → Editar permisos.</div>'
+        : '<div style="display:grid;gap:6px">'+ usuarios.map(function(u){
+            return '<div style="background:var(--gs);padding:9px 11px;border-radius:8px;display:flex;justify-content:space-between;align-items:center">'
+              + '<div><div style="font-weight:700;font-size:12.5px">'+(u.nombre||u.email||'?')+'</div><div style="font-size:10.5px;color:var(--ink3)">'+(u.rol||'')+' · '+(u.email||'')+'</div></div>'
+              + '<button class="btn btn-g btn-xs" onclick="closeM();nav(\'users\');setTimeout(function(){editarUsuario(\''+u.uid+'\');},250)">Editar</button>'
+              + '</div>';
+          }).join('') +'</div>')
+    + '</div>';
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>'
+    + '<button class="btn btn-p" onclick="_concOpenEdit(\''+c.id+'\')">Editar</button>';
+  $('ov').style.display='flex';
+}
+
+
 function closeM(){
   $('ov').style.display='none';
   $('modal-box').className='modal';
@@ -23309,6 +23696,39 @@ function editarUsuario(uid){
       + '</div>'
       + '</div>'
       + '</div>';
+    // Sección Concesionarios
+    var asignadosUsr = u.concesionarios || [];
+    var concListaActivos = (S.concesionarios||[]).filter(function(cc){return !cc.eliminado;});
+    var concSection;
+    if(concListaActivos.length === 0){
+      concSection = ''
+        + '<div style="margin-top:14px;padding:12px;background:var(--gs);border-radius:10px;border:1px solid var(--rim2)">'
+        + '<div style="font-size:12.5px;font-weight:700">Concesionarios asignados</div>'
+        + '<div style="font-size:10.5px;color:var(--ink3);margin-top:5px;line-height:1.5">Aún no has creado concesionarios. Para asignar al usuario a una sede específica, primero <a href="#" onclick="closeM();nav(\'concesionarios\');return false" style="color:var(--p1)">crea concesionarios</a>. Mientras tanto, este usuario ve todos los datos (vista global).</div>'
+        + '</div>';
+    } else {
+      concSection = ''
+        + '<div style="margin-top:14px;padding:12px;background:var(--gs);border-radius:10px;border:1px solid var(--rim2)">'
+        + '<div style="font-size:12.5px;font-weight:700">Concesionarios asignados</div>'
+        + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px;line-height:1.5">Marca a qué sedes tiene acceso. Si no marcas ninguna y el rol es Administrador/Gerente, ve todos. Para roles inferiores, sin asignación → ve todos los datos (vista global).</div>'
+        + '<div style="margin-top:10px;display:grid;gap:5px;max-height:180px;overflow-y:auto;padding:4px">'
+        + concListaActivos.map(function(cc){
+            var checked = asignadosUsr.indexOf(cc.id) !== -1;
+            return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 8px;cursor:pointer;background:'+(checked?'rgba(74,107,255,.1)':'var(--surf2)')+';border-radius:6px;border:1px solid '+(checked?'rgba(74,107,255,.3)':'transparent')+'">'
+              + '<input type="checkbox" class="eu-conc-cb" value="'+cc.id+'" '+(checked?'checked':'')+' style="accent-color:var(--p1)">'
+              + '<div style="flex:1"><div style="font-weight:'+(checked?'700':'600')+'">'+cc.nombre+'</div>'
+              + (cc.ciudad ? '<div style="font-size:10px;color:var(--ink3)">'+cc.ciudad+'</div>' : '')
+              + '</div>'
+              + (cc.activo===false ? '<span style="color:var(--red);font-size:9px;font-weight:700">INACTIVO</span>' : '')
+              + '</label>';
+          }).join('')
+        + '</div>'
+        + '<div style="display:flex;gap:6px;margin-top:9px">'
+        + '<button type="button" class="btn btn-g btn-xs" onclick="document.querySelectorAll(\'.eu-conc-cb\').forEach(function(cb){cb.checked=true})">Marcar todos</button>'
+        + '<button type="button" class="btn btn-g btn-xs" onclick="document.querySelectorAll(\'.eu-conc-cb\').forEach(function(cb){cb.checked=false})">Ninguno</button>'
+        + '</div>'
+        + '</div>';
+    }
     $('mbd').innerHTML=''
       +'<div style="background:var(--surf2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px">'
       +'<div style="font-weight:800">'+( u.nombre||u.email)+'</div>'
@@ -23331,14 +23751,21 @@ function editarUsuario(uid){
       +'</select></div>'
       +'<div style="margin-top:12px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);margin-bottom:8px">Módulos con acceso</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;max-height:200px;overflow-y:auto;padding:4px">'+modCheckboxes+'</div></div>'
+      + concSection
       + comSection;
     S.saveFn=function(){
       var rol=($('eu_rol')&&$('eu_rol').value)||u.rol;
       var permisos=[];
-      // Solo recoger checkboxes de PERMISOS (no el de comisiones)
+      // Solo recoger checkboxes de PERMISOS (no el de comisiones ni los de concesionarios)
       document.querySelectorAll('#mbd input[type=checkbox]').forEach(function(cb){
         if(cb.id === 'eu_com_activo') return; // saltar el de comisiones
+        if(cb.classList && cb.classList.contains('eu-conc-cb')) return; // saltar concesionarios
         if(cb.checked) permisos.push(cb.value);
+      });
+      // Recoger concesionarios asignados
+      var concesAsig = [];
+      document.querySelectorAll('.eu-conc-cb:checked').forEach(function(cb){
+        concesAsig.push(cb.value);
       });
       // Construir config de comisiones
       var comActivoNuevo = !!($('eu_com_activo')&&$('eu_com_activo').checked);
@@ -23353,12 +23780,20 @@ function editarUsuario(uid){
           valor: parseFloat(($('eu_com_c_val')&&$('eu_com_c_val').value)||1)||0
         }
       } : { activo: false };
-      DB.updateUsuario(uid,{rol:rol,permisos:permisos,comisiones:comNueva});
+      DB.updateUsuario(uid,{rol:rol,permisos:permisos,comisiones:comNueva,concesionarios:concesAsig});
       // Mantener cache local sincronizado para que la UI refleje los cambios al instante.
       try{
         if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
           var cached = _usersCache.find(function(x){ return x.uid === uid; });
-          if(cached){ cached.rol = rol; cached.permisos = permisos; cached.comisiones = comNueva; }
+          if(cached){ cached.rol = rol; cached.permisos = permisos; cached.comisiones = comNueva; cached.concesionarios = concesAsig; }
+        }
+      }catch(e){}
+      // Si es el usuario actual, actualizar currentUser y re-render switcher
+      try{
+        if(S.currentUser && S.currentUser.uid === uid){
+          S.currentUser.concesionarios = concesAsig;
+          S.currentUser.rol = rol;
+          if(typeof _renderConcSwitcher === 'function') _renderConcSwitcher();
         }
       }catch(e){}
       closeM(); nav('users'); toast('Permisos actualizados','success'); return true;
@@ -23690,7 +24125,9 @@ if (auth) {
             email: user.email,
             nombre: data.nombre || user.displayName || user.email,
             rol: data.rol || 'Administrador',
-            permisos: data.permisos || ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users','perm_delete']
+            permisos: data.permisos || ['dash','clientes','motos','creditos','pagos','cobranza','contratos','gps','notif','reportes','cuentas','conta','plan','config','users','perm_delete'],
+            concesionarios: data.concesionarios || [],
+            comisiones: data.comisiones || null
           };
           var sbUn = document.querySelector('.sb-un');
           if (sbUn) sbUn.textContent = S.currentUser.nombre;
