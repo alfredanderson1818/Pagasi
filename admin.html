@@ -5169,14 +5169,15 @@ function sincronizarInventarioConCreditos(opts){
 function renderMotoGrid(){
   sincronizarInventarioConCreditos({save:true});
   const f=S.mTab;
-  const fil = f==='todas'?S.motos.filter(m=>!m.eliminado):S.motos.filter(m=>!m.eliminado&&m.estado===f);
+  var _M = _concFiltrar(S.motos||[]);
+  const fil = f==='todas'?_M.filter(m=>!m.eliminado):_M.filter(m=>!m.eliminado&&m.estado===f);
   return fil.length?`<div class="moto-plan-grid">${fil.map(motoCard).join('')}</div>`:
     `<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin motos en esta categoría</div></div>`;
 }
 
 // Bloque de motos eliminadas con opción de restaurarlas
 function renderMotosEliminadasBloque(){
-  var eliminadas = (S.motos||[]).filter(function(m){return m.eliminado;});
+  var eliminadas = _concFiltrar((S.motos||[])).filter(function(m){return m.eliminado;});
   if(!eliminadas.length) return '';
   return '<div style="margin-top:18px;padding:12px 14px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.25)">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
@@ -5197,10 +5198,11 @@ function renderMotosEliminadasBloque(){
 }
 
 function filterMotos(q){
-  const f = q?S.motos.filter(m=>`${m.modelo} ${m.vin} ${m.cliente||''}`.toLowerCase().includes(q.toLowerCase())):S.motos.filter(m=>!m.eliminado&&(S.mTab==='todas'?true:m.estado===S.mTab));
+  var _M = _concFiltrar(S.motos||[]);
+  const f = q?_M.filter(m=>`${m.modelo} ${m.vin} ${m.cliente||''}`.toLowerCase().includes(q.toLowerCase())):_M.filter(m=>!m.eliminado&&(S.mTab==='todas'?true:m.estado===S.mTab));
   const g=$('mgr');
-  var elimHTML=S.motos.filter(m=>m.eliminado).length
-  ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+S.motos.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+m.modelo+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+m.vin+'</span></div>'+'<span style="font-size:10px;color:var(--red)">Del '+(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?'· '+m.eliminadoRazon:'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?'· '+m.eliminadoEn.split('T')[0]:'')+'</span>'+'</div>';}).join('')+'</div>':'';
+  var elimHTML=_M.filter(m=>m.eliminado).length
+  ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+_M.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+m.modelo+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+m.vin+'</span></div>'+'<span style="font-size:10px;color:var(--red)">Del '+(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?'· '+m.eliminadoRazon:'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?'· '+m.eliminadoEn.split('T')[0]:'')+'</span>'+'</div>';}).join('')+'</div>':'';
 if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join('')}</div>`:`<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q}"</div></div>`)+elimHTML;
 }
 
@@ -5248,7 +5250,7 @@ function clienteBadgesHTML(c){
 }
 function renderClienteList(q=''){
   const estadoFiltro = S.clienteEstadoFiltro || 'todos';
-  const base = S.clientes.filter(function(c){
+  const base = _concFiltrar(S.clientes||[]).filter(function(c){
     if(c.eliminado) return false;
     if(!clienteMatchesFiltro(c, estadoFiltro)) return false;
     if(!q) return true;
@@ -6338,39 +6340,46 @@ dash(){
   // Los empleados ven un dashboard especializado
   if(isEmpleadoRole()) return empleadoDashHTML();
 
+  // ── Variables filtradas por concesionario activo ──
+  // Si hay un concesionario en el switcher, todas las métricas se calculan solo sobre esos datos.
+  var _SCREDS = _concFiltrar(S.creds||[]);
+  var _SPAGOS = _concFiltrar(S.pagos||[]);
+  var _SMOTOS = _concFiltrar(S.motos||[]);
+  var _SEGR = _concFiltrar(S.egresos||[]);
+
   // ── Core metrics ──
-  const mora = S.creds.filter(c=>c.mora>0).length;
-  const activos = S.creds.filter(c=>c.estado==='activo').length;
-  const completados = S.creds.filter(c=>c.estado==='completado').length;
-  const totalCreds = S.creds.filter(c=>!c.eliminado && c.estado!=='cancelado' && c.estado!=='recuperado' && c.estado!=='recuperada').length;
+  const mora = _SCREDS.filter(c=>c.mora>0).length;
+  const activos = _SCREDS.filter(c=>c.estado==='activo').length;
+  const completados = _SCREDS.filter(c=>c.estado==='completado').length;
+  const totalCreds = _SCREDS.filter(c=>!c.eliminado && c.estado!=='cancelado' && c.estado!=='recuperado' && c.estado!=='recuperada').length;
   // Cartera: suma del saldo pendiente REAL de cada crédito activo
   // (usa la función canónica que respeta pagos parciales)
-  const cartera = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
-  const cuotasCobradas = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado'&&!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
-  const inicialesCobradas = getTotalInicialesCobradas();
+  const cartera = _SCREDS.filter(c=>c.estado==='activo').reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
+  const cuotasCobradas = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado'&&!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
+  const inicialesCobradas = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado'&&(p.esInicial||p.tipoOperacion==='inicial_credito')).reduce((a,p)=>a+p.monto,0);
   const ingMes = inicialesCobradas + cuotasCobradas; // Dashboard: ingresos confirmados sin duplicar la inicial
-  const egMes = (S.egresos||[]).filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
+  const egMes = _SEGR.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const utilidad = ingMes - egMes;
-  const pendPagos = S.pagos.filter(p=>p.estado==='pendiente').length;
-  const dispMotos = S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
+  const pendPagos = _SPAGOS.filter(p=>p.estado==='pendiente').length;
+  const dispMotos = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='disponible').length;
 
   // ── Mora buckets ──
   const moraBuckets = {
-    '1-15': S.creds.filter(c=>c.mora>0&&c.mora<=15).length,
-    '16-30': S.creds.filter(c=>c.mora>15&&c.mora<=30).length,
-    '31-60': S.creds.filter(c=>c.mora>30&&c.mora<=60).length,
-    '+60': S.creds.filter(c=>c.mora>60).length,
+    '1-15': _SCREDS.filter(c=>c.mora>0&&c.mora<=15).length,
+    '16-30': _SCREDS.filter(c=>c.mora>15&&c.mora<=30).length,
+    '31-60': _SCREDS.filter(c=>c.mora>30&&c.mora<=60).length,
+    '+60': _SCREDS.filter(c=>c.mora>60).length,
   };
   // BUG FIX: sumar la cuota REAL de cada crédito activo (antes multiplicaba count × primer cuota,
   // lo cual era incorrecto si los créditos tenían distintos montos)
-  const cuotaEsperada = S.creds.filter(c=>c.estado==='activo').reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
+  const cuotaEsperada = _SCREDS.filter(c=>c.estado==='activo').reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
   const pctCobro = cuotaEsperada > 0 ? Math.min(100, Math.round(cuotasCobradas / cuotaEsperada * 100)) : 0;
 
   // ── Moto inventory ──
-  const mDisp = S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
-  const mFin = S.motos.filter(m=>!m.eliminado&&m.estado==='financiada').length;
-  const mRec = S.motos.filter(m=>!m.eliminado&&m.estado==='recuperada').length;
-  const mInv = S.motos.filter(m=>!m.eliminado&&m.estado==='inventario').length;
+  const mDisp = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='disponible').length;
+  const mFin = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='financiada').length;
+  const mRec = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='recuperada').length;
+  const mInv = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='inventario').length;
   const mTotal = Math.max(1, mDisp+mFin+mRec+mInv);
 
   // ── Créditos por estado (para pie) ──
@@ -6415,7 +6424,7 @@ dash(){
 
   // ── Pagos por método (para pie) ──
   const metodoCounts={};
-  S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado').forEach(p=>{
+  _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado').forEach(p=>{
     var m=p.metodo||'Otro';
     metodoCounts[m]=(metodoCounts[m]||0)+1;
   });
@@ -6432,7 +6441,7 @@ dash(){
 
   // ── Próximas cuotas ──
   const hoy=(function(){
-    var prox=S.creds.filter(function(c){
+    var prox=_SCREDS.filter(function(c){
       if(c.estado!=='activo'||!c.fecha) return false;
       var start=new Date(c.fecha);
       var cuotaNum=(c.pagado||0)+1;
@@ -6440,7 +6449,7 @@ dash(){
       var diff=Math.round((vence-new Date())/(24*60*60*1000));
       return diff<=7 && diff>=-2;
     });
-    return prox.length ? prox : S.creds.filter(c=>c.estado==='activo').slice(0,5);
+    return prox.length ? prox : _SCREDS.filter(c=>c.estado==='activo').slice(0,5);
   })();
 
   // ── HTML ──
@@ -6575,7 +6584,7 @@ dash(){
     <div class="card" onclick="nav('motos')" style="cursor:pointer">
       <div class="ch" style="margin-bottom:12px">
         <div class="ct">Inventario Motos</div>
-        <span style="font-size:11px;color:var(--p1);font-weight:600">${S.motos.filter(m=>!m.eliminado).length} total</span>
+        <span style="font-size:11px;color:var(--p1);font-weight:600">${_SMOTOS.filter(m=>!m.eliminado).length} total</span>
       </div>
       <div style="display:flex;align-items:center;gap:16px">
         <div style="position:relative;flex-shrink:0">
@@ -6674,7 +6683,7 @@ dash(){
         <span style="font-size:11px;font-weight:600;cursor:pointer;color:var(--p1)" onclick="nav('pagos')">Ver todos →</span>
       </div>
       <div class="lst">
-        ${S.pagos.filter(p=>!p.eliminado).slice(0,5).map(p=>`
+        ${_SPAGOS.filter(p=>!p.eliminado).slice(0,5).map(p=>`
         <div class="li" onclick="nav('pagos')" style="cursor:pointer">
           <div class="li-ic" style="background:var(--greens);font-size:8px;font-weight:700;color:var(--green);font-family:var(--fm)">PAG</div>
           <div style="flex:1;min-width:0">
@@ -6686,7 +6695,7 @@ dash(){
             <span class="bdg ${sbg(p.estado)}" style="font-size:8.5px">${p.estado}</span>
           </div>
         </div>`).join('')}
-        ${S.pagos.filter(p=>!p.eliminado).length===0?'<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin pagos registrados</div>':''}
+        ${_SPAGOS.filter(p=>!p.eliminado).length===0?'<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin pagos registrados</div>':''}
       </div>
     </div>
 
@@ -6697,7 +6706,7 @@ dash(){
       </div>
       ${mora>0
         ?`<div class="lst">
-          ${S.creds.filter(c=>c.mora>0).slice(0,4).map(c=>`
+          ${_SCREDS.filter(c=>c.mora>0).slice(0,4).map(c=>`
           <div class="li" onclick="nav('cobranza')" style="cursor:pointer">
             <div style="width:36px;height:36px;border-radius:9px;background:var(--reds);display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <span style="font-size:10px;font-weight:900;color:var(--red);font-family:var(--fm)">${c.mora}d</span>
@@ -6725,8 +6734,8 @@ dash(){
   <!-- ROW 5: Quick access -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
     ${[
-      ['CLI','var(--gs)','var(--p1)','rgba(91,78,212,0.15)','Clientes',S.clientes.length,'registrados',"nav('clientes')"],
-      ['MOT','var(--greens)','var(--green)','rgba(6,176,106,0.15)','Disponibles',dispMotos,'de '+S.motos.filter(m=>!m.eliminado).length+' motos',"nav('motos');setTimeout(()=>setMTab('disponible'),100)"],
+      ['CLI','var(--gs)','var(--p1)','rgba(91,78,212,0.15)','Clientes',_concFiltrar(S.clientes||[]).length,'registrados',"nav('clientes')"],
+      ['MOT','var(--greens)','var(--green)','rgba(6,176,106,0.15)','Disponibles',dispMotos,'de '+_SMOTOS.filter(m=>!m.eliminado).length+' motos',"nav('motos');setTimeout(()=>setMTab('disponible'),100)"],
       ['ACT','rgba(91,78,212,0.08)','var(--p1)','rgba(91,78,212,0.2)','Activos',activos,'créditos activos',"nav('creditos')"],
       ['PLN','var(--gs)','var(--p1)','var(--rim2)','Catálogo',CATALOGO.length,'modelos',"nav('plan')"],
     ].map(([ic,bg,cl,br,label,val,sub,action])=>`
@@ -6747,9 +6756,10 @@ clientes(){
   const estado=S.clienteEstadoFiltro;
   const chips=[['todos','Todos'],['lead','Leads'],['activo','Activos'],['mora','En mora'],['completado','Completados']];
 
-  // Métricas para el banner
-  const nTot = S.clientes.filter(c=>!c.eliminado).length;
-  const nAct = S.clientes.filter(function(c){
+  // Métricas para el banner — filtradas por concesionario activo
+  var _CLIS = _concFiltrar(S.clientes||[]);
+  const nTot = _CLIS.filter(c=>!c.eliminado).length;
+  const nAct = _CLIS.filter(function(c){
     if(c.eliminado) return false;
     return getClienteEstados(c).estados.indexOf('activo')>=0;
   }).length;
@@ -6777,15 +6787,17 @@ clientes(){
 
 motos(){
   sincronizarInventarioConCreditos({save:true});
-  const total = S.motos.filter(m=>!m.eliminado).length;
-  const dispN = S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length;
-  const finN = S.motos.filter(m=>!m.eliminado&&m.estado==='financiada').length;
-  const recN = S.motos.filter(m=>!m.eliminado&&m.estado==='recuperada').length;
-  const invN = S.motos.filter(m=>!m.eliminado&&m.estado==='inventario').length;
+  // Filtrar S.motos por concesionario activo en una variable local
+  var _MOTOS = _concFiltrar(S.motos||[]);
+  const total = _MOTOS.filter(m=>!m.eliminado).length;
+  const dispN = _MOTOS.filter(m=>!m.eliminado&&m.estado==='disponible').length;
+  const finN = _MOTOS.filter(m=>!m.eliminado&&m.estado==='financiada').length;
+  const recN = _MOTOS.filter(m=>!m.eliminado&&m.estado==='recuperada').length;
+  const invN = _MOTOS.filter(m=>!m.eliminado&&m.estado==='inventario').length;
   const tabs=[['todas','Todas',total],['disponible','Disponibles',dispN],['financiada','Financiadas',finN],['recuperada','Recuperadas',recN],['inventario','Inventario',invN]];
 
   // ═══════════ ANÁLISIS DE INVENTARIO ═══════════
-  var allMotos = S.motos.filter(function(m){return !m.eliminado;});
+  var allMotos = _MOTOS.filter(function(m){return !m.eliminado;});
   // Valor total del inventario
   var valorTotal = allMotos.reduce(function(a,m){return a+(parseFloat(m.precio)||0);},0);
   var valorDisp = allMotos.filter(function(m){return m.estado==='disponible';}).reduce(function(a,m){return a+(parseFloat(m.precio)||0);},0);
@@ -7021,7 +7033,7 @@ creditos(){
   // ══════════════════════════════════════════════════════════════════════════
 
   // ─── 1. MÉTRICAS CANÓNICAS ───
-  const allCreds = S.creds.filter(c=>!c.eliminado);
+  const allCreds = _concFiltrar(S.creds||[]).filter(c=>!c.eliminado);
   const registradosCreds = allCreds.filter(c=>c.estado!=='cancelado');
   const activos = allCreds.filter(c=>c.estado==='activo');
   const enMora = allCreds.filter(c=>c.mora>0 && c.estado==='activo');
@@ -7446,7 +7458,7 @@ creditos(){
 },
 
 pagos(){
-  const allPagos = S.pagos.filter(p=>!p.eliminado);
+  const allPagos = _concFiltrar(S.pagos||[]).filter(p=>!p.eliminado);
   const confs = allPagos.filter(p=>p.estado==='confirmado');
   const pends = allPagos.filter(p=>p.estado==='pendiente');
   const totalConf= confs.reduce((a,p)=>a+p.monto,0);
@@ -7705,18 +7717,20 @@ pagos(){
 },
 
 cobranza(){
-  const mora = S.creds.filter(c=>c.mora>0&&!c.eliminado);
+  var _SCREDS = _concFiltrar(S.creds||[]);
+  var _SPAGOS = _concFiltrar(S.pagos||[]);
+  const mora = _SCREDS.filter(c=>c.mora>0&&!c.eliminado);
   const bucket1= mora.filter(c=>c.mora<=15);
   const bucket2= mora.filter(c=>c.mora>15&&c.mora<=30);
   const bucket3= mora.filter(c=>c.mora>30&&c.mora<=60);
   const bucket4= mora.filter(c=>c.mora>60);
   const deudaTotal = mora.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0)*Math.ceil(c.mora/15),0);
   const promMora = mora.length?Math.round(mora.reduce((a,c)=>a+c.mora,0)/mora.length):0;
-  const recuperadas= S.creds.filter(c=>c.estado==='recuperado'||c.estado==='recuperada').length;
+  const recuperadas= _SCREDS.filter(c=>c.estado==='recuperado'||c.estado==='recuperada').length;
   const cuotaCobrable = mora.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
 
   // ═══════════ MÉTRICAS AVANZADAS ═══════════
-  var totalActivos = S.creds.filter(function(c){return c.estado==='activo' && !c.eliminado;}).length;
+  var totalActivos = _SCREDS.filter(function(c){return c.estado==='activo' && !c.eliminado;}).length;
   var tasaMora = totalActivos ? Math.round(mora.length/totalActivos*100) : 0;
   var alDia = totalActivos - mora.length;
 
@@ -7728,15 +7742,15 @@ cobranza(){
   var iniMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   var iniMesStr = iniMes.toISOString().slice(0,10);
 
-  var pagosHoy = S.pagos.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha===hoyStr;});
+  var pagosHoy = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha===hoyStr;});
   var cobradoHoy = pagosHoy.reduce(function(a,p){return a+p.monto;},0);
-  var pagosSemana = S.pagos.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha>=iniSemanaStr;});
+  var pagosSemana = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha>=iniSemanaStr;});
   var cobradoSemana = pagosSemana.reduce(function(a,p){return a+p.monto;},0);
-  var pagosMes = S.pagos.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha>=iniMesStr;});
+  var pagosMes = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha>=iniMesStr;});
   var cobradoMes = pagosMes.reduce(function(a,p){return a+p.monto;},0);
 
   // Efectividad cobranza (% del cuotas del mes cobradas)
-  var cuotasEsperadasMes = S.creds.filter(function(c){return c.estado==='activo' && !c.eliminado;}).reduce(function(a,c){return a+parseFloat(c.cuotaM||0);},0);
+  var cuotasEsperadasMes = _SCREDS.filter(function(c){return c.estado==='activo' && !c.eliminado;}).reduce(function(a,c){return a+parseFloat(c.cuotaM||0);},0);
   var efectividadMes = cuotasEsperadasMes ? Math.round(cobradoMes/cuotasEsperadasMes*100) : 0;
 
   // Proyección cobranza si se recuperan todas las cuotas en mora
@@ -7749,10 +7763,10 @@ cobranza(){
     const fin = new Date(inicio); fin.setDate(inicio.getDate()+6);
     const iniStr = inicio.toISOString().slice(0,10);
     const finStr = fin.toISOString().slice(0,10);
-    const tot = S.pagos
+    const tot = _SPAGOS
       .filter(p=>!p.eliminado && p.estado==='confirmado' && p.fecha>=iniStr && p.fecha<=finStr)
       .reduce((a,p)=>a+p.monto,0);
-    const cnt = S.pagos.filter(p=>!p.eliminado && p.estado==='confirmado' && p.fecha>=iniStr && p.fecha<=finStr).length;
+    const cnt = _SPAGOS.filter(p=>!p.eliminado && p.estado==='confirmado' && p.fecha>=iniStr && p.fecha<=finStr).length;
     const lbl = String(inicio.getDate()).padStart(2,'0')+'/'+String(inicio.getMonth()+1).padStart(2,'0');
     semanas.push({lbl, tot, cnt});
   }
@@ -7769,7 +7783,7 @@ cobranza(){
   for(var d=13; d>=0; d--){
     var dia = new Date(hoy); dia.setDate(hoy.getDate()-d);
     var diaStr = dia.toISOString().slice(0,10);
-    var tot = S.pagos.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha===diaStr;}).reduce(function(a,p){return a+p.monto;},0);
+    var tot = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha===diaStr;}).reduce(function(a,p){return a+p.monto;},0);
     var diaLbl = String(dia.getDate()).padStart(2,'0');
     var dayOfWeek = dia.getDay();
     dias14.push({lbl:diaLbl, tot:tot, esDomingo:dayOfWeek===0, esHoy:d===0});
@@ -7782,7 +7796,7 @@ cobranza(){
   // Distribución de motivos de mora (simulada con buckets)
   // Cobrador con mejor recuperación (si existe data)
   var cobradoresStats = {};
-  S.pagos.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha>=iniMesStr;}).forEach(function(p){
+  _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha>=iniMesStr;}).forEach(function(p){
     var c = p.cobrador || 'Sin asignar';
     if(!cobradoresStats[c]) cobradoresStats[c] = {cnt:0, tot:0};
     cobradoresStats[c].cnt++;
@@ -8905,22 +8919,28 @@ reportes(){
   // Tab interno: 'resumen' (default), 'proyecciones', 'egresos', 'exportar'
   var tab = S.reportesTab || 'resumen';
 
+  // Variables filtradas por concesionario activo
+  var _SPAGOS = _concFiltrar(S.pagos||[]);
+  var _SCREDS = _concFiltrar(S.creds||[]);
+  var _SEGR = _concFiltrar(S.egresos||[]);
+  var _SMOTOS = _concFiltrar(S.motos||[]);
+
   // ══════════ CÁLCULOS COMPARTIDOS ══════════
-  const pagosConf = S.pagos.filter(p=>!p.eliminado&&p.estado==='confirmado');
-  const pagosPend = S.pagos.filter(p=>!p.eliminado&&p.estado==='pendiente');
-  const credsActivos= S.creds.filter(c=>!c.eliminado&&c.estado==='activo');
-  const credsMora = S.creds.filter(c=>!c.eliminado&&c.mora>0);
-  const credsComp = S.creds.filter(c=>!c.eliminado&&c.estado==='completado');
-  const credsRec = S.creds.filter(c=>!c.eliminado&&(c.estado==='recuperada'||c.estado==='recuperado'));
+  const pagosConf = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado');
+  const pagosPend = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='pendiente');
+  const credsActivos= _SCREDS.filter(c=>!c.eliminado&&c.estado==='activo');
+  const credsMora = _SCREDS.filter(c=>!c.eliminado&&c.mora>0);
+  const credsComp = _SCREDS.filter(c=>!c.eliminado&&c.estado==='completado');
+  const credsRec = _SCREDS.filter(c=>!c.eliminado&&(c.estado==='recuperada'||c.estado==='recuperado'));
   const totalCuotas= pagosConf.filter(p=>!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
   const totalIniciales= getTotalInicialesCobradas();
-  const totalEgresos= S.egresos.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
+  const totalEgresos= _SEGR.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const totalIngresos=totalCuotas+totalIniciales;
   const utilidad = totalIngresos-totalEgresos;
   const margen = totalIngresos>0?Math.round(utilidad/totalIngresos*100):0;
 
   // Cartera y proyecciones (de conta)
-  const creds = S.creds.filter(c=>!c.eliminado);
+  const creds = _SCREDS.filter(c=>!c.eliminado);
   const nTotal = creds.length;
   const cartera = credsActivos.reduce((a,c)=>a+(typeof getCreditoSaldoPendiente==='function'?getCreditoSaldoPendiente(c):0),0);
   const cuotaEsp = credsActivos.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
@@ -8943,11 +8963,11 @@ reportes(){
   },0);
 
   // Inventario
-  const valorInventario=S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').reduce((a,m)=>a+(m.precio||0),0);
+  const valorInventario=_SMOTOS.filter(m=>!m.eliminado&&m.estado==='disponible').reduce((a,m)=>a+(m.precio||0),0);
 
   // ══════════ SERIE 12 MESES (para proyecciones) ══════════
   const now = new Date();
-  const egresos = S.egresos.filter(e=>!e.eliminado);
+  const egresos = _SEGR.filter(e=>!e.eliminado);
   const serie = [];
   for(let i=11;i>=0;i--){
     const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
@@ -9220,14 +9240,14 @@ reportes(){
       </table></div>`:`<div style="text-align:center;padding:28px 0;color:var(--green);font-size:13px;font-weight:700">✓ Sin créditos en mora</div>`}
     </div>
     <div class="card">
-      <div class="ch"><div class="ct">Inventario de motos</div><div class="cs">${S.motos.filter(m=>!m.eliminado).length} unidades totales</div></div>
+      <div class="ch"><div class="ct">Inventario de motos</div><div class="cs">${_SMOTOS.filter(m=>!m.eliminado).length} unidades totales</div></div>
       ${[
-        ['Disponibles', S.motos.filter(m=>!m.eliminado&&m.estado==='disponible').length, 'green'],
-        ['Financiadas', S.motos.filter(m=>!m.eliminado&&m.estado==='financiada').length, 'p1'],
-        ['Recuperadas', S.motos.filter(m=>!m.eliminado&&(m.estado==='recuperada'||m.estado==='recuperado')).length, 'amber'],
-        ['Inventario', S.motos.filter(m=>!m.eliminado&&m.estado==='inventario').length, 'ink3'],
+        ['Disponibles', _SMOTOS.filter(m=>!m.eliminado&&m.estado==='disponible').length, 'green'],
+        ['Financiadas', _SMOTOS.filter(m=>!m.eliminado&&m.estado==='financiada').length, 'p1'],
+        ['Recuperadas', _SMOTOS.filter(m=>!m.eliminado&&(m.estado==='recuperada'||m.estado==='recuperado')).length, 'amber'],
+        ['Inventario', _SMOTOS.filter(m=>!m.eliminado&&m.estado==='inventario').length, 'ink3'],
       ].map(row=>{var l=row[0],n=row[1],c=row[2];
-        const tot=Math.max(1,S.motos.filter(m=>!m.eliminado).length);
+        const tot=Math.max(1,_SMOTOS.filter(m=>!m.eliminado).length);
         const pct=Math.round(n/tot*100);
         return `<div style="margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px">
@@ -11435,6 +11455,17 @@ function openAddMoto(id=null){
       <div class="fg"><label>N° de GPS</label><input class="fi" id="m_gps_num" value="${(m&&m.gpsNum)||''}" placeholder="Ej: GPS-12345"></div>
       <div class="fg"><label>Estado</label><select class="fs" id="m_est">${['disponible','financiada','recuperada','inventario','propia'].map(s=>`<option ${(m&&m.estado)===s?'selected':''}>${s}</option>`).join('')}</select></div>
     </div>
+    ${(function(){
+      var _concesList = (S.concesionarios||[]).filter(function(c){return !c.eliminado && c.activo!==false;});
+      if(!_concesList.length) return '';
+      var _selId = (m&&m.concesionarioId) || _concDefaultId() || '';
+      return '<div class="fgr"><div class="fg"><label>Concesionario / Sede</label><select class="fs" id="m_concesionario">'
+        + '<option value="">— Sin asignar —</option>'
+        + _concesList.map(function(c){
+            return '<option value="'+c.id+'" '+(_selId===c.id?'selected':'')+'>'+c.nombre+(c.ciudad?' · '+c.ciudad:'')+'</option>';
+          }).join('')
+        + '</select></div></div>';
+    })()}
     <div class="fgr">
       <div class="fg"><label>Cliente asignado</label><input class="fi" id="m_cli" value="${(m&&m.cliente)||''}" placeholder="Opcional"></div>
     </div>
@@ -11476,6 +11507,13 @@ function openAddMoto(id=null){
       calc=Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
     }
     const obj={id:(m&&m.id)||(S.motos.length?Math.max(...S.motos.map(x=>x.id))+1:1),modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,marca:g('m_marca')||'',color:g('m_color')||'',anio:(parseInt(g('m_anio'),10)||null),vin:g('m_vin')||'',placa:g('m_placa')||'',serialMotor:g('m_serial_motor')||'',serialChasis:g('m_serial_chasis')||'',gpsNum:g('m_gps_num')||'',estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
+    // Asignar concesionario: si está editando preserva el existente, si es nuevo usa el activo o el default
+    if(ed && m && m.concesionarioId){
+      obj.concesionarioId = m.concesionarioId;
+    } else {
+      var _selConc = ($('m_concesionario')&&$('m_concesionario').value);
+      obj.concesionarioId = _selConc || _concDefaultId();
+    }
     // ── Validar pago de la moto SOLO al crear nueva (no al editar) ──
     var _pagosMoto = null;
     if(!ed){
@@ -12415,8 +12453,13 @@ function _cliGuardar(){
     obj.editadoEn = new Date().toISOString();
     obj.editadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
     obj.editadoPorUid = (S.currentUser&&S.currentUser.uid)||'';
+    // Preservar concesionarioId existente al editar
+    if(S.clientes[idx].concesionarioId !== undefined) obj.concesionarioId = S.clientes[idx].concesionarioId;
     S.clientes[idx]=Object.assign({}, S.clientes[idx], obj);
-  } else S.clientes.push(obj);
+  } else {
+    obj.concesionarioId = _concDefaultId();
+    S.clientes.push(obj);
+  }
   DB.saveCliente(obj);
   _wzClose();
   nav('clientes');
@@ -14271,6 +14314,7 @@ function _wzGuardar(){
     creado: new Date().toISOString()
   };
   if(!existing){
+    cliente.concesionarioId = (WZ.concesionarioId !== undefined ? WZ.concesionarioId : _concDefaultId());
     S.clientes.push(cliente);
     DB.saveCliente(cliente);
   }
@@ -14317,6 +14361,7 @@ function _wzGuardar(){
     emp_tipo: WZ.emp||'',
     uso_moto: WZ.uso||'',
     notas: WZ.obs||'',
+    concesionarioId: (WZ.concesionarioId !== undefined ? WZ.concesionarioId : _concDefaultId()),
     creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
     creado: new Date().toISOString()
   };
@@ -14337,6 +14382,11 @@ function _wzGuardar(){
       if(WZ.serialMotor) S.motos[mi].serialMotor=WZ.serialMotor;
       if(WZ.serialChasis) S.motos[mi].serialChasis=WZ.serialChasis;
       if(WZ.gpsNum) S.motos[mi].gpsNum=WZ.gpsNum;
+      // Si la moto del inventario tenía concesionarioId, el crédito lo hereda
+      if(S.motos[mi].concesionarioId && !newCred.concesionarioId){
+        newCred.concesionarioId = S.motos[mi].concesionarioId;
+        DB.saveCred(newCred);
+      }
       DB.saveMoto(S.motos[mi]);
     }
   } else if(WZ.motoModelo){
@@ -14364,7 +14414,8 @@ function _wzGuardar(){
       total:r.total,
       cuotaQ:r.cuotaQ,
       cuotaM:r.cuotaM||r.cuotaQ*2,
-      totalPagado:r.totalPagado||0
+      totalPagado:r.totalPagado||0,
+      concesionarioId: newCred.concesionarioId || _concDefaultId()
     };
     S.motos.push(motoInvNueva);
     DB.saveMoto(motoInvNueva);
@@ -14394,7 +14445,8 @@ function _wzGuardar(){
     tipoOperacion:'inicial_credito',
     esInicial:true,
     realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
-    tasaBs:window._tasaBsGlobal||1
+    tasaBs:window._tasaBsGlobal||1,
+    concesionarioId: newCred.concesionarioId || _concDefaultId()
   };
   S.pagos.push(pagoIni);
   DB.savePago(pagoIni);
@@ -14946,7 +14998,8 @@ function openAddPago(){
       referencia:($('p_ref')&&$('p_ref').value)||'',
       estado:'confirmado',
       realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
-      tasaBs:window._tasaBsGlobal||1
+      tasaBs:window._tasaBsGlobal||1,
+      concesionarioId: cred.concesionarioId || _concDefaultId()
     };
     S.pagos.push(newPago);
     DB.savePago(newPago);
@@ -18204,7 +18257,8 @@ function _comCalcGenerado(u){
       modelo: c.modelo || '',
       fecha: c.fecha || c.creadoEn || '',
       precio: precio,
-      comision: monto
+      comision: monto,
+      concesionarioId: c.concesionarioId || null
     });
   });
   // Por cobranza: pagos confirmados registrados por este usuario
@@ -18222,7 +18276,8 @@ function _comCalcGenerado(u){
       cliente: p.cli,
       fecha: p.fecha || '',
       monto: parseFloat(p.monto)||0,
-      comision: monto
+      comision: monto,
+      concesionarioId: p.concesionarioId || null
     });
   });
   return {
@@ -18231,6 +18286,40 @@ function _comCalcGenerado(u){
     ventas: ventas,
     cobranzas: cobranzas
   };
+}
+
+// Devuelve desglose de comisiones generadas por concesionario para un usuario
+// Retorna un objeto: { 'CONC-XXX': { nombre, porVenta, porCobranza, total, nVentas, nCobranzas }, 'sinAsignar': {...} }
+function _comDesglosePorSede(u){
+  var gen = _comCalcGenerado(u);
+  var out = {};
+  function getEntry(concId){
+    var key = concId || '_sin';
+    if(!out[key]){
+      var nombre;
+      if(!concId) nombre = 'Sin concesionario';
+      else {
+        var c = _concGetById ? _concGetById(concId) : null;
+        nombre = c ? c.nombre : '(eliminado)';
+      }
+      out[key] = { id: concId, nombre: nombre, porVenta:0, porCobranza:0, nVentas:0, nCobranzas:0, total:0 };
+    }
+    return out[key];
+  }
+  gen.ventas.forEach(function(v){
+    var e = getEntry(v.concesionarioId);
+    e.porVenta += v.comision;
+    e.nVentas += 1;
+    e.total += v.comision;
+  });
+  gen.cobranzas.forEach(function(cb){
+    var e = getEntry(cb.concesionarioId);
+    e.porCobranza += cb.comision;
+    e.nCobranzas += 1;
+    e.total += cb.comision;
+  });
+  // Convertir a array ordenado por total descendente
+  return Object.values(out).sort(function(a,b){ return b.total - a.total; });
 }
 
 // Devuelve los pagos de comisiones que ya se le hicieron a un usuario (egresos categoría 'comisiones')
@@ -18636,6 +18725,25 @@ function _comAbrirDetalle(uid){
     + '<div style="background:var(--gs);padding:10px;border-radius:8px"><div style="font-size:9px;font-weight:800;color:var(--ink3);text-transform:uppercase">Por pagar</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;color:var(--green);margin-top:2px">$'+s.saldo.toFixed(2)+'</div></div>'
     + '<div style="background:var(--gs);padding:10px;border-radius:8px"><div style="font-size:9px;font-weight:800;color:var(--ink3);text-transform:uppercase">Operaciones</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;margin-top:2px">'+(s.nVentas+s.nCobranzas)+'</div></div>'
     + '</div>'
+    // Desglose por sede (Opción C — Entrega 2)
+    + (function(){
+        var desglose = _comDesglosePorSede(u);
+        if(desglose.length <= 1) return '';
+        return '<div style="background:rgba(74,107,255,0.05);border:1px solid rgba(74,107,255,0.2);border-radius:10px;padding:11px 13px;margin-bottom:14px">'
+          + '<div style="font-size:10px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Desglose por sede</div>'
+          + '<div style="display:grid;gap:6px">'
+          + desglose.map(function(d){
+              return '<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:8px;background:var(--surf);padding:8px 11px;border-radius:7px;font-size:11.5px;align-items:center">'
+                + '<div><div style="font-weight:700">'+d.nombre+'</div><div style="font-size:10px;color:var(--ink3);margin-top:1px">'+d.nVentas+' venta'+(d.nVentas===1?'':'s')+' · '+d.nCobranzas+' cobro'+(d.nCobranzas===1?'':'s')+'</div></div>'
+                + '<div style="text-align:right"><div style="font-size:9px;color:var(--ink3);font-weight:700">VENTA</div><div style="font-family:var(--fd);font-weight:800;color:var(--p1)">$'+d.porVenta.toFixed(2)+'</div></div>'
+                + '<div style="text-align:right"><div style="font-size:9px;color:var(--ink3);font-weight:700">COBRO</div><div style="font-family:var(--fd);font-weight:800;color:var(--green)">$'+d.porCobranza.toFixed(2)+'</div></div>'
+                + '<div style="text-align:right"><div style="font-size:9px;color:var(--ink3);font-weight:700">TOTAL</div><div style="font-family:var(--fd);font-weight:800">$'+d.total.toFixed(2)+'</div></div>'
+                + '</div>';
+            }).join('')
+          + '</div>'
+          + '<div style="font-size:10px;color:var(--ink3);margin-top:8px;font-style:italic">El pago se hace una sola vez sobre el total adeudado, sin importar la sede.</div>'
+          + '</div>';
+      })()
     // Tabs
     + '<div style="display:flex;border-bottom:2px solid var(--rim);margin-bottom:12px">'
     + tabBtn('ventas', 'Ventas', s.nVentas)
@@ -18777,7 +18885,8 @@ function _euComToggle(){
 // ║  - CRUD de sedes/puntos de venta                          ║
 // ║  - Asignación de usuarios a múltiples concesionarios      ║
 // ║  - Switcher en header para alternar concesionario activo  ║
-// ║  ENTREGA 1: Solo infraestructura. Filtros vienen en E2.   ║
+// ║  ENTREGA 2: Filtros automáticos + asignación histórica.   ║
+// ║  Modo Concesionario y Bandeja Aprobaciones → Entrega 3.   ║
 // ╚══════════════════════════════════════════════════════════╝
 
 // ── Helpers ──
@@ -18805,6 +18914,64 @@ function _concGetVisibles(){
   }
   // Sin asignaciones y no admin → ve todos por compatibilidad (mientras está en transición)
   return all;
+}
+
+// ── HELPERS DE FILTRADO POR CONCESIONARIO (Entrega 2) ──
+// Estos helpers son usados por todos los módulos (Motos, Créditos, Pagos, Clientes, etc)
+// para filtrar automáticamente según el concesionario activo.
+
+// Decide si un registro pasa el filtro de concesionario activo
+// item.concesionarioId puede ser: undefined/null (sin asignar) ó un id específico
+function _concPasaFiltro(item){
+  if(!item) return false;
+  var activo = S.concesionarioActivo;
+  var u = S.currentUser || {};
+  var asignados = u.concesionarios || [];
+  var esAdminTotal = (u.rol === 'Administrador' || u.rol === 'Gerente') && !asignados.length;
+
+  // 1) Si hay un concesionario activo en el switcher → filtrar por ese
+  if(activo){
+    return item.concesionarioId === activo;
+  }
+  // 2) Sin activo y admin total → ve todo (incluyendo sin asignar)
+  if(esAdminTotal){
+    return true;
+  }
+  // 3) Sin activo, usuario con asignaciones específicas → ve solo lo de sus sedes
+  if(asignados.length){
+    return asignados.indexOf(item.concesionarioId) !== -1;
+  }
+  // 4) Fallback: ve todo (compatibilidad)
+  return true;
+}
+
+// Filtra cualquier array de registros según el concesionario activo
+function _concFiltrar(arr){
+  if(!Array.isArray(arr)) return [];
+  return arr.filter(_concPasaFiltro);
+}
+
+// Devuelve el concesionarioId por defecto al crear un nuevo registro
+// Si hay uno activo en el switcher → ese
+// Si el usuario tiene UN solo concesionario asignado → ese
+// Si no → null (sin asignar)
+function _concDefaultId(){
+  var activo = S.concesionarioActivo;
+  if(activo) return activo;
+  var u = S.currentUser || {};
+  var asignados = u.concesionarios || [];
+  if(asignados.length === 1) return asignados[0];
+  return null;
+}
+
+// Cuenta registros sin concesionarioId (histórico sin asignar)
+function _concContarSinAsignar(){
+  return {
+    motos: (S.motos||[]).filter(function(m){return !m.eliminado && !m.concesionarioId;}).length,
+    creds: (S.creds||[]).filter(function(cr){return !cr.eliminado && !cr.concesionarioId;}).length,
+    clis:  (S.clientes||[]).filter(function(cl){return !cl.eliminado && !cl.concesionarioId;}).length,
+    pagos: (S.pagos||[]).filter(function(p){return !p.eliminado && !p.concesionarioId;}).length
+  };
 }
 
 // Cambia el concesionario activo y guarda en localStorage
@@ -18949,11 +19116,34 @@ function _concRender(){
     + '</div>';
   // Mensaje informativo
   html += ''
-    + '<div style="background:rgba(74,107,255,0.07);border:1px solid rgba(74,107,255,0.2);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
-    + '<strong style="color:var(--p1)">Entrega 1 — Infraestructura activa.</strong> '
-    + 'Ya puedes crear concesionarios y asignarles usuarios. El switcher en el header te deja cambiar entre sedes. '
-    + 'En la <b>Entrega 2</b> habilitaremos los filtros automáticos en cada módulo (Motos, Créditos, Pagos...) y el modo concesionario para vendedores externos.'
+    + '<div style="background:rgba(0,184,118,0.08);border:1px solid rgba(0,184,118,0.25);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
+    + '<strong style="color:var(--green)">Entrega 2 — Filtros y operaciones por sede activos.</strong> '
+    + 'El switcher arriba filtra todos los módulos por concesionario. Los registros nuevos heredan la sede activa automáticamente. '
+    + 'Usa <b>"Asignar histórico"</b> abajo para migrar registros antiguos a sus sedes.'
     + '</div>';
+
+  // Bloque de asignación de histórico (masivo + individual)
+  var totalSinAsig = sinAsig.creds + sinAsig.motos + sinAsig.clis + sinAsig.pagos;
+  if(totalSinAsig > 0 && lista.length > 0){
+    html += ''
+      + '<div style="background:rgba(255,165,0,0.07);border:1px solid rgba(255,165,0,0.3);border-radius:10px;padding:13px 16px;margin-bottom:16px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:240px">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px">Asignación de histórico</div>'
+      + '<div style="font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.5">Tienes <b style="color:var(--amber);font-family:var(--fd)">'+totalSinAsig+'</b> registros sin concesionario asignado:</div>'
+      + '<div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--ink3);flex-wrap:wrap">'
+      + '<span><b style="color:var(--ink2);font-family:var(--fd)">'+sinAsig.motos+'</b> motos</span>'
+      + '<span><b style="color:var(--ink2);font-family:var(--fd)">'+sinAsig.creds+'</b> créditos</span>'
+      + '<span><b style="color:var(--ink2);font-family:var(--fd)">'+sinAsig.clis+'</b> clientes</span>'
+      + '<span><b style="color:var(--ink2);font-family:var(--fd)">'+sinAsig.pagos+'</b> pagos</span>'
+      + '</div></div>'
+      + '<div style="display:flex;gap:7px;flex-wrap:wrap">'
+      + '<button class="btn btn-p btn-sm" onclick="_concAbrirAsignarMasivo()">⇒ Asignar masivo</button>'
+      + '<button class="btn btn-g btn-sm" onclick="_concAbrirAsignarIndividual()">⌗ Asignar individual</button>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }
   // Lista de concesionarios
   if(lista.length === 0){
     html += '<div style="padding:60px 20px;text-align:center;background:var(--surf);border-radius:14px;border:1px dashed var(--rim2)">'
@@ -19133,6 +19323,232 @@ function _concAbrirDetalle(id){
   $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>'
     + '<button class="btn btn-p" onclick="_concOpenEdit(\''+c.id+'\')">Editar</button>';
   $('ov').style.display='flex';
+}
+
+
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  ASIGNACIÓN DE HISTÓRICO POR CONCESIONARIO (Entrega 2)    ║
+// ║  - Modal masivo: aplicar a todo lo sin asignar de un tipo ║
+// ║  - Modal individual: lista filtrable, asignar uno por uno ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// Modal: asignación masiva
+function _concAbrirAsignarMasivo(){
+  var concesList = (S.concesionarios||[]).filter(function(c){return !c.eliminado && c.activo!==false;});
+  if(!concesList.length){ toast('No hay concesionarios disponibles','error'); return; }
+  var sin = _concContarSinAsignar();
+  $('mic').textContent='MAS';
+  $('mtt').textContent='Asignación Masiva de Histórico';
+  $('msb').textContent='Aplicar concesionario a todo lo sin asignar';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = ''
+    + '<div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.3);border-radius:9px;padding:11px 13px;margin-bottom:14px;font-size:11.5px;line-height:1.55">'
+    + '<strong style="color:var(--amber)">⚠ Atención:</strong> Esta acción asignará TODOS los registros sin concesionario al sede que selecciones. Útil si todo tu histórico viene de una sola sede.'
+    + '</div>'
+    + '<div class="fg" style="margin-bottom:10px"><label>Concesionario destino</label>'
+    + '<select class="fs" id="cmas_sede">'
+    + concesList.map(function(c){
+        return '<option value="'+c.id+'">'+c.nombre+(c.ciudad?' · '+c.ciudad:'')+'</option>';
+      }).join('')
+    + '</select></div>'
+    + '<div style="margin-top:14px"><div style="font-size:11px;font-weight:800;color:var(--ink2);margin-bottom:8px">¿Qué tipos asignar?</div>'
+    + '<div style="display:grid;gap:6px">'
+    + '<label style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--gs);border-radius:8px;cursor:pointer'+(sin.motos===0?';opacity:.5':'')+'">'
+    + '<input type="checkbox" id="cmas_motos" '+(sin.motos>0?'checked':'disabled')+' style="accent-color:var(--p1);transform:scale(1.1)">'
+    + '<span style="flex:1"><b>Motos</b> · '+sin.motos+' sin asignar</span></label>'
+    + '<label style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--gs);border-radius:8px;cursor:pointer'+(sin.creds===0?';opacity:.5':'')+'">'
+    + '<input type="checkbox" id="cmas_creds" '+(sin.creds>0?'checked':'disabled')+' style="accent-color:var(--p1);transform:scale(1.1)">'
+    + '<span style="flex:1"><b>Créditos</b> · '+sin.creds+' sin asignar</span></label>'
+    + '<label style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--gs);border-radius:8px;cursor:pointer'+(sin.clis===0?';opacity:.5':'')+'">'
+    + '<input type="checkbox" id="cmas_clis" '+(sin.clis>0?'checked':'disabled')+' style="accent-color:var(--p1);transform:scale(1.1)">'
+    + '<span style="flex:1"><b>Clientes</b> · '+sin.clis+' sin asignar</span></label>'
+    + '<label style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--gs);border-radius:8px;cursor:pointer'+(sin.pagos===0?';opacity:.5':'')+'">'
+    + '<input type="checkbox" id="cmas_pagos" '+(sin.pagos>0?'checked':'disabled')+' style="accent-color:var(--p1);transform:scale(1.1)">'
+    + '<span style="flex:1"><b>Pagos</b> · '+sin.pagos+' sin asignar</span></label>'
+    + '</div></div>'
+    + '<div id="cmas_info" style="margin-top:11px;font-size:11px;color:var(--ink3);font-style:italic"></div>';
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + '<button class="btn btn-p" onclick="_concEjecutarMasivo()">Asignar registros</button>';
+  $('ov').style.display='flex';
+}
+
+function _concEjecutarMasivo(){
+  var sedeId = ($('cmas_sede')&&$('cmas_sede').value);
+  if(!sedeId){ toast('Selecciona un concesionario','error'); return; }
+  var sede = _concGetById(sedeId);
+  if(!sede){ toast('Concesionario no encontrado','error'); return; }
+  var hacerMotos = !!($('cmas_motos')&&$('cmas_motos').checked);
+  var hacerCreds = !!($('cmas_creds')&&$('cmas_creds').checked);
+  var hacerClis  = !!($('cmas_clis')&&$('cmas_clis').checked);
+  var hacerPagos = !!($('cmas_pagos')&&$('cmas_pagos').checked);
+  if(!hacerMotos && !hacerCreds && !hacerClis && !hacerPagos){
+    toast('Selecciona al menos un tipo','error'); return;
+  }
+  if(!confirm('¿Asignar todos los registros sin concesionario seleccionados a "'+sede.nombre+'"?\n\nEsto modificará registros en la base de datos.')) return;
+  var total = 0;
+  if(hacerMotos){
+    (S.motos||[]).forEach(function(m){
+      if(!m.eliminado && !m.concesionarioId){
+        m.concesionarioId = sedeId;
+        if(DB && DB.saveMoto) DB.saveMoto(m);
+        total++;
+      }
+    });
+  }
+  if(hacerCreds){
+    (S.creds||[]).forEach(function(c){
+      if(!c.eliminado && !c.concesionarioId){
+        c.concesionarioId = sedeId;
+        if(DB && DB.saveCred) DB.saveCred(c);
+        total++;
+      }
+    });
+  }
+  if(hacerClis){
+    (S.clientes||[]).forEach(function(cl){
+      if(!cl.eliminado && !cl.concesionarioId){
+        cl.concesionarioId = sedeId;
+        if(DB && DB.saveCliente) DB.saveCliente(cl);
+        total++;
+      }
+    });
+  }
+  if(hacerPagos){
+    (S.pagos||[]).forEach(function(p){
+      if(!p.eliminado && !p.concesionarioId){
+        p.concesionarioId = sedeId;
+        if(DB && DB.savePago) DB.savePago(p);
+        total++;
+      }
+    });
+  }
+  closeM();
+  toast(total+' registros asignados a '+sede.nombre,'success');
+  nav('concesionarios');
+}
+
+// Modal: asignación individual con lista filtrable
+var _concAsignIndState = { tipo:'motos', q:'' };
+
+function _concAbrirAsignarIndividual(){
+  _concAsignIndState = { tipo:'motos', q:'' };
+  _concRenderAsignarIndividual();
+  $('ov').style.display='flex';
+}
+
+function _concRenderAsignarIndividual(){
+  var concesList = (S.concesionarios||[]).filter(function(c){return !c.eliminado && c.activo!==false;});
+  if(!concesList.length){ toast('No hay concesionarios disponibles','error'); return; }
+  var tipo = _concAsignIndState.tipo || 'motos';
+  var q = (_concAsignIndState.q || '').toLowerCase().trim();
+  $('mic').textContent='IND';
+  $('mtt').textContent='Asignación Individual';
+  $('msb').textContent='Asigna registros uno por uno';
+  $('modal-box').className='modal modal-lg';
+  // Tab buttons
+  var sin = _concContarSinAsignar();
+  var tabBtn = function(t, lbl, count){
+    var act = tipo === t;
+    return '<button onclick="_concAsignSetTipo(\''+t+'\')" style="background:none;border:none;padding:9px 14px;font-size:12px;font-weight:'+(act?'800':'600')+';color:'+(act?'var(--p1)':'var(--ink3)')+';border-bottom:3px solid '+(act?'var(--p1)':'transparent')+';margin-bottom:-2px;cursor:pointer;font-family:var(--f)">'
+      + lbl + ' <span style="background:'+(act?'var(--p1)':'var(--gs)')+';color:'+(act?'#fff':'var(--ink2)')+';font-size:10px;padding:1px 7px;border-radius:9px;margin-left:4px">'+count+'</span>'
+      + '</button>';
+  };
+  // Datos según tipo
+  var registros = [];
+  if(tipo==='motos'){
+    registros = (S.motos||[]).filter(function(m){return !m.eliminado && !m.concesionarioId;});
+    if(q) registros = registros.filter(function(m){ return (((m.modelo||'')+' '+(m.vin||'')+' '+(m.cliente||'')).toLowerCase().indexOf(q) !== -1); });
+  } else if(tipo==='creds'){
+    registros = (S.creds||[]).filter(function(c){return !c.eliminado && !c.concesionarioId;});
+    if(q) registros = registros.filter(function(c){ return (((c.cli||'')+' '+(c.modelo||'')+' '+(c.id||'')).toLowerCase().indexOf(q) !== -1); });
+  } else if(tipo==='clis'){
+    registros = (S.clientes||[]).filter(function(cl){return !cl.eliminado && !cl.concesionarioId;});
+    if(q) registros = registros.filter(function(cl){ return (((cl.nombre||'')+' '+(cl.cedula||'')+' '+(cl.tel||'')).toLowerCase().indexOf(q) !== -1); });
+  } else { // pagos
+    registros = (S.pagos||[]).filter(function(p){return !p.eliminado && !p.concesionarioId;});
+    if(q) registros = registros.filter(function(p){ return (((p.cli||'')+' '+(p.id||'')+' '+(p.cred||'')).toLowerCase().indexOf(q) !== -1); });
+  }
+  registros = registros.slice(0, 200); // limitar para no colgar el navegador
+  // Construir select de sedes para cada fila
+  var sedesOpts = '<option value="">— Sin asignar —</option>' + concesList.map(function(c){ return '<option value="'+c.id+'">'+c.nombre+'</option>'; }).join('');
+  // Render filas según tipo
+  var filas;
+  if(registros.length === 0){
+    filas = '<div style="padding:40px 20px;text-align:center;color:var(--ink3);font-size:12.5px">' + (q ? 'Sin resultados para "'+q+'"' : 'No hay registros sin asignar de este tipo') + '</div>';
+  } else {
+    filas = '<div style="display:grid;gap:5px;max-height:380px;overflow-y:auto">'
+      + registros.map(function(r){
+          var label, sub;
+          if(tipo==='motos'){
+            label = (r.modelo||'(sin modelo)') + ' · ' + (r.estado||'');
+            sub = 'VIN: '+(r.vin||'—')+(r.cliente?' · Cliente: '+r.cliente:'');
+          } else if(tipo==='creds'){
+            label = r.id + ' · ' + (r.cli||'');
+            sub = (r.modelo||'') + ' · ' + (r.estado||'') + (r.fecha?' · '+r.fecha:'');
+          } else if(tipo==='clis'){
+            label = r.nombre || '(sin nombre)';
+            sub = 'C.I.: '+(r.cedula||'—')+(r.tel?' · '+r.tel:'')+(r.ciudad?' · '+r.ciudad:'');
+          } else {
+            label = r.id + ' · ' + (r.cli||'');
+            sub = '$'+(parseFloat(r.monto)||0).toFixed(2)+(r.fecha?' · '+r.fecha:'')+' · '+(r.metodo||'');
+          }
+          return '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:9px 11px;background:var(--gs);border-radius:8px;align-items:center">'
+            + '<div style="min-width:0">'
+            + '<div style="font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+label+'</div>'
+            + '<div style="font-size:10.5px;color:var(--ink3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+sub+'</div>'
+            + '</div>'
+            + '<select class="fs" style="min-width:160px;font-size:11.5px" onchange="_concAsignarUno(\''+tipo+'\',\''+String(r.id).replace(/\'/g,'')+'\', this.value)">'+sedesOpts+'</select>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+    if((tipo==='motos'?sin.motos:tipo==='creds'?sin.creds:tipo==='clis'?sin.clis:sin.pagos) > 200){
+      filas += '<div style="margin-top:9px;padding:8px;background:rgba(255,165,0,.08);border-radius:7px;text-align:center;font-size:11px;color:var(--ink3)">Mostrando los primeros 200. Usa el buscador para filtrar.</div>';
+    }
+  }
+  $('mbd').innerHTML = ''
+    // Tabs por tipo
+    + '<div style="display:flex;border-bottom:2px solid var(--rim);margin-bottom:12px">'
+    + tabBtn('motos','Motos',sin.motos)
+    + tabBtn('creds','Créditos',sin.creds)
+    + tabBtn('clis','Clientes',sin.clis)
+    + tabBtn('pagos','Pagos',sin.pagos)
+    + '</div>'
+    // Buscador
+    + '<div class="fg" style="margin-bottom:12px"><input class="fi" id="cind_q" placeholder="Buscar..." value="'+q.replace(/"/g,'&quot;')+'" oninput="_concAsignSetQ(this.value)" style="font-size:12.5px"></div>'
+    // Lista
+    + filas;
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM();nav(\'concesionarios\')">Cerrar</button>';
+}
+
+function _concAsignSetTipo(t){
+  _concAsignIndState.tipo = t;
+  _concAsignIndState.q = '';
+  _concRenderAsignarIndividual();
+}
+
+var _concAsignDebounce;
+function _concAsignSetQ(v){
+  _concAsignIndState.q = v || '';
+  clearTimeout(_concAsignDebounce);
+  _concAsignDebounce = setTimeout(_concRenderAsignarIndividual, 200);
+}
+
+function _concAsignarUno(tipo, id, sedeId){
+  if(!sedeId) return; // dejar como está
+  var coll, saveFn;
+  if(tipo==='motos'){ coll=S.motos; saveFn=DB.saveMoto; }
+  else if(tipo==='creds'){ coll=S.creds; saveFn=DB.saveCred; }
+  else if(tipo==='clis'){ coll=S.clientes; saveFn=DB.saveCliente; }
+  else { coll=S.pagos; saveFn=DB.savePago; }
+  if(!coll) return;
+  var it = coll.find(function(x){ return String(x.id) === String(id); });
+  if(!it){ toast('Registro no encontrado','error'); return; }
+  it.concesionarioId = sedeId;
+  if(saveFn) saveFn(it);
+  toast('Asignado','success');
+  // Re-render lista para que desaparezca
+  _concRenderAsignarIndividual();
 }
 
 
