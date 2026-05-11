@@ -3423,6 +3423,22 @@ var DB = {
           S.concesionarioActivo = savedConc;
         }
       }catch(e){}
+      // Si el usuario tiene UNA sola sede asignada, forzarla como activa (no permitir "Todos")
+      try{
+        if(S.currentUser){
+          var asignados = S.currentUser.concesionarios || [];
+          if(asignados.length === 1){
+            S.concesionarioActivo = asignados[0];
+            try{ localStorage.setItem('concesionarioActivo', asignados[0]); }catch(e){}
+          } else if(asignados.length > 1){
+            // Si tiene varias y el savedConc no está en su lista, usar la primera
+            if(!S.concesionarioActivo || asignados.indexOf(S.concesionarioActivo) === -1){
+              S.concesionarioActivo = asignados[0];
+              try{ localStorage.setItem('concesionarioActivo', asignados[0]); }catch(e){}
+            }
+          }
+        }
+      }catch(e){}
       calcularMoraAuto();
       cargarCuentasBanc();
       cargarEmpresa();
@@ -3999,6 +4015,17 @@ function _attachCurrentUserListener(uid){
       if(data.nombre) S.currentUser.nombre = data.nombre;
       S.currentUser.concesionarios = data.concesionarios || [];
       S.currentUser.comisiones = data.comisiones || null;
+      // Auto-set sede activa si tiene 1 sola asignada
+      try{
+        var _asgn = S.currentUser.concesionarios || [];
+        if(_asgn.length === 1){
+          S.concesionarioActivo = _asgn[0];
+          try{ localStorage.setItem('concesionarioActivo', _asgn[0]); }catch(e){}
+        } else if(_asgn.length > 1 && _asgn.indexOf(S.concesionarioActivo) === -1){
+          S.concesionarioActivo = _asgn[0];
+          try{ localStorage.setItem('concesionarioActivo', _asgn[0]); }catch(e){}
+        }
+      }catch(e){}
       if(typeof _renderConcSwitcher === 'function') _renderConcSwitcher();
       // Avisar al usuario
       try{
@@ -4327,7 +4354,7 @@ function nav(p){
     if(!hasModuleAccess(p)){
       document.querySelectorAll('.si').forEach(function(e){e.classList.remove('on');});
       $('pgT').textContent = 'Sin acceso'; if($('pgT-mob')) $('pgT-mob').textContent='Sin acceso';
-      $('cnt').innerHTML = '<div class="empty"><div style="font-size:36px;margin-bottom:14px;opacity:0.3;font-family:monospace">style="font-size:36px;margin-bottom:14px;opacity:0.3"></div>#128274;</div><div class="e-tt">Acceso restringido</div><div style="font-size:12px;margin-top:5px">No tienes permiso para ver este módulo.<br>Contacta al administrador.</div></div>';
+      $('cnt').innerHTML = '<div class="empty" style="padding:80px 20px;text-align:center"><div style="font-size:48px;margin-bottom:14px;opacity:0.4">🔒</div><div class="e-tt" style="font-size:18px;font-weight:800;margin-bottom:8px">Acceso restringido</div><div style="font-size:13px;color:var(--ink3);line-height:1.6;max-width:380px;margin:0 auto">No tienes permiso para ver este módulo.<br>Contacta al administrador.</div></div>';
       return;
     }
   }
@@ -19092,16 +19119,46 @@ function _renderConcSwitcher(){
     wrap.style.display = 'none';
     return;
   }
+  var u = S.currentUser || {};
+  var asignados = u.concesionarios || [];
+  var esAdminPuro = (u.rol === 'Administrador' || u.rol === 'Gerente') && asignados.length === 0;
+  // Si tiene UNA sola sede asignada → mostrar como info estática (sin opción de cambiar)
+  if(asignados.length === 1 && !esAdminPuro){
+    var sedeUnica = _concGetById(asignados[0]);
+    if(!sedeUnica){
+      wrap.style.display = 'none';
+      return;
+    }
+    // Forzar activo en su sede
+    if(S.concesionarioActivo !== asignados[0]){
+      S.concesionarioActivo = asignados[0];
+      try{ localStorage.setItem('concesionarioActivo', asignados[0]); }catch(e){}
+    }
+    wrap.style.display = 'flex';
+    wrap.style.alignItems = 'center';
+    wrap.innerHTML = ''
+      + '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surf2);border:1px solid var(--rim2);border-radius:9px;font-family:var(--f);font-size:12.5px;font-weight:700;color:var(--ink)">'
+      + '<span style="width:7px;height:7px;border-radius:50%;background:var(--p1)"></span>'
+      + '<span style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Sede</span>'
+      + '<span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+sedeUnica.nombre+'</span>'
+      + '</div>';
+    return;
+  }
   var activo = S.concesionarioActivo;
-  // Verificar que el activo siga siendo visible
+  // Verificar que el activo siga siendo visible (y dentro de las asignadas si aplica)
   if(activo && !visibles.find(function(c){return c.id===activo;})){
     S.concesionarioActivo = null;
     activo = null;
   }
-  var u = S.currentUser || {};
-  var esAdmin = (u.rol === 'Administrador' || u.rol === 'Gerente');
-  // Admin con permiso amplio ve "Todos" como opción; usuarios con restricciones solo sus concesionarios
-  var puedeVerTodos = esAdmin && (!u.concesionarios || u.concesionarios.length === 0 || u.concesionarios.length === visibles.length);
+  // Admin total (sin asignaciones específicas) ve "Todos" como opción
+  // Usuario con asignaciones específicas (varias) NO ve "Todos" — solo sus sedes
+  var puedeVerTodos = esAdminPuro;
+  // Si NO puede ver todos y no tiene activo, forzar a su primera sede
+  if(!puedeVerTodos && !activo && asignados.length){
+    S.concesionarioActivo = asignados[0];
+    activo = asignados[0];
+    try{ localStorage.setItem('concesionarioActivo', asignados[0]); }catch(e){}
+  }
   var labelActivo = activo ? ((_concGetById(activo)||{}).nombre || '?') : 'Todos';
   wrap.style.display = 'flex';
   wrap.style.alignItems = 'center';
@@ -23678,9 +23735,14 @@ function init() {
   // Cargar datos desde Firebase o usar datos locales de demostración
   DB.load().then(function() {
     renderSidebar();
-    // Todos los roles entran al dashboard — dash() renderiza la versión correcta
-    // según el rol (Empleado ve su dashboard especializado, Admin ve el completo)
-    nav('dash');
+    // Vendedor Concesionario → calculadora (motos). Otros roles → dashboard.
+    var paginaInicial = isVendedorConcesionarioRole() ? 'motos' : 'dash';
+    if(!hasModuleAccess(paginaInicial)){
+      // Fallback: ir al primer módulo accesible
+      var candidatos = ['motos','clientes','creditos','dash','centro'];
+      paginaInicial = candidatos.find(function(p){ return hasModuleAccess(p); }) || 'dash';
+    }
+    nav(paginaInicial);
     updateBadge();
     iniciarListenerSolicitudes();
     var isMob = window.innerWidth <= 820;
@@ -23691,7 +23753,8 @@ function init() {
   }).catch(function(e) {
     console.warn('Error cargando datos:', e);
     renderSidebar();
-    nav('dash');
+    var paginaInicial = isVendedorConcesionarioRole() ? 'motos' : 'dash';
+    nav(paginaInicial);
     updateBadge();
     iniciarListenerSolicitudes();
   });
