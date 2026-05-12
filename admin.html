@@ -7564,7 +7564,7 @@ pagos(){
   if(tab==='archivados') filtered = pagosEliminados;
 
   // Cuotas próximas (mismo criterio que dashboard) — créditos activos con cuota próxima o vencida
-  const proximasCuotas = S.creds.filter(function(c){
+  const proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
     if(c.eliminado) return false;
     if(c.estado!=='activo'||!c.fecha) return false;
     const start=new Date(c.fecha);
@@ -8592,11 +8592,11 @@ gps(){
 
 notif(){
   // Build real recipient lists
-  var moraClientes = S.creds.filter(c=>c.mora>0).map(function(c){
+  var moraClientes = _concFiltrar(S.creds||[]).filter(c=>c.mora>0).map(function(c){
     var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
     return {nombre:c.cli, tel:cl.tel||'', cred:c.id, mora:c.mora, cuota:c.cuotaQ||c.cuota, modelo:c.modelo};
   });
-  var proximasCuotas = S.creds.filter(function(c){
+  var proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
     if(c.estado!=='activo'||!c.fecha) return false;
     var inicio=new Date(c.fecha);
     var siguiente=new Date(inicio.getTime()+((c.pagado+1)*15*24*60*60*1000));
