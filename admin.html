@@ -6407,7 +6407,7 @@ dash(){
   var _SCREDS = _concFiltrar(S.creds||[]);
   var _SPAGOS = _concFiltrar(S.pagos||[]);
   var _SMOTOS = _concFiltrar(S.motos||[]);
-  var _SEGR = _concFiltrar(S.egresos||[]);
+  var _SEGR = _concFiltrarEgresos(S.egresos||[]);
 
   // ── Core metrics ──
   const mora = _SCREDS.filter(c=>c.mora>0).length;
@@ -8985,7 +8985,7 @@ reportes(){
   // Variables filtradas por concesionario activo
   var _SPAGOS = _concFiltrar(S.pagos||[]);
   var _SCREDS = _concFiltrar(S.creds||[]);
-  var _SEGR = _concFiltrar(S.egresos||[]);
+  var _SEGR = _concFiltrarEgresos(S.egresos||[]);
   var _SMOTOS = _concFiltrar(S.motos||[]);
 
   // ══════════ CÁLCULOS COMPARTIDOS ══════════
@@ -19289,9 +19289,7 @@ function _concFiltrarClientes(arr){
   var u = S.currentUser || {};
   var asignados = u.concesionarios || [];
   var esAdminTotal = (u.rol === 'Administrador' || u.rol === 'Gerente') && !asignados.length;
-  // Admin total ve todos los clientes siempre
   if(esAdminTotal) return arr.filter(function(c){ return c; });
-  // Usuario con sedes asignadas: ve clientes de sus sedes + clientes sin sede asignada
   if(asignados.length){
     return arr.filter(function(c){
       if(!c) return false;
@@ -19299,6 +19297,30 @@ function _concFiltrarClientes(arr){
     });
   }
   return arr.filter(function(c){ return c; });
+}
+
+// Filtra egresos por concesionario activo PERO incluye los sin sede asignada (histórico)
+function _concFiltrarEgresos(arr){
+  if(!Array.isArray(arr)) return [];
+  var activo = S.concesionarioActivo;
+  var u = S.currentUser || {};
+  var asignados = u.concesionarios || [];
+  var esAdminTotal = (u.rol === 'Administrador' || u.rol === 'Gerente') && !asignados.length;
+  if(esAdminTotal) return arr.filter(function(e){ return e; });
+  if(activo){
+    // Muestra los del concesionario activo + los que no tienen sede asignada (histórico)
+    return arr.filter(function(e){
+      if(!e) return false;
+      return !e.concesionarioId || e.concesionarioId === activo;
+    });
+  }
+  if(asignados.length){
+    return arr.filter(function(e){
+      if(!e) return false;
+      return !e.concesionarioId || asignados.indexOf(e.concesionarioId) !== -1;
+    });
+  }
+  return arr.filter(function(e){ return e; });
 }
 
 // Devuelve el concesionarioId por defecto al crear un nuevo registro
