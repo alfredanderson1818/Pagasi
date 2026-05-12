@@ -7681,7 +7681,7 @@ pagos(){
             <div style="font-weight:800;font-family:var(--fd);font-size:14px;color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</div>
           </div>
           <div style="display:flex;gap:5px">
-            <button class="btn btn-p btn-xs" style="flex:1" onclick="openAddPago()">Cobrar</button>
+            <button class="btn btn-p btn-xs" style="flex:1" onclick="openAddPago('${c.id}')">Cobrar</button>
             <button class="btn btn-g btn-xs" style="flex:1" onclick="avisarCuotaProxima('${c.id}')" title="Enviar recordatorio al cliente por WhatsApp">Avisar</button>
           </div>
         </div>`;
@@ -15288,11 +15288,11 @@ function updCredCalc(sel){
   </div>`).join('');
 }
 
-function openAddPago(){
+function openAddPago(preCredId){
   $('mic').textContent='PAG';$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan '+PLAN.plazo+' meses';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`
-    <div class="fgr c1" style="gap:9px"><div class="fg"><label>Crédito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}">${c.id} — ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
+    <div class="fgr c1" style="gap:9px"><div class="fg"><label>Crédito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}" ${preCredId&&String(c.id)===String(preCredId)?'selected':''}>${c.id} — ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
     <div class="fgr" style="margin-top:9px">
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
