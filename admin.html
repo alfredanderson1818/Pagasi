@@ -5311,7 +5311,7 @@ function clienteBadgesHTML(c){
 }
 function renderClienteList(q=''){
   const estadoFiltro = S.clienteEstadoFiltro || 'todos';
-  const base = _concFiltrar(S.clientes||[]).filter(function(c){
+  const base = _concFiltrarClientes(S.clientes||[]).filter(function(c){
     if(c.eliminado) return false;
     if(!clienteMatchesFiltro(c, estadoFiltro)) return false;
     if(!q) return true;
@@ -6796,7 +6796,7 @@ dash(){
   <!-- ROW 5: Quick access -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
     ${[
-      ['CLI','var(--gs)','var(--p1)','rgba(91,78,212,0.15)','Clientes',_concFiltrar(S.clientes||[]).length,'registrados',"nav('clientes')"],
+      ['CLI','var(--gs)','var(--p1)','rgba(91,78,212,0.15)','Clientes',_concFiltrarClientes(S.clientes||[]).length,'registrados',"nav('clientes')"],
       ['MOT','var(--greens)','var(--green)','rgba(6,176,106,0.15)','Disponibles',dispMotos,'de '+_SMOTOS.filter(m=>!m.eliminado).length+' motos',"nav('motos');setTimeout(()=>setMTab('disponible'),100)"],
       ['ACT','rgba(91,78,212,0.08)','var(--p1)','rgba(91,78,212,0.2)','Activos',activos,'créditos activos',"nav('creditos')"],
       ['PLN','var(--gs)','var(--p1)','var(--rim2)','Catálogo',CATALOGO.length,'modelos',"nav('plan')"],
@@ -6819,7 +6819,7 @@ clientes(){
   const chips=[['todos','Todos'],['lead','Leads'],['activo','Activos'],['mora','En mora'],['completado','Completados']];
 
   // Métricas para el banner — filtradas por concesionario activo
-  var _CLIS = _concFiltrar(S.clientes||[]);
+  var _CLIS = _concFiltrarClientes(S.clientes||[]);
   const nTot = _CLIS.filter(c=>!c.eliminado).length;
   const nAct = _CLIS.filter(function(c){
     if(c.eliminado) return false;
@@ -19197,6 +19197,25 @@ function _concPasaFiltro(item){
 function _concFiltrar(arr){
   if(!Array.isArray(arr)) return [];
   return arr.filter(_concPasaFiltro);
+}
+
+// Filtra clientes SIN aplicar el filtro de concesionario activo
+// Los clientes son globales: se ven en todos los módulos/concesionarios
+function _concFiltrarClientes(arr){
+  if(!Array.isArray(arr)) return [];
+  var u = S.currentUser || {};
+  var asignados = u.concesionarios || [];
+  var esAdminTotal = (u.rol === 'Administrador' || u.rol === 'Gerente') && !asignados.length;
+  // Admin total ve todos los clientes siempre
+  if(esAdminTotal) return arr.filter(function(c){ return c; });
+  // Usuario con sedes asignadas: ve clientes de sus sedes + clientes sin sede asignada
+  if(asignados.length){
+    return arr.filter(function(c){
+      if(!c) return false;
+      return !c.concesionarioId || asignados.indexOf(c.concesionarioId) !== -1;
+    });
+  }
+  return arr.filter(function(c){ return c; });
 }
 
 // Devuelve el concesionarioId por defecto al crear un nuevo registro
