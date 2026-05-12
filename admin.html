@@ -6934,6 +6934,7 @@ motos(){
     [
       {label:'⟳ Resincronizar', onclick:'resyncMotosConFirebase()'},
       {label:'↓ Exportar CSV', onclick:"exportarCSV('motos')"},
+      {label:'＋ Al catálogo', onclick:'openAddCatalogo()'},
       {label:'＋ Nueva unidad', onclick:'openAddMoto()', primary:true}
     ]
   )}
@@ -11459,13 +11460,19 @@ function openAddMoto(id=null){
         <select class="fs" id="m_mod_sel" onchange="onCatalogoSelect(this)">
           <option value="">— Seleccionar del catálogo —</option>
           ${CATALOGO.map(c=>`<option value="${c.modelo}" data-precio="${c.precio}" ${(m&&m.modelo)===c.modelo?'selected':''}>${c.modelo} — $${c.precio.toLocaleString('es')}</option>`).join('')}
-          <option value="__custom__" ${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?'selected':''}>Editar Precio personalizado...</option>
+          <option value="__custom__" ${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?'selected':''}>＋ Agregar nueva moto al catálogo...</option>
         </select>
       </div>
       <div class="fg"><label>Precio USD *</label><input class="fi" id="m_pr" type="number" value="${(m&&m.precio)||''}" placeholder="0.00" oninput="previewCalc()" ${(m&&CATALOGO.find(c=>c.modelo===m.modelo))?'readonly':''}></div>
     </div>
-    <div id="m_custom_div" style="display:${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?'block':'none'};margin-bottom:8px">
-      <div class="fg"><label>Nombre personalizado *</label><input class="fi" id="m_mod_custom" value="${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?m.modelo:''}" placeholder="Ej: MODELO ESPECIAL 200"></div>
+    <div id="m_custom_div" style="display:${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?'block':'none'};margin-bottom:8px;background:var(--surf2);border:1px solid var(--rim);border-radius:var(--r8);padding:12px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">Nueva moto al catálogo</div>
+      <div class="fgr">
+        <div class="fg"><label>Marca *</label><input class="fi" id="m_mod_cat_marca" value="" placeholder="Ej: Empire, Bera..."></div>
+        <div class="fg"><label>Modelo *</label><input class="fi" id="m_mod_custom" value="${(m&&!CATALOGO.find(c=>c.modelo===m.modelo))?m.modelo:''}" placeholder="Ej: NEW HORSE 150"></div>
+        <div class="fg"><label>Precio catálogo USD *</label><input class="fi" id="m_mod_cat_precio" type="number" placeholder="0.00" oninput="var pr=$('m_pr');if(pr&&!pr.readOnly)pr.value=this.value;"></div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:6px">Esta moto se guardará en el catálogo y quedará disponible para futuras unidades.</div>
     </div>
     <div style="background:var(--surf);border:1px solid var(--rim);border-radius:var(--r8);padding:12px;margin:12px 0">
       <div class="fsec" style="margin:0 0 8px 0">Plan sugerido</div>
@@ -11542,10 +11549,25 @@ function openAddMoto(id=null){
   if(ed) previewCalc();
   S.saveFn=()=>{
     const g=i=>{ var el=$(i); return el?el.value.trim():null; };
-    // Resolver nombre del modelo (dropdown catálogo o personalizado)
+    // Resolver nombre del modelo (dropdown catálogo o nueva entrada al catálogo)
     var _selMod = ($('m_mod_sel')&&$('m_mod_sel').value)||'';
     var _modeloFinal = _selMod==='__custom__' ? g('m_mod_custom') : _selMod;
     if(!_modeloFinal){toast('Selecciona un modelo del catálogo','error');return false;}
+    // Si es nueva entrada al catálogo, guardarla antes de continuar
+    if(_selMod==='__custom__'){
+      var _catPrecio = parseFloat(($('m_mod_cat_precio')&&$('m_mod_cat_precio').value))||0;
+      if(!_catPrecio){toast('Ingresa el precio del catálogo','error');return false;}
+      // Guardar en CATALOGO
+      var _newCatId = CATALOGO.length ? Math.max.apply(null,CATALOGO.map(function(c){return c.id||0;}))+1 : 1;
+      var _catMarca = (($('m_mod_cat_marca')&&$('m_mod_cat_marca').value)||'').trim();
+      var _catEntry = {id:_newCatId, modelo:_modeloFinal, precio:_catPrecio};
+      if(_catMarca) _catEntry.marca = _catMarca;
+      CATALOGO.push(_catEntry);
+      if(db){ db.collection('config').doc('catalogo').set({items:CATALOGO}).then(function(){ try{localStorage.setItem('pagasi_catalogo_config',JSON.stringify(CATALOGO));}catch(e){} }).catch(function(){}); }
+      toast('Moto agregada al catálogo: '+_modeloFinal,'success');
+      // Usar el precio del catálogo si no se puso precio en el campo principal
+      if(!($('m_pr')&&$('m_pr').value)){ var _prEl=$('m_pr'); if(_prEl){_prEl.value=_catPrecio.toFixed(2);} }
+    }
     if(!($('m_pr')&&$('m_pr').value)){toast('El precio es obligatorio','error');return false;}
     const precio=parseFloat($('m_pr').value)||0;
     const planMode=(($('m_plan_mode')&&$('m_plan_mode').value)||'global');
@@ -11603,6 +11625,12 @@ function onCatalogoSelect(sel){
     if(customDiv) customDiv.style.display='block';
     var pr = $('m_pr');
     if(pr){ pr.value=''; pr.readOnly=false; }
+    var catPrecio = $('m_mod_cat_precio');
+    if(catPrecio) catPrecio.value='';
+    var catMarca = $('m_mod_cat_marca');
+    if(catMarca) catMarca.value='';
+    var catModelo = $('m_mod_custom');
+    if(catModelo) catModelo.value='';
     var calc = $('calc-preview');
     if(calc) calc.style.display='none';
   } else {
@@ -11610,7 +11638,7 @@ function onCatalogoSelect(sel){
     var opt = sel.options[sel.selectedIndex];
     var precio = opt ? parseFloat(opt.dataset.precio)||0 : 0;
     var pr = $('m_pr');
-    if(pr){ pr.value = precio ? precio.toFixed(2) : ''; }
+    if(pr){ pr.value = precio ? precio.toFixed(2) : ''; pr.readOnly = !!precio; }
     if(precio) previewCalc();
   }
 }
@@ -12725,7 +12753,7 @@ function _wzRender(motoId){
 
   var catOptions = CATALOGO.map(function(c){
     return '<option value="'+c.precio+'" data-modelo="'+c.modelo+'">'+c.modelo+' — $'+c.precio.toFixed(2)+'</option>';
-  }).join('');
+  }).join('') + '<option value="__wz_new_cat__">＋ Agregar nueva moto al catálogo...</option>';
 
   var step2 = '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:14px;margin-bottom:12px">'
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Moto del inventario disponible</div>'
@@ -12741,6 +12769,15 @@ function _wzRender(motoId){
     + '<option value="">Seleccionar modelo...</option>'
     + catOptions
     + '</select></div>'
+    + '<div id="wz_new_cat_div" style="display:none;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:12px;margin-top:8px">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">Nueva moto al catálogo</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:4px">Marca</label><input class="fi" id="wz_cat_marca" placeholder="Ej: Empire, Bera..."></div>'
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:4px">Modelo *</label><input class="fi" id="wz_cat_modelo" placeholder="Ej: NEW HORSE 150"></div>'
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:4px">Precio USD *</label><input class="fi" id="wz_cat_precio" type="number" placeholder="0.00" oninput="_wzCatPrecioSync()"></div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Se guardará en el catálogo y se usará en este crédito.</div>'
+    + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
     + _wzFg('Precio (USD)','wz_precio','number','0','oninput="_wzActualizarPrecioBaseDesdePrecio();_wzActualizarFinPreview(this.value);_wzMpagoSync();_wzScore()"',true)
     + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Uso de la moto *</label>'
@@ -13412,10 +13449,21 @@ function _wzPickMotoInv(sel){
 // ── Selección de moto del catálogo ──
 function _wzPickMotoCat(sel){
   var wrap = document.getElementById('wz-mpago-wrap');
+  var newCatDiv = document.getElementById('wz_new_cat_div');
   if(!sel.value){
     if(wrap) wrap.style.display='none';
+    if(newCatDiv) newCatDiv.style.display='none';
     return;
   }
+  if(sel.value === '__wz_new_cat__'){
+    if(newCatDiv) newCatDiv.style.display='block';
+    if(wrap) wrap.style.display='none';
+    WZ.precio = 0;
+    WZ.motoInvId = null;
+    WZ.motoModelo = '';
+    return;
+  }
+  if(newCatDiv) newCatDiv.style.display='none';
   var precio = parseFloat(sel.value);
   var opt = sel.options[sel.selectedIndex];
   var invSel = document.getElementById('wz_moto_inv');
@@ -13438,6 +13486,17 @@ function _wzPickMotoCat(sel){
   }
   _wzActualizarFinPreview(precio);
   _wzScore();
+}
+
+// Sincroniza el precio del campo nueva-cat-wizard con los campos del wizard
+function _wzCatPrecioSync(){
+  var catPrecio = parseFloat((document.getElementById('wz_cat_precio')||{}).value)||0;
+  var catModelo = ((document.getElementById('wz_cat_modelo')||{}).value||'').trim();
+  var pInp = document.getElementById('wz_precio');
+  if(pInp && catPrecio){ pInp.value = catPrecio; }
+  WZ.precio = catPrecio;
+  WZ.motoModelo = catModelo;
+  if(catPrecio) _wzActualizarFinPreview(catPrecio);
 }
 
 // ── Preview financiero ──
@@ -14477,6 +14536,30 @@ function _wzRenderResultado(){
 function _wzGuardar(){
   var btn = document.querySelector('#wz-overlay button[onclick="_wzGuardar()"]');
   if(btn){ btn.textContent='Guardando...'; btn.disabled=true; }
+
+  // ── Si se eligió "Agregar nueva moto al catálogo" en el wizard, guardarla primero ──
+  var _wzCatSel = document.getElementById('wz_moto_cat');
+  if(_wzCatSel && _wzCatSel.value === '__wz_new_cat__'){
+    var _wzCatModelo = ((document.getElementById('wz_cat_modelo')||{}).value||'').trim();
+    var _wzCatPrecio = parseFloat((document.getElementById('wz_cat_precio')||{}).value)||0;
+    var _wzCatMarca  = ((document.getElementById('wz_cat_marca')||{}).value||'').trim();
+    if(!_wzCatModelo || !_wzCatPrecio){
+      toast('Ingresa el modelo y precio de la nueva moto','error');
+      if(btn){ btn.textContent='Guardar Solicitud'; btn.disabled=false; }
+      return;
+    }
+    var _wzNewCatId = CATALOGO.length ? Math.max.apply(null,CATALOGO.map(function(c){return c.id||0;}))+1 : 1;
+    var _wzCatEntry = {id:_wzNewCatId, modelo:_wzCatModelo, precio:_wzCatPrecio};
+    if(_wzCatMarca) _wzCatEntry.marca = _wzCatMarca;
+    CATALOGO.push(_wzCatEntry);
+    if(db){ db.collection('config').doc('catalogo').set({items:CATALOGO}).then(function(){ try{localStorage.setItem('pagasi_catalogo_config',JSON.stringify(CATALOGO));}catch(e){} }).catch(function(){}); }
+    WZ.motoModelo = _wzCatModelo;
+    WZ.precio = _wzCatPrecio;
+    if(_wzCatMarca) WZ.marca = _wzCatMarca;
+    var _pInp = document.getElementById('wz_precio');
+    if(_pInp) _pInp.value = _wzCatPrecio;
+    toast('Moto agregada al catálogo: '+_wzCatModelo,'success');
+  }
 
   // Leer concesionario seleccionado en el último paso (si existe)
   var _selConc = document.getElementById('wz_concesionario_id');
