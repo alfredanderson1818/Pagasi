@@ -13759,76 +13759,172 @@ function _wzSafeFileName(name){
 function _wzDocLabel(id){ return (_wzDocDefs[id]&&_wzDocDefs[id].label)||id; }
 function _renderCliDocManager(c){
   var docs=(c&&Array.isArray(c.documentos))?c.documentos:[];
-  var docsMap={};
-  docs.forEach(function(d){ if(d&&d.id) docsMap[d.id]=d; });
-  var groups=[]; var byGroup={};
-  Object.keys(_wzDocDefs).forEach(function(id){
-    var def=_wzDocDefs[id]||{};
-    var group=def.group||'Documentos';
-    if(!byGroup[group]){ byGroup[group]=[]; groups.push(group); }
-    byGroup[group].push({ id:id, def:def, meta:docsMap[id]||null });
-  });
 
-  // Contador resumen
-  var totalDocs = Object.keys(_wzDocDefs).length;
-  var uploadedCount = docs.length;
-  var pct = totalDocs>0 ? Math.round(uploadedCount/totalDocs*100) : 0;
-  var pctColor = pct>=80?'var(--green)':pct>=40?'var(--amber)':'var(--red)';
-
-  var summaryHtml = '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;margin-bottom:12px">'
-    + '<div style="font-size:28px;font-weight:900;color:'+pctColor+';line-height:1;font-family:var(--fd);min-width:60px">'+uploadedCount+'</div>'
-    + '<div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--ink)">Documentos cargados</div>'
-    + '<div style="font-size:11px;color:var(--ink3)">'+pct+'% del expediente completo · '+(totalDocs-uploadedCount)+' pendientes</div></div>'
-    + '<div style="width:80px;height:8px;background:var(--rim);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+pctColor+'"></div></div>'
-    + '</div>';
-
-  // Storage status warning
+  // Storage warning
   var storageStatus = '';
   if(typeof storage === 'undefined' || !storage || typeof storage.ref !== 'function'){
-    storageStatus = '<div style="padding:9px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.45">'
-      + '<b style="color:var(--amber)"> Firebase Storage no disponible.</b> Los documentos se guardarán <b>localmente en este navegador</b> (max 2MB por archivo). Para almacenamiento en la nube habilita Storage en Firebase Console.'
+    storageStatus = '<div style="padding:8px 11px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--ink2)">'
+      + '<b style="color:var(--amber)">⚠ Firebase Storage no disponible.</b> Los documentos se guardarán localmente (max 2MB).'
       + '</div>';
   }
 
-  var docsHtml='';
+  // Lista compacta de documentos existentes
+  var docsHtml = '';
   if(docs.length){
-    docsHtml='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:6px"> Archivos cargados ('+docs.length+')</div>';
-    docsHtml+='<div class="lst" style="margin-bottom:16px">'+docs.map(function(d){
-      var def=_wzDocDefs[d.id]||{};
-      var isLocal = d.source==='local' || (d.url||'').indexOf('data:')===0;
-      var badge = isLocal ? '<span class="bdg b-a" style="font-size:9px;margin-left:4px">local</span>' : '<span class="bdg b-g" style="font-size:9px;margin-left:4px">nube</span>';
-      return '<div class="li">'
-        + '<div class="li-ic" style="background:var(--gs)">'+(def.icon||'')+'</div>'
-        + '<div style="flex:1;min-width:0">'
-        + '<div style="font-weight:700;color:var(--ink);font-size:12px">'+(d.label||_wzDocLabel(d.id)||'Documento')+badge+'</div>'
-        + '<div class="tds" style="font-size:10px">'+(d.name||'Archivo')+(d.size?' · '+Math.round(d.size/1024)+'KB':'')+(d.uploadedAt?(' · '+fmtFechaHora(d.uploadedAt)):'')+'</div>'
-        + '</div>'
-        + (d.url?'<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener" download="'+(d.name||'').replace(/"/g,'&quot;')+'">Abrir</a>':'')
-        + '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+c.id+'\',\''+d.id+'\')" title="Eliminar">✕</button>'
-        + '</div>';
-    }).join('')+'</div>';
+    docsHtml = '<div style="margin-bottom:12px">'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:6px">Documentos cargados ('+docs.length+')</div>'
+      + docs.map(function(d){
+          var isLocal = d.source==='local' || (d.url||'').indexOf('data:')===0;
+          var badge = isLocal
+            ? '<span style="font-size:9px;background:var(--ambers);color:var(--amber);border-radius:4px;padding:1px 5px;margin-left:5px">local</span>'
+            : '<span style="font-size:9px;background:var(--greens);color:var(--green);border-radius:4px;padding:1px 5px;margin-left:5px">nube</span>';
+          var desc = d.descripcion ? ('<span style="color:var(--ink3)"> · '+d.descripcion+'</span>') : '';
+          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--rim);font-size:12px">'
+            + '<span style="font-size:14px">📄</span>'
+            + '<div style="flex:1;min-width:0;overflow:hidden">'
+            +   '<span style="font-weight:700;color:var(--ink)">'+(d.label||d.name||'Documento')+'</span>'+badge+desc
+            + '</div>'
+            + (d.url ? '<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener">Abrir</a>' : '')
+            + '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+c.id+'\',\''+d.id+'\')" title="Eliminar">✕</button>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  } else {
+    docsHtml = '<div style="font-size:12px;color:var(--ink3);padding:8px 0 12px">Sin documentos cargados aún.</div>';
   }
 
-  var uploadHtml='<div style="background:rgba(91,78,212,.04);border:1px solid var(--rim2);border-radius:12px;padding:12px">'
-    +'<div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:4px">Cargar / actualizar documentos</div>'
-    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:10px">Toca el recuadro y selecciona el archivo. Se guarda automáticamente.</div>'
-    +groups.map(function(group){
-      return '<div style="margin-top:8px">'
-        +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink3);margin:10px 0 7px">'+group+'</div>'
-        +byGroup[group].map(function(item){
-          var id=item.id, def=item.def||{}, meta=item.meta;
-          return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1.5px solid '+(meta?'rgba(6,176,106,.28)':'var(--rim)')+';position:relative;overflow:hidden;margin-bottom:8px;cursor:pointer">'
-            +'<input type="file" accept="'+(def.accept||'image/*,.pdf')+'" '+(def.capture?('capture="'+def.capture+'"'):'')+' data-cliente-id="'+String(c.id).replace(/"/g,'&quot;')+'" data-doc-id="'+id+'" onchange="_cliDocUploadFromInput(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">'
-            +'<div style="width:34px;height:34px;border-radius:9px;background:var(--surf);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(def.icon||'')+'</div>'
-            +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+(def.label||id)+'</div><div style="font-size:10.5px;color:'+(meta?'var(--green)':'var(--ink3)')+';margin-top:2px">'+(meta?('✓ '+(meta.name||'Archivo')+(meta.uploadedAt?(' · '+fmtFechaHora(meta.uploadedAt)):'')):'Toca para subir')+'</div></div>'
-            +'<div style="font-size:17px;flex-shrink:0">'+(meta?'':'')+'</div>'
-            +(meta&&meta.url?'<a class="btn btn-xs btn-g" href="'+meta.url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="z-index:2;position:relative">Abrir</a>':'')
-            +'</label>';
-        }).join('')
-        +'</div>';
-    }).join('')
-    +'</div>';
-  return summaryHtml + storageStatus + docsHtml + uploadHtml;
+  // Botón agregar documento
+  var addBtn = '<button class="btn btn-p" onclick="_cliDocAbrirModal(\''+c.id+'\')" style="width:100%">+ Agregar documento</button>';
+
+  return storageStatus + docsHtml + addBtn;
+}
+
+// Modal para agregar documento con descripción
+function _cliDocAbrirModal(cliId){
+  var existing = document.getElementById('_cliDocModalWrap');
+  if(existing) existing.remove();
+
+  var wrap = document.createElement('div');
+  wrap.id = '_cliDocModalWrap';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+
+  wrap.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.25)">'
+    + '<div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:14px">Agregar documento</div>'
+    + '<div style="margin-bottom:10px">'
+    +   '<label style="font-size:11px;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Descripción</label>'
+    +   '<input id="_cliDocDescInput" class="fi" type="text" placeholder="Ej: Cédula, Contrato firmado, Pagaré..." style="width:100%">'
+    + '</div>'
+    + '<div style="margin-bottom:16px">'
+    +   '<label style="font-size:11px;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Archivo (PDF o imagen)</label>'
+    +   '<input id="_cliDocFileInput" type="file" accept="image/*,.pdf" style="font-size:13px;width:100%">'
+    + '</div>'
+    + '<div style="display:flex;gap:8px">'
+    +   '<button class="btn btn-g" style="flex:1" onclick="document.getElementById(\'_cliDocModalWrap\').remove()">Cancelar</button>'
+    +   '<button class="btn btn-p" style="flex:1" onclick="_cliDocModalConfirmar(\''+cliId+'\')">Guardar</button>'
+    + '</div>'
+    + '</div>';
+
+  document.body.appendChild(wrap);
+  setTimeout(function(){ var el=document.getElementById('_cliDocDescInput'); if(el) el.focus(); }, 80);
+}
+
+function _cliDocModalConfirmar(cliId){
+  var descEl = document.getElementById('_cliDocDescInput');
+  var fileEl = document.getElementById('_cliDocFileInput');
+  var desc = (descEl && descEl.value.trim()) || '';
+  var file = fileEl && fileEl.files && fileEl.files[0];
+  if(!file){ toast('Selecciona un archivo','error'); return; }
+
+  // Usar el sistema existente de upload — creamos un docId único basado en timestamp
+  var docId = 'doc_' + Date.now();
+
+  // Temporalmente asignar el docId y descripción al input para que _cliDocUpload lo procese
+  fileEl.setAttribute('data-cliente-id', cliId);
+  fileEl.setAttribute('data-doc-id', docId);
+  fileEl.setAttribute('data-descripcion', desc);
+
+  // Cerrar modal antes de subir
+  var modal = document.getElementById('_cliDocModalWrap');
+  if(modal) modal.remove();
+
+  _cliDocUploadConDesc(fileEl, cliId, docId, desc);
+}
+
+function _cliDocUploadConDesc(input, clienteId, docId, descripcion){
+  var file = input && input.files && input.files[0];
+  if(!file){ return; }
+  var cliId = String(clienteId||'').trim();
+  if(!cliId){ toast('Cliente inválido','error'); return; }
+
+  var FILE_LIMIT_LOCAL = 2 * 1024 * 1024;
+
+  function finalize(meta, source){
+    // Agregar descripción al meta
+    meta.descripcion = descripcion || '';
+    meta.label = descripcion || meta.name || 'Documento';
+
+    var c = S.clientes.find(function(x){ return String(x.id)===String(cliId); });
+    if(!c){ toast('Cliente no encontrado','error'); return; }
+    var docs = Array.isArray(c.documentos) ? c.documentos.slice() : [];
+    var idx = docs.findIndex(function(d){ return d && d.id===docId; });
+    if(idx>=0) docs[idx] = meta; else docs.push(meta);
+    c.documentos = docs;
+    c.docs_count = docs.length;
+
+    if(db && source==='firebase'){
+      db.collection('clientes').doc(String(c.id)).set({documentos:docs, docs_count:docs.length},{merge:true})
+        .then(function(){ toast('✓ Documento guardado','success'); })
+        .catch(function(err){
+          _cliDocSaveLocal(cliId, meta);
+          toast('Guardado localmente (Firestore falló)','error');
+        });
+    } else {
+      _cliDocSaveLocal(cliId, meta);
+      toast('Guardado localmente','info');
+    }
+    _cliDocRefreshInModal(cliId);
+  }
+
+  toast('⏳ Subiendo...','info');
+
+  if(storage && typeof storage.ref === 'function'){
+    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    var filePath = 'clientes/'+cliId+'/documentos/'+docId+'_'+Date.now()+'_'+safeName;
+    var ref = storage.ref().child(filePath);
+    ref.put(file).then(function(snap){
+      return snap.ref.getDownloadURL();
+    }).then(function(url){
+      finalize({
+        id: docId,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: url,
+        path: filePath,
+        uploadedAt: new Date().toISOString(),
+        source: 'firebase'
+      }, 'firebase');
+    }).catch(function(err){
+      toast('Error al subir: '+(err.message||err),'error');
+    });
+  } else {
+    // Fallback local
+    if(file.size > FILE_LIMIT_LOCAL){ toast('Archivo demasiado grande para guardar localmente (max 2MB)','error'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e){
+      finalize({
+        id: docId,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: e.target.result,
+        path: 'local://'+docId,
+        uploadedAt: new Date().toISOString(),
+        source: 'local'
+      }, 'local');
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 // Eliminar documento
