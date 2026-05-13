@@ -14566,8 +14566,8 @@ function _wzRenderResultado(){
       +'<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
       +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Cobro de Inicial</div>'
       +'<div class="fgr">'
-      +'<div class="fg"><label>Método de pago inicial *</label><select class="fs" id="wz_ini_metodo">'
-      +(((_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(function(c){ return '<option value="'+c.nombre+'">'+c.nombre+'</option>'; }).join('')) || '<option value="Efectivo USD">Efectivo USD</option>')
+      +'<div class="fg"><label>Método de pago inicial *</label><select class="fs" id="wz_ini_metodo" onchange="WZ.iniMetodo=this.value">'
+      +(((_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(function(c){ return '<option value="'+c.nombre+'"'+(WZ.iniMetodo&&WZ.iniMetodo===c.nombre?' selected':'')+'>'+c.nombre+'</option>'; }).join('')) || '<option value="Efectivo USD">Efectivo USD</option>')
       +'</select></div>'
       +'<div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="wz_ini_ref" placeholder="N° de referencia (opcional)"></div>'
       +'</div>'
@@ -14666,7 +14666,33 @@ function _wzGuardar(){
   if(!existing){
     existing = S.clientes.find(function(c){ return !c.eliminado && c.cedula && c.cedula.replace(/\s/g,'').toLowerCase()===(WZ.ci||'').replace(/\s/g,'').toLowerCase(); }) || null;
   }
-  if(existing){ cliId = existing.id; WZ.nom = existing.nombre || WZ.nom; }
+  if(existing){
+    cliId = existing.id;
+    // Actualizar el cliente existente con los datos del wizard (incluyendo nombre corregido)
+    if(WZ.nom) existing.nombre = WZ.nom;
+    if(WZ.ci) existing.cedula = WZ.ci;
+    if(WZ.rif) existing.rif = WZ.rif;
+    if(WZ.nacionalidad) existing.nacionalidad = WZ.nacionalidad;
+    if(WZ.tel) existing.tel = WZ.tel;
+    if(WZ.wa) existing.wa = WZ.wa;
+    if(WZ.email) existing.email = WZ.email;
+    if(WZ.ciudad_res||WZ.ciudad) existing.ciudad = WZ.ciudad_res||WZ.ciudad||existing.ciudad;
+    if(WZ.estado_ubi) existing.estado_ubi = WZ.estado_ubi;
+    if(WZ.dir_det) existing.dir = WZ.dir_det;
+    if(WZ.emp) existing.trabajo = WZ.emp;
+    if(WZ.empresa) existing.empresa = WZ.empresa;
+    if(WZ.cargo) existing.cargo = WZ.cargo;
+    if(WZ.dir_trabajo) existing.dir_trabajo = WZ.dir_trabajo;
+    if(WZ.tel_trabajo) existing.tel_trabajo = WZ.tel_trabajo;
+    if(WZ.ing) existing.ingreso = WZ.ing;
+    if(WZ.ifam) existing.ingreso_familiar = WZ.ifam;
+    if(WZ.ant) existing.antiguedad = WZ.ant;
+    if(WZ.score) existing.score_indexa = WZ.score;
+    if(WZ.r1n){ existing.ref1 = {nom:WZ.r1n||'',ci:WZ.r1ci||'',tel:WZ.r1t||'',rel:WZ.r1r||'',obs:WZ.r1obs||''}; }
+    if(WZ.r2n){ existing.ref2 = {nom:WZ.r2n||'',ci:WZ.r2ci||'',tel:WZ.r2t||'',rel:WZ.r2r||'',obs:WZ.r2obs||''}; }
+    if(WZ.fiador_nom){ existing.fiador = WZ.fiador_tiene||existing.fiador; existing.fiador_nom = WZ.fiador_nom; existing.fiador_ci = WZ.fiador_ci; existing.fiador_tel = WZ.fiador_tel; existing.fiador_rif = WZ.fiador_rif; existing.fiador_dir = WZ.fiador_dir; existing.fiador_email = WZ.fiador_email; }
+    DB.saveCliente(existing);
+  }
 
   var cliente = existing || {
     id: cliId,
@@ -14736,7 +14762,7 @@ function _wzGuardar(){
   var credId = nextCredId();
   var newCred = {
     id: credId,
-    cli: (existing&&existing.nombre)||WZ.nom||'',
+    cli: WZ.nom||(existing&&existing.nombre)||'',
     clienteId: cliId,
     modelo: WZ.motoModelo||'',
     motoId: WZ.motoInvId||null,
