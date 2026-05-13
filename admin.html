@@ -5522,11 +5522,11 @@ function verCliente(id){
     + '<button class="cf-tab is-active" data-tab="resumen" onclick="cfTab(\''+c.id+'\',\'resumen\')">Resumen</button>'
     + '<button class="cf-tab" data-tab="personal" onclick="cfTab(\''+c.id+'\',\'personal\')">Personal</button>'
     + '<button class="cf-tab" data-tab="laboral" onclick="cfTab(\''+c.id+'\',\'laboral\')">Laboral</button>'
-    + '<button class="cf-tab" data-tab="financiero" onclick="cfTab(\''+c.id+'\',\'financiero\')">Financiero</button>'
-    + '<button class="cf-tab" data-tab="referencias" onclick="cfTab(\''+c.id+'\',\'referencias\')">Referencias</button>'
+    + '<button class="cf-tab" data-tab="financiero" onclick="cfTab(\''+c.id+'\',\'financiero\')">Finanzas</button>'
+    + '<button class="cf-tab" data-tab="referencias" onclick="cfTab(\''+c.id+'\',\'referencias\')">Refs</button>'
     + '<button class="cf-tab" data-tab="creditos" onclick="cfTab(\''+c.id+'\',\'creditos\')">Planes <span class="cf-tab-count">'+creditos.length+'</span></button>'
     + '<button class="cf-tab" data-tab="pagos" onclick="cfTab(\''+c.id+'\',\'pagos\')">Pagos <span class="cf-tab-count">'+pagos.length+'</span></button>'
-    + '<button class="cf-tab" data-tab="docs" onclick="cfTab(\''+c.id+'\',\'docs\')">Documentos <span class="cf-tab-count">'+(Array.isArray(c.documentos)?c.documentos.length:0)+'</span></button>'
+    + '<button class="cf-tab" data-tab="docs" onclick="cfTab(\''+c.id+'\',\'docs\')">Docs <span class="cf-tab-count">'+(Array.isArray(c.documentos)?c.documentos.length:0)+'</span></button>'
     + '</div>';
 
   // ── PANEL: RESUMEN ──
@@ -13785,7 +13785,7 @@ function _renderCliDocManager(c){
             +   '<span style="font-weight:700;color:var(--ink)">'+(d.label||d.name||'Documento')+'</span>'+badge+desc
             + '</div>'
             + (d.url ? '<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener">Abrir</a>' : '')
-            + '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+c.id+'\',\''+d.id+'\')" title="Eliminar">✕</button>'
+            + ((S.currentUser&&(S.currentUser.rol==='Administrador'||S.currentUser.rol==='Gerente')) ? '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+c.id+'\',\''+d.id+'\')" title="Eliminar">✕</button>' : '')
             + '</div>';
         }).join('')
       + '</div>';
