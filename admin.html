@@ -13440,6 +13440,38 @@ function _wzPickMotoInv(sel){
   _wzActualizarPrecioBaseDesdePrecio();
   WZ.motoInvId = sel.value;
   WZ.motoModelo = moto ? moto.modelo : opt.text.split(' —')[0].trim();
+  // Precargar campos de la moto en WZ para que _wzFg los muestre
+  if(moto){
+    WZ.wz_marca        = moto.marca        || '';
+    WZ.wz_color        = moto.color        || '';
+    WZ.wz_vin          = moto.vin          || '';
+    WZ.wz_placa        = moto.placa        || '';
+    WZ.wz_anio         = moto.anio         || '';
+    WZ.wz_serial_motor = moto.serialMotor  || '';
+    WZ.wz_serial_chasis= moto.serialChasis || '';
+    WZ.wz_gps_num      = moto.gpsNum       || '';
+    // También en las claves cortas que usa _wzValidar paso 3
+    WZ.marca        = moto.marca        || '';
+    WZ.color        = moto.color        || '';
+    WZ.vin          = moto.vin          || '';
+    WZ.placa        = moto.placa        || '';
+    WZ.anio         = moto.anio         || '';
+    WZ.serialMotor  = moto.serialMotor  || '';
+    WZ.serialChasis = moto.serialChasis || '';
+    WZ.gpsNum       = moto.gpsNum       || '';
+  }
+  // Rellenar los inputs visibles si ya están en el DOM
+  function _setInp(id, val){ var el=document.getElementById(id); if(el && val) el.value=val; }
+  if(moto){
+    _setInp('wz_marca',         moto.marca);
+    _setInp('wz_color',         moto.color);
+    _setInp('wz_vin',           moto.vin);
+    _setInp('wz_placa',         moto.placa);
+    _setInp('wz_anio',          moto.anio);
+    _setInp('wz_serial_motor',  moto.serialMotor);
+    _setInp('wz_serial_chasis', moto.serialChasis);
+    _setInp('wz_gps_num',       moto.gpsNum);
+  }
   // Inventario existente: NO mostrar bloque de pago (la moto ya fue pagada al ingresarla)
   if(wrap) wrap.style.display='none';
   _wzActualizarFinPreview(precio);
