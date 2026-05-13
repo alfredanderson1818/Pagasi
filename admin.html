@@ -12089,6 +12089,8 @@ function _cliInitFromCliente(c){
   WZ = { step:1, totalSteps:2, score:0, f1:0,f2:0,f3:0,f4:0,f5:0, cuota:0,ratio:0,monto:0,precio:0,plazo:0,ini:0,ing:0, mode:'cliente', clienteEditId:(c&&c.id)||null };
   if(!c) return;
   WZ.nom = WZ.wz_nom = c.nombre || '';
+  WZ.rif = WZ.wz_rif = c.rif || '';
+  WZ.nacionalidad = WZ.wz_nacionalidad = c.nacionalidad || '';
   WZ.ci = WZ.wz_ci = _wzFmtCedula(c.cedula || '');
   WZ.tel = WZ.wz_tel = c.tel || '';
   WZ.wa = WZ.wz_wa = c.wa || c.tel || '';
@@ -12105,6 +12107,8 @@ function _cliInitFromCliente(c){
   WZ.ciudad_res = WZ.wz_ciudad_res = c.ciudad || '';
   WZ.dir_det = WZ.wz_dir_det = c.dir || '';
   WZ.empresa = WZ.wz_empresa = c.empresa || '';
+  WZ.dir_trabajo = WZ.wz_dir_trabajo = c.dir_trabajo || '';
+  WZ.tel_trabajo = WZ.wz_tel_trabajo = c.tel_trabajo || '';
   WZ.cargo = WZ.wz_cargo = c.cargo || '';
   WZ.rem = WZ.wz_rem = c.remesas || '';
   WZ.dep = c.dependientes || 0;
@@ -12129,14 +12133,19 @@ function _cliInitFromCliente(c){
   WZ.cashea_obs = WZ.wz_cashea_obs = c.cashea_obs || '';
   WZ.fiador_tiene = c.fiador || 'no';
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
+  WZ.fiador_rif = WZ.wz_fiador_rif = c.fiador_rif || '';
+  WZ.fiador_dir = WZ.wz_fiador_dir = c.fiador_dir || '';
+  WZ.fiador_email = WZ.wz_fiador_email = c.fiador_email || '';
   WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
   WZ.fiador_ci = WZ.wz_fiador_ci = _wzFmtCedula(c.fiador_ci || '');
   WZ.fiador_rel = WZ.wz_fiador_rel = c.fiador_rel || '';
   WZ.r1n = WZ.wz_r1n = c.ref1&&c.ref1.nom || '';
+  WZ.r1ci = WZ.wz_r1ci = c.ref1&&c.ref1.ci || '';
   WZ.r1t = WZ.wz_r1t = c.ref1&&c.ref1.tel || '';
   WZ.r1r = WZ.wz_r1r = c.ref1&&c.ref1.rel || '';
   WZ.r1obs = WZ.wz_r1obs = c.ref1&&c.ref1.obs || '';
   WZ.r2n = WZ.wz_r2n = c.ref2&&c.ref2.nom || '';
+  WZ.r2ci = WZ.wz_r2ci = c.ref2&&c.ref2.ci || '';
   WZ.r2t = WZ.wz_r2t = c.ref2&&c.ref2.tel || '';
   WZ.r2r = WZ.wz_r2r = c.ref2&&c.ref2.rel || '';
   WZ.r2obs = WZ.wz_r2obs = c.ref2&&c.ref2.obs || '';
@@ -12169,6 +12178,8 @@ function _cliStep1(){
   return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     + _wzFg('Nombre completo *','wz_nom','text','Ej: Carlos Pérez','',true)
     + _wzFg('N° Cédula *','wz_ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"',true)
+    + _wzFg('RIF','wz_rif','text','J-12345678-9')
+    + _wzFg('Nacionalidad','wz_nacionalidad','text','Venezolano/a')
     + _wzFg('Teléfono *','wz_tel','tel','0412-0000000','',true)
     + _wzFg('WhatsApp','wz_wa','tel','0412-0000000')
     + _wzFg('Correo','wz_email','email','correo@ejemplo.com')
@@ -12246,6 +12257,10 @@ function _cliStep2(){
     _fg('Cargo / actividad',_inp('wz_cargo','text','Ej: vendedor, delivery, comerciante'))
   )
   +_row2(
+    _fg('Dirección de trabajo',_inp('wz_dir_trabajo','text','Ej: Av. Principal, Local 3...')),
+    _fg('Teléfono laboral',_inp('wz_tel_trabajo','tel','0212-0000000'))
+  )
+  +_row2(
     _fg('Ingreso mensual propio (USD)',_inp('wz_ing','number','0','oninput="_wzScore()"')),
     _fg('Ingreso familiar total (USD)',_inp('wz_ifam','number','0','oninput="_wzScore()"'))
   )
@@ -12317,13 +12332,15 @@ function _cliStep2(){
   +_s('Referencias Personales')
   +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px;margin-bottom:10px">'
   +'<div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:10px">Referencia 1</div>'
-  +_row2(_fg('Nombre',_inp('wz_r1n','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_r1t','tel','0412-0000000')))
-  +_row2(_fg('Relación',_sel('wz_r1r','<option>Familiar directo</option><option>Amigo/a</option><option>Colega</option><option>Vecino/a</option>')),_fg('Observación',_inp('wz_r1obs','text','Notas...')))
+  +_row2(_fg('Nombre',_inp('wz_r1n','text','Nombre y apellido')),_fg('Cédula',_inp('wz_r1ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"')))
+  +_row2(_fg('Teléfono',_inp('wz_r1t','tel','0412-0000000')),_fg('Relación',_sel('wz_r1r','<option>Familiar directo</option><option>Amigo/a</option><option>Colega</option><option>Vecino/a</option>')))
+  +_row2(_fg('Observación',_inp('wz_r1obs','text','Notas...')),_fg('',''))
   +'</div>'
   +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px;margin-bottom:10px">'
   +'<div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:10px">Referencia 2</div>'
-  +_row2(_fg('Nombre',_inp('wz_r2n','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_r2t','tel','0412-0000000')))
-  +_row2(_fg('Relación',_sel('wz_r2r','<option>Familiar directo</option><option>Amigo/a</option><option>Colega</option><option>Vecino/a</option>')),_fg('Observación',_inp('wz_r2obs','text','Notas...')))
+  +_row2(_fg('Nombre',_inp('wz_r2n','text','Nombre y apellido')),_fg('Cédula',_inp('wz_r2ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"')))
+  +_row2(_fg('Teléfono',_inp('wz_r2t','tel','0412-0000000')),_fg('Relación',_sel('wz_r2r','<option>Familiar directo</option><option>Amigo/a</option><option>Colega</option><option>Vecino/a</option>')))
+  +_row2(_fg('Observación',_inp('wz_r2obs','text','Notas...')),_fg('',''))
   +'</div>'
   +_s('Fiador / Garante')
   +'<div style="margin-bottom:10px">'+_fg('¿Presenta fiador?',
@@ -12336,7 +12353,9 @@ function _cliStep2(){
   )+'</div>'
   +'<div id="wz_fiador_det" style="display:none">'
   +_row2(_fg('Nombre del fiador',_inp('wz_fiador_nom','text','Nombre y apellido')),_fg('Teléfono',_inp('wz_fiador_tel','tel','0412-0000000')))
-  +_row2(_fg('Cédula del fiador',_inp('wz_fiador_ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"')),_fg('Relación',_sel('wz_fiador_rel','<option value="familiar">Familiar directo</option><option value="conyuge">Cónyuge / pareja</option><option value="amigo">Amigo/a</option><option value="colega">Colega / socio</option>')))
+  +_row2(_fg('Cédula del fiador',_inp('wz_fiador_ci','text','V-12345678','oninput="_wzCedulaInput(event)" autocapitalize="characters"')),_fg('RIF del fiador',_inp('wz_fiador_rif','text','J-12345678-9')))
+  +_row2(_fg('Relación',_sel('wz_fiador_rel','<option value="familiar">Familiar directo</option><option value="conyuge">Cónyuge / pareja</option><option value="amigo">Amigo/a</option><option value="colega">Colega / socio</option>')),_fg('Correo del fiador',_inp('wz_fiador_email','email','correo@ejemplo.com')))
+  +_row2(_fg('Dirección del fiador',_inp('wz_fiador_dir','text','Dirección completa...')),_fg('',''))
   +'</div>'
   +_s('Notas del Vendedor')
   +'<div style="margin-bottom:10px">'+_fg('Impresión general',
@@ -12348,7 +12367,7 @@ function _cliStep2(){
 }
 
 function _cliHydrate(){
-  var ids=['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
+  var ids=['wz_nom','wz_ci','wz_rif','wz_nacionalidad','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_dir_trabajo','wz_tel_trabajo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1ci','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2ci','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rif','wz_fiador_dir','wz_fiador_email','wz_fiador_rel','wz_obs'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null) el.value=WZ[id]; });
   ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_cashea_estado','wz_cashea_deuda','wz_cashea_total_compras','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
   var cashea = WZ.cashea||'no';
@@ -12369,6 +12388,8 @@ function _cliCollectStep(step){
   if(step===1){
     WZ.nom = WZ.wz_nom = g('wz_nom');
     WZ.ci = WZ.wz_ci = _wzFmtCedula(g('wz_ci'));
+    WZ.rif = WZ.wz_rif = g('wz_rif');
+    WZ.nacionalidad = WZ.wz_nacionalidad = g('wz_nacionalidad');
     WZ.tel = WZ.wz_tel = g('wz_tel');
     WZ.wa = WZ.wz_wa = g('wz_wa');
     WZ.email = WZ.wz_email = g('wz_email');
@@ -12390,6 +12411,8 @@ function _cliCollectStep(step){
     WZ.emp = _wzChipVal('wz_emp_g')||g('wz_emp')||WZ.emp||'';
     WZ.empresa = WZ.wz_empresa = g('wz_empresa');
     WZ.cargo = WZ.wz_cargo = g('wz_cargo');
+    WZ.dir_trabajo = WZ.wz_dir_trabajo = g('wz_dir_trabajo');
+    WZ.tel_trabajo = WZ.wz_tel_trabajo = g('wz_tel_trabajo');
     WZ.ing = parseFloat(g('wz_ing'))||WZ.ing||0;
     WZ.ifam = parseFloat(g('wz_ifam'))||WZ.ifam||0;
     WZ.ant = g('wz_ant')||WZ.ant||'';
@@ -12418,9 +12441,12 @@ function _cliCollectStep(step){
     WZ.fiador_nom = WZ.wz_fiador_nom = g('wz_fiador_nom');
     WZ.fiador_tel = WZ.wz_fiador_tel = g('wz_fiador_tel');
     WZ.fiador_ci = WZ.wz_fiador_ci = _wzFmtCedula(g('wz_fiador_ci'));
+    WZ.fiador_rif = WZ.wz_fiador_rif = g('wz_fiador_rif');
+    WZ.fiador_dir = WZ.wz_fiador_dir = g('wz_fiador_dir');
+    WZ.fiador_email = WZ.wz_fiador_email = g('wz_fiador_email');
     WZ.fiador_rel = WZ.wz_fiador_rel = g('wz_fiador_rel');
-    WZ.r1n = WZ.wz_r1n = g('wz_r1n'); WZ.r1t = WZ.wz_r1t = g('wz_r1t'); WZ.r1r = WZ.wz_r1r = g('wz_r1r'); WZ.r1obs = WZ.wz_r1obs = g('wz_r1obs');
-    WZ.r2n = WZ.wz_r2n = g('wz_r2n'); WZ.r2t = WZ.wz_r2t = g('wz_r2t'); WZ.r2r = WZ.wz_r2r = g('wz_r2r'); WZ.r2obs = WZ.wz_r2obs = g('wz_r2obs');
+    WZ.r1n = WZ.wz_r1n = g('wz_r1n'); WZ.r1ci = WZ.wz_r1ci = _wzFmtCedula(g('wz_r1ci')); WZ.r1t = WZ.wz_r1t = g('wz_r1t'); WZ.r1r = WZ.wz_r1r = g('wz_r1r'); WZ.r1obs = WZ.wz_r1obs = g('wz_r1obs');
+    WZ.r2n = WZ.wz_r2n = g('wz_r2n'); WZ.r2ci = WZ.wz_r2ci = _wzFmtCedula(g('wz_r2ci')); WZ.r2t = WZ.wz_r2t = g('wz_r2t'); WZ.r2r = WZ.wz_r2r = g('wz_r2r'); WZ.r2obs = WZ.wz_r2obs = g('wz_r2obs');
     WZ.impresion = _wzChipVal('wz_impresion_g')||'';
   }
 }
@@ -12486,6 +12512,8 @@ function _cliGuardar(){
     id: edId || ((S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1),
     nombre: WZ.nom||'',
     cedula: WZ.ci||'',
+    rif: WZ.rif||'',
+    nacionalidad: WZ.nacionalidad||'',
     tel: WZ.tel||'',
     wa: WZ.wa||WZ.tel||'',
     email: WZ.email||'',
@@ -12495,6 +12523,8 @@ function _cliGuardar(){
     trabajo: WZ.emp||'',
     empresa: WZ.empresa||'',
     cargo: WZ.cargo||'',
+    dir_trabajo: WZ.dir_trabajo||'',
+    tel_trabajo: WZ.tel_trabajo||'',
     ingreso: WZ.ing||0,
     ingreso_familiar: WZ.ifam||0,
     antiguedad: WZ.ant||'',
@@ -12525,9 +12555,12 @@ function _cliGuardar(){
     fiador_nom: WZ.fiador_nom||'',
     fiador_tel: WZ.fiador_tel||'',
     fiador_ci: WZ.fiador_ci||'',
+    fiador_rif: WZ.fiador_rif||'',
+    fiador_dir: WZ.fiador_dir||'',
+    fiador_email: WZ.fiador_email||'',
     fiador_rel: WZ.fiador_rel||'',
-    ref1:{nom:WZ.r1n||'',tel:WZ.r1t||'',rel:WZ.r1r||'',obs:WZ.r1obs||''},
-    ref2:{nom:WZ.r2n||'',tel:WZ.r2t||'',rel:WZ.r2r||'',obs:WZ.r2obs||''},
+    ref1:{nom:WZ.r1n||'',ci:WZ.r1ci||'',tel:WZ.r1t||'',rel:WZ.r1r||'',obs:WZ.r1obs||''},
+    ref2:{nom:WZ.r2n||'',ci:WZ.r2ci||'',tel:WZ.r2t||'',rel:WZ.r2r||'',obs:WZ.r2obs||''},
     docs_count: WZ.docsCount||0,
     documentos: _wzGetClientDocsArray(),
     impresion: WZ.impresion||'',
@@ -14639,6 +14672,8 @@ function _wzGuardar(){
     id: cliId,
     nombre: WZ.nom||'',
     cedula: WZ.ci||'',
+    rif: WZ.rif||'',
+    nacionalidad: WZ.nacionalidad||'',
     tel: WZ.tel||'',
     wa: WZ.wa||'',
     email: WZ.email||'',
@@ -14648,6 +14683,8 @@ function _wzGuardar(){
     trabajo: WZ.emp||'',
     empresa: WZ.empresa||'',
     cargo: WZ.cargo||'',
+    dir_trabajo: WZ.dir_trabajo||'',
+    tel_trabajo: WZ.tel_trabajo||'',
     ingreso: WZ.ing||0,
     ingreso_familiar: WZ.ifam||0,
     antiguedad: WZ.ant||'',
@@ -16778,240 +16815,256 @@ function _renderContratoArrendamiento(){
   var ctx = _docCtx();
   if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
   var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, V=ctx.V, Vm=ctx.Vm;
-  var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mMarca=ctx.mMarca, mSerialMotor=ctx.mSerialMotor, mSerialChasis=ctx.mSerialChasis, mGpsNum=ctx.mGpsNum;
+  var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mMarca=ctx.mMarca, mSerialMotor=ctx.mSerialMotor, mSerialChasis=ctx.mSerialChasis;
   var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
-  var rowStyle=ctx.rowStyle, tableHdr=ctx.tableHdr, clausH=ctx.clausH, p=ctx.p, li=ctx.li, lblCell=ctx.lblCell, valCell=ctx.valCell;
+  var clausH=ctx.clausH, p=ctx.p, li=ctx.li, lblCell=ctx.lblCell, valCell=ctx.valCell;
+
+  // Datos financieros
+  var nCuotas = c.totalCuotas || (c.plazo ? c.plazo*2 : 24);
+  var cuotaMonto = parseFloat(c.cuotaQ||c.cuota||0);
+  var iniMonto = parseFloat(c.ini||0);
+  var saldoCuotas = parseFloat(c.total||c.fin||0);
+  var fechaInicio = c.fecha ? new Date(c.fecha+'T12:00:00') : new Date();
+  var fechaPrimeraCuota = new Date(fechaInicio.getTime() + 15*24*60*60*1000);
+  var fechaUltimaCuota = new Date(fechaInicio.getTime() + nCuotas*15*24*60*60*1000);
+  var fmtFecha = function(d){ return d.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}); };
+  var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Datos del cliente
+  var cliNom = V(cli.nombre||c.cli);
+  var cliCi = V(cli.cedula);
+  var cliRif = V(cli.rif);
+  var cliNac = V(cli.nacionalidad||'Venezolano/a');
+  var cliTel = V(cli.tel);
+  var cliEmail = V(cli.email);
+  var cliDir = V(cli.dir||cli.ciudad||'');
+  var cliEmpresa = V(cli.empresa);
+  var cliCargo = V(cli.cargo);
+  var cliIngreso = V(cli.ingreso ? '$ '+parseFloat(cli.ingreso).toFixed(2) : '');
+  var cliTelTrab = V(cli.tel_trabajo);
+  var cliDirTrab = V(cli.dir_trabajo);
+
+  // Referencias
+  var r1 = cli.ref1||{};
+  var r2 = cli.ref2||{};
+
+  // Fiador
+  var tieneFiador = cli.fiador==='si' || cli.fiador===true;
+  var fiadNom = V(cli.fiador_nom);
+  var fiadCi = V(cli.fiador_ci);
+  var fiadRif = V(cli.fiador_rif);
+  var fiadDir = V(cli.fiador_dir);
+  var fiadTel = V(cli.fiador_tel);
+  var fiadEmail = V(cli.fiador_email);
+
+  // Línea en blanco helper
+  var blank = function(val, len){ len=len||30; var v=val||''; return v ? '<strong>'+v+'</strong>' : '<span style="display:inline-block;border-bottom:1px solid #888;min-width:'+(len*6)+'px;vertical-align:bottom">&nbsp;</span>'; };
 
   $('cz').innerHTML = `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
 
-    <!-- Header con logo y N° de contrato -->
+    <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div>${logoSrc?`<img src="${logoSrc}" style="height:46px;object-fit:contain">`:`<div style="font-size:22px;font-weight:900;color:${purple}">${empresaUp}</div>`}</div>
-      <div style="font-size:11px;color:#555"><strong>N° de Contrato:</strong> <span style="border-bottom:1px solid #888;padding:0 24px 2px">${c.id||'________'}</span></div>
+      <div style="font-size:11px;color:#555;text-align:right"><strong>N° de Contrato:</strong> ${c.id||'________'}<br><span style="color:#888">${hoy}</span></div>
     </div>
 
-    <!-- Título principal -->
+    <!-- Título -->
     <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #E8C842">
-      <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">CONTRATO DE ARRENDAMIENTO · CON OPCIÓN A COMPRA</div>
+      <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">CONTRATO DE VENTA DE MOTOCICLETA EN CUOTAS</div>
+      <div style="font-size:11px;opacity:.85;margin-top:3px;font-weight:600">CON RESERVA DE DOMINIO</div>
     </div>
 
-    <!-- Ciudad y Fecha -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 4px;font-size:11.5px">
-      <div><strong style="color:${purple}">Ciudad / Estado:</strong> ${emp.ciudad||'Caracas'}</div>
-      <div><strong style="color:${purple}">Fecha:</strong> ${hoy}</div>
-    </div>
-    <div style="border-bottom:1px solid #ccc;margin-bottom:6px"></div>
+    <!-- Intro partes -->
+    <p style="${p};margin-top:14px">Entre <strong>${empresaUp}</strong>, sociedad mercantil domiciliada en la República Bolivariana de Venezuela, identificada con RIF <strong>${V(emp.rif)||'J-50829589-7'}</strong>, quien en lo sucesivo se denominará <strong>LA VENDEDORA</strong>; y por la otra parte, el ciudadano/la ciudadana <strong>${cliNom||blank(null,30)}</strong>, de nacionalidad ${blank(cliNac,16)}, mayor de edad, titular de la cédula de identidad N° ${blank(cliCi,14)}, RIF N° ${blank(cliRif,14)}, domiciliado(a) en ${blank(cliDir,35)}, teléfono N° ${blank(cliTel,14)}, correo electrónico ${blank(cliEmail,24)}, quien en lo sucesivo se denominará <strong>EL COMPRADOR</strong>; se ha convenido celebrar el presente Contrato de Venta de Motocicleta en Cuotas con Reserva de Dominio, sujeto a las siguientes cláusulas:</p>
 
-    <!-- CLÁUSULA PRIMERA -->
-    <h3 style="${clausH}">CLÁUSULA PRIMERA: DE LAS PARTES</h3>
-    <p style="${p}">El presente contrato de arrendamiento con opción a compra se celebra entre las siguientes partes:</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
-      <tr>
-        <th style="${tableHdr};width:50%">EL ARRENDADOR</th>
-        <th style="${tableHdr};width:50%">EL ARRENDATARIO</th>
-      </tr>
-      <tr>
-        <td style="${rowStyle};vertical-align:top">
-          <div style="margin-bottom:5px"><strong>Denominación:</strong> ${empresaUp}</div>
-          <div style="margin-bottom:5px"><strong>RIF:</strong> ${V(emp.rif)}</div>
-          <div style="margin-bottom:5px"><strong>Domicilio:</strong> ${V(emp.direccion)}</div>
-          <div><strong>Teléfono:</strong> ${V(emp.tel)}</div>
-        </td>
-        <td style="${rowStyle};vertical-align:top">
-          <div style="margin-bottom:5px"><strong>Nombre y Apellido:</strong> ${V(cli.nombre||c.cli)}</div>
-          <div style="margin-bottom:5px"><strong>Cédula de Identidad:</strong> ${V(cli.cedula)}</div>
-          <div style="margin-bottom:5px"><strong>Teléfono:</strong> ${V(cli.tel)}</div>
-          <div style="margin-bottom:5px"><strong>Dirección:</strong> ${V(cli.dir||cli.ciudad)}</div>
-          <div><strong>Correo electrónico:</strong> ${V(cli.email)}</div>
-        </td>
-      </tr>
+    <!-- PRIMERA -->
+    <h3 style="${clausH}">PRIMERA: OBJETO</h3>
+    <p style="${p}">LA VENDEDORA da en venta a EL COMPRADOR, quien acepta comprar, una motocicleta identificada de la siguiente manera:</p>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Marca:</td><td style="${valCell}">${blank(mMarca)}</td><td style="${lblCell}">Modelo:</td><td style="${valCell}">${blank(mModelo)}</td></tr>
+      <tr><td style="${lblCell}">Año:</td><td style="${valCell}">${blank(mAnio)}</td><td style="${lblCell}">Color:</td><td style="${valCell}">${blank(mColor)}</td></tr>
+      <tr><td style="${lblCell}">Serial de carrocería / VIN:</td><td style="${valCell}">${blank(mSerialChasis)}</td><td style="${lblCell}">Serial de motor:</td><td style="${valCell}">${blank(mSerialMotor)}</td></tr>
+      <tr><td style="${lblCell}">Placa (si aplica):</td><td style="${valCell}">${blank(mPlaca)}</td><td style="${lblCell}">Condición:</td><td style="${valCell}">Nueva</td></tr>
     </table>
 
-    <!-- CLÁUSULA SEGUNDA -->
-    <h3 style="${clausH}">CLÁUSULA SEGUNDA: OBJETO DEL CONTRATO</h3>
-    <p style="${p}">EL ARRENDADOR da en arrendamiento con opción a compra a EL ARRENDATARIO, quien acepta en dicho carácter, una motocicleta de las siguientes características:</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
-      <tr><td style="${lblCell}">Marca:</td><td style="${valCell}">${V(mMarca)}</td><td style="${lblCell}">Modelo:</td><td style="${valCell}">${V(mModelo)}</td></tr>
-      <tr><td style="${lblCell}">Color:</td><td style="${valCell}">${V(mColor)}</td><td style="${lblCell}">Año:</td><td style="${valCell}">${V(mAnio)}</td></tr>
-      <tr><td style="${lblCell}">Serial de Motor:</td><td style="${valCell}">${V(mSerialMotor)}</td><td style="${lblCell}">Serial de Chasis:</td><td style="${valCell}">${V(mSerialChasis)}</td></tr>
-      <tr><td style="${lblCell}">Placa:</td><td style="${valCell}">${V(mPlaca)}</td><td style="${lblCell}">N° de GPS:</td><td style="${valCell}">${V(mGpsNum)}</td></tr>
+    <!-- SEGUNDA -->
+    <h3 style="${clausH}">SEGUNDA: PRECIO Y CONDICIONES DE PAGO</h3>
+    <p style="${p}">El precio y las condiciones de pago de la motocicleta serán los siguientes:</p>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Inicial (USD $):</td><td style="${valCell};font-weight:700">${blank(iniMonto?'$ '+iniMonto.toFixed(2):null)}</td><td style="${lblCell}">Cuotas quincenales (USD $):</td><td style="${valCell};font-weight:700">${blank(cuotaMonto?'$ '+cuotaMonto.toFixed(2):null)}</td></tr>
+      <tr><td style="${lblCell}">Número de cuotas:</td><td style="${valCell};font-weight:700">${blank(nCuotas?String(nCuotas):null)}</td><td style="${lblCell}">Precio total motocicleta:</td><td style="${valCell};font-weight:700">${blank(c.precio?'$ '+parseFloat(c.precio).toFixed(2):null)}</td></tr>
     </table>
+    <p style="${p}">Todas las obligaciones de pago se expresan y serán cumplidas en <strong>Dólares de los Estados Unidos de América (USD)</strong>, salvo acuerdo expreso por escrito.</p>
 
-    <!-- CLÁUSULA TERCERA -->
-    <h3 style="${clausH}">CLÁUSULA TERCERA: CONDICIONES ECONÓMICAS DEL ARRENDAMIENTO</h3>
-    <p style="${p}">Las partes acuerdan las siguientes condiciones económicas:</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
-      <tr>
-        <th style="${tableHdr};text-align:left">Concepto</th>
-        <th style="${tableHdr};text-align:right;width:30%">Monto (USD)</th>
-      </tr>
-      <tr><td style="${valCell}">Precio de referencia de la motocicleta:</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.precio)}</td></tr>
-      <tr><td style="${valCell}">Depósito inicial (pago al momento de la firma):</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.ini)}</td></tr>
-      <tr><td style="${valCell}">Monto sujeto a canon de arrendamiento:</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.fin)}</td></tr>
-      <tr><td style="${valCell}">Canon quincenal de arrendamiento (24 cuotas):</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.cuotaQ||c.cuota)}</td></tr>
-      <tr><td style="${valCell}">Canon total del período de arrendamiento:</td><td style="${valCell};text-align:right;font-weight:700">${Vm(c.total)}</td></tr>
-      <tr style="background:${purpleLight}"><td style="padding:9px 10px;font-size:11.5px;font-weight:800;color:${purpleDark}">Precio de ejercicio de la opción a compra</td><td style="padding:9px 10px;text-align:right;font-weight:900;color:${purpleDark}">$ 1.00</td></tr>
+    <!-- TERCERA -->
+    <h3 style="${clausH}">TERCERA: SALDO A PAGAR</h3>
+    <p style="${p}">Luego del pago inicial indicado en la cláusula anterior, EL COMPRADOR se obliga a pagar el saldo pendiente mediante las cuotas quincenales pactadas.</p>
+    <p style="${p}"><strong>Saldo total a pagar en cuotas: USD $ ${blank(saldoCuotas?saldoCuotas.toFixed(2):null,16)}</strong></p>
+
+    <!-- CUARTA -->
+    <h3 style="${clausH}">CUARTA: FORMA DE PAGO EN CUOTAS</h3>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Número total de cuotas:</td><td style="${valCell}">${blank(nCuotas?String(nCuotas):null)}</td><td style="${lblCell}">Monto de cada cuota quincenal:</td><td style="${valCell};font-weight:700">${blank(cuotaMonto?'$ '+cuotaMonto.toFixed(2):null)}</td></tr>
+      <tr><td style="${lblCell}">Fecha primera cuota:</td><td style="${valCell}">${blank(fmtFecha(fechaPrimeraCuota))}</td><td style="${lblCell}">Fecha última cuota (est.):</td><td style="${valCell}">${blank(fmtFecha(fechaUltimaCuota))}</td></tr>
+      <tr><td style="${lblCell}">Día(s) de pago:</td><td style="${valCell}" colspan="3">Cada quince (15) días a partir de la fecha de suscripción</td></tr>
     </table>
-    <p style="${p};margin-top:10px">Todos los pagos deberán realizarse <strong>exclusivamente en Dólares Americanos (USD)</strong>. No se aceptarán pagos en moneda nacional, ni ninguna otra divisa. Los cánones se cancelarán de manera quincenal, contados a partir de la fecha de suscripción del presente contrato.</p>
+    <p style="${p}">El incumplimiento en el pago oportuno de cualquiera de las cuotas dará derecho a LA VENDEDORA a ejercer las acciones previstas en el presente contrato y en la legislación aplicable.</p>
 
-    <!-- CRONOGRAMA DE PAGOS -->
+    <!-- CRONOGRAMA -->
     <h3 style="${clausH}">CRONOGRAMA DE PAGOS QUINCENALES</h3>
-    <p style="${p}">EL ARRENDATARIO se obliga a cancelar las siguientes cuotas quincenales en las fechas y montos aquí establecidos:</p>
     ${(function(){
-      var startFecha = c.fecha || new Date().toISOString().split('T')[0];
-      var start = new Date(startFecha+'T12:00:00');
-      var nCuotas = c.totalCuotas || (c.plazo?c.plazo*2:24);
-      var cuotaMonto = parseFloat(c.cuotaQ||c.cuota||0);
-      var cols = 4;
-      var perCol = Math.ceil(nCuotas/cols);
-      var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-      var cellWrap = 'display:flex;align-items:center;gap:7px;padding:7px 9px;background:#fff;border:1px solid #E5DDF5;border-radius:5px';
-      var numBadge = 'display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:'+purple+';color:#fff;font-size:10px;font-weight:800;border-radius:50%;flex-shrink:0';
-      var fechaStyle = 'font-size:10.5px;color:#444;font-weight:600;flex:1;line-height:1.2';
-      var montoStyle = 'font-size:10.5px;font-weight:800;color:'+purpleDark+';white-space:nowrap';
-      var html = '<div style="background:'+purpleLight+';border:1px solid #DDD2F5;border-radius:6px;padding:10px">';
-      html += '<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:6px">';
+      var cols=4; var cuotaMonto2=cuotaMonto;
+      var cellWrap='display:flex;align-items:center;gap:7px;padding:7px 9px;background:#fff;border:1px solid #E5DDF5;border-radius:5px';
+      var numBadge='display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:'+purple+';color:#fff;font-size:10px;font-weight:800;border-radius:50%;flex-shrink:0';
+      var fechaStyle='font-size:10.5px;color:#444;font-weight:600;flex:1;line-height:1.2';
+      var montoStyle='font-size:10.5px;font-weight:800;color:'+purpleDark+';white-space:nowrap';
+      var html='<div style="background:'+purpleLight+';border:1px solid #DDD2F5;border-radius:6px;padding:10px">';
+      html+='<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:6px">';
       for(var i=0;i<nCuotas;i++){
-        var fd = new Date(start.getTime()+((i+1)*15*24*60*60*1000));
-        var d = fd.getDate();
-        var m = meses[fd.getMonth()];
-        var y = String(fd.getFullYear()).slice(-2);
-        var fechaStr = d+' '+m+' '+y;
-        html += '<div style="'+cellWrap+'">';
-        html += '<span style="'+numBadge+'">'+(i+1)+'</span>';
-        html += '<span style="'+fechaStyle+'">'+fechaStr+'</span>';
-        html += '<span style="'+montoStyle+'">$'+cuotaMonto.toFixed(2)+'</span>';
-        html += '</div>';
+        var fd=new Date(fechaInicio.getTime()+((i+1)*15*24*60*60*1000));
+        var d=fd.getDate(), m=meses[fd.getMonth()], y=String(fd.getFullYear()).slice(-2);
+        html+='<div style="'+cellWrap+'">';
+        html+='<span style="'+numBadge+'">'+(i+1)+'</span>';
+        html+='<span style="'+fechaStyle+'">'+d+' '+m+' '+y+'</span>';
+        html+='<span style="'+montoStyle+'">$'+cuotaMonto2.toFixed(2)+'</span>';
+        html+='</div>';
       }
-      // Completar grilla si no es múltiplo
-      var restantes = (cols*perCol) - nCuotas;
-      for(var r=0;r<restantes;r++){
-        html += '<div style="padding:7px 9px;background:rgba(255,255,255,0.3);border:1px dashed #D5C9F0;border-radius:5px;min-height:22px"></div>';
-      }
-      html += '</div>';
-      html += '</div>';
-      var fechaInicioStr = c.fecha?new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}):'';
-      html += '<p style="font-size:10.5px;color:#666;margin:8px 0 0;font-style:italic;text-align:center">Fechas estimadas a partir del inicio del contrato ('+fechaInicioStr+'). Las cuotas vencen cada quince (15) días.</p>';
+      html+='</div></div>';
+      html+='<p style="font-size:10.5px;color:#666;margin:8px 0 0;font-style:italic;text-align:center">Fechas estimadas a partir del inicio del contrato ('+fmtFecha(fechaInicio)+'). Las cuotas vencen cada quince (15) días.</p>';
       return html;
     })()}
 
-    <!-- CLÁUSULA CUARTA -->
-    <h3 style="${clausH}">CLÁUSULA CUARTA: PLAZO DEL ARRENDAMIENTO</h3>
-    <p style="${p}">El presente contrato tendrá una duración de <strong>doce (12) meses</strong>, equivalentes a <strong>veinticuatro (24) cuotas quincenales</strong> consecutivas, contadas a partir de la fecha de suscripción. Una vez canceladas la totalidad de las cuotas, EL ARRENDATARIO podrá ejercer la opción a compra descrita en la Cláusula Séptima.</p>
+    <!-- QUINTA -->
+    <h3 style="${clausH}">QUINTA: RESERVA DE DOMINIO</h3>
+    <p style="${p}">LA VENDEDORA se reserva el dominio y propiedad de la motocicleta descrita en la Cláusula Primera hasta tanto EL COMPRADOR haya pagado la totalidad del precio, incluyendo cuotas, cargos, penalidades, gastos o cualquier otra obligación pendiente derivada de este contrato. EL COMPRADOR reconoce que adquirirá la propiedad plena de la motocicleta únicamente una vez pagada la última cuota y cumplidas todas sus obligaciones contractuales.</p>
 
-    <!-- CLÁUSULA QUINTA -->
-    <h3 style="${clausH}">CLÁUSULA QUINTA: OBLIGACIONES DE EL ARRENDATARIO</h3>
-    <div style="padding-left:4px">
-      <p style="${li}">1. Pagar puntualmente los cánones de arrendamiento en las fechas y montos establecidos.</p>
-      <p style="${li}">2. Usar la motocicleta exclusivamente para fines lícitos y personales, dentro del territorio de la República Bolivariana de Venezuela.</p>
-      <p style="${li}">3. Mantener la motocicleta en buen estado de funcionamiento y conservación, corriendo por su cuenta los gastos de mantenimiento ordinario.</p>
-      <p style="${li}">4. No ceder, subarrendar, ni transferir a terceros el uso del vehículo arrendado sin previa autorización escrita de EL ARRENDADOR.</p>
-      <p style="${li}">5. Permitir a EL ARRENDADOR o a sus representantes verificar el estado de la motocicleta cuando lo considere conveniente.</p>
-      <p style="${li}">6. No realizar modificaciones estructurales ni mecánicas al vehículo sin autorización escrita de EL ARRENDADOR.</p>
-      <p style="${li}">7. Mantener activo y en óptimas condiciones el dispositivo GPS instalado. Cualquier manipulación o interferencia del sistema GPS será considerada incumplimiento grave del contrato.</p>
-      <p style="${li}">8. Notificar de inmediato a EL ARRENDADOR ante cualquier accidente, robo, avería mayor o circunstancia que afecte el estado del vehículo.</p>
-      <p style="${li}">9. Portar en todo momento el presente contrato como documento de uso del vehículo.</p>
-    </div>
+    <!-- SEXTA -->
+    <h3 style="${clausH}">SEXTA: ENTREGA Y RIESGO</h3>
+    <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha ${blank(hoy,20)}. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pérdida, robo, hurto, daño, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
 
-    <!-- CLÁUSULA SEXTA -->
-    <h3 style="${clausH}">CLÁUSULA SEXTA: MORA Y PENALIDADES</h3>
-    <div style="background:#FFF8E8;border:1px solid #E8C842;border-radius:4px;padding:10px 14px">
-      <p style="${p};margin:0">Si EL ARRENDATARIO se atrasa en el pago del canon por más de <strong>cuatro (4) días</strong> contados desde la fecha de vencimiento, deberá cancelar un recargo de mora equivalente al <strong>5% sobre el canon quincenal vencido</strong>, adicional al monto adeudado. En caso de atraso superior a <strong>sesenta (60) días</strong>, EL ARRENDADOR podrá dar por resuelto el contrato de pleno derecho conforme a lo establecido en la Cláusula Novena.</p>
-    </div>
+    <!-- SÉPTIMA -->
+    <h3 style="${clausH}">SÉPTIMA: USO, CONSERVACIÓN Y PROHIBICIONES</h3>
+    <p style="${p}">Mientras exista saldo pendiente de pago, EL COMPRADOR se obliga a:</p>
+    <ul style="margin:6px 0 6px 18px;padding:0">
+      <li style="${li}">Usar la motocicleta de forma diligente y conforme a la ley.</li>
+      <li style="${li}">Mantenerla en buen estado de funcionamiento y conservación.</li>
+      <li style="${li}">No vender, ceder, donar, traspasar, gravar, arrendar ni entregar la motocicleta a terceros sin autorización previa y por escrito de LA VENDEDORA.</li>
+      <li style="${li}">No utilizarla para actividades ilícitas.</li>
+      <li style="${li}">Informar inmediatamente a LA VENDEDORA en caso de accidente, robo, hurto, retención, decomiso, daño grave o cualquier situación que afecte la motocicleta.</li>
+      <li style="${li}">Permitir inspecciones razonables de la motocicleta cuando LA VENDEDORA lo solicite.</li>
+    </ul>
 
-    <!-- CLÁUSULA SÉPTIMA -->
-    <h3 style="${clausH}">CLÁUSULA SÉPTIMA: OPCIÓN A COMPRA</h3>
-    <p style="${p}">Una vez cancelados los <strong>veinticuatro (24) cánones quincenales</strong> sin resolución contractual, EL ARRENDATARIO adquirirá el derecho de ejercer la opción a compra mediante el pago simbólico de <strong>Un Dólar Americano (USD 1.00)</strong>. EL ARRENDADOR realizará el traspaso legal del vehículo dentro de los <strong>treinta (30) días hábiles</strong> siguientes al ejercicio de dicha opción, previo cumplimiento de los trámites ante el INTT.</p>
+    <!-- OCTAVA -->
+    <h3 style="${clausH}">OCTAVA: MORA</h3>
+    <p style="${p}">EL COMPRADOR incurrirá en mora de pleno derecho, sin necesidad de notificación judicial o extrajudicial, por el solo vencimiento de cualquiera de las cuotas sin que haya sido pagada oportunamente. En caso de mora, EL COMPRADOR deberá pagar un cargo por mora equivalente al <strong>dos coma cinco por ciento mensual (2,5% mensual)</strong> calculado sobre el monto vencido y no pagado. La aceptación de pagos tardíos no implicará renuncia a los derechos de LA VENDEDORA ni modificación de las fechas de pago originalmente pactadas.</p>
 
-    <!-- CLÁUSULA OCTAVA -->
-    <h3 style="${clausH}">CLÁUSULA OCTAVA: SISTEMA DE LOCALIZACIÓN GPS</h3>
-    <p style="${p}">La motocicleta podría contar con un dispositivo GPS instalado y activo. EL ARRENDATARIO autoriza expresamente el monitoreo continuo de la ubicación del vehículo durante toda la vigencia del contrato. Cualquier intento de remoción, bloqueo o desactivación del GPS facultará a EL ARRENDADOR para resolver el contrato de forma inmediata y recuperar el vehículo sin necesidad de procedimiento judicial previo.</p>
+    <!-- NOVENA -->
+    <h3 style="${clausH}">NOVENA: INCUMPLIMIENTO</h3>
+    <p style="${p}">Se considerará incumplimiento grave: falta de pago de una o más cuotas; suministro de información falsa; venta, cesión u ocultamiento no autorizado de la motocicleta; uso para actividades ilícitas; daño grave o abandono. En caso de incumplimiento, LA VENDEDORA podrá exigir el pago inmediato del saldo pendiente, resolver el contrato, solicitar la restitución de la motocicleta y reclamar daños, perjuicios, gastos de cobranza y honorarios profesionales.</p>
 
-    <!-- CLÁUSULA NOVENA -->
-    <h3 style="${clausH}">CLÁUSULA NOVENA: RESOLUCIÓN DEL CONTRATO Y RECUPERACIÓN DEL VEHÍCULO</h3>
-    <p style="${p}">EL ARRENDADOR podrá resolver el contrato y recuperar la motocicleta de forma inmediata, sin notificación previa ni intervención judicial, en cualquiera de los siguientes supuestos:</p>
-    <div style="padding-left:4px">
-      <p style="${li}">1. Falta de pago de cuatro (4) o más cánones quincenales consecutivos.</p>
-      <p style="${li}">2. Uso del vehículo para actividades ilícitas.</p>
-      <p style="${li}">3. Cesión no autorizada del uso del vehículo a terceros.</p>
-      <p style="${li}">4. Manipulación o desactivación del sistema GPS.</p>
-      <p style="${li}">5. Traslado del vehículo fuera del territorio nacional sin autorización.</p>
-      <p style="${li}">6. Cualquier otro incumplimiento grave de las obligaciones establecidas en este contrato.</p>
-    </div>
-    <p style="${p}">EL ARRENDATARIO acepta que, en caso de resolución por incumplimiento, todos los cánones pagados quedarán a favor de EL ARRENDADOR como indemnización, renunciando a cualquier reclamación al respecto.</p>
+    <!-- DÉCIMA -->
+    <h3 style="${clausH}">DÉCIMA: RESTITUCIÓN DE LA MOTOCICLETA</h3>
+    <p style="${p}">En caso de resolución del contrato por incumplimiento, EL COMPRADOR se obliga a restituir inmediatamente la motocicleta a LA VENDEDORA en el lugar que esta indique. La restitución no limitará el derecho de LA VENDEDORA a reclamar cuotas vencidas, cargos por mora, daños, gastos, honorarios legales o cualquier otra cantidad adeudada.</p>
 
-    <!-- CLÁUSULA DÉCIMA -->
-    <h3 style="${clausH}">CLÁUSULA DÉCIMA: FIADOR SOLIDARIO</h3>
-    <p style="${p}">EL ARRENDATARIO presenta como fiador y principal pagador, garante solidario e indivisible de todas las obligaciones contraídas en el presente contrato:</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
-      <tr><td style="${lblCell}">Nombre y Apellido:</td><td style="${valCell}">${V(cli.fiador_nom)}</td></tr>
-      <tr><td style="${lblCell}">Cédula de Identidad:</td><td style="${valCell}">${V(cli.fiador_ci)}</td></tr>
-      <tr><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${V(cli.fiador_tel)}</td></tr>
-      <tr><td style="${lblCell}">Dirección:</td><td style="${valCell}">${V(cli.fiador_dir)}</td></tr>
-      <tr><td style="${lblCell}">Parentesco / Relación:</td><td style="${valCell}">${V(cli.fiador_rel)}</td></tr>
+    <!-- DÉCIMA PRIMERA -->
+    <h3 style="${clausH}">DÉCIMA PRIMERA: GASTOS, MULTAS E IMPUESTOS</h3>
+    <p style="${p}">Serán por cuenta exclusiva de EL COMPRADOR, desde la fecha de entrega: gastos de mantenimiento y reparación; combustible, lubricantes y repuestos; multas, infracciones y sanciones administrativas; impuestos, tasas o aranceles relacionados con el uso o circulación de la motocicleta; y gastos de cobranza, recuperación o traslado en caso de incumplimiento.</p>
+
+    <!-- DÉCIMA SEGUNDA -->
+    <h3 style="${clausH}">DÉCIMA SEGUNDA: DECLARACIONES DE EL COMPRADOR</h3>
+    <p style="${p}">EL COMPRADOR declara que: ha inspeccionado la motocicleta y la recibe a su entera satisfacción; conoce y acepta su estado físico, mecánico y legal; tiene capacidad económica suficiente para cumplir con las cuotas pactadas; la información suministrada a LA VENDEDORA es verdadera, completa y verificable; y autoriza a LA VENDEDORA a verificar sus datos personales, laborales, comerciales, referencias y capacidad de pago.</p>
+
+    <!-- DÉCIMA TERCERA -->
+    <h3 style="${clausH}">DÉCIMA TERCERA: DATOS Y REFERENCIAS DE EL COMPRADOR</h3>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Dirección de habitación:</td><td style="${valCell}" colspan="3">${blank(cliDir,40)}</td></tr>
+      <tr><td style="${lblCell}">Dirección de trabajo:</td><td style="${valCell}" colspan="3">${blank(cliDirTrab,40)}</td></tr>
+      <tr><td style="${lblCell}">Empresa donde trabaja:</td><td style="${valCell}">${blank(cliEmpresa)}</td><td style="${lblCell}">Cargo:</td><td style="${valCell}">${blank(cliCargo)}</td></tr>
+      <tr><td style="${lblCell}">Ingreso mensual aprox.:</td><td style="${valCell}">${blank(cliIngreso)}</td><td style="${lblCell}">Teléfono laboral:</td><td style="${valCell}">${blank(cliTelTrab)}</td></tr>
+      <tr><td style="${lblCell}">Teléfono personal:</td><td style="${valCell}">${blank(cliTel)}</td><td style="${lblCell}">Correo electrónico:</td><td style="${valCell}">${blank(cliEmail)}</td></tr>
+    </table>
+    <p style="${p};font-weight:700;margin-top:10px">Referencia personal 1:</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Nombre:</td><td style="${valCell}">${blank(V(r1.nom))}</td><td style="${lblCell}">Cédula:</td><td style="${valCell}">${blank(V(r1.ci))}</td></tr>
+      <tr><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${blank(V(r1.tel))}</td><td style="${lblCell}">Relación:</td><td style="${valCell}">${blank(V(r1.rel))}</td></tr>
+    </table>
+    <p style="${p};font-weight:700">Referencia personal 2:</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Nombre:</td><td style="${valCell}">${blank(V(r2.nom))}</td><td style="${lblCell}">Cédula:</td><td style="${valCell}">${blank(V(r2.ci))}</td></tr>
+      <tr><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${blank(V(r2.tel))}</td><td style="${lblCell}">Relación:</td><td style="${valCell}">${blank(V(r2.rel))}</td></tr>
     </table>
 
-    <!-- CLÁUSULA DÉCIMA PRIMERA -->
-    <h3 style="${clausH}">CLÁUSULA DÉCIMA PRIMERA: JURISDICCIÓN Y DOMICILIO ESPECIAL</h3>
-    <p style="${p}">Para todos los efectos legales, las partes eligen domicilio especial en la ciudad de <strong>${emp.ciudad||'Caracas'}</strong>, sometiéndose a la jurisdicción de sus tribunales competentes, renunciando a cualquier otro fuero que pudiera corresponderles.</p>
+    <!-- DÉCIMA CUARTA -->
+    <h3 style="${clausH}">DÉCIMA CUARTA: FIADOR O GARANTE${tieneFiador?'':' (SI APLICA)'}</h3>
+    ${tieneFiador ? `
+    <p style="${p}">En caso de requerirse fiador, comparece el ciudadano/la ciudadana:</p>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Nombre:</td><td style="${valCell}">${blank(fiadNom)}</td><td style="${lblCell}">Cédula:</td><td style="${valCell}">${blank(fiadCi)}</td></tr>
+      <tr><td style="${lblCell}">RIF:</td><td style="${valCell}">${blank(fiadRif)}</td><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${blank(fiadTel)}</td></tr>
+      <tr><td style="${lblCell}">Dirección:</td><td style="${valCell}" colspan="3">${blank(fiadDir,40)}</td></tr>
+      <tr><td style="${lblCell}">Correo:</td><td style="${valCell}" colspan="3">${blank(fiadEmail,30)}</td></tr>
+    </table>
+    <p style="${p}">El fiador se constituye en responsable solidario de todas las obligaciones asumidas por EL COMPRADOR bajo el presente contrato.</p>
+    <p style="${p}">Firma del fiador: <span style="display:inline-block;border-bottom:1px solid #888;min-width:200px;vertical-align:bottom">&nbsp;</span></p>
+    ` : `
+    <p style="${p}">Nombre: <span style="display:inline-block;border-bottom:1px solid #888;min-width:200px;vertical-align:bottom">&nbsp;</span> &nbsp;&nbsp; Cédula: <span style="display:inline-block;border-bottom:1px solid #888;min-width:140px;vertical-align:bottom">&nbsp;</span></p>
+    <p style="${p}">RIF: <span style="display:inline-block;border-bottom:1px solid #888;min-width:160px;vertical-align:bottom">&nbsp;</span> &nbsp;&nbsp; Dirección: <span style="display:inline-block;border-bottom:1px solid #888;min-width:200px;vertical-align:bottom">&nbsp;</span></p>
+    <p style="${p}">Teléfono: <span style="display:inline-block;border-bottom:1px solid #888;min-width:140px;vertical-align:bottom">&nbsp;</span> &nbsp;&nbsp; Correo: <span style="display:inline-block;border-bottom:1px solid #888;min-width:180px;vertical-align:bottom">&nbsp;</span></p>
+    <p style="${p}">Firma del fiador: <span style="display:inline-block;border-bottom:1px solid #888;min-width:200px;vertical-align:bottom">&nbsp;</span></p>
+    `}
 
-    <!-- CLÁUSULA DÉCIMA SEGUNDA -->
-    <h3 style="${clausH}">CLÁUSULA DÉCIMA SEGUNDA: ACEPTACIÓN Y CONFORMIDAD</h3>
-    <p style="${p}">Las partes declaran haber leído, entendido y aceptado en su totalidad los términos del presente contrato, el cual se firma en dos (2) ejemplares de igual valor e igual tenor, en la ciudad y fecha indicadas al inicio del mismo.</p>
+    <!-- DÉCIMA QUINTA -->
+    <h3 style="${clausH}">DÉCIMA QUINTA: NOTIFICACIONES</h3>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+      <tr><td style="${lblCell}">Correo de EL COMPRADOR:</td><td style="${valCell}">${blank(cliEmail,25)}</td><td style="${lblCell}">Tel / WhatsApp EL COMPRADOR:</td><td style="${valCell}">${blank(cliTel,14)}</td></tr>
+      <tr><td style="${lblCell}">Correo de LA VENDEDORA:</td><td style="${valCell}">${blank(V(emp.email),25)}</td><td style="${lblCell}">Tel / WhatsApp LA VENDEDORA:</td><td style="${valCell}">${blank(V(emp.tel),14)}</td></tr>
+    </table>
 
-    <!-- Firmas -->
-    <div style="margin-top:28px;border-top:2px solid ${purple};padding-top:18px">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
-        <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
-          <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:56px;text-align:center">EL ARRENDADOR</div>
-          <div style="border-top:1px solid #333;padding-top:6px;font-size:10.5px;text-align:center">
-            <strong>${empresaUp}</strong><br>
-            Firma y sello
-          </div>
-        </div>
-        <div style="background:${purpleLight};padding:14px 10px;border-radius:4px">
-          <div style="background:${purple};color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL ARRENDATARIO</div>
-          <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
-            <div style="text-align:center;padding-top:46px">
-              <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
-                Firma<br>
-                Nombre: ${cli.nombre||c.cli||''}<br>
-                C.I.: ${cli.cedula||''}
-              </div>
-            </div>
-            <div>
-              <div style="border:1px dashed #666;background:#fff;height:70px;border-radius:3px"></div>
-              <div style="text-align:center;font-size:9px;color:#555;margin-top:3px;font-weight:700">HUELLA</div>
-            </div>
-          </div>
-        </div>
-        <div style="background:#F6EEFC;padding:14px 10px;border-radius:4px">
-          <div style="background:#8B5BC9;color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL FIADOR</div>
-          <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
-            <div style="text-align:center;padding-top:46px">
-              <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
-                Firma<br>
-                Nombre: ${cli.fiador_nom||''}<br>
-                C.I.: ${cli.fiador_ci||''}
-              </div>
-            </div>
-            <div>
-              <div style="border:1px dashed #666;background:#fff;height:70px;border-radius:3px"></div>
-              <div style="text-align:center;font-size:9px;color:#555;margin-top:3px;font-weight:700">HUELLA</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- DÉCIMA SEXTA -->
+    <h3 style="${clausH}">DÉCIMA SEXTA: JURISDICCIÓN</h3>
+    <p style="${p}">Para todos los efectos derivados del presente contrato, las partes eligen como domicilio especial, excluyente de cualquier otro, la ciudad de <strong>${emp.ciudad||'Caracas'}</strong>, República Bolivariana de Venezuela, a cuyos tribunales competentes declaran someterse.</p>
 
-    <!-- Footer -->
-    <div style="margin-top:22px;padding-top:10px;border-top:1px solid #ccc;text-align:center;font-size:9.5px;color:#888">
-      ${empresaUp} · Arrendamiento con Opción a Compra de Motocicletas · Documento válido con firma de ambas partes · Venezuela
+    <!-- DÉCIMA SÉPTIMA -->
+    <h3 style="${clausH}">DÉCIMA SÉPTIMA: ACEPTACIÓN</h3>
+    <p style="${p}">Leído el presente contrato por las partes, y estando conformes con su contenido, lo firman en dos ejemplares de un mismo tenor y a un solo efecto, en la ciudad de <strong>${emp.ciudad||'Caracas'}</strong>, a los _____ días del mes de __________________ de ______.</p>
+
+    <!-- FIRMAS -->
+    <table style="width:100%;border-collapse:collapse;margin-top:32px;border:1px solid #EAE5F7">
+      <tr>
+        <th style="background:${purple};color:#fff;padding:10px;text-align:center;width:50%;font-size:12px">LA VENDEDORA<br>${empresaUp}<br>RIF ${V(emp.rif)||'J-50829589-7'}</th>
+        <th style="background:${purple};color:#fff;padding:10px;text-align:center;width:50%;font-size:12px">EL COMPRADOR</th>
+      </tr>
+      <tr>
+        <td style="padding:40px 20px 16px;vertical-align:bottom;border-right:1px solid #EAE5F7">
+          <div style="border-top:1px solid #444;padding-top:6px;font-size:11px;color:#555;text-align:center">Firma autorizada</div>
+        </td>
+        <td style="padding:16px 20px;vertical-align:bottom">
+          <div style="font-size:11px;margin-bottom:4px">Nombre: <strong>${cliNom}</strong></div>
+          <div style="font-size:11px;margin-bottom:4px">C.I.: <strong>${cliCi}</strong></div>
+          <div style="font-size:11px;margin-bottom:20px">RIF: <strong>${cliRif}</strong></div>
+          <div style="border-top:1px solid #444;padding-top:6px;font-size:11px;color:#555;text-align:center">Firma del comprador</div>
+        </td>
+      </tr>
+      ${tieneFiador ? `<tr>
+        <td colspan="2" style="padding:16px 20px;border-top:1px solid #EAE5F7">
+          <div style="font-weight:700;font-size:11px;margin-bottom:8px;color:${purple}">FIADOR / GARANTE</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:20px">
+            <div>Nombre: <strong>${fiadNom}</strong></div>
+            <div>C.I.: <strong>${fiadCi}</strong></div>
+            <div>RIF: <strong>${fiadRif}</strong></div>
+            <div></div>
+          </div>
+          <div style="border-top:1px solid #444;padding-top:6px;font-size:11px;color:#555;text-align:center;max-width:250px">Firma del fiador</div>
+        </td>
+      </tr>` : ''}
+    </table>
+
+    <div style="text-align:center;font-size:10px;color:#999;margin-top:18px;padding-top:10px;border-top:1px solid #eee">
+      ${empresaUp} · Contrato de Venta de Motocicleta en Cuotas · ${emp.ciudad||'Venezuela'}
     </div>
   </div>`;
 }
 
-// PAGARÉ — Documento a la orden firmado por el arrendatario
 function _renderPagare(){
   var ctx = _docCtx();
   if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
