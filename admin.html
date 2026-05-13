@@ -13083,7 +13083,7 @@ function _wzRender(motoId){
   // ── PASO 4: Resultado ──
   var step4 = '<div id="wz-resultado-contenido">Calculando...</div>';
 
-  var steps = [step1, step2, step3, step4];
+  var steps = [step1, step3, step2, step4];
   var current = steps[WZ.step-1];
 
   var btnBack = WZ.step > 1
@@ -13548,6 +13548,8 @@ function _wzPickMotoCat(sel){
     var iniReal = 0;
     try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
     _mpagoSetCosto('wzmpago', costoBase, iniReal>0 ? iniReal : null);
+    // Scroll para que el bloque sea visible
+    setTimeout(function(){ wrap.scrollIntoView({behavior:'smooth', block:'start'}); }, 80);
   }
   _wzActualizarFinPreview(precio);
   _wzScore();
