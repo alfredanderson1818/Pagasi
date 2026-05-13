@@ -14318,6 +14318,28 @@ function _wzValidar(){
       var precioBase=parseFloat((document.getElementById('wz_precio_base_real')||{}).value)||precio;
       if(precioBase<=0){ toast('El precio base real es obligatorio','error'); return false; }
       if(iniReal>precioBase){ toast('La inicial real no puede ser mayor al precio base real','error'); return false; }
+      // Guardar en WZ para que getWzPlanConfig() los encuentre aunque el DOM ya no esté
+      WZ.plazo = plazoReal;
+      WZ.cuota = cuotaReal;
+      WZ.ini = iniReal;
+      WZ.precioBaseReal = precioBase;
+      WZ.planMode = 'custom';
+    }
+    if(planMode==='apy'){
+      var apyObj=parseFloat((document.getElementById('wz_apy_objetivo')||{}).value)||0;
+      var plazoApy=parseInt((document.getElementById('wz_apy_plazo')||{}).value,10)||0;
+      if(apyObj<=0){ toast('El APY objetivo es obligatorio','error'); return false; }
+      if(plazoApy<=0){ toast('El plazo es obligatorio en plan APY','error'); return false; }
+      var iniSelEl=document.getElementById('wz_apy_inicial_sel');
+      var iniSelRaw=iniSelEl?iniSelEl.value:'0.50';
+      var iniSel=iniSelRaw==='custom'?(parseFloat(window._wzCustomPct)||0.50):parseFloat(iniSelRaw);
+      if(!(iniSel>0)) iniSel=0.50;
+      var precioBaseApy=parseFloat((document.getElementById('wz_precio_base_real')||{}).value)||precio;
+      // Guardar en WZ para que getWzPlanConfig() los encuentre aunque el DOM ya no esté
+      WZ.plazo = plazoApy;
+      WZ.precioBaseReal = precioBaseApy;
+      WZ.planMode = 'apy';
+      window._wzCustomPct = iniSel; // asegurar que el pct quede guardado
     }
     // Validar pago de la moto SOLO si se eligió del catálogo (no del inventario existente)
     if(!WZ.motoInvId){
