@@ -69,9 +69,12 @@ input[type=number] { -moz-appearance: textfield; }
   text-decoration: none;
 }
 .brand-logo {
-  height: 36px;
+  height: 64px;
   width: auto;
   display: block;
+}
+@media (max-width: 720px) {
+  .brand-logo { height: 50px; }
 }
 .brand-tag {
   font-size: 11px;
