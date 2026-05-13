@@ -13522,7 +13522,10 @@ function _wzPickMotoCat(sel){
   }
   if(sel.value === '__wz_new_cat__'){
     if(newCatDiv) newCatDiv.style.display='block';
-    if(wrap) wrap.style.display='none';
+    if(wrap){
+      wrap.style.display='block';
+      setTimeout(function(){ wrap.scrollIntoView({behavior:'smooth', block:'start'}); }, 80);
+    }
     WZ.precio = 0;
     WZ.motoInvId = null;
     WZ.motoModelo = '';
