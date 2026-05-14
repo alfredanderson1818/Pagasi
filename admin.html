@@ -6385,44 +6385,43 @@ function wtHTML(){
     var pr = prCol[t.prioridad||'media'];
     var ckDone = (t.checklist||[]).filter(function(c){return c.done;}).length;
     var ckTotal = (t.checklist||[]).length;
-    var pct = ckTotal ? Math.round(ckDone/ckTotal*100) : 0;
     var estadoBadge = done
-      ? '<span style="background:var(--greens);color:var(--green);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">✓ Lista</span>'
+      ? '<span style="background:var(--greens);color:var(--green);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">Hecha</span>'
       : vencida
-        ? '<span style="background:rgba(255,80,80,.12);color:var(--red);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">⚠ Vencida</span>'
+        ? '<span style="background:rgba(255,80,80,.12);color:var(--red);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">Vencida</span>'
         : t.estado==='proceso'
-          ? '<span style="background:rgba(255,170,0,.12);color:var(--amber);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">→ En proceso</span>'
+          ? '<span style="background:rgba(255,170,0,.12);color:var(--amber);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">En proceso</span>'
           : '<span style="background:var(--surf2);color:var(--ink3);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">Pendiente</span>';
-    return '<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--rim);cursor:pointer;transition:.15s" onmouseenter="this.style.background='var(--surf2)'" onmouseleave="this.style.background=''" onclick="openWtTask(''+t.id+'')">'
+    var tid = String(t.id||'').replace(/'/g,"");
+    var titulo = '<div style="font-weight:700;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis' + (done?';text-decoration:line-through;opacity:.5':'') + '">' + (done?'&#10003; ':'') + wtEsc(t.titulo) + '</div>';
+    var sub = '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' + wtEsc(t.tipo||'Tarea') + (t.fecha?' &middot; '+wtEsc(t.fecha):'') + (ckTotal?' &middot; '+ckDone+'/'+ckTotal+' pasos':'') + '</div>';
+    var btnAvanzar = !done ? '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtNextStatus(this.closest(\'.wt-mine-row\').dataset.tid)" title="Avanzar">&#8594;</button>' : '';
+    var btnArchivar = '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtArchive(this.closest(\'.wt-mine-row\').dataset.tid)" title="Archivar">&#215;</button>';
+    return '<div class="wt-mine-row" data-tid="'+tid+'" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--rim);cursor:pointer;transition:background .15s" onclick="openWtTask(this.dataset.tid)" onmouseenter="this.style.background=\'var(--surf2)\'" onmouseleave="this.style.background=\'\'">'
       + '<div style="width:4px;height:38px;border-radius:99px;background:'+pr+';flex-shrink:0"></div>'
-      + '<div style="flex:1;min-width:0">'
-      +   '<div style="font-weight:700;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis'+(done?';text-decoration:line-through;opacity:.5':'')+'">'+(done?'✓ ':'')+wtEsc(t.titulo)+'</div>'
-      +   '<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+wtEsc(t.tipo||'Tarea')+(t.fecha?' · '+wtEsc(t.fecha):'')+(ckTotal?' · '+ckDone+'/'+ckTotal+' pasos':'')+'</div>'
-      + '</div>'
+      + '<div style="flex:1;min-width:0">'+titulo+sub+'</div>'
       + estadoBadge
-      + '<div style="display:flex;gap:6px;flex-shrink:0">'
-      +   (!done ? '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtNextStatus(''+t.id+'')" title="Avanzar estado">→</button>' : '')
-      +   '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtArchive(''+t.id+'')" title="Archivar">✕</button>'
-      + '</div>'
+      + '<div style="display:flex;gap:6px;flex-shrink:0">'+btnAvanzar+btnArchivar+'</div>'
       + '</div>';
   }
 
-  // --- tarjeta kanban para el equipo ---
+    // --- tarjeta kanban para el equipo ---
   function kanbanCard(t){
     var vencida = t.estado!=='completada' && t.fecha && t.fecha < today;
     var pr = prCol[t.prioridad||'media'];
     var ckDone = (t.checklist||[]).filter(function(c){return c.done;}).length;
     var ckTotal = (t.checklist||[]).length;
     var pct = ckTotal ? Math.round(ckDone/ckTotal*100) : 0;
-    return '<div class="card" style="padding:13px;border-left:3px solid '+pr+';cursor:pointer;margin-bottom:9px" onclick="openWtTask(''+t.id+'')">'
-      + (vencida ? '<div style="font-size:10px;color:var(--red);font-weight:800;margin-bottom:5px">⚠ VENCIDA</div>' : '')
+    var tid = String(t.id||'').replace(/'/g,"");
+    return '<div class="wt-kb-card" data-tid="'+tid+'" style="background:var(--bg);border:1px solid var(--rim);border-left:3px solid '+pr+';border-radius:12px;padding:13px;cursor:pointer;margin-bottom:9px" onclick="openWtTask(this.dataset.tid)">'
+      + (vencida ? '<div style="font-size:10px;color:var(--red);font-weight:800;margin-bottom:5px">&#9888; VENCIDA</div>' : '')
       + '<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:4px;line-height:1.3">'+wtEsc(t.titulo)+'</div>'
-      + '<div style="font-size:11px;color:var(--ink3);margin-bottom:8px">'+wtEsc(t.asignadoA||'Sin asignar')+(t.fecha?' · '+wtEsc(t.fecha):'')+'</div>'
+      + '<div style="font-size:11px;color:var(--ink3);margin-bottom:8px">'+wtEsc(t.asignadoA||'Sin asignar')+(t.fecha?' &middot; '+wtEsc(t.fecha):'')+'</div>'
       + (ckTotal ? '<div style="height:5px;border-radius:99px;background:var(--soft);overflow:hidden;margin-bottom:4px"><div style="height:100%;width:'+pct+'%;background:var(--p1);border-radius:99px"></div></div><div style="font-size:10px;color:var(--ink3);font-weight:700">'+ckDone+'/'+ckTotal+' pasos</div>' : '')
       + '</div>';
   }
 
-  // --- columnas kanban ---
+    // --- columnas kanban ---
   function kanbanCol(titulo, estado, color, tareas){
     var filtered = tareas.filter(function(t){ return t.estado===estado || (estado==='pendiente' && !t.estado); });
     return '<div style="background:var(--surf2);border-radius:14px;padding:14px;min-width:0">'
