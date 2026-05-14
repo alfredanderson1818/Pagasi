@@ -6395,8 +6395,8 @@ function wtHTML(){
     var tid = String(t.id||'').replace(/'/g,"");
     var titulo = '<div style="font-weight:700;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis' + (done?';text-decoration:line-through;opacity:.5':'') + '">' + (done?'&#10003; ':'') + wtEsc(t.titulo) + '</div>';
     var sub = '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' + wtEsc(t.tipo||'Tarea') + (t.fecha?' &middot; '+wtEsc(t.fecha):'') + (ckTotal?' &middot; '+ckDone+'/'+ckTotal+' pasos':'') + '</div>';
-    var btnAvanzar = !done ? '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtNextStatus(this.closest(\'.wt-mine-row\').dataset.tid)" title="Avanzar">&#8594;</button>' : '';
-    var btnArchivar = '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtArchive(this.closest(\'.wt-mine-row\').dataset.tid)" title="Archivar">&#215;</button>';
+    var btnAvanzar = !done ? '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtNextStatus(this.closest(\'.wt-mine-row\').dataset.tid)">&#8594;</button>' : '';
+    var btnArchivar = '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtArchive(this.closest(\'.wt-mine-row\').dataset.tid)">&#215;</button>';
     return '<div class="wt-mine-row" data-tid="'+tid+'" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--rim);cursor:pointer;transition:background .15s" onclick="openWtTask(this.dataset.tid)" onmouseenter="this.style.background=\'var(--surf2)\'" onmouseleave="this.style.background=\'\'">'
       + '<div style="width:4px;height:38px;border-radius:99px;background:'+pr+';flex-shrink:0"></div>'
       + '<div style="flex:1;min-width:0">'+titulo+sub+'</div>'
