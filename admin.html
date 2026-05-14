@@ -6288,12 +6288,7 @@ function wtStats(){ var today=wtToday(); var mine=(S.tareas||[]).filter(function
 function wtFiltered(){ var today=wtToday(); return (S.tareas||[]).filter(function(t){ if(t.eliminado || !wtIsMine(t)) return false; if(WT_FILTER==='archivadas') return !!t.archivado; if(t.archivado) return false; if(WT_FILTER==='hoy') return t.estado!=='completada' && (t.fecha===today || !t.fecha); if(WT_FILTER==='vencidas') return t.estado!=='completada' && t.fecha && t.fecha<today; if(WT_FILTER==='proceso') return t.estado==='proceso'; if(WT_FILTER==='completadas') return t.estado==='completada'; return true; }).sort(function(a,b){ var pa={alta:0,media:1,baja:2}[a.prioridad||'media']; var pb={alta:0,media:1,baja:2}[b.prioridad||'media']; return (a.fecha||'9999').localeCompare(b.fecha||'9999') || pa-pb; }); }
 function wtPill(t){ var today=wtToday(); if(t.archivado) return '<span class="bdg b-n">Archivada</span>'; if(t.estado==='completada') return '<span class="bdg b-g">Completada</span>'; if(t.fecha && t.fecha<today) return '<span class="bdg b-r">Vencida</span>'; if(t.estado==='proceso') return '<span class="bdg b-a">En proceso</span>'; return '<span class="bdg b-p">Pendiente</span>'; }
 function wtMetric(t,n,ic,col){ return '<div class="card" style="padding:16px"><div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:15px;background:'+col+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:950;box-shadow:0 10px 24px rgba(0,0,0,.10)">'+ic+'</div><div><div style="font-size:11px;color:var(--ink3);font-weight:900;text-transform:uppercase;letter-spacing:.7px">'+t+'</div><div style="font-size:27px;font-weight:950;font-family:var(--fd);letter-spacing:-.8px">'+n+'</div></div></div></div>'; }
-function wtHTML(){ wtLoadRemote(); var st=wtStats(); var rows=wtFiltered(); var html='';
-  html += pageBanner('Centro de trabajo','Lo que hay que ejecutar hoy','Tareas internas, checklist, comentarios, vencidas y archivadas para que nada se pierda.',[{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true},{label:'Cargar demo',onclick:'wtResetDemo()'}]);
-  html += '<div class="grid cols-4" style="margin-bottom:14px">'+wtMetric('Hoy',st.hoy,'HOY','var(--p1)')+wtMetric('Vencidas',st.vencidas,'!','var(--red)')+wtMetric('Proceso',st.proceso,'→','var(--amber)')+wtMetric('Archivadas',st.archivadas,'AR','var(--ink3)')+'</div>';
-  html += '<div class="card" style="margin-bottom:14px;padding:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div style="display:flex;gap:7px;flex-wrap:wrap">'+['hoy','vencidas','proceso','completadas','todas','archivadas'].map(function(k){var lbl={hoy:'Hoy',vencidas:'Vencidas',proceso:'En proceso',completadas:'Completadas',todas:'Todas',archivadas:'Archivadas'}[k];return '<button class="btn '+(WT_FILTER===k?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';}).join('')+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800">Vista: '+wtEsc(isAdminUser()?'equipo completo':wtUserName())+'</div></div></div>';
-  if(!rows.length){ return html+'<div class="empty"><div class="e-ic">✓</div><div class="e-tt">Sin tareas en esta vista</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Crea una tarea o cambia el filtro para ver otras.</div><button class="btn btn-p" style="margin-top:14px" onclick="openWtTask()">+ Nueva tarea</button></div>'; }
-  html+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">'; rows.forEach(function(t){ html+=wtTaskCard(t); }); return html+'</div>'; }
+
 function wtTaskCard(t){ var total=(t.checklist||[]).length, done=(t.checklist||[]).filter(function(c){return c.done;}).length, pct=total?Math.round(done/total*100):0; var pr={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[t.prioridad||'media']; var comments=(t.comentarios||[]).length; var act=t.archivado?'<button class="btn btn-g btn-sm" onclick="wtRestore(\''+t.id+'\')">Restaurar</button>':'<button class="btn btn-g btn-sm" onclick="wtNextStatus(\''+t.id+'\')">Avanzar</button><button class="btn btn-g btn-sm" onclick="openWtTask(\''+t.id+'\')">Editar</button><button class="btn btn-g btn-sm" onclick="wtArchive(\''+t.id+'\')">Archivar</button>'; return '<div class="card" style="border-left:4px solid '+pr+';padding:15px;position:relative;overflow:hidden"><div style="position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:rgba(91,78,212,.06)"></div><div style="position:relative"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px"><div><div style="font-weight:950;font-size:15px;color:var(--ink);line-height:1.2">'+wtEsc(t.titulo)+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800;margin-top:4px">'+wtEsc(t.tipo||'Tarea')+' · '+wtEsc(t.asignadoA||'Sin asignar')+' · '+wtEsc(t.fecha||'Sin fecha')+'</div></div>'+wtPill(t)+'</div><div style="font-size:12px;color:var(--ink2);line-height:1.45;min-height:34px">'+wtEsc(t.descripcion||'Sin descripción')+'</div><div style="margin:12px 0 9px"><div style="height:8px;border-radius:99px;background:var(--soft);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:99px"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);font-weight:800;margin-top:5px"><span>Checklist '+done+'/'+total+'</span><span>'+pct+'%</span></div></div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:space-between"><div style="font-size:11px;color:var(--ink3);font-weight:900">💬 '+comments+' comentarios</div><div style="display:flex;gap:7px;flex-wrap:wrap">'+act+'</div></div></div></div>'; }
 function wtSetFilter(k){ WT_FILTER=k; nav('centro'); }
 function wtField(label,html){ return '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"><label style="display:block;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3)">'+label+'</label>'+html+'</div>'; }
@@ -6372,13 +6367,149 @@ function wtMaybeNotify(){
   if(WT_NOTIFIED) return; var st=wtStats(); var total=st.hoy+st.vencidas; if(!total) return; WT_NOTIFIED=true;
   setTimeout(function(){ if(typeof toast==='function') toast('Tienes '+total+' tarea(s) pendientes en Centro de trabajo','info'); },350);
 }
-function wtHTML(){ wtInjectStyle(); wtLoadRemote(); wtLoadUsers(); wtMaybeNotify(); var st=wtStats(); var rows=wtFiltered(); var html='';
-  html += pageBanner('Centro de trabajo','Lo que hay que ejecutar hoy','Cada usuario ve sus tareas, puede asignar trabajo a otros usuarios, comentar y archivar sin perder historial.',[{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true},{label:'Cargar demo',onclick:'wtResetDemo()'}]);
+function wtHTML(){
+  wtInjectStyle(); wtLoadRemote(); wtLoadUsers(); wtMaybeNotify();
+  var st = wtStats();
+  var today = wtToday();
+  var allTareas = (S.tareas||[]).filter(function(t){ return !t.eliminado && !t.archivado; });
+  var mine = allTareas.filter(function(t){ return wtIsMine(t); });
+  var team = allTareas.filter(function(t){ return !wtIsMine(t); });
+
+  // prioridad color
+  var prCol = {alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'};
+
+  // --- fila compacta para MIS tareas ---
+  function mineRow(t){
+    var done = t.estado==='completada';
+    var vencida = !done && t.fecha && t.fecha < today;
+    var pr = prCol[t.prioridad||'media'];
+    var ckDone = (t.checklist||[]).filter(function(c){return c.done;}).length;
+    var ckTotal = (t.checklist||[]).length;
+    var pct = ckTotal ? Math.round(ckDone/ckTotal*100) : 0;
+    var estadoBadge = done
+      ? '<span style="background:var(--greens);color:var(--green);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">✓ Lista</span>'
+      : vencida
+        ? '<span style="background:rgba(255,80,80,.12);color:var(--red);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">⚠ Vencida</span>'
+        : t.estado==='proceso'
+          ? '<span style="background:rgba(255,170,0,.12);color:var(--amber);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">→ En proceso</span>'
+          : '<span style="background:var(--surf2);color:var(--ink3);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">Pendiente</span>';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--rim);cursor:pointer;transition:.15s" onmouseenter="this.style.background='var(--surf2)'" onmouseleave="this.style.background=''" onclick="openWtTask(''+t.id+'')">'
+      + '<div style="width:4px;height:38px;border-radius:99px;background:'+pr+';flex-shrink:0"></div>'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div style="font-weight:700;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis'+(done?';text-decoration:line-through;opacity:.5':'')+'">'+(done?'✓ ':'')+wtEsc(t.titulo)+'</div>'
+      +   '<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+wtEsc(t.tipo||'Tarea')+(t.fecha?' · '+wtEsc(t.fecha):'')+(ckTotal?' · '+ckDone+'/'+ckTotal+' pasos':'')+'</div>'
+      + '</div>'
+      + estadoBadge
+      + '<div style="display:flex;gap:6px;flex-shrink:0">'
+      +   (!done ? '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtNextStatus(''+t.id+'')" title="Avanzar estado">→</button>' : '')
+      +   '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtArchive(''+t.id+'')" title="Archivar">✕</button>'
+      + '</div>'
+      + '</div>';
+  }
+
+  // --- tarjeta kanban para el equipo ---
+  function kanbanCard(t){
+    var vencida = t.estado!=='completada' && t.fecha && t.fecha < today;
+    var pr = prCol[t.prioridad||'media'];
+    var ckDone = (t.checklist||[]).filter(function(c){return c.done;}).length;
+    var ckTotal = (t.checklist||[]).length;
+    var pct = ckTotal ? Math.round(ckDone/ckTotal*100) : 0;
+    return '<div class="card" style="padding:13px;border-left:3px solid '+pr+';cursor:pointer;margin-bottom:9px" onclick="openWtTask(''+t.id+'')">'
+      + (vencida ? '<div style="font-size:10px;color:var(--red);font-weight:800;margin-bottom:5px">⚠ VENCIDA</div>' : '')
+      + '<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:4px;line-height:1.3">'+wtEsc(t.titulo)+'</div>'
+      + '<div style="font-size:11px;color:var(--ink3);margin-bottom:8px">'+wtEsc(t.asignadoA||'Sin asignar')+(t.fecha?' · '+wtEsc(t.fecha):'')+'</div>'
+      + (ckTotal ? '<div style="height:5px;border-radius:99px;background:var(--soft);overflow:hidden;margin-bottom:4px"><div style="height:100%;width:'+pct+'%;background:var(--p1);border-radius:99px"></div></div><div style="font-size:10px;color:var(--ink3);font-weight:700">'+ckDone+'/'+ckTotal+' pasos</div>' : '')
+      + '</div>';
+  }
+
+  // --- columnas kanban ---
+  function kanbanCol(titulo, estado, color, tareas){
+    var filtered = tareas.filter(function(t){ return t.estado===estado || (estado==='pendiente' && !t.estado); });
+    return '<div style="background:var(--surf2);border-radius:14px;padding:14px;min-width:0">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+      +   '<div style="width:10px;height:10px;border-radius:50%;background:'+color+'"></div>'
+      +   '<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3)">'+titulo+'</div>'
+      +   '<div style="margin-left:auto;background:'+color+';color:#fff;font-size:10px;font-weight:900;padding:2px 8px;border-radius:99px">'+filtered.length+'</div>'
+      + '</div>'
+      + (filtered.length ? filtered.map(kanbanCard).join('') : '<div style="font-size:12px;color:var(--ink3);text-align:center;padding:20px 0">Sin tareas</div>')
+      + '</div>';
+  }
+
+  var html = '';
+
+  // Alertas
   html += wtNotificationHTML(st);
-  html += '<div class="grid cols-4" style="margin-bottom:14px">'+wtMetric('Hoy',st.hoy,'HOY','var(--p1)')+wtMetric('Vencidas',st.vencidas,'!','var(--red)')+wtMetric('Proceso',st.proceso,'→','var(--amber)')+wtMetric('Archivadas',st.archivadas,'AR','var(--ink3)')+'</div>';
-  html += '<div class="card" style="margin-bottom:14px;padding:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div style="display:flex;gap:7px;flex-wrap:wrap">'+['hoy','vencidas','proceso','completadas','todas','archivadas'].map(function(k){var lbl={hoy:'Hoy',vencidas:'Vencidas',proceso:'En proceso',completadas:'Completadas',todas:'Todas',archivadas:'Archivadas'}[k];return '<button class="btn '+(WT_FILTER===k?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';}).join('')+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800">Vista: '+wtEsc(isAdminUser()?'equipo completo':wtUserName())+'</div></div></div>';
-  if(!rows.length){ return html+'<div class="empty"><div class="e-ic">✓</div><div class="e-tt">Sin tareas en esta vista</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Crea una tarea o cambia el filtro.</div><button class="btn btn-p" style="margin-top:14px" onclick="openWtTask()">+ Nueva tarea</button></div>'; }
-  html+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">'; rows.forEach(function(t){ html+=wtTaskCard(t); }); return html+'</div>'; }
+
+  // Stats compactos
+  html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">';
+  var statItems = [
+    {lbl:'Mis tareas hoy', val:mine.filter(function(t){return t.estado!=='completada'&&(t.fecha===today||!t.fecha);}).length, col:'var(--p1)'},
+    {lbl:'Vencidas', val:mine.filter(function(t){return t.estado!=='completada'&&t.fecha&&t.fecha<today;}).length, col:'var(--red)'},
+    {lbl:'En proceso', val:mine.filter(function(t){return t.estado==='proceso';}).length, col:'var(--amber)'},
+    {lbl:'Completadas hoy', val:mine.filter(function(t){return t.estado==='completada'&&t.fecha===today;}).length, col:'var(--green)'}
+  ];
+  statItems.forEach(function(s){
+    html += '<div style="flex:1;min-width:120px;background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:12px 16px">'
+      + '<div style="font-size:26px;font-weight:900;color:'+s.col+';font-family:var(--fd)">'+s.val+'</div>'
+      + '<div style="font-size:11px;color:var(--ink3);font-weight:700;margin-top:2px">'+s.lbl+'</div>'
+      + '</div>';
+  });
+  html += '</div>';
+
+  // MIS TAREAS — lista compacta
+  html += '<div style="margin-bottom:24px">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+  html += '<div style="font-size:14px;font-weight:900;color:var(--ink)">📋 Mis tareas</div>';
+  html += '<span style="font-size:11px;color:var(--ink3)">'+mine.length+' tarea'+(mine.length!==1?'s':'')+'</span>';
+  html += '</div>';
+  if(mine.length){
+    html += '<div class="card" style="padding:0;overflow:hidden">';
+    // vencidas primero, luego hoy, luego resto
+    var mineSort = mine.slice().sort(function(a,b){
+      var av = a.fecha && a.fecha<today ? 0 : a.fecha===today ? 1 : 2;
+      var bv = b.fecha && b.fecha<today ? 0 : b.fecha===today ? 1 : 2;
+      if(av!==bv) return av-bv;
+      var pa={alta:0,media:1,baja:2}[a.prioridad||'media'];
+      var pb={alta:0,media:1,baja:2}[b.prioridad||'media'];
+      return pa-pb;
+    });
+    mineSort.forEach(function(t){ html += mineRow(t); });
+    html += '</div>';
+  } else {
+    html += '<div class="card" style="padding:24px;text-align:center;color:var(--ink3)">'
+      + '<div style="font-size:28px;margin-bottom:8px">✓</div>'
+      + '<div style="font-size:13px;font-weight:700">Sin tareas pendientes</div>'
+      + '<div style="font-size:12px;margin-top:4px">¡Todo al día!</div>'
+      + '</div>';
+  }
+  html += '</div>';
+
+  // EQUIPO — kanban (solo admin/gerente ve todo el equipo)
+  if(isAdminUser() || (S.currentUser && (S.currentUser.rol==='Gerente'||S.currentUser.rol==='Empleado'))){
+    var teamAll = allTareas;
+    html += '<div>';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+    html += '<div style="font-size:14px;font-weight:900;color:var(--ink)">👥 Equipo</div>';
+    html += '<span style="font-size:11px;color:var(--ink3)">'+teamAll.length+' tarea'+(teamAll.length!==1?'s':'')+'</span>';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
+    html += kanbanCol('Pendiente','pendiente','var(--ink3)',teamAll);
+    html += kanbanCol('En proceso','proceso','var(--amber)',teamAll);
+    html += kanbanCol('Completada','completada','var(--green)',teamAll);
+    html += '</div>';
+    html += '</div>';
+  }
+
+  // Botón flotante siempre visible
+  html += '<div style="position:fixed;bottom:28px;right:28px;z-index:900">'
+    + '<button onclick="openWtTask()" style="background:var(--p1);color:#fff;border:none;border-radius:99px;padding:14px 24px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 8px 28px rgba(91,78,212,.45);display:flex;align-items:center;gap:8px;white-space:nowrap">＋ Nueva tarea</button>'
+    + '</div>';
+
+  // padding inferior para que el FAB no tape contenido
+  html += '<div style="height:80px"></div>';
+
+  return html;
+}
 function wtCheckRow(c,i){ return '<div class="wt-check-row"><input type="checkbox" id="wtck_'+i+'" '+(c&&c.done?'checked':'')+'><input class="wt-input" id="wtcktxt_'+i+'" value="'+wtEsc(c&&c.txt||'')+'" placeholder="Paso del checklist" style="height:42px"><button type="button" class="btn btn-g btn-sm" onclick="this.closest(\'.wt-check-row\').remove()">×</button></div>'; }
 function openWtTask(id){
   wtInjectStyle(); wtLoadUsers(); var isNew=!id; var t=isNew?{id:'T'+Date.now(),titulo:'',descripcion:'',asignadoA:(S.currentUser&&S.currentUser.email)||wtUserName(),fecha:wtToday(),prioridad:'media',estado:'pendiente',tipo:'Seguimiento',checklist:[{txt:'Llamar / escribir al cliente',done:false},{txt:'Registrar resultado',done:false}],comentarios:[]}:((S.tareas||[]).find(function(x){return x.id===id;})||{});
