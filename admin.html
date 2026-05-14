@@ -5774,7 +5774,7 @@ function verCliente(id){
 
   $('mbd').innerHTML = html;
 
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''} ${creditos.length?`<button class="btn btn-g" onclick="(function(){ var r=window._returnToAmort; window._returnToAmort=null; if(r){ closeM(); setTimeout(function(){ openAmort(r); },80); } else { closeM(); nav('creditos'); } })()">📄 Créditos</button>`:''}` ;
   $('ov').style.display='flex';
 
   // Render charts después de que el DOM esté visible
@@ -16153,7 +16153,7 @@ function openAmort(id){
       <div>#</div><div>Fecha</div><div>Estado</div><div>Abonos</div><div>Monto</div><div>Interés</div><div>Capital</div><div>Saldo</div>
     </div>
     <div style="max-height:280px;overflow-y:auto;margin-top:3px;border:1px solid var(--rim);border-radius:8px;padding:2px">${rows}</div>`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${estadoCred==='activo'?`<button class="btn btn-g" onclick="closeM();openPagoRapido('${c.id}')">Registrar pago</button>`:''}<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-p" onclick="descargarAmortPDF()">↓ Descargar PDF</button>`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${estadoCred==='activo'?`<button class="btn btn-g" onclick="closeM();openPagoRapido('${c.id}')">Registrar pago</button>`:''}<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-g" onclick="descargarAmortPDF()">↓ Descargar PDF</button><button class="btn btn-p" onclick="(function(){ var _cliId='${cliente.id||''}'; if(!_cliId) return; var _credId='${c.id}'; openM(); verCliente(_cliId); window._returnToAmort=_credId; })()"> Perfil del cliente</button>`;
   $('ov').style.display='flex';
 }
 
