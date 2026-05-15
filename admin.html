@@ -5522,11 +5522,11 @@ function verCliente(id){
     + '<button class="cf-tab is-active" data-tab="resumen" onclick="cfTab(\''+c.id+'\',\'resumen\')">Resumen</button>'
     + '<button class="cf-tab" data-tab="personal" onclick="cfTab(\''+c.id+'\',\'personal\')">Personal</button>'
     + '<button class="cf-tab" data-tab="laboral" onclick="cfTab(\''+c.id+'\',\'laboral\')">Laboral</button>'
-    + '<button class="cf-tab" data-tab="financiero" onclick="cfTab(\''+c.id+'\',\'financiero\')">Finanzas</button>'
-    + '<button class="cf-tab" data-tab="referencias" onclick="cfTab(\''+c.id+'\',\'referencias\')">Refs</button>'
+    + '<button class="cf-tab" data-tab="financiero" onclick="cfTab(\''+c.id+'\',\'financiero\')">Financiero</button>'
+    + '<button class="cf-tab" data-tab="referencias" onclick="cfTab(\''+c.id+'\',\'referencias\')">Referencias</button>'
     + '<button class="cf-tab" data-tab="creditos" onclick="cfTab(\''+c.id+'\',\'creditos\')">Planes <span class="cf-tab-count">'+creditos.length+'</span></button>'
     + '<button class="cf-tab" data-tab="pagos" onclick="cfTab(\''+c.id+'\',\'pagos\')">Pagos <span class="cf-tab-count">'+pagos.length+'</span></button>'
-    + '<button class="cf-tab" data-tab="docs" onclick="cfTab(\''+c.id+'\',\'docs\')">Docs <span class="cf-tab-count">'+(Array.isArray(c.documentos)?c.documentos.length:0)+'</span></button>'
+    + '<button class="cf-tab" data-tab="docs" onclick="cfTab(\''+c.id+'\',\'docs\')">Documentos <span class="cf-tab-count">'+(Array.isArray(c.documentos)?c.documentos.length:0)+'</span></button>'
     + '</div>';
 
   // ── PANEL: RESUMEN ──
@@ -5774,7 +5774,7 @@ function verCliente(id){
 
   $('mbd').innerHTML = html;
 
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''} ${creditos.length?`<button class="btn btn-g" onclick="(function(){ var r=window._returnToAmort; window._returnToAmort=null; if(r){ closeM(); setTimeout(function(){ openAmort(r); },80); } else if(creditos.length){ closeM(); setTimeout(function(){ openAmort(creditos[0].id); },80); } })()">📄 Ver crédito</button>`:''}` ;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
   $('ov').style.display='flex';
 
   // Render charts después de que el DOM esté visible
@@ -6288,7 +6288,12 @@ function wtStats(){ var today=wtToday(); var mine=(S.tareas||[]).filter(function
 function wtFiltered(){ var today=wtToday(); return (S.tareas||[]).filter(function(t){ if(t.eliminado || !wtIsMine(t)) return false; if(WT_FILTER==='archivadas') return !!t.archivado; if(t.archivado) return false; if(WT_FILTER==='hoy') return t.estado!=='completada' && (t.fecha===today || !t.fecha); if(WT_FILTER==='vencidas') return t.estado!=='completada' && t.fecha && t.fecha<today; if(WT_FILTER==='proceso') return t.estado==='proceso'; if(WT_FILTER==='completadas') return t.estado==='completada'; return true; }).sort(function(a,b){ var pa={alta:0,media:1,baja:2}[a.prioridad||'media']; var pb={alta:0,media:1,baja:2}[b.prioridad||'media']; return (a.fecha||'9999').localeCompare(b.fecha||'9999') || pa-pb; }); }
 function wtPill(t){ var today=wtToday(); if(t.archivado) return '<span class="bdg b-n">Archivada</span>'; if(t.estado==='completada') return '<span class="bdg b-g">Completada</span>'; if(t.fecha && t.fecha<today) return '<span class="bdg b-r">Vencida</span>'; if(t.estado==='proceso') return '<span class="bdg b-a">En proceso</span>'; return '<span class="bdg b-p">Pendiente</span>'; }
 function wtMetric(t,n,ic,col){ return '<div class="card" style="padding:16px"><div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:15px;background:'+col+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:950;box-shadow:0 10px 24px rgba(0,0,0,.10)">'+ic+'</div><div><div style="font-size:11px;color:var(--ink3);font-weight:900;text-transform:uppercase;letter-spacing:.7px">'+t+'</div><div style="font-size:27px;font-weight:950;font-family:var(--fd);letter-spacing:-.8px">'+n+'</div></div></div></div>'; }
-
+function wtHTML(){ wtLoadRemote(); var st=wtStats(); var rows=wtFiltered(); var html='';
+  html += pageBanner('Centro de trabajo','Lo que hay que ejecutar hoy','Tareas internas, checklist, comentarios, vencidas y archivadas para que nada se pierda.',[{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true},{label:'Cargar demo',onclick:'wtResetDemo()'}]);
+  html += '<div class="grid cols-4" style="margin-bottom:14px">'+wtMetric('Hoy',st.hoy,'HOY','var(--p1)')+wtMetric('Vencidas',st.vencidas,'!','var(--red)')+wtMetric('Proceso',st.proceso,'→','var(--amber)')+wtMetric('Archivadas',st.archivadas,'AR','var(--ink3)')+'</div>';
+  html += '<div class="card" style="margin-bottom:14px;padding:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div style="display:flex;gap:7px;flex-wrap:wrap">'+['hoy','vencidas','proceso','completadas','todas','archivadas'].map(function(k){var lbl={hoy:'Hoy',vencidas:'Vencidas',proceso:'En proceso',completadas:'Completadas',todas:'Todas',archivadas:'Archivadas'}[k];return '<button class="btn '+(WT_FILTER===k?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';}).join('')+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800">Vista: '+wtEsc(isAdminUser()?'equipo completo':wtUserName())+'</div></div></div>';
+  if(!rows.length){ return html+'<div class="empty"><div class="e-ic">✓</div><div class="e-tt">Sin tareas en esta vista</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Crea una tarea o cambia el filtro para ver otras.</div><button class="btn btn-p" style="margin-top:14px" onclick="openWtTask()">+ Nueva tarea</button></div>'; }
+  html+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">'; rows.forEach(function(t){ html+=wtTaskCard(t); }); return html+'</div>'; }
 function wtTaskCard(t){ var total=(t.checklist||[]).length, done=(t.checklist||[]).filter(function(c){return c.done;}).length, pct=total?Math.round(done/total*100):0; var pr={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[t.prioridad||'media']; var comments=(t.comentarios||[]).length; var act=t.archivado?'<button class="btn btn-g btn-sm" onclick="wtRestore(\''+t.id+'\')">Restaurar</button>':'<button class="btn btn-g btn-sm" onclick="wtNextStatus(\''+t.id+'\')">Avanzar</button><button class="btn btn-g btn-sm" onclick="openWtTask(\''+t.id+'\')">Editar</button><button class="btn btn-g btn-sm" onclick="wtArchive(\''+t.id+'\')">Archivar</button>'; return '<div class="card" style="border-left:4px solid '+pr+';padding:15px;position:relative;overflow:hidden"><div style="position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:rgba(91,78,212,.06)"></div><div style="position:relative"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px"><div><div style="font-weight:950;font-size:15px;color:var(--ink);line-height:1.2">'+wtEsc(t.titulo)+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800;margin-top:4px">'+wtEsc(t.tipo||'Tarea')+' · '+wtEsc(t.asignadoA||'Sin asignar')+' · '+wtEsc(t.fecha||'Sin fecha')+'</div></div>'+wtPill(t)+'</div><div style="font-size:12px;color:var(--ink2);line-height:1.45;min-height:34px">'+wtEsc(t.descripcion||'Sin descripción')+'</div><div style="margin:12px 0 9px"><div style="height:8px;border-radius:99px;background:var(--soft);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:99px"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);font-weight:800;margin-top:5px"><span>Checklist '+done+'/'+total+'</span><span>'+pct+'%</span></div></div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:space-between"><div style="font-size:11px;color:var(--ink3);font-weight:900">💬 '+comments+' comentarios</div><div style="display:flex;gap:7px;flex-wrap:wrap">'+act+'</div></div></div></div>'; }
 function wtSetFilter(k){ WT_FILTER=k; nav('centro'); }
 function wtField(label,html){ return '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"><label style="display:block;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3)">'+label+'</label>'+html+'</div>'; }
@@ -6308,7 +6313,6 @@ function openWtTask(id){
 function wtAddCheckRow(){ var box=$('wtchecks'); if(!box) return; var i=box.querySelectorAll('.wt-check-row').length; var d=document.createElement('div'); d.className='wt-check-row'; d.style.cssText='display:grid;grid-template-columns:22px 1fr;gap:9px;margin-bottom:8px;align-items:center'; d.innerHTML='<input type="checkbox" id="wtck_'+i+'" style="width:20px;height:20px;accent-color:#5b4ed4"><input class="inp" id="wtcktxt_'+i+'" placeholder="Paso del checklist" style="width:100%;height:40px;border-radius:12px;padding:0 12px;background:#fff;color:var(--ink);border:1px solid var(--rim)">'; box.appendChild(d); }
 function saveWtTask(id){ var old=S._wtEditing||{}; var t=Object.assign({},old); t.id=id||old.id||('T'+Date.now()); t.titulo=(($('wttitulo')||{}).value||'Tarea sin título').trim(); t.descripcion=(($('wtdesc')||{}).value)||''; t.asignadoA=(($('wtasig')||{}).value)||wtUserName(); t.fecha=(($('wtfecha')||{}).value)||''; t.prioridad=(($('wtprio')||{}).value)||'media'; t.estado=(($('wtest')||{}).value)||'pendiente'; t.tipo=(($('wttipo')||{}).value)||'Seguimiento'; t.archivado=!!old.archivado; t.updatedAt=new Date().toISOString(); if(!t.createdAt) t.createdAt=new Date().toISOString(); t.checklist=[]; var box=$('wtchecks'); if(box){ box.querySelectorAll('.wt-check-row').forEach(function(row){ var txt=(row.querySelector('.inp')||{}).value||''; if(txt.trim()) t.checklist.push({txt:txt.trim(),done:!!(row.querySelector('input[type="checkbox"]')||{}).checked}); }); } t.comentarios=Array.isArray(old.comentarios)?old.comentarios.slice():[]; var cm=(($('wtcomment')||{}).value||'').trim(); if(cm) t.comentarios.push({txt:cm,user:wtUserName(),fecha:new Date().toISOString()}); var idx=(S.tareas||[]).findIndex(function(x){return x.id===t.id;}); if(idx>=0) S.tareas[idx]=t; else S.tareas.push(t); wtPersist(t); closeM(); nav('centro'); toast('Tarea guardada','ok'); }
 function wtNextStatus(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; t.estado=t.estado==='pendiente'?'proceso':(t.estado==='proceso'?'completada':'pendiente'); t.updatedAt=new Date().toISOString(); wtPersist(t); nav('centro'); }
-function wtToggleDone(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; t.estado=t.estado==='completada'?'pendiente':'completada'; t.updatedAt=new Date().toISOString(); wtPersist(t); nav('centro'); }
 function wtArchive(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; if(!confirm('¿Archivar esta tarea? Quedará guardada en Archivadas.')) return; t.archivado=true; t.archivedAt=new Date().toISOString(); t.updatedAt=new Date().toISOString(); wtPersist(t); closeM(); nav('centro'); toast('Tarea archivada','info'); }
 function wtRestore(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; t.archivado=false; t.updatedAt=new Date().toISOString(); wtPersist(t); nav('centro'); toast('Tarea restaurada','ok'); }
 function wtDelete(id){ wtArchive(id); }
@@ -6368,191 +6372,13 @@ function wtMaybeNotify(){
   if(WT_NOTIFIED) return; var st=wtStats(); var total=st.hoy+st.vencidas; if(!total) return; WT_NOTIFIED=true;
   setTimeout(function(){ if(typeof toast==='function') toast('Tienes '+total+' tarea(s) pendientes en Centro de trabajo','info'); },350);
 }
-function wtHTML(){
-  wtInjectStyle(); wtLoadRemote(); wtLoadUsers(); wtMaybeNotify();
-  var st = wtStats();
-  var today = wtToday();
-  var all = (S.tareas||[]).filter(function(t){ return !t.eliminado && !t.archivado; });
-  var mine = all.filter(function(t){ return wtIsMine(t); });
-
-  // Ordenar: vencidas > alta prioridad > fecha
-  function sortTasks(arr){
-    return arr.slice().sort(function(a,b){
-      var av = a.estado==='completada'?3:(a.fecha&&a.fecha<today?0:a.fecha===today?1:2);
-      var bv = b.estado==='completada'?3:(b.fecha&&b.fecha<today?0:b.fecha===today?1:2);
-      if(av!==bv) return av-bv;
-      var pa={alta:0,media:1,baja:2}[a.prioridad||'media'];
-      var pb={alta:0,media:1,baja:2}[b.prioridad||'media'];
-      return pa-pb;
-    });
-  }
-
-  // Pill de prioridad
-  function prPill(t){
-    var map={alta:['#ff4d4f','🔴'],media:['#fa8c16','🟡'],baja:['#52c41a','🟢']};
-    var v=map[t.prioridad||'media'];
-    return '<span style="font-size:11px;color:'+v[0]+';font-weight:800">'+v[1]+' '+((t.prioridad||'media').charAt(0).toUpperCase()+(t.prioridad||'media').slice(1))+'</span>';
-  }
-
-  // Badge de estado
-  function estBadge(t){
-    if(t.estado==='completada') return '<span style="background:#f6ffed;color:#52c41a;border:1px solid #b7eb8f;font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px">✓ Hecha</span>';
-    if(t.fecha&&t.fecha<today) return '<span style="background:#fff1f0;color:#ff4d4f;border:1px solid #ffa39e;font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px">⚠ Vencida</span>';
-    if(t.estado==='proceso') return '<span style="background:#fffbe6;color:#d48806;border:1px solid #ffe58f;font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px">→ En proceso</span>';
-    return '<span style="background:var(--surf2);color:var(--ink3);border:1px solid var(--rim);font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px">Pendiente</span>';
-  }
-
-  // Fila Linear-style para mis tareas
-  function taskRow(t){
-    var tid = String(t.id||'');
-    var done = t.estado==='completada';
-    var ckDone = (t.checklist||[]).filter(function(c){return c.done;}).length;
-    var ckTotal = (t.checklist||[]).length;
-    var pct = ckTotal ? Math.round(ckDone/ckTotal*100) : 0;
-    var prColors = {alta:'#ff4d4f',media:'#fa8c16',baja:'#52c41a'};
-    var pr = prColors[t.prioridad||'media'];
-
-    var checkCircle = '<div onclick="event.stopPropagation();wtToggleDone(\''+tid+'\')" style="width:20px;height:20px;border-radius:50%;border:2px solid '+(done?'#52c41a':pr)+';background:'+(done?'#52c41a':'transparent')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:.2s">'+(done?'<svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>':'')+'</div>';
-
-    var progress = ckTotal ? '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0"><div style="width:40px;height:4px;border-radius:99px;background:var(--rim);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+pr+';border-radius:99px"></div></div><span style="font-size:10px;color:var(--ink3)">'+pct+'%</span></div>' : '';
-
-    var fecha = t.fecha ? '<span style="font-size:11px;color:'+(t.fecha<today&&!done?'#ff4d4f':'var(--ink3)')+'">'+t.fecha+'</span>' : '';
-
-    return '<div class="wt-row" data-tid="'+tid+'" style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rim);cursor:pointer;transition:background .12s" onclick="openWtTask(\''+tid+'\')" onmouseenter="this.style.background=\'var(--surf2)\'" onmouseleave="this.style.background=\'\'">'
-      + checkCircle
-      + '<div style="flex:1;min-width:0">'
-      +   '<div style="font-size:13.5px;font-weight:600;color:var(--ink);'+(done?'text-decoration:line-through;opacity:.45':'')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+wtEsc(t.titulo)+'</div>'
-      +   '<div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap">'
-      +     '<span style="font-size:11px;color:var(--ink3)">'+wtEsc(t.tipo||'Tarea')+'</span>'
-      +     (t.asignadoA&&!wtIsMine(t) ? '<span style="font-size:11px;color:var(--ink3)">· '+wtEsc(t.asignadoA)+'</span>' : '')
-      +   '</div>'
-      + '</div>'
-      + progress
-      + fecha
-      + estBadge(t)
-      + '<div style="display:flex;gap:5px;opacity:0" class="wt-row-actions">'
-      +   (!done?'<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtNextStatus(\''+tid+'\')" title="Avanzar">→</button>':'')
-      +   '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtArchive(\''+tid+'\')" title="Archivar">✕</button>'
-      + '</div>'
-      + '</div>';
-  }
-
-  // Tarjeta kanban equipo
-  function kbCard(t){
-    var tid = String(t.id||'');
-    var prColors = {alta:'#ff4d4f',media:'#fa8c16',baja:'#52c41a'};
-    var pr = prColors[t.prioridad||'media'];
-    var ckDone = (t.checklist||[]).filter(function(c){return c.done;}).length;
-    var ckTotal = (t.checklist||[]).length;
-    var pct = ckTotal?Math.round(ckDone/ckTotal*100):0;
-    return '<div class="wt-kb" data-tid="'+tid+'" style="background:var(--bg);border:1px solid var(--rim);border-top:3px solid '+pr+';border-radius:12px;padding:12px 14px;cursor:pointer;margin-bottom:8px" onclick="openWtTask(\''+tid+'\')">'
-      + '<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px;line-height:1.35">'+wtEsc(t.titulo)+'</div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap">'
-      +   '<div style="display:flex;align-items:center;gap:6px">'
-      +     (t.asignadoA?'<span style="background:var(--surf2);border:1px solid var(--rim);border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700;color:var(--ink3)">'+wtEsc((t.asignadoA||'').split(' ')[0])+'</span>':'')
-      +     (t.fecha?'<span style="font-size:10px;color:'+(t.fecha<today?'#ff4d4f':'var(--ink3)')+'">'+t.fecha+'</span>':'')
-      +   '</div>'
-      +   (ckTotal?'<span style="font-size:10px;color:var(--ink3)">'+ckDone+'/'+ckTotal+'</span>':'')
-      + '</div>'
-      + (ckTotal?'<div style="height:3px;border-radius:99px;background:var(--rim);overflow:hidden;margin-top:8px"><div style="height:100%;width:'+pct+'%;background:'+pr+';border-radius:99px;transition:width .3s"></div></div>':'')
-      + '</div>';
-  }
-
-  function kbCol(label, estado, color, tareas){
-    var items = tareas.filter(function(t){ return (t.estado||'pendiente')===estado; });
-    return '<div style="background:var(--surf2);border-radius:14px;padding:14px;min-width:0">'
-      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--rim)">'
-      +   '<div style="width:8px;height:8px;border-radius:50%;background:'+color+'"></div>'
-      +   '<span style="font-size:12px;font-weight:800;color:var(--ink)">'+label+'</span>'
-      +   '<span style="margin-left:auto;background:'+color+'22;color:'+color+';font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px">'+items.length+'</span>'
-      + '</div>'
-      + (items.length ? sortTasks(items).map(kbCard).join('') : '<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--ink3)">Sin tareas</div>')
-      + '</div>';
-  }
-
-  var html = '';
-
-  // === BANNER de saludo ===
-  var hora = new Date().getHours();
-  var saludo = hora<12?'Buenos días':(hora<18?'Buenas tardes':'Buenas noches');
-  var nombre = (S.currentUser&&(S.currentUser.nombre||S.currentUser.email||''))||'';
-  var pendMias = mine.filter(function(t){return t.estado!=='completada';}).length;
-  var vencMias = mine.filter(function(t){return t.estado!=='completada'&&t.fecha&&t.fecha<today;}).length;
-
-  html += '<div style="background:linear-gradient(135deg,var(--p1),var(--p2));border-radius:18px;padding:22px 26px;color:#fff;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">'
-    + '<div>'
-    +   '<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">'+saludo+(nombre?' '+nombre.split(' ')[0]:'')+' 👋</div>'
-    +   '<div style="font-size:13px;opacity:.85;margin-top:4px">'
-    +     (pendMias===0 ? '¡Todo al día! No tienes tareas pendientes.' :
-           vencMias>0 ? 'Tienes <b>'+vencMias+' vencida'+(vencMias>1?'s':'')+'</b> y '+pendMias+' pendiente'+(pendMias>1?'s':'')+' en total.' :
-           'Tienes <b>'+pendMias+' tarea'+(pendMias>1?'s':'')+' pendiente'+(pendMias>1?'s':'')+'</b> para hoy.')
-    +   '</div>'
-    + '</div>'
-    + '<button onclick="openWtTask()" style="background:#fff;color:var(--p1);border:none;border-radius:12px;padding:11px 20px;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.15)">+ Nueva tarea</button>'
-    + '</div>';
-
-  // === STATS rápidos ===
-  var statItems = [
-    {lbl:'Pendientes',  val:mine.filter(function(t){return t.estado==='pendiente';}).length,   col:'var(--p1)',  ic:'⏳'},
-    {lbl:'En proceso',  val:mine.filter(function(t){return t.estado==='proceso';}).length,      col:'#fa8c16',   ic:'🔄'},
-    {lbl:'Vencidas',    val:vencMias,                                                            col:'#ff4d4f',   ic:'🚨'},
-    {lbl:'Completadas', val:mine.filter(function(t){return t.estado==='completada';}).length,   col:'#52c41a',   ic:'✅'}
-  ];
-  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px">';
-  statItems.forEach(function(s){
-    html += '<div style="background:var(--bg);border:1px solid var(--rim);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="wtSetFilter(\''+(s.lbl==='Pendientes'?'todas':s.lbl==='En proceso'?'proceso':s.lbl==='Vencidas'?'vencidas':'completadas')+'\')">'
-      + '<div style="font-size:20px;margin-bottom:4px">'+s.ic+'</div>'
-      + '<div style="font-size:24px;font-weight:900;color:'+s.col+';font-family:var(--fd);line-height:1">'+s.val+'</div>'
-      + '<div style="font-size:11px;color:var(--ink3);font-weight:700;margin-top:3px">'+s.lbl+'</div>'
-      + '</div>';
-  });
-  html += '</div>';
-
-  // === MIS TAREAS ===
-  html += '<div style="background:var(--bg);border:1px solid var(--rim);border-radius:16px;margin-bottom:24px;overflow:hidden">';
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--rim)">';
-  html += '<div style="font-size:14px;font-weight:800;color:var(--ink)">Mis tareas</div>';
-  html += '<div style="display:flex;gap:6px">';
-  ['todas','hoy','vencidas','proceso','completadas'].forEach(function(k){
-    var lbl={todas:'Todas',hoy:'Hoy',vencidas:'Vencidas',proceso:'En proceso',completadas:'Listas'}[k];
-    html += '<button class="btn btn-sm '+(WT_FILTER===k?'btn-p':'btn-g')+'" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';
-  });
-  html += '</div>';
-  html += '</div>';
-
-  var filtered = mine;
-  if(WT_FILTER==='hoy') filtered = mine.filter(function(t){ return t.estado!=='completada'&&(t.fecha===today||!t.fecha); });
-  else if(WT_FILTER==='vencidas') filtered = mine.filter(function(t){ return t.estado!=='completada'&&t.fecha&&t.fecha<today; });
-  else if(WT_FILTER==='proceso') filtered = mine.filter(function(t){ return t.estado==='proceso'; });
-  else if(WT_FILTER==='completadas') filtered = mine.filter(function(t){ return t.estado==='completada'; });
-
-  if(filtered.length){
-    sortTasks(filtered).forEach(function(t){ html += taskRow(t); });
-  } else {
-    html += '<div style="padding:32px;text-align:center">'
-      + '<div style="font-size:32px;margin-bottom:8px">🎉</div>'
-      + '<div style="font-size:14px;font-weight:700;color:var(--ink)">Sin tareas aquí</div>'
-      + '<div style="font-size:12px;color:var(--ink3);margin-top:4px">Cambia el filtro o crea una nueva.</div>'
-      + '</div>';
-  }
-  html += '</div>';
-
-  // === KANBAN EQUIPO ===
-  if(isAdminUser() || (S.currentUser&&['Gerente','Empleado'].indexOf(S.currentUser.rol)>=0)){
-    html += '<div style="font-size:14px;font-weight:800;color:var(--ink);margin-bottom:12px">Equipo</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">';
-    html += kbCol('Pendiente','pendiente','#8c8caa', all);
-    html += kbCol('En proceso','proceso','#fa8c16', all);
-    html += kbCol('Completada','completada','#52c41a', all);
-    html += '</div>';
-  }
-
-  // FAB flotante
-  html += '<style>.wt-row:hover .wt-row-actions{opacity:1!important}</style>';
-  html += '<div style="height:80px"></div>';
-
-  return html;
-}
+function wtHTML(){ wtInjectStyle(); wtLoadRemote(); wtLoadUsers(); wtMaybeNotify(); var st=wtStats(); var rows=wtFiltered(); var html='';
+  html += pageBanner('Centro de trabajo','Lo que hay que ejecutar hoy','Cada usuario ve sus tareas, puede asignar trabajo a otros usuarios, comentar y archivar sin perder historial.',[{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true},{label:'Cargar demo',onclick:'wtResetDemo()'}]);
+  html += wtNotificationHTML(st);
+  html += '<div class="grid cols-4" style="margin-bottom:14px">'+wtMetric('Hoy',st.hoy,'HOY','var(--p1)')+wtMetric('Vencidas',st.vencidas,'!','var(--red)')+wtMetric('Proceso',st.proceso,'→','var(--amber)')+wtMetric('Archivadas',st.archivadas,'AR','var(--ink3)')+'</div>';
+  html += '<div class="card" style="margin-bottom:14px;padding:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div style="display:flex;gap:7px;flex-wrap:wrap">'+['hoy','vencidas','proceso','completadas','todas','archivadas'].map(function(k){var lbl={hoy:'Hoy',vencidas:'Vencidas',proceso:'En proceso',completadas:'Completadas',todas:'Todas',archivadas:'Archivadas'}[k];return '<button class="btn '+(WT_FILTER===k?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';}).join('')+'</div><div style="font-size:11px;color:var(--ink3);font-weight:800">Vista: '+wtEsc(isAdminUser()?'equipo completo':wtUserName())+'</div></div></div>';
+  if(!rows.length){ return html+'<div class="empty"><div class="e-ic">✓</div><div class="e-tt">Sin tareas en esta vista</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Crea una tarea o cambia el filtro.</div><button class="btn btn-p" style="margin-top:14px" onclick="openWtTask()">+ Nueva tarea</button></div>'; }
+  html+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">'; rows.forEach(function(t){ html+=wtTaskCard(t); }); return html+'</div>'; }
 function wtCheckRow(c,i){ return '<div class="wt-check-row"><input type="checkbox" id="wtck_'+i+'" '+(c&&c.done?'checked':'')+'><input class="wt-input" id="wtcktxt_'+i+'" value="'+wtEsc(c&&c.txt||'')+'" placeholder="Paso del checklist" style="height:42px"><button type="button" class="btn btn-g btn-sm" onclick="this.closest(\'.wt-check-row\').remove()">×</button></div>'; }
 function openWtTask(id){
   wtInjectStyle(); wtLoadUsers(); var isNew=!id; var t=isNew?{id:'T'+Date.now(),titulo:'',descripcion:'',asignadoA:(S.currentUser&&S.currentUser.email)||wtUserName(),fecha:wtToday(),prioridad:'media',estado:'pendiente',tipo:'Seguimiento',checklist:[{txt:'Llamar / escribir al cliente',done:false},{txt:'Registrar resultado',done:false}],comentarios:[]}:((S.tareas||[]).find(function(x){return x.id===id;})||{});
@@ -13696,10 +13522,7 @@ function _wzPickMotoCat(sel){
   }
   if(sel.value === '__wz_new_cat__'){
     if(newCatDiv) newCatDiv.style.display='block';
-    if(wrap){
-      wrap.style.display='block';
-      setTimeout(function(){ wrap.scrollIntoView({behavior:'smooth', block:'start'}); }, 80);
-    }
+    if(wrap) wrap.style.display='none';
     WZ.precio = 0;
     WZ.motoInvId = null;
     WZ.motoModelo = '';
@@ -13725,8 +13548,6 @@ function _wzPickMotoCat(sel){
     var iniReal = 0;
     try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
     _mpagoSetCosto('wzmpago', costoBase, iniReal>0 ? iniReal : null);
-    // Scroll para que el bloque sea visible
-    setTimeout(function(){ wrap.scrollIntoView({behavior:'smooth', block:'start'}); }, 80);
   }
   _wzActualizarFinPreview(precio);
   _wzScore();
@@ -13933,172 +13754,76 @@ function _wzSafeFileName(name){
 function _wzDocLabel(id){ return (_wzDocDefs[id]&&_wzDocDefs[id].label)||id; }
 function _renderCliDocManager(c){
   var docs=(c&&Array.isArray(c.documentos))?c.documentos:[];
+  var docsMap={};
+  docs.forEach(function(d){ if(d&&d.id) docsMap[d.id]=d; });
+  var groups=[]; var byGroup={};
+  Object.keys(_wzDocDefs).forEach(function(id){
+    var def=_wzDocDefs[id]||{};
+    var group=def.group||'Documentos';
+    if(!byGroup[group]){ byGroup[group]=[]; groups.push(group); }
+    byGroup[group].push({ id:id, def:def, meta:docsMap[id]||null });
+  });
 
-  // Storage warning
-  var storageStatus = '';
-  if(typeof storage === 'undefined' || !storage || typeof storage.ref !== 'function'){
-    storageStatus = '<div style="padding:8px 11px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--ink2)">'
-      + '<b style="color:var(--amber)">⚠ Firebase Storage no disponible.</b> Los documentos se guardarán localmente (max 2MB).'
-      + '</div>';
-  }
+  // Contador resumen
+  var totalDocs = Object.keys(_wzDocDefs).length;
+  var uploadedCount = docs.length;
+  var pct = totalDocs>0 ? Math.round(uploadedCount/totalDocs*100) : 0;
+  var pctColor = pct>=80?'var(--green)':pct>=40?'var(--amber)':'var(--red)';
 
-  // Lista compacta de documentos existentes
-  var docsHtml = '';
-  if(docs.length){
-    docsHtml = '<div style="margin-bottom:12px">'
-      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:6px">Documentos cargados ('+docs.length+')</div>'
-      + docs.map(function(d){
-          var isLocal = d.source==='local' || (d.url||'').indexOf('data:')===0;
-          var badge = isLocal
-            ? '<span style="font-size:9px;background:var(--ambers);color:var(--amber);border-radius:4px;padding:1px 5px;margin-left:5px">local</span>'
-            : '<span style="font-size:9px;background:var(--greens);color:var(--green);border-radius:4px;padding:1px 5px;margin-left:5px">nube</span>';
-          var desc = d.descripcion ? ('<span style="color:var(--ink3)"> · '+d.descripcion+'</span>') : '';
-          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--rim);font-size:12px">'
-            + '<span style="font-size:14px">📄</span>'
-            + '<div style="flex:1;min-width:0;overflow:hidden">'
-            +   '<span style="font-weight:700;color:var(--ink)">'+(d.label||d.name||'Documento')+'</span>'+badge+desc
-            + '</div>'
-            + (d.url ? '<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener">Abrir</a>' : '')
-            + ((S.currentUser&&(S.currentUser.rol==='Administrador'||S.currentUser.rol==='Gerente')) ? '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+c.id+'\',\''+d.id+'\')" title="Eliminar">✕</button>' : '')
-            + '</div>';
-        }).join('')
-      + '</div>';
-  } else {
-    docsHtml = '<div style="font-size:12px;color:var(--ink3);padding:8px 0 12px">Sin documentos cargados aún.</div>';
-  }
-
-  // Botón agregar documento
-  var addBtn = '<button class="btn btn-p" onclick="_cliDocAbrirModal(\''+c.id+'\')" style="width:100%">+ Agregar documento</button>';
-
-  return storageStatus + docsHtml + addBtn;
-}
-
-// Modal para agregar documento con descripción
-function _cliDocAbrirModal(cliId){
-  var existing = document.getElementById('_cliDocModalWrap');
-  if(existing) existing.remove();
-
-  var wrap = document.createElement('div');
-  wrap.id = '_cliDocModalWrap';
-  wrap.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px';
-
-  wrap.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:22px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.25)">'
-    + '<div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:14px">Agregar documento</div>'
-    + '<div style="margin-bottom:10px">'
-    +   '<label style="font-size:11px;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Descripción</label>'
-    +   '<input id="_cliDocDescInput" class="fi" type="text" placeholder="Ej: Cédula, Contrato firmado, Pagaré..." style="width:100%">'
-    + '</div>'
-    + '<div style="margin-bottom:16px">'
-    +   '<label style="font-size:11px;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Archivo (PDF o imagen)</label>'
-    +   '<input id="_cliDocFileInput" type="file" accept="image/*,.pdf" style="font-size:13px;width:100%">'
-    + '</div>'
-    + '<div style="display:flex;gap:8px">'
-    +   '<button class="btn btn-g" style="flex:1" onclick="document.getElementById(\'_cliDocModalWrap\').remove()">Cancelar</button>'
-    +   '<button class="btn btn-p" style="flex:1" onclick="_cliDocModalConfirmar(\''+cliId+'\')">Guardar</button>'
-    + '</div>'
+  var summaryHtml = '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;margin-bottom:12px">'
+    + '<div style="font-size:28px;font-weight:900;color:'+pctColor+';line-height:1;font-family:var(--fd);min-width:60px">'+uploadedCount+'</div>'
+    + '<div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--ink)">Documentos cargados</div>'
+    + '<div style="font-size:11px;color:var(--ink3)">'+pct+'% del expediente completo · '+(totalDocs-uploadedCount)+' pendientes</div></div>'
+    + '<div style="width:80px;height:8px;background:var(--rim);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+pctColor+'"></div></div>'
     + '</div>';
 
-  document.body.appendChild(wrap);
-  setTimeout(function(){ var el=document.getElementById('_cliDocDescInput'); if(el) el.focus(); }, 80);
-}
-
-function _cliDocModalConfirmar(cliId){
-  var descEl = document.getElementById('_cliDocDescInput');
-  var fileEl = document.getElementById('_cliDocFileInput');
-  var desc = (descEl && descEl.value.trim()) || '';
-  var file = fileEl && fileEl.files && fileEl.files[0];
-  if(!file){ toast('Selecciona un archivo','error'); return; }
-
-  // Usar el sistema existente de upload — creamos un docId único basado en timestamp
-  var docId = 'doc_' + Date.now();
-
-  // Temporalmente asignar el docId y descripción al input para que _cliDocUpload lo procese
-  fileEl.setAttribute('data-cliente-id', cliId);
-  fileEl.setAttribute('data-doc-id', docId);
-  fileEl.setAttribute('data-descripcion', desc);
-
-  // Cerrar modal antes de subir
-  var modal = document.getElementById('_cliDocModalWrap');
-  if(modal) modal.remove();
-
-  _cliDocUploadConDesc(fileEl, cliId, docId, desc);
-}
-
-function _cliDocUploadConDesc(input, clienteId, docId, descripcion){
-  var file = input && input.files && input.files[0];
-  if(!file){ return; }
-  var cliId = String(clienteId||'').trim();
-  if(!cliId){ toast('Cliente inválido','error'); return; }
-
-  var FILE_LIMIT_LOCAL = 2 * 1024 * 1024;
-
-  function finalize(meta, source){
-    // Agregar descripción al meta
-    meta.descripcion = descripcion || '';
-    meta.label = descripcion || meta.name || 'Documento';
-
-    var c = S.clientes.find(function(x){ return String(x.id)===String(cliId); });
-    if(!c){ toast('Cliente no encontrado','error'); return; }
-    var docs = Array.isArray(c.documentos) ? c.documentos.slice() : [];
-    var idx = docs.findIndex(function(d){ return d && d.id===docId; });
-    if(idx>=0) docs[idx] = meta; else docs.push(meta);
-    c.documentos = docs;
-    c.docs_count = docs.length;
-
-    if(db && source==='firebase'){
-      db.collection('clientes').doc(String(c.id)).set({documentos:docs, docs_count:docs.length},{merge:true})
-        .then(function(){ toast('✓ Documento guardado','success'); })
-        .catch(function(err){
-          _cliDocSaveLocal(cliId, meta);
-          toast('Guardado localmente (Firestore falló)','error');
-        });
-    } else {
-      _cliDocSaveLocal(cliId, meta);
-      toast('Guardado localmente','info');
-    }
-    _cliDocRefreshInModal(cliId);
+  // Storage status warning
+  var storageStatus = '';
+  if(typeof storage === 'undefined' || !storage || typeof storage.ref !== 'function'){
+    storageStatus = '<div style="padding:9px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.45">'
+      + '<b style="color:var(--amber)"> Firebase Storage no disponible.</b> Los documentos se guardarán <b>localmente en este navegador</b> (max 2MB por archivo). Para almacenamiento en la nube habilita Storage en Firebase Console.'
+      + '</div>';
   }
 
-  toast('⏳ Subiendo...','info');
-
-  if(storage && typeof storage.ref === 'function'){
-    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    var filePath = 'clientes/'+cliId+'/documentos/'+docId+'_'+Date.now()+'_'+safeName;
-    var ref = storage.ref().child(filePath);
-    ref.put(file).then(function(snap){
-      return snap.ref.getDownloadURL();
-    }).then(function(url){
-      finalize({
-        id: docId,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: url,
-        path: filePath,
-        uploadedAt: new Date().toISOString(),
-        source: 'firebase'
-      }, 'firebase');
-    }).catch(function(err){
-      toast('Error al subir: '+(err.message||err),'error');
-    });
-  } else {
-    // Fallback local
-    if(file.size > FILE_LIMIT_LOCAL){ toast('Archivo demasiado grande para guardar localmente (max 2MB)','error'); return; }
-    var reader = new FileReader();
-    reader.onload = function(e){
-      finalize({
-        id: docId,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: e.target.result,
-        path: 'local://'+docId,
-        uploadedAt: new Date().toISOString(),
-        source: 'local'
-      }, 'local');
-    };
-    reader.readAsDataURL(file);
+  var docsHtml='';
+  if(docs.length){
+    docsHtml='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:6px"> Archivos cargados ('+docs.length+')</div>';
+    docsHtml+='<div class="lst" style="margin-bottom:16px">'+docs.map(function(d){
+      var def=_wzDocDefs[d.id]||{};
+      var isLocal = d.source==='local' || (d.url||'').indexOf('data:')===0;
+      var badge = isLocal ? '<span class="bdg b-a" style="font-size:9px;margin-left:4px">local</span>' : '<span class="bdg b-g" style="font-size:9px;margin-left:4px">nube</span>';
+      return '<div class="li">'
+        + '<div class="li-ic" style="background:var(--gs)">'+(def.icon||'')+'</div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-weight:700;color:var(--ink);font-size:12px">'+(d.label||_wzDocLabel(d.id)||'Documento')+badge+'</div>'
+        + '<div class="tds" style="font-size:10px">'+(d.name||'Archivo')+(d.size?' · '+Math.round(d.size/1024)+'KB':'')+(d.uploadedAt?(' · '+fmtFechaHora(d.uploadedAt)):'')+'</div>'
+        + '</div>'
+        + (d.url?'<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener" download="'+(d.name||'').replace(/"/g,'&quot;')+'">Abrir</a>':'')
+        + '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+c.id+'\',\''+d.id+'\')" title="Eliminar">✕</button>'
+        + '</div>';
+    }).join('')+'</div>';
   }
+
+  var uploadHtml='<div style="background:rgba(91,78,212,.04);border:1px solid var(--rim2);border-radius:12px;padding:12px">'
+    +'<div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:4px">Cargar / actualizar documentos</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:10px">Toca el recuadro y selecciona el archivo. Se guarda automáticamente.</div>'
+    +groups.map(function(group){
+      return '<div style="margin-top:8px">'
+        +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink3);margin:10px 0 7px">'+group+'</div>'
+        +byGroup[group].map(function(item){
+          var id=item.id, def=item.def||{}, meta=item.meta;
+          return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1.5px solid '+(meta?'rgba(6,176,106,.28)':'var(--rim)')+';position:relative;overflow:hidden;margin-bottom:8px;cursor:pointer">'
+            +'<input type="file" accept="'+(def.accept||'image/*,.pdf')+'" '+(def.capture?('capture="'+def.capture+'"'):'')+' data-cliente-id="'+String(c.id).replace(/"/g,'&quot;')+'" data-doc-id="'+id+'" onchange="_cliDocUploadFromInput(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">'
+            +'<div style="width:34px;height:34px;border-radius:9px;background:var(--surf);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(def.icon||'')+'</div>'
+            +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+(def.label||id)+'</div><div style="font-size:10.5px;color:'+(meta?'var(--green)':'var(--ink3)')+';margin-top:2px">'+(meta?('✓ '+(meta.name||'Archivo')+(meta.uploadedAt?(' · '+fmtFechaHora(meta.uploadedAt)):'')):'Toca para subir')+'</div></div>'
+            +'<div style="font-size:17px;flex-shrink:0">'+(meta?'':'')+'</div>'
+            +(meta&&meta.url?'<a class="btn btn-xs btn-g" href="'+meta.url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="z-index:2;position:relative">Abrir</a>':'')
+            +'</label>';
+        }).join('')
+        +'</div>';
+    }).join('')
+    +'</div>';
+  return summaryHtml + storageStatus + docsHtml + uploadHtml;
 }
 
 // Eliminar documento
@@ -16153,7 +15878,7 @@ function openAmort(id){
       <div>#</div><div>Fecha</div><div>Estado</div><div>Abonos</div><div>Monto</div><div>Interés</div><div>Capital</div><div>Saldo</div>
     </div>
     <div style="max-height:280px;overflow-y:auto;margin-top:3px;border:1px solid var(--rim);border-radius:8px;padding:2px">${rows}</div>`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${estadoCred==='activo'?`<button class="btn btn-g" onclick="closeM();openPagoRapido('${c.id}')">Registrar pago</button>`:''}<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-g" onclick="descargarAmortPDF()">↓ Descargar PDF</button><button class="btn btn-p" onclick="(function(){ var _cliId=String('${c.cliId||cliente.id||''}'); var _credId='${c.id}'; if(!_cliId){ toast('Cliente no encontrado','error'); return; } window._returnToAmort=_credId; verCliente(_cliId); })()"> Perfil del cliente</button>`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${estadoCred==='activo'?`<button class="btn btn-g" onclick="closeM();openPagoRapido('${c.id}')">Registrar pago</button>`:''}<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-p" onclick="descargarAmortPDF()">↓ Descargar PDF</button>`;
   $('ov').style.display='flex';
 }
 
@@ -22066,6 +21791,25 @@ function exportarCSV(tipo){
     S.motos.filter(function(m){return !m.eliminado;}).forEach(function(m){
       rows.push(row([m.id,m.modelo,m.anio||'',m.vin||'',m.color||'',m.precio||0,m.estado,m.cliente||'',m.gps?'Si':'No',m.notas||'']));
     });
+  } else if(tipo==='movimientos'){
+    filename='movimientos-cuentas-'+new Date().toISOString().split('T')[0]+'.csv';
+    rows.push(row(['ID','Fecha','Hora','Concepto','Tipo','Cuenta Origen','Cuenta Destino','Monto','Referencia','Realizado por','Estado']));
+    (S.movimientos||[]).forEach(function(m){
+      var estado = m.eliminado ? 'Anulado' : 'Activo';
+      rows.push(row([
+        m.id,
+        m.fecha||'',
+        m.hora||'',
+        m.concepto||m.descripcion||'',
+        m.tipo||'',
+        m.cuentaOrigen||'',
+        m.cuentaDestino||'',
+        m.monto||0,
+        m.referencia||'',
+        m.realizadoPor||'',
+        estado
+      ]));
+    });
   } else {
     toast('Tipo de export desconocido','error'); return;
   }
@@ -22424,7 +22168,8 @@ function renderCuentas(){
       'Cuentas',
       '<b>'+nCuentas+'</b> cuenta'+(nCuentas!==1?'s':'')+' bancaria'+(nCuentas!==1?'s':'')+' · Saldo total: <b>'+(typeof fmt==='function'?fmt(totalSaldo):'$'+totalSaldo)+'</b>'+(pendientesCount>0?' · <b>'+pendientesCount+'</b> pendiente'+(pendientesCount!==1?'s':'')+' por confirmar':''),
       [
-        {label:'＋ Nuevo Depósito', onclick:'openDeposito(null)', primary:true}
+        {label:'＋ Nuevo Depósito', onclick:'openDeposito(null)', primary:true},
+        {label:'↓ Exportar CSV', onclick:"exportarCSV('movimientos')"}
       ]
     );
   }
