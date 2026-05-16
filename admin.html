@@ -11260,15 +11260,15 @@ tbody tr:hover td {
     <div class="login-sub">Ingresa tus credenciales para continuar</div>
     <div class="login-fg">
       <span class="login-lbl">Email</span>
-      <input class="login-inp" id="l_user" type="email" placeholder="correo@ejemplo.com" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <input class="login-inp" id="l_user_inv" type="email" placeholder="correo@ejemplo.com" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="login-fg">
       <span class="login-lbl">Contraseña</span>
-      <input class="login-inp" id="l_pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <input class="login-inp" id="l_pass_inv" type="password" placeholder="••••••••" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar →</button>
-    <div class="login-err" id="login-err">Usuario o contraseña incorrectos</div>
-    <div class="login-footer">Pagasi · Sistema interno · v7.0<br><span id="login-mode" style="font-size:9px;opacity:0.5">modo local</span></div>
+    <div class="login-err" id="login-err-inv">Usuario o contraseña incorrectos</div>
+    <div class="login-footer">Pagasi · Sistema interno · v7.0<br><span id="login-mode-inv" style="font-size:9px;opacity:0.5">modo local</span></div>
   </div>
 </div>
 
@@ -32812,11 +32812,38 @@ function init() {
 }
 
 // ── AUTENTICACIÓN ──────────────────────────────────────────
+var _doLoginInProgress = false;
 async function doLogin() {
-  var email = ($('l_user') || {}).value || '';
-  var pass = ($('l_pass') || {}).value || '';
-  var errEl = $('login-err');
+  // Guard: prevent concurrent/loop calls
+  if (_doLoginInProgress) return;
+  _doLoginInProgress = true;
+  setTimeout(function(){ _doLoginInProgress = false; }, 4000);
+
+  // Read from whichever login form is visible
+  var loginScreen = $('login-screen');
+  var inviteScreen = $('invite-screen');
+  var usingInvite = inviteScreen && inviteScreen.style.display !== 'none';
+  var email = usingInvite
+    ? (($('l_user_inv') || {}).value || '').trim()
+    : (($('l_user') || {}).value || '').trim();
+  var pass = usingInvite
+    ? (($('l_pass_inv') || {}).value || '').trim()
+    : (($('l_pass') || {}).value || '').trim();
+  var errEl = usingInvite ? $('login-err-inv') : $('login-err');
   if (errEl) errEl.style.display = 'none';
+
+  // Validate email before hitting Firebase
+  if (auth && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (errEl) { errEl.textContent = 'El email no tiene un formato válido.'; errEl.style.display = 'block'; }
+    _doLoginInProgress = false;
+    return;
+  }
+
+  if (!email || !pass) {
+    if (errEl) { errEl.textContent = 'Ingresa tu email y contraseña.'; errEl.style.display = 'block'; }
+    _doLoginInProgress = false;
+    return;
+  }
 
   // Modo local (sin Firebase)
   if (!auth) {
@@ -32856,9 +32883,10 @@ async function doLogin() {
   // Modo Firebase
   showLoader('Iniciando sesión...', '');
   auth.signInWithEmailAndPassword(email, pass)
-    .then(function() { hideLoader(); })
+    .then(function() { hideLoader(); _doLoginInProgress = false; })
     .catch(function(e) {
       hideLoader();
+      _doLoginInProgress = false;
       if (errEl) {
         if (e.code === 'auth/network-request-failed') {
           errEl.textContent = 'Sin conexión a internet. Verifica tu red e intenta de nuevo.';
