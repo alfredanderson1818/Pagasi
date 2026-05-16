@@ -4726,6 +4726,9 @@ function toggleDark(){
     if(typeof renderCredChart==='function' && !_credChart) renderCredChart();
     if(typeof renderDashChart==='function' && !_dashChart) renderDashChart();
   }, 600);
+  setTimeout(function(){
+    if(typeof renderCredChart==='function' && !_credChart) renderCredChart();
+  }, 1500);
 }
 function setDark(on){
   if(on){
@@ -4756,14 +4759,14 @@ document.addEventListener('DOMContentLoaded', function(){
 var _dashChart = null;
 var _moraChart = null;
 var _credChart = null;
-var _dashPeriodo = { ingresos: 'mensual', creditos: 'mensual' };
+var _dashPeriodo = { ingresos: 'diario', creditos: 'diario' };
 
 function getDashData(tipo, periodo){
   var now = new Date();
   var buckets = [];
   var matchFn;
   if(periodo === 'diario'){
-    for(var i=13; i>=0; i--){
+    for(var i=29; i>=0; i--){
       var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()-i);
       buckets.push({ label: d.getDate()+'/'+(d.getMonth()+1), y:d.getFullYear(), m:d.getMonth(), day:d.getDate(), total:0, count:0 });
     }
@@ -4779,19 +4782,24 @@ function getDashData(tipo, periodo){
     buckets = buckets.slice(-8);
     matchFn = function(fecha, b){ var fd=new Date(fecha); var fq=fd.getDate()<=15?1:2; return fd.getFullYear()===b.y&&fd.getMonth()===b.m&&fq===b.q; };
   } else {
-    for(var i=6; i>=0; i--){
+    for(var i=11; i>=0; i--){
       var d = new Date(now.getFullYear(), now.getMonth()-i, 1);
       buckets.push({ label: d.toLocaleDateString('es-VE',{month:'short'}), y:d.getFullYear(), m:d.getMonth(), total:0, count:0 });
     }
     matchFn = function(fecha, b){ var fd=new Date(fecha); return fd.getFullYear()===b.y&&fd.getMonth()===b.m; };
   }
   if(tipo === 'ingresos'){
-    (_concFiltrar(S.pagos||[])).filter(function(p){ return !p.eliminado&&p.estado==='confirmado'&&p.fecha; }).forEach(function(p){
+    var pagosData = _concFiltrar(S.pagos||[]);
+    if(!pagosData.length) pagosData = S.pagos||[];
+    pagosData.filter(function(p){ return !p.eliminado&&p.estado==='confirmado'&&p.fecha; }).forEach(function(p){
       buckets.forEach(function(b){ if(matchFn(p.fecha,b)){ b.total+=parseFloat(p.monto)||0; b.count++; } });
     });
   } else {
-    (_concFiltrar(S.creds||[])).filter(function(c){ return !c.eliminado&&c.fecha; }).forEach(function(c){
-      buckets.forEach(function(b){ if(matchFn(c.fecha,b)){ b.count++; b.total+=parseFloat(c.total||c.precio||0); } });
+    var credsData = _concFiltrar(S.creds||[]);
+    if(!credsData.length) credsData = S.creds||[];
+    credsData.filter(function(c){ return !c.eliminado&&(c.fecha||c.creadoEn); }).forEach(function(c){
+      var f = c.fecha || c.creadoEn || '';
+      buckets.forEach(function(b){ if(matchFn(f,b)){ b.count++; b.total+=parseFloat(c.total||c.precio||0); } });
     });
   }
   return buckets;
@@ -4816,9 +4824,17 @@ function renderCredChart(){
   var labels=data.map(function(x){return x.label;}), counts=data.map(function(x){return x.count;});
   var isDark = document.documentElement.getAttribute('data-theme')==='dark';
   var g=isDark?'#00D68F':'#00B876', gt=isDark?'rgba(0,214,143,0.18)':'rgba(0,184,118,0.12)', ink3=isDark?'#6B6896':'#9794BB';
-  var subLabels={diario:'Últimos 14 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 7 meses'};
+  var subLabels={diario:'Últimos 30 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 12 meses'};
   var sub=document.getElementById('dash-cred-sub'); if(sub) sub.textContent=subLabels[periodo];
   if(_credChart){_credChart.destroy();_credChart=null;}
+  // Si no hay datos, mostrar placeholder
+  var totalCounts = counts.reduce(function(a,b){return a+b;},0);
+  var wrap = canvas.parentElement;
+  var placeholder = wrap ? wrap.querySelector('.chart-empty') : null;
+  if(!placeholder && wrap){ placeholder = document.createElement('div'); placeholder.className='chart-empty'; placeholder.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink3);font-size:12px;font-weight:700;gap:6px'; placeholder.innerHTML='<div style="font-size:28px;opacity:.3">📊</div><div>Sin créditos en este período</div>'; wrap.appendChild(placeholder); }
+  if(placeholder) placeholder.style.display = totalCounts===0 ? 'flex' : 'none';
+  canvas.style.display = totalCounts===0 ? 'none' : 'block';
+  if(totalCounts===0) return;
   _credChart=new Chart(canvas,{type:'bar',data:{labels:labels,datasets:[{label:'Créditos',data:counts,backgroundColor:counts.map(function(v,i){return i===counts.length-1?g:gt;}),borderColor:'transparent',borderWidth:0,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:isDark?'#252844':'#fff',borderColor:isDark?'rgba(0,214,143,0.3)':'rgba(0,184,118,0.2)',borderWidth:1,titleColor:isDark?'#E8E6FF':'#0B0B1E',bodyColor:isDark?'#B0ADDB':'#4A4870',padding:10,callbacks:{label:function(ctx){return ' '+ctx.raw+' crédito'+(ctx.raw!==1?'s':'')+' otorgado'+(ctx.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:ink3,font:{size:9}}},y:{grid:{color:isDark?'rgba(0,214,143,0.08)':'rgba(0,184,118,0.06)'},border:{display:false,dash:[4,4]},ticks:{color:ink3,font:{size:9},stepSize:1,maxTicksLimit:5}}}}});
 }
 function renderMoraChart(){
@@ -7077,9 +7093,9 @@ dash(){
           <div class="cs" id="dash-cred-sub">Últimos 7 meses</div>
         </div>
         <div style="display:flex;gap:4px">
-          <button class="btn btn-xs" id="dash-cred-d"  onclick="setDashPeriodo('creditos','diario')"   style="font-size:10px;padding:4px 9px">Diario</button>
+          <button class="btn btn-xs btn-p" id="dash-cred-d"  onclick="setDashPeriodo('creditos','diario')"   style="font-size:10px;padding:4px 9px">Diario</button>
           <button class="btn btn-xs" id="dash-cred-q"  onclick="setDashPeriodo('creditos','quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-          <button class="btn btn-xs btn-p" id="dash-cred-m" onclick="setDashPeriodo('creditos','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+          <button class="btn btn-xs" id="dash-cred-m" onclick="setDashPeriodo('creditos','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
         </div>
       </div>
       <div style="position:relative;height:160px;min-height:160px">
@@ -7095,9 +7111,9 @@ dash(){
           <div class="cs" id="dash-ing-sub">Últimos 7 meses</div>
         </div>
         <div style="display:flex;gap:4px">
-          <button class="btn btn-xs" id="dash-ing-d"  onclick="setDashPeriodo('ingresos','diario')"  style="font-size:10px;padding:4px 9px">Diario</button>
+          <button class="btn btn-xs btn-p" id="dash-ing-d"  onclick="setDashPeriodo('ingresos','diario')"  style="font-size:10px;padding:4px 9px">Diario</button>
           <button class="btn btn-xs" id="dash-ing-q"  onclick="setDashPeriodo('ingresos','quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-          <button class="btn btn-xs btn-p" id="dash-ing-m" onclick="setDashPeriodo('ingresos','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+          <button class="btn btn-xs" id="dash-ing-m" onclick="setDashPeriodo('ingresos','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
         </div>
       </div>
       <div style="position:relative;height:160px;min-height:160px">
@@ -7108,7 +7124,7 @@ dash(){
   </div>
 
   <!-- ROW 2b: Mora + Cuotas -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-bottom:14px">
 
     <div class="card">
       <div class="ch" style="margin-bottom:14px">
