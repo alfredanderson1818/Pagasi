@@ -6516,7 +6516,7 @@ function empleadoDashHTML(){
       <div style="font-size:11.5px;font-weight:800;color:var(--ink)">Nueva Solicitud</div>
       <div style="font-size:9.5px;color:var(--ink3)">Capturar cliente</div>
     </button>
-    <button onclick="nav('cobranza')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border-radius:12px;border:1px solid var(--rim);background:var(--surf);cursor:pointer;transition:all .15s;font-family:var(--f)" onmouseover="this.style.borderColor='var(--amber)';this.style.background='var(--ambers)'" onmouseout="this.style.borderColor='var(--rim)';this.style.background='var(--surf)'">
+    <button onclick="nav(&quot;cobranza&quot;)" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border-radius:12px;border:1px solid var(--rim);background:var(--surf);cursor:pointer;transition:all .15s;font-family:var(--f)" onmouseover="this.style.borderColor='var(--amber)';this.style.background='var(--ambers)'" onmouseout="this.style.borderColor='var(--rim)';this.style.background='var(--surf)'">
       <div style="font-size:22px"></div>
       <div style="font-size:11.5px;font-weight:800;color:var(--ink)">Ver Cobranza</div>
       <div style="font-size:9.5px;color:var(--ink3)">Todos los créditos</div>
@@ -6765,7 +6765,7 @@ function wtHTML(){
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
     +['kanban','hoy','vencidas','completadas','todas','archivadas'].map(function(k){
       var lbl={kanban:'📋 Kanban',hoy:'Hoy',vencidas:'Vencidas',completadas:'Completadas',todas:'Todas',archivadas:'Archivadas'}[k];
-      return '<button class="btn '+(WT_FILTER===k?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter('\''+k+'\'')">'+lbl+'</button>';
+      return '<button class="btn '+(WT_FILTER===k?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter(\''+k+'\')">'+lbl+'</button>';
     }).join('')+'</div>'
     +'<span style="font-size:11px;color:var(--ink3);font-weight:700">'+wtEsc(isAdminUser()?'Equipo completo':'Mis tareas')+'</span></div>';
   if(WT_FILTER==='kanban'||WT_FILTER==='todas'){
@@ -6777,7 +6777,7 @@ function wtHTML(){
     html+='<div id="wt-kanban" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start">';
     cols.forEach(function(col){
       var venc=col.tasks.filter(function(t){return t.fecha&&t.fecha<today;}).length;
-      html+='<div class="wt-col" data-estado="'+col.id+'" ondragover="event.preventDefault();this.style.background='var(--gs)'" ondragleave="this.style.background=''" ondrop="wtDrop(event,''+col.id+'')" style="background:var(--surf2);border-radius:14px;padding:10px;min-height:200px;transition:background .15s">';
+      html+='<div class="wt-col" data-estado="'+col.id+'" ondragover="event.preventDefault();this.style.background=\'var(--gs)\'" ondragleave="this.style.background=\'\'" ondrop="wtDrop(event,\''+col.id+'\')" style="background:var(--surf2);border-radius:14px;padding:10px;min-height:200px;transition:background .15s">';
       html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:2px solid '+col.color+'">'
         +'<span style="font-size:16px;color:'+col.color+'">'+col.icon+'</span>'
         +'<span style="font-weight:800;font-size:13px">'+col.label+'</span>'
@@ -6797,43 +6797,48 @@ function wtHTML(){
   return html;
 }
 function wtKanbanCard(t,today){
-  var pr={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[t.prioridad||'media'];
-  var prLbl={alta:'Alta',media:'Media',baja:'Baja'}[t.prioridad||'media'];
+  var pr={alta:"var(--red)",media:"var(--amber)",baja:"var(--green)"}[t.prioridad||"media"];
+  var prLbl={alta:"Alta",media:"Media",baja:"Baja"}[t.prioridad||"media"];
   var total=(t.checklist||[]).length,done=(t.checklist||[]).filter(function(c){return c.done;}).length,pct=total?Math.round(done/total*100):0;
-  var isVenc=t.fecha&&t.fecha<today&&t.estado!=='completada';
+  var isVenc=t.fecha&&t.fecha<today&&t.estado!=="completada";
   var comments=(t.comentarios||[]).length;
-  return '<div class="card" draggable="true" ondragstart="wtDragStart(event,''+t.id+'')" ondragend="document.querySelectorAll('.wt-col').forEach(function(c){c.style.background=''})" style="padding:12px;margin-bottom:8px;border-left:3px solid '+pr+';cursor:grab;user-select:none">'
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px">'
-    +'<div style="font-weight:700;font-size:13px;line-height:1.3">'+wtEsc(t.titulo)+'</div>'
-    +'<span style="background:'+pr+';color:#fff;font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:6px;flex-shrink:0">'+prLbl+'</span></div>'
-    +'<div style="font-size:10.5px;color:var(--ink3);margin-bottom:8px">'+wtEsc(t.asignadoA||'Sin asignar')
-    +(t.fecha?' · <span style="color:'+(isVenc?'var(--red)':'var(--ink3)')+'">'+wtEsc(t.fecha)+'</span>'+(isVenc?' <b style="color:var(--red)">⚠</b>':''):'')+'</div>'
-    +(total>0?'<div style="background:var(--gs);border-radius:3px;height:4px;overflow:hidden;margin-bottom:5px"><div style="height:100%;width:'+pct+'%;background:'+pr+';border-radius:3px"></div></div><div style="font-size:9.5px;color:var(--ink3);margin-bottom:8px">'+done+'/'+total+' pasos</div>':'')
-    +'<div style="display:flex;gap:5px;flex-wrap:wrap">'
-    +'<button class="btn btn-g btn-xs" onclick="openWtTask(''+t.id+'')">Editar</button>'
-    +'<button class="btn btn-g btn-xs" onclick="wtNextStatus(''+t.id+'')">Avanzar</button>'
-    +'<button class="btn btn-g btn-xs" onclick="wtArchive(''+t.id+'')">Archivar</button>'
-    +(comments>0?'<span style="font-size:10px;color:var(--ink3);margin-left:auto;align-self:center">💬'+comments+'</span>':'')
-    +'</div></div>';
+  var tid=t.id;
+  return "<div class=\"card\" draggable=\"true\" ondragstart=\"wtDragStart(event,\'"+tid+"\');\" ondragend=\"document.querySelectorAll(\'.wt-col\').forEach(function(c){c.style.background=\'\'})\" style=\"padding:12px;margin-bottom:8px;border-left:3px solid "+pr+";cursor:grab;user-select:none\">"
+    +"<div style=\"display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px\">"
+    +"<div style=\"font-weight:700;font-size:13px;line-height:1.3\">"+wtEsc(t.titulo)+"</div>"
+    +"<span style=\"background:"+pr+";color:#fff;font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:6px;flex-shrink:0\">"+prLbl+"</span></div>"
+    +"<div style=\"font-size:10.5px;color:var(--ink3);margin-bottom:8px\">"+wtEsc(t.asignadoA||"Sin asignar")
+    +(t.fecha?" · <span style=\"color:"+(isVenc?"var(--red)":"var(--ink3)")+"\">"+wtEsc(t.fecha)+"</span>"+(isVenc?" <b style=\"color:var(--red)\">⚠</b>":""):"")+"</div>"
+    +(total>0?"<div style=\"background:var(--gs);border-radius:3px;height:4px;overflow:hidden;margin-bottom:5px\"><div style=\"height:100%;width:"+pct+"%;background:"+pr+";border-radius:3px\"></div></div><div style=\"font-size:9.5px;color:var(--ink3);margin-bottom:8px\">"+done+"/"+total+" pasos</div>":"")
+    +"<div style=\"display:flex;gap:5px;flex-wrap:wrap\">"
+    +"<button class=\"btn btn-g btn-xs\" onclick=\"openWtTask(&quot;"+tid+"&quot;)\">Editar</button>"
+    +"<button class=\"btn btn-g btn-xs\" onclick=\"wtNextStatus(&quot;"+tid+"&quot;)\">Avanzar</button>"
+    +"<button class=\"btn btn-g btn-xs\" onclick=\"wtArchive(&quot;"+tid+"&quot;)\">Archivar</button>"
+    +(comments>0?"<span style=\"font-size:10px;color:var(--ink3);margin-left:auto;align-self:center\">💬"+comments+"</span>":"")
+    +"</div></div>";
 }
 function wtListCard(t,today){
-  var pr={alta:'var(--red)',media:'var(--amber)',baja:'var(--green)'}[t.prioridad||'media'];
-  var isVenc=t.fecha&&t.fecha<today&&t.estado!=='completada';
+  var pr={alta:"var(--red)",media:"var(--amber)",baja:"var(--green)"}[t.prioridad||"media"];
+  var isVenc=t.fecha&&t.fecha<today&&t.estado!=="completada";
   var total=(t.checklist||[]).length,done=(t.checklist||[]).filter(function(c){return c.done;}).length,pct=total?Math.round(done/total*100):0;
   var comments=(t.comentarios||[]).length;
+  var tid=t.id;
   var act=t.archivado
-    ?'<button class="btn btn-g btn-sm" onclick="wtRestore(''+t.id+'')">Restaurar</button>'
-    :'<button class="btn btn-g btn-sm" onclick="wtNextStatus(''+t.id+'')">Avanzar</button><button class="btn btn-g btn-sm" onclick="openWtTask(''+t.id+'')">Editar</button><button class="btn btn-g btn-sm" onclick="wtArchive(''+t.id+'')">Archivar</button>';
-  return '<div class="card" style="padding:14px;border-left:4px solid '+pr+'">'
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
-    +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;margin-bottom:3px">'+wtEsc(t.titulo)+'</div>'
-    +'<div style="font-size:11px;color:var(--ink3)">'+wtEsc(t.tipo||'—')+' · '+wtEsc(t.asignadoA||'Sin asignar')+(t.fecha?' · <span style="color:'+(isVenc?'var(--red)':'var(--ink3)')+'">'+wtEsc(t.fecha)+(isVenc?' ⚠':'')+'</span>':'')+'</div>'
-    +(t.descripcion?'<div style="font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.4">'+wtEsc(t.descripcion.slice(0,120))+(t.descripcion.length>120?'…':'')+'</div>':'')
-    +(total>0?'<div style="margin-top:8px"><div style="background:var(--gs);border-radius:3px;height:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+pr+';border-radius:3px"></div></div><div style="font-size:9.5px;color:var(--ink3);margin-top:3px">'+done+'/'+total+' pasos · '+pct+'%</div></div>':'')+'</div>'
-    +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'+wtPill(t)
-    +(comments>0?'<span style="font-size:10px;color:var(--ink3)">💬 '+comments+'</span>':'')
-    +'<div style="display:flex;gap:5px;margin-top:4px">'+act+'</div></div></div></div>';
+    ?"<button class=\"btn btn-g btn-sm\" onclick=\"wtRestore(&quot;"+tid+"&quot;)\">Restaurar</button>"
+    :"<button class=\"btn btn-g btn-sm\" onclick=\"wtNextStatus(&quot;"+tid+"&quot;)\">Avanzar</button>"
+     +"<button class=\"btn btn-g btn-sm\" onclick=\"openWtTask(&quot;"+tid+"&quot;)\">Editar</button>"
+     +"<button class=\"btn btn-g btn-sm\" onclick=\"wtArchive(&quot;"+tid+"&quot;)\">Archivar</button>";
+  return "<div class=\"card\" style=\"padding:14px;border-left:4px solid "+pr+"\">"
+    +"<div style=\"display:flex;justify-content:space-between;align-items:flex-start;gap:12px\">"
+    +"<div style=\"flex:1;min-width:0\"><div style=\"font-weight:700;font-size:14px;margin-bottom:3px\">"+wtEsc(t.titulo)+"</div>"
+    +"<div style=\"font-size:11px;color:var(--ink3)\">"+wtEsc(t.tipo||"—")+" · "+wtEsc(t.asignadoA||"Sin asignar")+(t.fecha?" · <span style=\"color:"+(isVenc?"var(--red)":"var(--ink3)")+"\">"+wtEsc(t.fecha)+(isVenc?" ⚠":"")+"</span>":"")+"</div>"
+    +(t.descripcion?"<div style=\"font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.4\">"+wtEsc(t.descripcion.slice(0,120))+(t.descripcion.length>120?"…":"")+"</div>":"")
+    +(total>0?"<div style=\"margin-top:8px\"><div style=\"background:var(--gs);border-radius:3px;height:4px;overflow:hidden\"><div style=\"height:100%;width:"+pct+"%;background:"+pr+";border-radius:3px\"></div></div><div style=\"font-size:9.5px;color:var(--ink3);margin-top:3px\">"+done+"/"+total+" pasos · "+pct+"%</div></div>":"")+"</div>"
+    +"<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0\">"+wtPill(t)
+    +(comments>0?"<span style=\"font-size:10px;color:var(--ink3)\">💬 "+comments+"</span>":"")
+    +"<div style=\"display:flex;gap:5px;margin-top:4px\">"+act+"</div></div></div></div>";
 }
+
 var _wtDragId=null;
 function wtDragStart(e,id){ _wtDragId=id; e.dataTransfer.effectAllowed='move'; var el=e.currentTarget; el.style.opacity='0.5'; setTimeout(function(){el.style.opacity='1';},0); }
 function wtDrop(e,nuevoEstado){ e.preventDefault(); e.currentTarget.style.background=''; if(!_wtDragId) return; var t=(S.tareas||[]).find(function(x){return x.id===_wtDragId;}); _wtDragId=null; if(!t||t.estado===nuevoEstado) return; t.estado=nuevoEstado; t.updatedAt=new Date().toISOString(); wtPersist(t); nav('centro'); toast('Movida a '+nuevoEstado,'ok'); }
@@ -6989,7 +6994,7 @@ dash(){
   <!-- ROW 1: 4 KPI CARDS -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
 
-    <div class="card dash-kpi" onclick="nav('creditos')" style="cursor:pointer;border-left:3px solid var(--p1)">
+    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer;border-left:3px solid var(--p1)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Cartera Activa</span>
         <span style="font-size:9px;background:rgba(91,78,212,0.1);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${activos} créditos</span>
@@ -7002,7 +7007,7 @@ dash(){
       </div>
     </div>
 
-    <div class="card dash-kpi" onclick="nav('pagos')" style="cursor:pointer;border-left:3px solid var(--green)">
+    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer;border-left:3px solid var(--green)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (mes)</span>
         ${pendPagos>0?`<span style="font-size:9px;background:rgba(232,152,10,0.12);color:var(--amber);padding:2px 7px;border-radius:20px;font-weight:700">${pendPagos} pend.</span>`:'<span style="font-size:9px;background:var(--greens);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:700">Al día</span>'}
@@ -7019,7 +7024,7 @@ dash(){
       </div>
     </div>
 
-    <div class="card dash-kpi" onclick="nav('cobranza')" style="cursor:pointer;border-left:3px solid ${mora>0?'var(--red)':'var(--green)'}">
+    <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer;border-left:3px solid ${mora>0?'var(--red)':'var(--green)'}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${mora>0?'var(--red)':'var(--green)'};font-family:var(--fm)">En Mora</span>
         <span style="font-size:9px;background:${mora>0?'var(--reds)':'var(--greens)'};color:${mora>0?'var(--red)':'var(--green)'};padding:2px 7px;border-radius:20px;font-weight:700">${mora>0?mora+' clientes':'Sin mora'}</span>
@@ -7038,7 +7043,7 @@ dash(){
       </div>
     </div>
 
-    <div class="card dash-kpi" onclick="nav('conta')" style="cursor:pointer;border-left:3px solid ${utilidad>=0?'var(--p2)':'var(--red)'}">
+    <div class="card dash-kpi" onclick="nav(&quot;conta&quot;)" style="cursor:pointer;border-left:3px solid ${utilidad>=0?'var(--p2)':'var(--red)'}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p2);font-family:var(--fm)">Utilidad</span>
         <span style="font-size:9px;background:rgba(91,141,239,0.1);color:var(--p2);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'})}</span>
@@ -7112,7 +7117,7 @@ dash(){
     <div class="card" style="display:flex;flex-direction:column">
       <div class="ch" style="margin-bottom:10px">
         <div class="ct">Cuotas Próximas</div>
-        <span class="bdg ${hoy.length>0?'b-a':'b-g'}" onclick="nav('pagos')" style="cursor:pointer">${hoy.length}</span>
+        <span class="bdg ${hoy.length>0?'b-a':'b-g'}" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">${hoy.length}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:7px;flex:1;overflow:auto;max-height:170px">
         ${hoy.length===0?'<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin cuotas próximas</div>':''}
@@ -7143,7 +7148,7 @@ dash(){
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
 
     <!-- PIE: Motos por estado -->
-    <div class="card" onclick="nav('motos')" style="cursor:pointer">
+    <div class="card" onclick="nav(&quot;motos&quot;)" style="cursor:pointer">
       <div class="ch" style="margin-bottom:12px">
         <div class="ct">Inventario Motos</div>
         <span style="font-size:11px;color:var(--p1);font-weight:600">${_SMOTOS.filter(m=>!m.eliminado).length} total</span>
@@ -7172,7 +7177,7 @@ dash(){
     </div>
 
     <!-- BARRAS: Créditos por estado -->
-    <div class="card" onclick="nav('creditos')" style="cursor:pointer">
+    <div class="card" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer">
       <div class="ch" style="margin-bottom:14px">
         <div class="ct">Cartera por Estado</div>
         <span style="font-size:11px;color:var(--p1);font-weight:600">${totalCreds} créditos</span>
@@ -7206,7 +7211,7 @@ dash(){
     </div>
 
     <!-- PIE: Pagos por método -->
-    <div class="card" onclick="nav('pagos')" style="cursor:pointer">
+    <div class="card" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
       <div class="ch" style="margin-bottom:12px">
         <div class="ct">Pagos por Método</div>
         <span style="font-size:11px;color:var(--p1);font-weight:600">${metodoTotal} pagos</span>
@@ -7247,7 +7252,7 @@ dash(){
       </div>
       <div class="lst">
         ${_SPAGOS.filter(p=>!p.eliminado).slice(0,5).map(p=>`
-        <div class="li" onclick="nav('pagos')" style="cursor:pointer">
+        <div class="li" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
           <div class="li-ic" style="background:var(--greens);font-size:8px;font-weight:700;color:var(--green);font-family:var(--fm)">PAG</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:600;color:var(--ink)">${p.cli}</div>
@@ -7270,7 +7275,7 @@ dash(){
       ${mora>0
         ?`<div class="lst">
           ${_SCREDS.filter(c=>c.mora>0).slice(0,4).map(c=>`
-          <div class="li" onclick="nav('cobranza')" style="cursor:pointer">
+          <div class="li" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
             <div style="width:36px;height:36px;border-radius:9px;background:var(--reds);display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <span style="font-size:10px;font-weight:900;color:var(--red);font-family:var(--fm)">${c.mora}d</span>
             </div>
@@ -22941,12 +22946,12 @@ function renderTabCuentasBanc(){
           var isLast = ci === cuentas.length - 1;
           var rowBorder = isLast ? '' : 'border-bottom:1px solid var(--rim2)';
           var cellStyle = 'padding:13px 12px;'+rowBorder;
-          return '<div onclick="verMovsCuenta(''+c.nombre+'')" style="'+cellStyle+';cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.parentElement.querySelectorAll('[data-row=\"'+ci+'\"]').forEach(function(e){e.style.background='var(--gs)'})" onmouseout="this.parentElement.querySelectorAll('[data-row=\"'+ci+'\"]').forEach(function(e){e.style.background=''})" data-row="'+ci+'">'
+                    return '<div onclick="verMovsCuenta(&quot;'+c.nombre+'&quot;)" style="'+cellStyle+';cursor:pointer;display:flex;align-items:center;gap:10px" data-row="'+ci+'">' 
             + '<div style="width:34px;height:34px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;flex-shrink:0">'+mon+'</div>'
             + '<div><div style="font-weight:700;font-size:13px">'+c.nombre+'</div>'
             + '<div style="font-size:10px;color:var(--ink3)">'+(c.moneda||'USD')+' · '+movsCuenta.length+' movimientos</div></div>'
             + '</div>'
-            + '<div data-row="'+ci+'" style="'+cellStyle+';text-align:right;cursor:pointer" onclick="verMovsCuenta(''+c.nombre+'')">'
+                        + '<div data-row="'+ci+'" style="'+cellStyle+';text-align:right;cursor:pointer" onclick="verMovsCuenta(&quot;'+c.nombre+'&quot;)">'
             + '<div style="font-family:var(--fd);font-weight:900;font-size:15px">'+fmt(saldo)+'</div>'
             + '</div>'
             + '<div data-row="'+ci+'" style="'+cellStyle+';text-align:right">'
@@ -22966,11 +22971,11 @@ function renderTabCuentasBanc(){
       + '<button class="btn btn-p btn-sm" onclick="openDeposito(null)">＋ Ingresar</button>'
       + '<button class="btn btn-d btn-sm" onclick="openRetiro(null)">− Retirar</button>'
       + '<button class="btn btn-g btn-sm" onclick="openTransferencia(null)">⇄ Transferir</button>'
-      + '<button class="btn btn-g btn-sm" style="margin-left:auto" onclick="nav('config')">＋ Nueva cuenta</button>'
+      + '<button class="btn btn-g btn-sm" style="margin-left:auto" onclick="nav(&quot;config&quot;)">＋ Nueva cuenta</button>'
       + '</div>'
       + '</div>'
     : '<div class="empty"><div class="e-ic">◈</div><div class="e-tt">Sin cuentas bancarias</div>'
-      + '<button class="btn btn-p btn-sm" style="margin-top:14px" onclick="nav('config')">＋ Agregar cuenta</button></div>';
+      + '<button class="btn btn-p btn-sm" style="margin-top:14px" onclick="nav(&quot;config&quot;)">＋ Agregar cuenta</button></div>';
 
   return '<div>'
     + kpisHTML
