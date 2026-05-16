@@ -5433,16 +5433,18 @@ function renderClienteList(q=''){
       else scNum = parseFloat(scRaw)||0;
       if(isNaN(scNum) || scNum < 300 || scNum > 850) scNum = 0;
       const sc = scNum;
-      const scoreCol=sc>=625?'var(--green)':sc>=450?'var(--amber)':'var(--red)';
-      return`<tr class="${rowClass}" onclick="verCliente(\'${c.id}\')" style="cursor:pointer">
+      const scoreCol=sc>=700?'var(--green)':sc>=580?'var(--p1)':sc>=450?'var(--amber)':'var(--red)';
+      const scoreBarW = sc ? Math.round(((sc-300)/550)*100) : 0;
+      const scoreLbl = sc>=700?'Excelente':sc>=580?'Bueno':sc>=450?'Regular':sc>0?'Bajo':'—';
+      return`<tr class="${rowClass}" onclick="verCliente('${c.id}')" style="cursor:pointer">
       <td><div style="display:flex;align-items:center;gap:9px">
         <div style="width:31px;height:31px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${ini(c.nombre)}</div>
         <div><div class="tdm">${c.nombre}${c.premium?` <span style="color:var(--amber)" title="Premium">★</span>`:''}</div><div class="tds">${c.cedula}</div></div>
       </div></td>
       <td><div class="tdm">${c.tel}</div><div class="tds">${c.ciudad||'—'}</div></td>
       <td><div class="tdm">${c.trabajo||'—'}</div><div class="tds" style="color:var(--green);font-weight:700">${fmt(c.ingreso)}/mes</div></td>
-      <td>${sc?`<span style="font-weight:900;font-size:14px;color:${scoreCol}">${sc}</span><div class="tds">/850</div>`:'<span style="color:var(--ink3)">—</span>'}</td>
-      <td><div class="tdm">${credsCli.length} crédito${credsCli.length!==1?'s':''}</div><div class="tds">${activo?'Activo: '+activo.id:'Sin activo'}${(()=>{var cv=activo?getCuotasVencidas(activo):0;return cv>0?` <span style="background:rgba(217,59,90,.15);color:var(--red);font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px">${cv} venc.</span>`:'';})()}</div></td>
+      <td>${sc?`<div><span style="font-weight:900;font-size:13px;color:${scoreCol}">${sc}</span><span style="font-size:9px;color:var(--ink3)">/850</span></div><div style="background:var(--gs);border-radius:3px;height:4px;width:60px;margin-top:3px;overflow:hidden"><div style="height:100%;width:${scoreBarW}%;background:${scoreCol};border-radius:3px"></div></div><div style="font-size:9px;color:${scoreCol};font-weight:700;margin-top:2px">${scoreLbl}</div>`:'<span style="color:var(--ink3)">—</span>'}</td>
+      <td><div class="tdm">${credsCli.length} crédito${credsCli.length!==1?'s':''}</div><div class="tds">${activo?'Activo: '+activo.id:'Sin activo'}${(()=>{var cv=activo?getCuotasVencidas(activo):0;return cv>0?` <span style="background:rgba(217,59,90,.15);color:var(--red);font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px">${cv} venc.</span>`:'';})()} </div></td>
       <td>${clienteBadgesHTML(c)}</td>
       <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
         <button class="btn btn-g btn-xs" onclick="editCliente(\'${c.id}\')">Editar</button>
@@ -5490,10 +5492,89 @@ function verCliente(id){
 
   var scoreRaw = c.score_indexa;
   var score = (scoreRaw && typeof scoreRaw === 'object') ? (scoreRaw.total||0) : (parseFloat(scoreRaw)||0);
-  var scoreColor = score>=625?'#5dd8a0':score>=450?'#ffcc66':score>=300?'#ff9a7b':'#ffffff';
-  var scoreLabel = score>=625?'EXCELENTE':score>=450?'BUENO':score>=300?'REGULAR':'BAJO';
+
+  // ── SCORE INTERNO basado en historial real de pagos ──
+  (function(){
+    if(!pagos.length && !creditos.length) return; // sin datos reales, dejar score_indexa
+    var hoy = new Date();
+
+    // F-A: Puntualidad de pagos (0-100)
+    // Comparamos fecha de pago vs fecha esperada de cuota
+    var pagosConf = pagos.filter(function(p){ return p.estado==='confirmado' && !p.eliminado; });
+    var pagosPuntuales = 0, pagosAtrasados = 0, pagosMuyAtrasados = 0;
+    pagosConf.forEach(function(p){
+      var cred = creditos.find(function(cr){ return cr.id === p.cred; });
+      if(!cred || !cred.fecha || !p.fecha) { pagosPuntuales++; return; }
+      var inicio = new Date(cred.fecha);
+      var numCuota = parseInt(p.numCuota || 1, 10);
+      var fechaEsperada = new Date(inicio.getTime() + numCuota * 15 * 24*60*60*1000);
+      var fechaPago = new Date(p.fecha);
+      var diasDiff = Math.round((fechaPago - fechaEsperada) / (24*60*60*1000));
+      if(diasDiff <= 3) pagosPuntuales++;
+      else if(diasDiff <= 10) pagosAtrasados++;
+      else pagosMuyAtrasados++;
+    });
+    var totalPagosEv = pagosPuntuales + pagosAtrasados + pagosMuyAtrasados;
+    var fA = totalPagosEv > 0
+      ? Math.round((pagosPuntuales*100 + pagosAtrasados*50 + pagosMuyAtrasados*0) / totalPagosEv)
+      : 60; // sin pagos evaluables, neutro
+
+    // F-B: Mora activa (0-100, penalización)
+    var moraActiva = creditos.filter(function(cr){ return !cr.eliminado && cr.mora > 0 && cr.estado==='activo'; });
+    var diasMoraMax = moraActiva.reduce(function(max,cr){ return Math.max(max, cr.mora||0); }, 0);
+    var fB = 100;
+    if(diasMoraMax > 60)      fB = 10;
+    else if(diasMoraMax > 30) fB = 30;
+    else if(diasMoraMax > 15) fB = 55;
+    else if(diasMoraMax > 5)  fB = 75;
+    else if(diasMoraMax > 0)  fB = 88;
+
+    // F-C: Historial de créditos completados (0-100)
+    var completados = creditos.filter(function(cr){ return cr.estado==='completado' && !cr.eliminado; }).length;
+    var cancelados  = creditos.filter(function(cr){ return cr.estado==='cancelado'  && !cr.eliminado; }).length;
+    var fC = Math.min(100, 50 + completados*25 - cancelados*20);
+    fC = Math.max(0, fC);
+
+    // F-D: Volumen y constancia (pagos en los últimos 3 meses)
+    var hace3m = new Date(hoy.getFullYear(), hoy.getMonth()-3, 1);
+    var pagosRecientes = pagosConf.filter(function(p){ return p.fecha && new Date(p.fecha) >= hace3m; }).length;
+    var fD = Math.min(100, pagosRecientes * 15);
+
+    // ── Combinar con score_indexa (40% historial externo, 60% interno) ──
+    var scoreInterno = Math.round(fA*0.35 + fB*0.35 + fC*0.20 + fD*0.10);
+    var scoreFinal;
+    if(score > 0){
+      // Promedio ponderado: 40% score externo, 60% score interno convertido
+      var scoreInternoEscalado = Math.round(300 + (scoreInterno/100)*550);
+      scoreFinal = Math.round(score*0.4 + scoreInternoEscalado*0.6);
+    } else {
+      scoreFinal = Math.round(300 + (scoreInterno/100)*550);
+    }
+    scoreFinal = Math.max(300, Math.min(850, scoreFinal));
+
+    // Guardar sub-factores para el desglose visual
+    c._scoreDetalle = {
+      fA: fA, fB: fB, fC: fC, fD: fD,
+      pagosPuntuales: pagosPuntuales, pagosAtrasados: pagosAtrasados, pagosMuyAtrasados: pagosMuyAtrasados,
+      diasMoraMax: diasMoraMax, completados: completados, cancelados: cancelados,
+      pagosRecientes: pagosRecientes, scoreInterno: scoreInterno, scorePrevio: score
+    };
+    score = scoreFinal;
+
+    // Persistir en background si cambió significativamente
+    if(Math.abs(scoreFinal - (c.score_indexa||0)) > 10 && c.id){
+      c.score_indexa = scoreFinal;
+      c.score_actualizado = new Date().toISOString();
+      if(typeof DB !== 'undefined' && DB.saveCliente) DB.saveCliente(c);
+    }
+  })();
+
+  var scoreColor = score>=700?'var(--green)':score>=580?'var(--p1)':score>=450?'var(--amber)':'var(--red)';
+  var scoreLabel = score>=700?'EXCELENTE':score>=580?'BUENO':score>=450?'REGULAR':'BAJO';
+  var scoreBar   = Math.round(((score-300)/550)*100);
 
   // Badges de estado
+
   var estadosInfo = getClienteEstados(c).estados;
   var badgesHero = '';
   if(estadosInfo.indexOf('activo')>=0) badgesHero += '<span class="cf-hero-badge is-green">● ACTIVO</span>';
@@ -5570,14 +5651,14 @@ function verCliente(id){
     + '<div class="cf-hero-sub">'+esc(c.cedula||'Sin CI')+(c.ciudad?' · '+esc(c.ciudad):'')+(c.tel?' · '+esc(c.tel):'')+'</div>'
     + (badgesHero?'<div class="cf-hero-badges">'+badgesHero+'</div>':'')
     + '</div>'
-    + (score>0?'<div class="cf-score" onclick="recalcularScoreClienteYRefrescar(\''+c.id+'\')" title="Click para recalcular" style="cursor:pointer">'
-    + '<div class="cf-score-v" style="color:'+scoreColor+'">'+score+'</div>'
-    + '<div class="cf-score-max" style="color:'+scoreColor+'">/ 850</div>'
-    + '<div class="cf-score-l">'+scoreLabel+' ↻</div>'
-    + '</div>':'<div class="cf-score" onclick="recalcularScoreClienteYRefrescar(\''+c.id+'\')" title="Click para calcular" style="cursor:pointer">'
-    + '<div class="cf-score-v" style="color:var(--ink3)">—</div>'
-    + '<div class="cf-score-l">Calcular ↻</div>'
-    + '</div>')
+    + '<div class="cf-score" onclick="recalcularScoreClienteYRefrescar(\''+c.id+'\')" title="Click para recalcular" style="cursor:pointer;min-width:120px;text-align:center">'
+    + (score>0
+      ? '<div style="display:flex;align-items:baseline;justify-content:center;gap:2px"><span class="cf-score-v" style="color:'+scoreColor+'">'+score+'</span><span class="cf-score-max" style="color:'+scoreColor+'">/850</span></div>'
+        + '<div style="background:var(--gs);border-radius:4px;height:6px;margin:5px 2px;overflow:hidden"><div style="height:100%;width:'+scoreBar+'%;background:'+scoreColor+';border-radius:4px"></div></div>'
+        + '<div class="cf-score-l" style="color:'+scoreColor+';font-size:9px;font-weight:900;letter-spacing:.5px">'+scoreLabel+' ↻</div>'
+      : '<div class="cf-score-v" style="color:var(--ink3)">—</div><div class="cf-score-l">Calcular ↻</div>'
+    )
+    + '</div>'
     + '</div>'
     + '<div class="cf-action-btns" style="margin-top:12px">'
     + (telWA?'<a class="cf-action is-wa" href="https://wa.me/58'+telWA+'" target="_blank" onclick="event.stopPropagation()"> WhatsApp</a>':'')
@@ -5598,6 +5679,8 @@ function verCliente(id){
   // ── TABS ──
   html += '<div class="cf-tabs" id="cf-tabs-'+c.id+'">'
     + '<button class="cf-tab is-active" data-tab="resumen" onclick="cfTab(\''+c.id+'\',\'resumen\')">Resumen</button>'
+    + '<button class="cf-tab" data-tab="score" onclick="cfTab(\''+c.id+'\',\'score\')">Score <span class="cf-tab-count" style="background:'+scoreColor+';color:#fff">'+score+'</span></button>'
+    + '<button class="cf-tab" data-tab="actividad" onclick="cfTab(\''+c.id+'\',\'actividad\')">Actividad</button>'
     + '<button class="cf-tab" data-tab="personal" onclick="cfTab(\''+c.id+'\',\'personal\')">Personal</button>'
     + '<button class="cf-tab" data-tab="laboral" onclick="cfTab(\''+c.id+'\',\'laboral\')">Laboral</button>'
     + '<button class="cf-tab" data-tab="financiero" onclick="cfTab(\''+c.id+'\',\'financiero\')">Financiero</button>'
@@ -5636,6 +5719,104 @@ function verCliente(id){
     html += '</div></div>';
   }
   html += '</div>';
+
+  // ── PANEL: SCORE INTERNO ──
+  html += '<div class="cf-panel" data-tab="score">';
+  var sd = c._scoreDetalle || {};
+  var fmtBar = function(val, color){
+    return '<div style="display:flex;align-items:center;gap:8px">'
+      + '<div style="flex:1;background:var(--gs);border-radius:4px;height:8px;overflow:hidden">'
+      + '<div style="height:100%;width:'+Math.round(val)+'%;background:'+color+';border-radius:4px;transition:width .6s"></div></div>'
+      + '<span style="font-size:11px;font-weight:800;color:'+color+';min-width:32px;text-align:right">'+Math.round(val)+'</span></div>';
+  };
+  html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">Desglose del Score · '+score+'/850</div>'
+    + '<button class="btn btn-g btn-xs" onclick="recalcularScoreClienteYRefrescar(\''+c.id+'\')">↻ Recalcular</button></div>';
+  // Big score display
+  html += '<div style="text-align:center;padding:20px 0 16px">'
+    + '<div style="font-family:var(--fd);font-size:64px;font-weight:900;line-height:1;color:'+scoreColor+'">'+score+'</div>'
+    + '<div style="background:var(--gs);border-radius:6px;height:10px;margin:10px auto;max-width:280px;overflow:hidden">'
+    + '<div style="height:100%;width:'+scoreBar+'%;background:'+scoreColor+';border-radius:6px"></div></div>'
+    + '<div style="font-size:11px;font-weight:900;color:'+scoreColor+';letter-spacing:1px">'+scoreLabel+'</div>'
+    + '<div style="font-size:10px;color:var(--ink3);margin-top:4px">Rango: 300 (mínimo) → 850 (perfecto)</div>'
+    + '</div>';
+  // Factor breakdown
+  html += '<div style="display:grid;gap:10px;margin-top:4px">';
+  var factors = [
+    {label:'Puntualidad de pagos', val: sd.fA!=null?sd.fA:60, color:'var(--green)',
+     sub: sd.pagosPuntuales!=null ? sd.pagosPuntuales+' puntuales · '+sd.pagosAtrasados+' con retraso · '+sd.pagosMuyAtrasados+' tardíos' : 'Sin datos de pagos'},
+    {label:'Comportamiento de mora', val: sd.fB!=null?sd.fB:80, color:'var(--p1)',
+     sub: sd.diasMoraMax!=null ? (sd.diasMoraMax===0?'Sin mora activa':sd.diasMoraMax+' días mora máxima') : 'Sin datos'},
+    {label:'Historial de créditos', val: sd.fC!=null?sd.fC:50, color:'var(--amber)',
+     sub: sd.completados!=null ? sd.completados+' planes completados · '+sd.cancelados+' cancelados' : 'Sin datos'},
+    {label:'Actividad reciente', val: sd.fD!=null?sd.fD:40, color:'var(--p2)',
+     sub: sd.pagosRecientes!=null ? sd.pagosRecientes+' pagos en los últimos 3 meses' : 'Sin datos'},
+  ];
+  factors.forEach(function(f){
+    html += '<div style="background:var(--surf2);border-radius:10px;padding:12px 14px">'
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
+      + '<span style="font-size:12px;font-weight:700">'+f.label+'</span>'
+      + '</div>'
+      + fmtBar(f.val, f.color)
+      + '<div style="font-size:10px;color:var(--ink3);margin-top:5px">'+f.sub+'</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  // Decision box
+  var decisionBg = score>=700?'rgba(93,216,160,.1)':score>=580?'rgba(91,78,212,.1)':score>=450?'rgba(232,152,10,.1)':'rgba(217,59,90,.1)';
+  var decisionText = score>=700?'APROBACIÓN AUTOMÁTICA':score>=580?'APROBAR':score>=450?'REVISAR MANUALMENTE':'RECHAZAR';
+  html += '<div style="background:'+decisionBg+';border:1px solid '+scoreColor+';border-radius:10px;padding:14px;margin-top:12px;text-align:center">'
+    + '<div style="font-size:10px;color:var(--ink3);font-weight:700;margin-bottom:4px">DECISIÓN RECOMENDADA</div>'
+    + '<div style="font-size:15px;font-weight:900;color:'+scoreColor+'">'+decisionText+'</div>'
+    + (sd.scorePrevio&&sd.scorePrevio>0?'<div style="font-size:10px;color:var(--ink3);margin-top:4px">Score externo (Indexa/manual): '+sd.scorePrevio+' · Score interno: '+Math.round(300+(sd.scoreInterno/100)*550)+'</div>':'')
+    + '</div>';
+  html += '</div></div>';
+
+  // ── PANEL: ACTIVIDAD ──
+  html += '<div class="cf-panel" data-tab="actividad">';
+  // Build full activity timeline
+  var actTimeline = [];
+  if(c.creado) actTimeline.push({fecha:c.creado, tipo:'alta', ico:'👤', titulo:'Cliente registrado', sub:'Alta en el sistema', color:'var(--p1)'});
+  creditos.forEach(function(cr){
+    if(cr.fecha) actTimeline.push({fecha:cr.fecha, tipo:'credito', ico:'📋', titulo:'Crédito aprobado: '+cr.id, sub:(cr.modelo||'—')+' · Total: '+fmt(cr.total||0)+' · '+( cr.plazo||'?')+'M', color:'var(--p1)'});
+    if(cr.fechaCompletado) actTimeline.push({fecha:cr.fechaCompletado, tipo:'completado', ico:'✅', titulo:'Plan completado: '+cr.id, sub:'Saldado exitosamente · '+cr.modelo, color:'var(--green)'});
+    if(cr.mora>0) actTimeline.push({fecha:new Date().toISOString().slice(0,10), tipo:'mora', ico:'⚠️', titulo:'En mora: '+cr.id, sub:cr.mora+' días · Saldo: '+fmt(cr.saldo||0), color:'var(--red)'});
+  });
+  pagos.forEach(function(p){
+    if(!p.eliminado) actTimeline.push({
+      fecha:p.fecha, tipo:'pago', ico:'💰',
+      titulo:'Pago recibido: '+fmt(p.monto||0),
+      sub:(p.metodo||'—')+' · Crédito: '+(p.cred||'—')+(p.cobrador?' · '+p.cobrador:''),
+      color:'var(--green)'
+    });
+  });
+  (c.notas||[]).forEach(function(n){
+    actTimeline.push({fecha:n.fecha||n.creado, tipo:'nota', ico:'📝', titulo:'Nota: '+esc(n.texto||n.titulo||'').slice(0,60), sub:'por '+(n.autor||'Sistema'), color:'var(--ink3)'});
+  });
+  actTimeline.sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+
+  html += '<div class="cf-section">';
+  html += '<div class="cf-section-h"><div class="cf-section-t">Historial completo · '+actTimeline.length+' eventos</div></div>';
+  if(!actTimeline.length){
+    html += '<div style="text-align:center;padding:30px;color:var(--ink3);font-size:13px">Sin actividad registrada</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:0">';
+    actTimeline.forEach(function(t, i){
+      var fecha = '—';
+      try { fecha = new Date(t.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){}
+      html += '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:'+(i<actTimeline.length-1?'1px solid var(--rim2)':'none')+'">'
+        + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">'
+        + '<div style="width:32px;height:32px;border-radius:50%;background:var(--surf2);border:2px solid '+t.color+';display:flex;align-items:center;justify-content:center;font-size:14px">'+t.ico+'</div>'
+        + (i<actTimeline.length-1?'<div style="width:2px;flex:1;background:var(--rim2);margin-top:4px;min-height:16px"></div>':'')
+        + '</div>'
+        + '<div style="flex:1;padding-top:4px">'
+        + '<div style="font-weight:700;font-size:12px;color:var(--ink)">'+esc(t.titulo)+'</div>'
+        + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+esc(t.sub||'')+'</div>'
+        + '<div style="font-size:10px;color:var(--ink3);margin-top:3px;opacity:.7">'+fecha+'</div>'
+        + '</div></div>';
+    });
+    html += '</div>';
+  }
+  html += '</div></div>';
 
   // ── PANEL: PERSONAL ──
   html += '<div class="cf-panel" data-tab="personal">';
@@ -19107,68 +19288,84 @@ function _comisionesRender(){
   return html;
 }
 
-// Tarjeta individual de usuario (estilo del screenshot)
+// Tarjeta individual de usuario — rediseño
 function _comTarjetaHtml(u){
   var cfg = _comGetConfig(u);
   if(!cfg) return '';
   var s = _comGetSaldo(u);
   var st = _comStatsRango(u);
-  var nombre = (u.nombre || u.email || 'Usuario').toUpperCase();
+  var nombre = (u.nombre || u.email || 'Usuario');
   var nombreEsc = nombre.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  var ventaLbl = cfg.venta.tipo === 'porc' ? 'Venta '+cfg.venta.valor+'%' : 'Venta $'+cfg.venta.valor;
-  var cobroLbl = cfg.cobranza.tipo === 'porc' ? 'Cobro '+cfg.cobranza.valor+'%' : 'Cobro $'+cfg.cobranza.valor;
-  var debe = s.saldo;
-  var debeColor = debe > 0 ? 'var(--green)' : 'var(--ink3)';
-  return ''
-    + '<div class="com-card card" data-nombre="'+nombreEsc.toLowerCase()+'" style="overflow:hidden;display:flex;flex-direction:column;padding:0">'
-      // Encabezado: nombre + badges
-      + '<div style="padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
-      + '<div style="flex:1;min-width:0">'
-      + '<div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">VENDEDOR</div>'
-      + '<div style="font-weight:800;font-size:16px;margin-top:2px;line-height:1.2">'+nombre+'</div>'
-      + '</div>'
-      + '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">'
-      + '<span style="background:rgba(0,184,118,0.15);color:var(--green);padding:3px 10px;border-radius:14px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:4px"><span style="width:5px;height:5px;border-radius:50%;background:var(--green)"></span>'+ventaLbl+'</span>'
-      + '<span style="background:rgba(74,107,255,0.13);color:var(--p1);padding:3px 10px;border-radius:14px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:4px"><span style="width:5px;height:5px;border-radius:50%;background:var(--p1)"></span>'+cobroLbl+'</span>'
-      + '</div>'
-      + '</div>'
-      // Sección: SE LE DEBE
-      + '<div style="padding:14px 16px;background:rgba(0,184,118,0.07);border-top:1px solid rgba(0,184,118,0.18);border-bottom:1px solid var(--rim2)">'
-      + '<div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Se le debe</div>'
-      + '<div style="font-family:var(--fd);font-weight:900;font-size:28px;color:'+debeColor+';line-height:1.1;margin-top:2px">'+fmt(debe)+'</div>'
-      + '</div>'
-      // Stats: vendido total / semana / mes
-      + '<div style="padding:13px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;border-bottom:1px solid var(--rim2)">'
-      + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Generado total</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;margin-top:3px">$ '+s.generado.toFixed(2)+'</div></div>'
-      + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Semana</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;margin-top:3px">$ '+st.semana.toFixed(2)+'</div></div>'
-      + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Mes</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;margin-top:3px">$ '+st.mes.toFixed(2)+'</div></div>'
-      + '</div>'
-      // Desglose: por venta / por cobranza
-      + '<div style="padding:11px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--rim2)">'
-      + '<div style="background:rgba(74,107,255,0.08);padding:9px 11px;border-radius:9px">'
-      + '<div style="font-size:9px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.6px">Por venta</div>'
-      + '<div style="font-family:var(--fd);font-weight:800;font-size:15px;color:var(--p1);margin-top:2px">$ '+s.porVenta.toFixed(2)+'</div>'
-      + '<div style="font-size:10px;color:var(--ink3);margin-top:1px">'+s.nVentas+' '+(s.nVentas===1?'venta':'ventas')+'</div>'
-      + '</div>'
-      + '<div style="background:rgba(0,184,118,0.08);padding:9px 11px;border-radius:9px">'
-      + '<div style="font-size:9px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.6px">Por cobranza</div>'
-      + '<div style="font-family:var(--fd);font-weight:800;font-size:15px;color:var(--green);margin-top:2px">$ '+s.porCobranza.toFixed(2)+'</div>'
-      + '<div style="font-size:10px;color:var(--ink3);margin-top:1px">'+s.nCobranzas+' '+(s.nCobranzas===1?'cobro':'cobros')+'</div>'
-      + '</div>'
-      + '</div>'
-      // Pagado
-      + '<div style="padding:11px 16px;border-bottom:1px solid var(--rim2)">'
-      + '<div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Pagado</div>'
-      + '<div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px">$ '+s.pagado.toFixed(2)+'</div>'
-      + '</div>'
-      // Footer botones
-      + '<div style="padding:11px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto">'
-      + '<button class="btn btn-p" style="font-size:13px;font-weight:700" onclick="_comAbrirPagar(\''+u.uid+'\')" '+(s.saldo<=0?'disabled style="opacity:.5"':'')+'>$ Pagar</button>'
-      + '<button class="btn btn-g" style="font-size:13px;font-weight:700" onclick="_comAbrirDetalle(\''+u.uid+'\')">Detalle</button>'
-      + '</div>'
+  var inics = nombre.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('');
+  var ventaLbl = cfg.venta.tipo === 'porc' ? cfg.venta.valor+'%' : '$'+cfg.venta.valor;
+  var cobroLbl = cfg.cobranza.tipo === 'porc' ? cfg.cobranza.valor+'%' : '$'+cfg.cobranza.valor;
+  var debeColor = s.saldo > 0 ? 'var(--green)' : 'var(--ink3)';
+  var pctPagado = s.generado > 0 ? Math.round((s.pagado/s.generado)*100) : 0;
+  // Desglose por sede — total por tarjeta (Entrega 2, Opción C)
+  var desgloseSede = _comDesglosePorSede(u);
+  var sedeHtml = '';
+  if(desgloseSede.length > 1){
+    sedeHtml = '<div style="padding:0 16px 12px">'
+      + '<div style="font-size:9px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Por sede</div>'
+      + '<div style="display:flex;flex-direction:column;gap:4px">'
+      + desgloseSede.map(function(d){
+          return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--surf2);padding:6px 10px;border-radius:7px">'
+            + '<span style="font-size:11px;font-weight:700;color:var(--ink2)">'+d.nombre+'</span>'
+            + '<span style="font-family:var(--fd);font-size:12px;font-weight:800;color:var(--p1)">'+fmt(d.total)+'</span>'
+            + '</div>';
+        }).join('')
+      + '</div></div>';
+  }
+  return '<div class="com-card card" data-nombre="'+nombreEsc.toLowerCase()+'" style="overflow:hidden;display:flex;flex-direction:column;padding:0;gap:0">'
+    // ── Header: avatar + nombre + badges ──
+    + '<div style="padding:16px 16px 12px;display:flex;align-items:center;gap:12px">'
+    + '<div style="width:42px;height:42px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
+    + '<div style="flex:1;min-width:0">'
+    + '<div class="ct" style="font-size:14px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nombre+'</div>'
+    + '<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">'
+    + '<span style="background:rgba(74,107,255,.1);color:var(--p1);padding:2px 8px;border-radius:10px;font-size:9.5px;font-weight:800">Venta '+ventaLbl+'</span>'
+    + '<span style="background:rgba(0,184,118,.1);color:var(--green);padding:2px 8px;border-radius:10px;font-size:9.5px;font-weight:800">Cobro '+cobroLbl+'</span>'
+    + '</div>'
+    + '</div>'
+    + '<div style="text-align:right;flex-shrink:0">'
+    + '<div style="font-size:9px;color:var(--ink3);font-weight:700;text-transform:uppercase">Por pagar</div>'
+    + '<div style="font-family:var(--fd);font-size:22px;font-weight:900;color:'+debeColor+';line-height:1.1">'+fmt(s.saldo)+'</div>'
+    + '</div>'
+    + '</div>'
+    // ── KPIs ──
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-top:1px solid var(--rim2);border-bottom:1px solid var(--rim2)">'
+    + '<div style="padding:10px 14px;border-right:1px solid var(--rim2)">'
+    + '<div style="font-size:9px;color:var(--ink3);font-weight:800;text-transform:uppercase">Generado</div>'
+    + '<div style="font-family:var(--fd);font-weight:800;font-size:13px;margin-top:2px">'+fmt(s.generado)+'</div>'
+    + '</div>'
+    + '<div style="padding:10px 14px;border-right:1px solid var(--rim2)">'
+    + '<div style="font-size:9px;color:var(--ink3);font-weight:800;text-transform:uppercase">Pagado</div>'
+    + '<div style="font-family:var(--fd);font-weight:800;font-size:13px;color:var(--p1);margin-top:2px">'+fmt(s.pagado)+'</div>'
+    + '</div>'
+    + '<div style="padding:10px 14px">'
+    + '<div style="font-size:9px;color:var(--ink3);font-weight:800;text-transform:uppercase">Este mes</div>'
+    + '<div style="font-family:var(--fd);font-weight:800;font-size:13px;margin-top:2px">'+fmt(st.mes)+'</div>'
+    + '</div>'
+    + '</div>'
+    // ── Barra de progreso pagado ──
+    + '<div style="padding:10px 16px;border-bottom:1px solid var(--rim2)">'
+    + '<div style="display:flex;justify-content:space-between;margin-bottom:5px">'
+    + '<span style="font-size:9.5px;color:var(--ink3);font-weight:700">'+s.nVentas+' ventas · '+s.nCobranzas+' cobranzas</span>'
+    + '<span style="font-size:9.5px;font-weight:800;color:var(--p1)">'+pctPagado+'% pagado</span>'
+    + '</div>'
+    + '<div style="background:var(--gs);border-radius:4px;height:5px;overflow:hidden">'
+    + '<div style="height:100%;width:'+pctPagado+'%;background:var(--grad);border-radius:4px"></div>'
+    + '</div>'
+    + '</div>'
+    // ── Desglose por sede (si aplica) ──
+    + (sedeHtml ? '<div style="border-bottom:1px solid var(--rim2)">'+sedeHtml+'</div>' : '')
+    // ── Botones ──
+    + '<div style="padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto">'
+    + '<button class="btn btn-g" onclick="_comAbrirDetalle(\''+u.uid+'\')">Ver detalle</button>'
+    + '<button class="btn btn-p" onclick="_comAbrirPagar(\''+u.uid+'\')" '+(s.saldo<=0?'disabled style="opacity:.5"':'')+'>$ Pagar</button>'
+    + '</div>'
     + '</div>';
 }
-
 // Filtrado por buscador
 function _comFiltrar(){
   var q = (($('com-search')&&$('com-search').value)||'').toLowerCase().trim();
