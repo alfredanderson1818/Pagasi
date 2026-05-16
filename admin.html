@@ -7554,11 +7554,13 @@ creditos(){
       <td>${moraCell}</td>
       <td><span style="font-weight:800;font-family:var(--fd);color:var(--ink)">${apyVal.toFixed(2)}%</span></td>
       <td><span class="bdg ${sbg(c.estado)}">${c.estado}</span></td>
-      <td style="display:flex;gap:4px;flex-wrap:wrap" onclick="event.stopPropagation()">
-        <button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')">Ver</button>
-        <button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')">Editar</button>
-        ${c.estado!=="completado"&&c.estado!=="cancelado"&&c.estado!=="recuperado"&&c.estado!=="recuperada"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar anticipadamente">Liquidar</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito">✕</button>`:''}
-        ${(c.estado==='cancelado'||c.estado==='recuperado'||c.estado==='recuperada')?`<button class="btn btn-p btn-xs" onclick="restaurarCred('${c.id}')" title="Restaurar crédito">↺ Restaurar</button>`:''}
+      <td onclick="event.stopPropagation()" style="white-space:nowrap">
+        <div style="display:flex;gap:3px;align-items:center">
+        <button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')" title="Ver">Ver</button>
+        <button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')" title="Editar">Editar</button>
+        ${c.estado!=="completado"&&c.estado!=="cancelado"&&c.estado!=="recuperado"&&c.estado!=="recuperada"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar">Liq.</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito" style="padding:4px 7px">✕</button>`:''}
+        ${(c.estado==='cancelado'||c.estado==='recuperado'||c.estado==='recuperada')?`<button class="btn btn-p btn-xs" onclick="restaurarCred('${c.id}')" title="Restaurar crédito">↺</button>`:''}
+        </div>
       </td>
     </tr>`;}).join('')})()}
     ${filtered.length===0?`<tr><td colspan="13" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin resultados para este filtro</td></tr>`:''}
