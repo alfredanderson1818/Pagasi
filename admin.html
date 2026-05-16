@@ -223,7 +223,7 @@ body{font-family:var(--f);color:var(--ink);font-size:14px;line-height:1.5;-webki
 .sb::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad)}
 .sb-logo{padding:20px 16px 16px;display:flex;align-items:center;border-bottom:1px solid var(--rim);position:relative}
 .sb-logo::after{content:'';position:absolute;bottom:-1px;left:16px;right:16px;height:1px;background:linear-gradient(90deg,transparent,rgba(37,99,235,0.15),transparent)}
-.sb-logo img{height:34px;object-fit:contain;filter:brightness(0) saturate(100%) invert(27%) sepia(94%) saturate(1652%) hue-rotate(213deg) brightness(97%)}
+.sb-logo img{height:34px;object-fit:contain}
 .sb-nav{flex:1;overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin}
 .sb-nav::-webkit-scrollbar{width:4px}
 .sb-nav::-webkit-scrollbar-thumb{background:var(--rim2);border-radius:4px}
@@ -426,7 +426,7 @@ tbody tr:last-child td{border-bottom:none}
 .login-card{background:#fff;border:1px solid var(--rim2);border-radius:var(--r20);padding:36px 32px 32px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(37,99,235,0.12),0 0 0 1px var(--rim);position:relative;overflow:hidden}
 .login-card::before{content:'';position:absolute;top:-80px;right:-80px;width:260px;height:260px;background:radial-gradient(circle,rgba(37,99,235,0.08) 0%,transparent 65%);pointer-events:none}
 .login-logo{display:flex;justify-content:center;margin-bottom:22px}
-.login-logo img{height:40px;object-fit:contain;filter:brightness(0) saturate(100%) invert(27%) sepia(94%) saturate(1652%) hue-rotate(213deg) brightness(97%)}
+.login-logo img{height:40px;object-fit:contain}
 .login-title{font-family:var(--fd);font-weight:900;font-size:21px;color:var(--ink);text-align:center;margin-bottom:5px;letter-spacing:-0.5px}
 .login-sub{font-size:12px;color:var(--ink3);text-align:center;margin-bottom:28px;font-weight:600}
 .login-fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
@@ -474,7 +474,7 @@ tbody tr:last-child td{border-bottom:none}
   .sb-un, .sb-ur, .sb-lbl, .si span:not(.sic), .si-bx { display: initial; }
   .si { justify-content: flex-start; padding: 12px 14px; min-height: 44px; }
   .sb-usr { justify-content: flex-start; }
-  .sb-logo img { height: 30px; filter:brightness(0) saturate(100%) invert(27%) sepia(94%) saturate(1652%) hue-rotate(213deg) brightness(97%); }
+  .sb-logo img { height: 30px; }
 
   /* Top bar — mostrar botón de menú */
   .topbar {
@@ -820,9 +820,9 @@ button.si {
   --ink: #0E0E1F;
   --ink2: #3D3B5A;
   --ink3: #8C8AAC;
-  --p1: #2563EB;
-  --p2: #60A5FA;
-  --grad: linear-gradient(135deg, #2563EB 0%, #60A5FA 100%);
+  --p1: #5B4ED4;
+  --p2: #3A8FE8;
+  --grad: linear-gradient(135deg, #5B4ED4 0%, #3A8FE8 100%);
   --gs: rgba(37,99,235,0.09);
   --rim: rgba(37,99,235,0.10);
   --rim2: rgba(37,99,235,0.20);
@@ -2696,8 +2696,8 @@ tbody tr:hover td {
   top: 0; right: 0; bottom: 0;
   width: 420px;
   max-width: 100%;
-  background: #ffffff;
-  border-left: 1px solid #e5e7f0;
+  background: var(--surf);
+  border-left: 1px solid var(--rim);
   box-shadow: -8px 0 40px rgba(0,0,0,.12);
   z-index: 2000;
   transform: translateX(100%);
@@ -2727,16 +2727,17 @@ tbody tr:hover td {
   padding: 18px 18px 16px;
   position: relative;
   flex-shrink: 0;
-  background: #ffffff;
-  border-bottom: 1px solid #eaecf4;
+  background: var(--surf);
+  border-bottom: 1px solid var(--rim);
 }
+.up-hero * { color: inherit; }
 .up-close {
   position: absolute;
   top: 14px;
   right: 14px;
-  background: #f0f1fa;
-  border: 1px solid #e5e7f0;
-  color: #8a92b2;
+  background: var(--surf2);
+  border: 1px solid var(--rim);
+  color: var(--ink3);
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -2769,11 +2770,11 @@ tbody tr:hover td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #1a1d35;
+  color: var(--ink);
 }
 .up-mine-tag {
   display: inline-block;
-  background: #eef0fc;
+  background: var(--gs);
   color: var(--p1);
   font-size: 8.5px;
   font-weight: 800;
@@ -2784,7 +2785,7 @@ tbody tr:hover td {
 }
 .up-hero-email {
   font-size: 11.5px;
-  color: #8a92b2;
+  color: var(--ink3);
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -2808,7 +2809,7 @@ tbody tr:hover td {
   overflow-y: auto;
   padding: 14px 16px;
   -webkit-overflow-scrolling: touch;
-  background: #f4f5fb;
+  background: var(--base);
 }
 
 /* Stats cards */
@@ -2819,23 +2820,23 @@ tbody tr:hover td {
   margin-bottom: 14px;
 }
 .up-stat {
-  background: #ffffff;
+  background: var(--surf);
   padding: 9px 10px;
   border-radius: 9px;
-  border: 1px solid #e5e7f0;
+  border: 1px solid var(--rim);
 }
 .up-stat-l {
   font-size: 8.5px;
   font-weight: 800;
   text-transform: uppercase;
-  color: #8a92b2;
+  color: var(--ink3);
   letter-spacing: .5px;
   margin-bottom: 3px;
 }
 .up-stat-v {
   font-size: 12.5px;
   font-weight: 800;
-  color: #1a1d35;
+  color: var(--ink);
   line-height: 1.2;
 }
 
@@ -2847,7 +2848,7 @@ tbody tr:hover td {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .7px;
-  color: #8a92b2;
+  color: var(--ink3);
   margin-bottom: 7px;
 }
 
@@ -2865,7 +2866,7 @@ tbody tr:hover td {
 }
 .up-rol-desc {
   font-size: 11.5px;
-  color: #555b7a;
+  color: var(--ink2);
   line-height: 1.5;
 }
 
@@ -2880,30 +2881,30 @@ tbody tr:hover td {
   align-items: center;
   gap: 10px;
   padding: 9px 11px;
-  background: #ffffff;
-  border: 1px solid #e5e7f0;
+  background: var(--surf);
+  border: 1px solid var(--rim);
   border-radius: 9px;
   cursor: pointer;
   text-align: left;
   width: 100%;
   font-family: var(--f);
   transition: all .15s ease;
-  color: #1a1d35;
+  color: var(--ink);
 }
 .up-action-btn:hover {
-  background: #f0f1fa;
+  background: var(--gs);
   border-color: var(--p1);
 }
 .up-action-ic {
+  font-size: 16px;
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  background: #eef0fc;
-  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  background: var(--surf2);
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
 }
 .up-action-tx {
   flex: 1;
@@ -2912,12 +2913,12 @@ tbody tr:hover td {
 .up-action-t {
   font-size: 12px;
   font-weight: 700;
-  color: #1a1d35;
+  color: var(--ink);
   line-height: 1.2;
 }
 .up-action-d {
   font-size: 10px;
-  color: #8a92b2;
+  color: var(--ink3);
   margin-top: 1px;
   line-height: 1.25;
 }
@@ -2936,16 +2937,16 @@ tbody tr:hover td {
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
-  border: 1px solid #e5e7f0;
+  border: 1px solid var(--rim);
 }
 .up-perm-chip.has {
-  background: #eef0fc;
-  border-color: #d8dbf0;
-  color: #1a1d35;
+  background: var(--gs);
+  border-color: var(--rim2);
+  color: var(--ink);
 }
 .up-perm-chip.no {
-  background: #f4f5fb;
-  color: #8a92b2;
+  background: var(--surf2);
+  color: var(--ink3);
   text-decoration: line-through;
   opacity: .55;
 }
@@ -2956,7 +2957,7 @@ tbody tr:hover td {
   align-items: flex-start;
   gap: 9px;
   padding: 7px 0;
-  border-bottom: 1px solid #eaecf4;
+  border-bottom: 1px solid var(--rim2);
   font-size: 11.5px;
 }
 .up-log-row:last-child { border-bottom: none; }
@@ -2975,8 +2976,8 @@ tbody tr:hover td {
 /* Footer sticky */
 .up-footer {
   padding: 10px 14px;
-  border-top: 1px solid #e5e7f0;
-  background: #ffffff;
+  border-top: 1px solid var(--rim);
+  background: var(--surf);
   display: flex;
   gap: 8px;
   flex-shrink: 0;
@@ -3038,7 +3039,7 @@ tbody tr:hover td {
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar →</button>
     <div class="login-err" id="login-err">Usuario o contraseña incorrectos</div>
-    <div class="login-footer">Pagasi · Sistema interno · v18.0<br><span id="login-mode" style="font-size:9px;opacity:0.5">modo local</span></div>
+    <div class="login-footer">Pagasi · Sistema interno · v7.0<br><span id="login-mode" style="font-size:9px;opacity:0.5">modo local</span></div>
   </div>
 </div>
 
@@ -4901,7 +4902,7 @@ function renderMoraChart(){
 
 // ── Cobros programados con toggle D/Q/M (igual que dashboard) ──
 var _credCobrosChart = null;
-var _credCobrosPeriodo = 'diario';
+var _credCobrosPeriodo = 'quincenal';
 
 function setCredCobrosPeriodo(periodo){
   _credCobrosPeriodo = periodo;
@@ -4916,7 +4917,7 @@ function setCredCobrosPeriodo(periodo){
 function renderCredCobrosChart(){
   var canvas = document.getElementById('cred-cobros-chart');
   if(!canvas || typeof Chart==='undefined') return;
-  var periodo = _credCobrosPeriodo || 'diario';
+  var periodo = _credCobrosPeriodo || 'quincenal';
   var isDark = document.documentElement.getAttribute('data-theme')==='dark';
   var p1 = isDark ? '#3B82F6' : '#2563EB';
   var p1t = isDark ? 'rgba(59,130,246,0.18)' : 'rgba(37,99,235,0.12)';
@@ -6180,7 +6181,7 @@ function verCliente(id){
     html += '<div style="display:flex;flex-direction:column;gap:0">';
     actTimeline.forEach(function(t, i){
       var fecha = '—';
-      try { fecha = fmtFechaHora(t.fecha); } catch(e){}
+      try { fecha = new Date(t.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){}
       html += '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:'+(i<actTimeline.length-1?'1px solid var(--rim2)':'none')+'">'
         + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">'
         + '<div style="width:32px;height:32px;border-radius:50%;background:var(--surf2);border:2px solid '+t.color+';display:flex;align-items:center;justify-content:center;font-size:14px">'+t.ico+'</div>'
@@ -7134,7 +7135,7 @@ dash(){
   // Moto pie
   const motoSlices=[
     [mDisp/mTotal*100, 0, '#06B06A'],
-    [mFin/mTotal*100, mDisp/mTotal*100, '#2563EB'],
+    [mFin/mTotal*100, mDisp/mTotal*100, '#5B4ED4'],
     [mRec/mTotal*100, (mDisp+mFin)/mTotal*100, '#D93B5A'],
     [mInv/mTotal*100, (mDisp+mFin+mRec)/mTotal*100, '#5B8DEF'],
   ];
@@ -7143,7 +7144,7 @@ dash(){
 
   // Créditos pie
   const credSlices=[
-    [cActivos/cTotal*100, 0, '#2563EB'],
+    [cActivos/cTotal*100, 0, '#5B4ED4'],
     [cEnMora/cTotal*100, cActivos/cTotal*100, '#D93B5A'],
     [cCompletados/cTotal*100, (cActivos+cEnMora)/cTotal*100, '#06B06A'],
   ];
@@ -7157,7 +7158,7 @@ dash(){
     metodoCounts[m]=(metodoCounts[m]||0)+1;
   });
   const metodoTotal=Math.max(1,Object.values(metodoCounts).reduce((a,b)=>a+b,0));
-  const metodoColors=['#2563EB','#06B06A','#5B8DEF','#D93B5A','#F59E0B'];
+  const metodoColors=['#5B4ED4','#06B06A','#5B8DEF','#D93B5A','#F59E0B'];
   const metodoEntries=Object.entries(metodoCounts).slice(0,5);
   let pagoOff=0;
   const pagoArcs=metodoEntries.map(([,v],i)=>{
@@ -7367,7 +7368,7 @@ dash(){
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;flex:1">
-          ${[['#06B06A','Disponibles',mDisp],['#2563EB','Financiadas',mFin],['#D93B5A','Recuperadas',mRec],['#5B8DEF','Inventario',mInv]].map(([c,l,v])=>
+          ${[['#06B06A','Disponibles',mDisp],['#5B4ED4','Financiadas',mFin],['#D93B5A','Recuperadas',mRec],['#5B8DEF','Inventario',mInv]].map(([c,l,v])=>
             `<div style="display:flex;align-items:center;gap:6px">
               <div style="width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></div>
               <span style="font-size:10px;color:var(--ink3);flex:1">${l}</span>
@@ -8700,270 +8701,246 @@ cobranza(){
 
   ${pageBanner(
     'Centro de recuperación · Cobranza',
-    'Cobranza',
-    '<b>'+mora.length+'</b> en mora · Potencial: <b>'+fmt(cobranzaPotencial)+'</b> · Efectividad: <b>'+efectividadMes+'%</b>',
+    'Gestión de mora',
+    '<b>'+mora.length+'</b> clientes en mora · Potencial recuperación: <b>'+fmt(cobranzaPotencial)+'</b> · Tasa de mora: <b>'+tasaMora+'%</b>',
     [
-      {label:'↓ Exportar mora', onclick:"exportarCSV('cobranza')"},
-      {label:'Registrar pago', onclick:"nav('pagos')", primary:true}
+      {label:'Reporte PDF', onclick:'window.print()'},
+      {label:'Ver todos los pagos', onclick:"nav('pagos')"},
+      {label:'↓ Exportar mora CSV', onclick:"exportarCSV('cobranza')"},
+      {label:'↓ Exportar créditos', onclick:"exportarCSV('creditos')", primary:true}
     ]
   )}
 
-  <!-- ═══ KPIs COMPACTOS ═══ -->
-  <div class="sg" style="grid-template-columns:repeat(6,1fr);margin-bottom:14px">
+  <!-- ═══ KPIs PRINCIPALES ═══ -->
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
     <div class="stat" style="border-top:3px solid var(--red)">
-      <div class="st-v" style="color:var(--red);font-size:26px">${mora.length}</div>
+      <div class="st-v" style="color:var(--red);font-size:24px">${mora.length}</div>
       <div class="st-l">En mora</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:2px">de ${totalActivos} activos · ${tasaMora}%</div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:3px">de ${totalActivos} activos</div>
     </div>
     <div class="stat" style="border-top:3px solid var(--amber)">
       <div class="st-v" style="color:var(--amber);font-size:20px">${fmt(deudaTotal)}</div>
       <div class="st-l">Deuda total</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:2px">~${promMora}d promedio</div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:3px">${mora.length} créditos</div>
+    </div>
+    <div class="stat" style="border-top:3px solid var(--ink3)">
+      <div class="st-v" style="font-size:24px">${promMora}d</div>
+      <div class="st-l">Mora promedio</div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:3px">días por crédito</div>
     </div>
     <div class="stat" style="border-top:3px solid var(--green)">
-      <div class="st-v" style="color:var(--green);font-size:22px">${fmt(cobradoHoy)}</div>
+      <div class="st-v" style="color:var(--green);font-size:20px">${fmt(cobradoHoy)}</div>
       <div class="st-l">Cobrado hoy</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:2px">${pagosHoy.length} pagos</div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:3px">${pagosHoy.length} pagos</div>
     </div>
     <div class="stat" style="border-top:3px solid var(--p1)">
       <div class="st-v" style="color:var(--p1);font-size:20px">${fmt(cobradoSemana)}</div>
       <div class="st-l">Esta semana</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:2px">${tendenciaSemanal>0?'↑ +'+tendenciaSemanal+'%':tendenciaSemanal<0?'↓ '+tendenciaSemanal+'%':'→ estable'}</div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:3px">${pagosSemana.length} pagos · ${tendenciaSemanal>0?' +'+tendenciaSemanal+'%':tendenciaSemanal<0?' '+tendenciaSemanal+'%':'→ estable'}</div>
     </div>
     <div class="stat" style="border-top:3px solid var(--green)">
-      <div class="st-v" style="color:var(--green);font-size:26px">${efectividadMes}%</div>
+      <div class="st-v" style="color:var(--green);font-size:24px">${efectividadMes}%</div>
       <div class="st-l">Efectividad mes</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:2px">${fmt(cobradoMes)} cobrado</div>
-    </div>
-    <div class="stat" style="border-top:3px solid var(--ink3)">
-      <div class="st-v" style="font-size:22px">${alDia}</div>
-      <div class="st-l">Al día</div>
-      <div style="font-size:10px;color:var(--green);margin-top:2px;font-weight:700">✓ sin mora</div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:3px">${fmt(cobradoMes)} / ${fmt(cuotasEsperadasMes)}</div>
     </div>
   </div>
 
-  <!-- ═══ BARRA DE SEVERIDAD ═══ -->
-  <div class="card" style="margin-bottom:14px;padding:12px 16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:800;color:var(--ink2)">Distribución por severidad</div>
-      <div style="display:flex;gap:12px;font-size:11px">
-        <span style="color:var(--amber);font-weight:700">⬛ ${bucket1.length} leve</span>
-        <span style="color:var(--red);font-weight:700">⬛ ${bucket2.length} moderada</span>
-        <span style="color:var(--red);font-weight:700">⬛ ${bucket3.length} grave</span>
-        <span style="color:#8B0000;font-weight:800">⬛ ${bucket4.length} crítico</span>
-      </div>
-    </div>
-    ${mora.length
-      ? `<div style="display:flex;height:28px;border-radius:8px;overflow:hidden;background:var(--surf2)">
-          ${bucket1.length?`<div style="flex:${bucket1.length};background:linear-gradient(90deg,#e8980a,#ffa94d);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800">${bucket1.length>1?bucket1.length:''}</div>`:''}
-          ${bucket2.length?`<div style="flex:${bucket2.length};background:linear-gradient(90deg,#d93b5a,#ec6584);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800">${bucket2.length>1?bucket2.length:''}</div>`:''}
-          ${bucket3.length?`<div style="flex:${bucket3.length};background:linear-gradient(90deg,#c0392b,#d93b5a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800">${bucket3.length>1?bucket3.length:''}</div>`:''}
-          ${bucket4.length?`<div style="flex:${bucket4.length};background:linear-gradient(90deg,#8B0000,#a52424);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800">${bucket4.length>1?bucket4.length:''}</div>`:''}
-          <div style="flex:${alDia};background:var(--greens);min-width:4px"></div>
-        </div>`
-      : `<div style="text-align:center;padding:10px;background:rgba(5,160,96,.08);border-radius:8px;color:var(--green);font-weight:800;font-size:12px">✓ Sin clientes en mora</div>`
-    }
-  </div>
-
-  <!-- ═══ TABS ═══ -->
-  <div style="display:flex;gap:0;border-bottom:2px solid var(--rim);margin-bottom:16px">
-    ${[['mora','📋 Lista de mora ('+mora.length+')'],['gestiones','📞 Gestiones'],['rendimiento','📊 Rendimiento']].map(([k,l])=>'<button onclick="window._cobTab=\''+k+'\';nav(\'cobranza\')" style="background:none;border:none;padding:11px 18px;font-size:13px;font-weight:'+((window._cobTab||\'mora\')===k?800:600)+';color:'+((window._cobTab||\'mora\')===k?'var(--p1)':'var(--ink3)')+';border-bottom:'+((window._cobTab||\'mora\')===k?'3px solid var(--p1)':'3px solid transparent')+';margin-bottom:-2px;cursor:pointer;font-family:var(--f)">'+l+'</button>').join('')}
-  </div>
-
-  <!-- ══ TAB: LISTA DE MORA ══ -->
-  <div style="display:${(window._cobTab||'mora')==='mora'?'block':'none'}">
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;align-items:start">
-
-      <!-- Lista priorizada -->
+  <!-- ═══ BUCKETS DE SEVERIDAD + BARRA PROGRESO ═══ -->
+  <div class="card" style="margin-bottom:14px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div>
-        ${bucket4.length?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:rgba(139,0,0,.1);border-radius:10px;border-left:4px solid #8B0000">
-          <span style="font-size:13px">🚨</span>
-          <span style="font-size:11.5px;font-weight:800;color:#8B0000;text-transform:uppercase;letter-spacing:.5px">Crítico — +60 días (${bucket4.length})</span>
-        </div>${bucket4.map(moraRow).join('')}`:''}
-        ${bucket3.length?`<div style="display:flex;align-items:center;gap:8px;margin:${bucket4.length?'16px':'0'} 0 10px;padding:8px 12px;background:var(--reds);border-radius:10px;border-left:4px solid var(--red)">
-          <span style="font-size:13px">🔴</span>
-          <span style="font-size:11.5px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.5px">Grave — 31–60 días (${bucket3.length})</span>
-        </div>${bucket3.map(moraRow).join('')}`:''}
-        ${bucket2.length?`<div style="display:flex;align-items:center;gap:8px;margin:${(bucket3.length||bucket4.length)?'16px':'0'} 0 10px;padding:8px 12px;background:rgba(217,59,90,.07);border-radius:10px;border-left:4px solid var(--red)">
-          <span style="font-size:13px">⚠️</span>
-          <span style="font-size:11.5px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.5px">Moderada — 16–30 días (${bucket2.length})</span>
-        </div>${bucket2.map(moraRow).join('')}`:''}
-        ${bucket1.length?`<div style="display:flex;align-items:center;gap:8px;margin:${(bucket2.length||bucket3.length||bucket4.length)?'16px':'0'} 0 10px;padding:8px 12px;background:var(--ambers);border-radius:10px;border-left:4px solid var(--amber)">
-          <span style="font-size:13px">🟡</span>
-          <span style="font-size:11.5px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px">Leve — 1–15 días (${bucket1.length})</span>
-        </div>${bucket1.map(moraRow).join('')}`:''}
-        ${!mora.length?`<div style="text-align:center;padding:60px 20px;background:linear-gradient(135deg,rgba(5,160,96,.08),rgba(37,99,235,.05));border-radius:16px;border:2px dashed var(--green)">
-          <div style="font-size:52px;margin-bottom:12px">🎉</div>
-          <div style="font-weight:900;font-size:20px;color:var(--green)">¡Portfolio al 100%!</div>
-          <div style="font-size:13px;color:var(--ink3);margin-top:8px">Todos los clientes están al día</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:12px">${recuperadas} crédito${recuperadas!==1?'s':''} recuperado${recuperadas!==1?'s':''} históricamente</div>
-        </div>`:''}
+        <div style="font-size:14px;font-weight:800">️ Distribución por severidad de mora</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${mora.length} créditos en mora · clasificados por días de atraso</div>
       </div>
-
-      <!-- Panel lateral derecho -->
-      <div style="display:flex;flex-direction:column;gap:12px">
-
-        <!-- Acciones rápidas -->
-        <div class="card" style="padding:14px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:10px">Acciones rápidas</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-            <button class="btn btn-p btn-sm" onclick="nav('pagos')" style="justify-content:center">💵 Cobrar</button>
-            <button class="btn btn-g btn-sm" onclick="nav('creditos')" style="justify-content:center">📋 Créditos</button>
-            <button class="btn btn-g btn-sm" onclick="exportarCSV('cobranza')" style="justify-content:center">↓ Exportar</button>
-            <button class="btn btn-g btn-sm" onclick="nav('clientes')" style="justify-content:center">👥 Clientes</button>
-          </div>
-        </div>
-
-        <!-- Top 5 deudores -->
-        <div class="card">
-          <div class="ch"><div><div class="ct">Top deudores</div><div class="cs">Mayor mora acumulada</div></div></div>
-          ${topDeudores.length ? topDeudores.map(function(c,i){
-            var col = c.mora>60?'#8B0000':c.mora>30?'var(--red)':'var(--amber)';
-            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rim2);cursor:pointer" onclick="openAmort(\''+c.id+'\')">'
-              +'<div style="width:24px;height:24px;border-radius:6px;background:'+col+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:10px;flex-shrink:0">'+(i+1)+'</div>'
-              +'<div style="flex:1;min-width:0">'
-                +'<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.cli+'</div>'
-                +'<div style="font-size:10px;color:var(--ink3)">'+c.modelo+'</div>'
-              +'</div>'
-              +'<div style="text-align:right;flex-shrink:0">'
-                +'<div style="font-size:15px;font-weight:900;color:'+col+';line-height:1">'+c.mora+'d</div>'
-                +'<div style="font-size:10px;color:var(--ink3)">'+fmt(c.cuotaQ||c.cuota||0)+'</div>'
-              +'</div>'
-            +'</div>';
-          }).join('') : '<div style="color:var(--green);padding:16px 0;text-align:center;font-size:12px;font-weight:700">✓ Sin deudores</div>'}
-        </div>
-
-        <!-- Resumen mes -->
-        <div class="card" style="padding:14px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:10px">Resumen del mes</div>
-          <div style="display:flex;flex-direction:column;gap:7px">
-            ${[
-              ['Pagos registrados', pagosMes.length, 'var(--p1)'],
-              ['Total recaudado', fmt(cobradoMes), 'var(--green)'],
-              ['Recuperados', recuperadas, 'var(--green)'],
-              ['Efectividad', efectividadMes+'%', efectividadMes>=70?'var(--green)':efectividadMes>=40?'var(--amber)':'var(--red)'],
-            ].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surf2);border-radius:8px">
-              <span style="font-size:11.5px;color:var(--ink2)">${l}</span>
-              <span style="font-size:14px;font-weight:900;color:${c}">${v}</span>
-            </div>`).join('')}
-          </div>
-        </div>
-
+      <div style="font-size:11px;color:var(--ink3)">
+        <span style="color:var(--green);font-weight:800">${alDia}</span> al día · 
+        <span style="color:var(--red);font-weight:800">${mora.length}</span> en mora
+      </div>
+    </div>
+    ${mora.length?`<div style="display:flex;height:36px;border-radius:10px;overflow:hidden;background:var(--surf2);margin-bottom:10px">
+      ${bucket1.length>0?`<div style="flex:${bucket1.length};background:linear-gradient(135deg,#e8980a,#ffa94d);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:40px">${bucket1.length}</div>`:''}
+      ${bucket2.length>0?`<div style="flex:${bucket2.length};background:linear-gradient(135deg,#d93b5a,#ec6584);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:40px">${bucket2.length}</div>`:''}
+      ${bucket3.length>0?`<div style="flex:${bucket3.length};background:linear-gradient(135deg,#c0392b,#d93b5a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:40px">${bucket3.length}</div>`:''}
+      ${bucket4.length>0?`<div style="flex:${bucket4.length};background:linear-gradient(135deg,#8B0000,#a52424);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:40px">${bucket4.length}</div>`:''}
+    </div>`:'<div style="text-align:center;padding:16px;background:rgba(5,160,96,.08);border-radius:10px;color:var(--green);font-weight:800">✓ No hay clientes en mora</div>'}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      <div style="background:var(--ambers);border:1.5px solid rgba(232,152,10,.3);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:900;color:var(--amber);line-height:1">${bucket1.length}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--ink3);margin-top:4px">1–15 días</div>
+        <div style="font-size:9.5px;color:var(--ink3);margin-top:2px">Leve</div>
+      </div>
+      <div style="background:rgba(217,59,90,.07);border:1.5px solid rgba(217,59,90,.25);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:900;color:var(--red);line-height:1">${bucket2.length}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--ink3);margin-top:4px">16–30 días</div>
+        <div style="font-size:9.5px;color:var(--ink3);margin-top:2px">Moderada</div>
+      </div>
+      <div style="background:var(--reds);border:1.5px solid rgba(217,59,90,.35);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:900;color:var(--red);line-height:1">${bucket3.length}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--ink3);margin-top:4px">31–60 días</div>
+        <div style="font-size:9.5px;color:var(--ink3);margin-top:2px">Grave</div>
+      </div>
+      <div style="background:rgba(139,0,0,.08);border:1.5px solid rgba(139,0,0,.3);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:900;color:#8B0000;line-height:1">${bucket4.length}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--ink3);margin-top:4px">+60 días</div>
+        <div style="font-size:9.5px;color:#8B0000;margin-top:2px;font-weight:700"> CRÍTICO</div>
       </div>
     </div>
   </div>
 
-  <!-- ══ TAB: GESTIONES ══ -->
-  <div style="display:${(window._cobTab||'mora')==='gestiones'?'block':'none'}">
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;align-items:start">
-      <div class="card">
-        <div class="ch"><div><div class="ct">📞 Historial de gestiones</div><div class="cs">Llamadas, WhatsApp, visitas y acuerdos</div></div></div>
-        <div id="cobranza-notas-list" style="max-height:500px;overflow-y:auto">
-          <div style="color:var(--ink3);font-size:12px;padding:16px 0;text-align:center">Cargando gestiones...</div>
+  <!-- ═══ CHARTS: RECUPERACIÓN + DÍAS + TOP DEUDORES ═══ -->
+  <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:12px;margin-bottom:14px">
+
+    <div class="card">
+      <div class="ch"><div><div class="ct"> Recuperación por semana</div><div class="cs">Últimas 8 semanas · ${semanas.reduce((a,s)=>a+s.cnt,0)} pagos</div></div>
+        <div style="text-align:right">
+          <div style="font-weight:900;font-size:18px;color:var(--green);letter-spacing:-.5px">${fmt(semanas.reduce((a,s)=>a+s.tot,0))}</div>
+          <div style="font-size:10px;color:var(--ink3)">8 semanas</div>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div class="card" style="padding:14px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:12px">Nueva gestión</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <select class="fs" id="nota-tipo"><option>Llamada</option><option>WhatsApp</option><option>Visita</option><option>Acuerdo</option></select>
-            <input class="fi" id="nota-cred" placeholder="ID del crédito (ej: CRED-001)">
-            <textarea class="fi" id="nota-resultado" placeholder="Resultado de la gestión..." style="min-height:80px;resize:vertical"></textarea>
-            <input class="fi" id="nota-compromiso" type="date" placeholder="Fecha de compromiso (opcional)">
-            <button class="btn btn-p btn-sm" onclick="guardarNotaCobranza()" style="width:100%;justify-content:center">Guardar gestión</button>
-          </div>
-        </div>
-        <div class="card" style="padding:14px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:10px">Acciones de contacto</div>
-          ${mora.slice(0,4).map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--rim2)">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cli}</div>
-              <div style="font-size:10px;color:${c.mora>30?'var(--red)':'var(--amber)'}">${c.mora}d mora</div>
+      <div style="display:flex;align-items:flex-end;gap:5px;height:130px;margin-top:12px">
+        ${semanas.map((s,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:9px;font-weight:800;color:${s.tot>0?'var(--green)':'var(--ink3)'};height:14px">${s.tot>0?fmt(s.tot).replace('$','$').slice(0,7):''}</div>
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end">
+            <div style="width:100%;background:${i===semanas.length-1?'linear-gradient(180deg,var(--p1),var(--p2,#60A5FA))':s.tot>0?'linear-gradient(180deg,var(--green),#10c878)':'var(--rim)'};border-radius:4px 4px 0 0;height:${s.tot>0?Math.max(8,Math.round(s.tot/maxSem*100)):4}px;transition:height .3s;position:relative">
+              ${i===semanas.length-1&&s.tot>0?'<div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:900;color:var(--p1);white-space:nowrap">Hoy</div>':''}
             </div>
-            <button class="btn btn-g btn-xs" onclick="whatsappCliente('${c.id}')">WA</button>
-            <button class="btn btn-g btn-xs" onclick="llamarCliente('${c.id}')">📞</button>
-          </div>`).join('')}
-          ${mora.length>4?`<div style="font-size:11px;color:var(--ink3);text-align:center;padding-top:8px">+${mora.length-4} más en la lista de mora</div>`:''}
-        </div>
+          </div>
+          <div style="font-size:9px;color:var(--ink3);font-weight:600">${s.lbl}</div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:14px;margin-top:12px;padding-top:10px;border-top:1px solid var(--rim2);font-size:11px;flex-wrap:wrap">
+        <div><span style="color:var(--ink3)">Pagos totales:</span> <b>${semanas.reduce((a,s)=>a+s.cnt,0)}</b></div>
+        <div><span style="color:var(--ink3)">Promedio sem:</span> <b style="color:var(--green)">${fmt(semanas.reduce((a,s)=>a+s.tot,0)/8)}</b></div>
+        <div><span style="color:var(--ink3)">Tendencia:</span> <b style="color:${tendenciaSemanal>0?'var(--green)':tendenciaSemanal<0?'var(--red)':'var(--ink3)'}">${tendenciaSemanal>0?'+':''}${tendenciaSemanal}%</b></div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="ch"><div><div class="ct"> Últimos 14 días</div><div class="cs">${dias14.reduce((a,d)=>a+(d.tot>0?1:0),0)} días con cobros</div></div></div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:130px;margin-top:12px">
+        ${dias14.map(function(d){
+          var h = d.tot>0 ? Math.max(6, Math.round(d.tot/maxDia*110)) : 3;
+          var col = d.esHoy?'var(--p1)':d.tot>0?'var(--green)':'var(--rim)';
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">'
+            +'<div style="flex:1;width:100%;display:flex;align-items:flex-end">'
+            +'<div style="width:100%;background:'+col+';border-radius:3px 3px 0 0;height:'+h+'px;opacity:'+(d.tot>0?1:.3)+'" title="'+d.lbl+': '+fmt(d.tot)+'"></div>'
+            +'</div>'
+            +'<div style="font-size:8.5px;color:'+(d.esHoy?'var(--p1)':'var(--ink3)')+';font-weight:'+(d.esHoy?'900':'600')+'">'+d.lbl+'</div>'
+            +'</div>';
+        }).join('')}
+      </div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--rim2);font-size:11px;display:flex;justify-content:space-between">
+        <span><span style="color:var(--ink3)">Mejor día:</span> <b>${fmt(maxDia)}</b></span>
+        <span><span style="color:var(--ink3)">Total:</span> <b style="color:var(--green)">${fmt(dias14.reduce(function(a,d){return a+d.tot;},0))}</b></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div><div class="ct"> Top 5 deudores</div><div class="cs">Mayor mora acumulada</div></div></div>
+      ${topDeudores.length ? topDeudores.map(function(c,i){
+        var col = c.mora>60?'#8B0000':c.mora>30?'var(--red)':'var(--amber)';
+        var cuotasV = Math.ceil(c.mora/15);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rim2);cursor:pointer" onclick="openAmort('${c.id}')">
+          <div style="width:26px;height:26px;border-radius:7px;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;flex-shrink:0">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cli}</div>
+            <div style="font-size:10px;color:var(--ink3)">${c.modelo} · ${cuotasV} cta vencidas</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:14px;font-weight:900;color:${col};line-height:1">${c.mora}d</div>
+            <div style="font-size:10px;color:var(--ink3);margin-top:1px">${fmt(c.cuotaQ||c.cuota||0)}</div>
+          </div>
+        </div>`;
+      }).join('') : '<div style="color:var(--green);padding:24px 0;text-align:center;font-size:13px;font-weight:600">✓ Sin deudores</div>'}
+    </div>
+
   </div>
 
-  <!-- ══ TAB: RENDIMIENTO ══ -->
-  <div style="display:${(window._cobTab||'mora')==='rendimiento'?'block':'none'}">
-    <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:12px;margin-bottom:14px">
-
-      <!-- Recuperación semanal -->
-      <div class="card">
-        <div class="ch">
-          <div><div class="ct">📈 Recuperación semanal</div><div class="cs">Últimas 8 semanas</div></div>
-          <div style="text-align:right">
-            <div style="font-weight:900;font-size:18px;color:var(--green)">${fmt(semanas.reduce((a,s)=>a+s.tot,0))}</div>
-            <div style="font-size:10px;color:var(--ink3)">${semanas.reduce((a,s)=>a+s.cnt,0)} pagos</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:12px">
-          ${semanas.map((s,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
-            <div style="flex:1;width:100%;display:flex;align-items:flex-end">
-              <div style="width:100%;background:${i===semanas.length-1?'var(--grad)':s.tot>0?'var(--greens)':'var(--rim)'};border:${s.tot>0?'none':'1px solid var(--rim2)'};border-radius:4px 4px 0 0;height:${s.tot>0?Math.max(8,Math.round(s.tot/maxSem*100)):4}px;position:relative">
-                ${i===semanas.length-1&&s.tot>0?'<div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:900;color:var(--p1);white-space:nowrap;background:var(--gs);border-radius:3px;padding:1px 4px">HOY</div>':''}
-              </div>
-            </div>
-            <div style="font-size:8.5px;color:var(--ink3);font-weight:600">${s.lbl}</div>
-          </div>`).join('')}
-        </div>
-        <div style="display:flex;gap:14px;margin-top:10px;padding-top:8px;border-top:1px solid var(--rim2);font-size:11px">
-          <div><span style="color:var(--ink3)">Promedio:</span> <b style="color:var(--green)">${fmt(semanas.reduce((a,s)=>a+s.tot,0)/8)}</b></div>
-          <div><span style="color:var(--ink3)">Tendencia:</span> <b style="color:${tendenciaSemanal>0?'var(--green)':tendenciaSemanal<0?'var(--red)':'var(--ink3)'}">${tendenciaSemanal>0?'↑ +':'↓ '}${tendenciaSemanal}%</b></div>
-        </div>
+  ${topCobradores.length?`<!-- ═══ RENDIMIENTO DE COBRADORES ═══ -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch">
+      <div>
+        <div class="ct"> Rendimiento de cobradores · ${new Date().toLocaleDateString('es-VE',{month:'long',year:'numeric'})}</div>
+        <div class="cs">Top 3 cobradores del mes · ordenado por monto recaudado</div>
       </div>
-
-      <!-- Últimos 14 días -->
-      <div class="card">
-        <div class="ch"><div><div class="ct">📅 Últimos 14 días</div><div class="cs">${dias14.reduce((a,d)=>a+(d.tot>0?1:0),0)} días con cobros</div></div></div>
-        <div style="display:flex;align-items:flex-end;gap:2px;height:120px;margin-top:12px">
-          ${dias14.map(function(d){
-            var h = d.tot>0 ? Math.max(6, Math.round(d.tot/maxDia*100)) : 3;
-            var col = d.esHoy?'var(--p1)':d.tot>0?'var(--green)':'var(--rim)';
-            return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'
-              +'<div style="flex:1;width:100%;display:flex;align-items:flex-end">'
-              +'<div style="width:100%;background:'+col+';border-radius:2px 2px 0 0;height:'+h+'px;opacity:'+(d.tot>0?1:.35)+'" title="'+d.lbl+': '+fmt(d.tot)+'"></div>'
-              +'</div>'
-              +'<div style="font-size:8.5px;color:'+(d.esHoy?'var(--p1)':'var(--ink3)')+';font-weight:'+(d.esHoy?900:600)+'">'+d.lbl+'</div>'
-            +'</div>';
-          }).join('')}
-        </div>
-        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--rim2);font-size:11px;display:flex;justify-content:space-between">
-          <span><span style="color:var(--ink3)">Mejor día:</span> <b>${fmt(maxDia)}</b></span>
-          <span><span style="color:var(--ink3)">Total:</span> <b style="color:var(--green)">${fmt(dias14.reduce(function(a,d){return a+d.tot;},0))}</b></span>
-        </div>
-      </div>
-
-      <!-- Top cobradores -->
-      <div class="card">
-        <div class="ch"><div><div class="ct">🏆 Cobradores del mes</div><div class="cs">Por monto recaudado</div></div></div>
-        ${topCobradores.length ? topCobradores.map(function(c,i){
-          var medals=['🥇','🥈','🥉'];
-          var pct = cobradoMes > 0 ? Math.round(c.tot/cobradoMes*100) : 0;
-          return '<div style="padding:10px 0;border-bottom:1px solid var(--rim2)">'
-            +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
-              +'<span style="font-size:16px">'+medals[i]+'</span>'
-              +'<div style="flex:1;min-width:0">'
-                +'<div style="font-size:12.5px;font-weight:800">'+c.nombre+'</div>'
-                +'<div style="font-size:10.5px;color:var(--ink3)">'+c.cnt+' pagos · '+pct+'% del total</div>'
-              +'</div>'
-              +'<div style="font-size:15px;font-weight:900;color:var(--green)">'+fmt(c.tot)+'</div>'
-            +'</div>'
-            +'<div style="height:5px;background:var(--rim);border-radius:3px;overflow:hidden">'
-              +'<div style="height:100%;width:'+pct+'%;background:var(--grad);border-radius:3px"></div>'
-            +'</div>'
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${topCobradores.length},1fr);gap:10px;margin-top:12px">
+      ${topCobradores.map(function(c,i){
+        var medals=['','',''];
+        var cols=['linear-gradient(135deg,#ffd700,#ffb700)','linear-gradient(135deg,#c0c0c0,#999)','linear-gradient(135deg,#cd7f32,#a05a1f)'];
+        return '<div style="background:'+cols[i]+';border-radius:14px;padding:14px 16px;color:#fff;position:relative;overflow:hidden">'
+          +'<div style="font-size:48px;position:absolute;top:-10px;right:5px;opacity:.35">'+medals[i]+'</div>'
+          +'<div style="font-size:11px;font-weight:800;letter-spacing:1px;opacity:.9;text-transform:uppercase">#'+(i+1)+' · '+(i===0?'Top Cobrador':'Cobrador')+'</div>'
+          +'<div style="font-size:16px;font-weight:900;margin-top:4px;letter-spacing:-.3px">'+c.nombre+'</div>'
+          +'<div style="font-size:24px;font-weight:900;margin-top:8px;letter-spacing:-.5px">'+fmt(c.tot)+'</div>'
+          +'<div style="font-size:11px;opacity:.9;margin-top:2px">'+c.cnt+' pagos recaudados</div>'
           +'</div>';
-        }).join('') : '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:24px 0">Sin registros este mes</div>'}
-        ${renderDashboardCobradores?renderDashboardCobradores():''}
-      </div>
+      }).join('')}
     </div>
-  </div>
+  </div>`:''}
 
+  <!-- ═══ LAYOUT PRINCIPAL ═══ -->
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px">
+
+    <!-- Lista de mora -->
+    <div>
+      ${bucket4.length?`<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#8B0000;margin-bottom:8px;padding:6px 12px;background:rgba(139,0,0,.1);border-radius:8px;display:inline-flex;align-items:center;gap:6px"><span style="font-size:14px"></span>Crítico +60 días (${bucket4.length})</div>`:''}
+      ${bucket4.map(moraRow).join('')}
+      ${bucket3.length?`<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin:${bucket4.length?'14px ':' '}0 8px;padding:6px 12px;background:var(--reds);border-radius:8px;display:inline-flex;align-items:center;gap:6px"><span style="font-size:14px">️</span>Grave 31–60 días (${bucket3.length})</div>`:''}
+      ${bucket3.map(moraRow).join('')}
+      ${bucket2.length?`<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin:${(bucket3.length||bucket4.length)?'14px ':' '}0 8px;padding:6px 12px;background:rgba(217,59,90,.07);border-radius:8px;display:inline-flex;align-items:center;gap:6px"><span style="font-size:14px">⏰</span>Moderada 16–30 días (${bucket2.length})</div>`:''}
+      ${bucket2.map(moraRow).join('')}
+      ${bucket1.length?`<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--amber);margin:${(bucket2.length||bucket3.length||bucket4.length)?'14px ':' '}0 8px;padding:6px 12px;background:var(--ambers);border-radius:8px;display:inline-flex;align-items:center;gap:6px"><span style="font-size:14px"></span>Leve 1–15 días (${bucket1.length})</div>`:''}
+      ${bucket1.map(moraRow).join('')}
+      ${!mora.length?`<div style="text-align:center;padding:60px 20px;background:linear-gradient(135deg,rgba(5,160,96,.08),rgba(37,99,235,.05));border-radius:16px;border:2px dashed var(--green)"><div style="font-size:56px;margin-bottom:14px"></div><div style="font-weight:900;font-size:20px;color:var(--green);letter-spacing:-.5px">¡Portfolio al 100%!</div><div style="font-size:13px;color:var(--ink3);margin-top:8px">Todos los clientes están al día con sus pagos</div><div style="font-size:11px;color:var(--ink3);margin-top:16px">${recuperadas} crédito${recuperadas!==1?'s':''} recuperado${recuperadas!==1?'s':''} históricamente</div></div>`:''}
+    </div>
+
+    <!-- Panel derecho -->
+    <div>
+      <!-- Acciones rápidas -->
+      <div class="card" style="margin-bottom:12px;padding:14px">
+        <div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px"> Acciones rápidas</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button class="btn btn-p btn-sm" onclick="nav('pagos')"> Registrar pago</button>
+          <button class="btn btn-g btn-sm" onclick="nav('creditos')"> Ver créditos</button>
+          <button class="btn btn-g btn-sm" onclick="exportarCSV('creditos')">↓ Exportar</button>
+          <button class="btn btn-g btn-sm" onclick="nav('clientes')"> Clientes</button>
+        </div>
+      </div>
+
+      <!-- Stats adicionales -->
+      <div class="card" style="margin-bottom:12px;padding:14px">
+        <div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px"> Resumen del mes</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--surf2);border-radius:8px">
+            <span style="font-size:11.5px;color:var(--ink2)">Pagos registrados</span>
+            <span style="font-size:15px;font-weight:900;color:var(--p1)">${pagosMes.length}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--surf2);border-radius:8px">
+            <span style="font-size:11.5px;color:var(--ink2)">Total recaudado</span>
+            <span style="font-size:15px;font-weight:900;color:var(--green)">${fmt(cobradoMes)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--surf2);border-radius:8px">
+            <span style="font-size:11.5px;color:var(--ink2)">Créditos recuperados</span>
+            <span style="font-size:15px;font-weight:900;color:var(--red)">${recuperadas}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:linear-gradient(90deg,rgba(37,99,235,.1),rgba(124,109,255,.05));border-radius:8px;border:1px solid rgba(37,99,235,.2)">
+            <span style="font-size:11.5px;color:var(--ink2);font-weight:700">Efectividad</span>
+            <span style="font-size:18px;font-weight:900;color:var(--p1);letter-spacing:-.5px">${efectividadMes}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="ch"><div class="ct"> Historial de gestiones</div></div>
+        <div id="cobranza-notas-list" style="max-height:320px;overflow-y:auto">
+          <div style="color:var(--ink3);font-size:12px;padding:12px 0">Cargando...</div>
+        </div>
+      </div>
+      ${renderDashboardCobradores()}
+    </div>
+
+  </div>
   </div>`;
 },
 
@@ -11723,33 +11700,23 @@ function openUserPanel(uid){
 
   function addAction(icon, title, desc, onClick){
     var btn = el('button', { cls:'up-action-btn', onclick: onClick });
-    var ic = el('div', { cls:'up-action-ic' });
-    ic.innerHTML = icon;
-    btn.appendChild(ic);
+    btn.appendChild(el('span', { cls:'up-action-ic', text:icon }));
     var textWrap = el('div', { cls:'up-action-tx' });
     textWrap.appendChild(el('div', { cls:'up-action-t', text:title }));
     textWrap.appendChild(el('div', { cls:'up-action-d', text:desc }));
     btn.appendChild(textWrap);
-    btn.innerHTML += '<span style="color:#8a92b2;font-size:16px;margin-left:auto;padding-left:8px">›</span>';
+    btn.innerHTML += '<span style="color:var(--ink3);font-size:16px;margin-left:auto;padding-left:8px">›</span>';
     actionsCt.appendChild(btn);
   }
 
-  var iconShield = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
-  var iconUser   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-  var iconMail   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>';
-  var iconLink   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
-  var iconPause  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8980a" stroke-width="2.2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
-  var iconPlay   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b876" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5,3 19,12 5,21"/></svg>';
-
-  addAction(iconShield, 'Editar permisos', 'Cambiar módulos con acceso', function(){ closeUserPanel(); editarUsuario(uid); });
-  addAction(iconUser,   'Cambiar rol', 'Reasignar a otro rol', function(){ closeUserPanel(); cambiarRolUsuario(uid); });
+  addAction('️', 'Editar permisos', 'Cambiar módulos con acceso', function(){ closeUserPanel(); editarUsuario(uid); });
+  addAction('', 'Cambiar rol', 'Reasignar a otro rol', function(){ closeUserPanel(); cambiarRolUsuario(uid); });
   if(u.email){
-    addAction(iconMail, 'Email de reset', 'El usuario recibirá un correo', function(){ closeUserPanel(); cambiarPasswordUsuario(uid); });
+    addAction('', 'Email de reset', 'El usuario recibirá un correo', function(){ closeUserPanel(); cambiarPasswordUsuario(uid); });
   }
-  addAction(iconLink, 'Link de invitación', 'Copiar enlace para reenviar', function(){ closeUserPanel(); copiarInvitacionUsuario(uid); });
+  addAction('', 'Link de invitación', 'Copiar enlace para reenviar', function(){ closeUserPanel(); copiarInvitacionUsuario(uid); });
   if(!esMio){
-    var suspIc = u.suspendido ? iconPlay : iconPause;
-    addAction(suspIc,
+    addAction(u.suspendido?'▶️':'⏸',
               u.suspendido?'Reactivar usuario':'Suspender usuario',
               u.suspendido?'Permitir acceso de nuevo':'Bloquear sin eliminar',
               function(){ closeUserPanel(); toggleSuspenderUsuario(uid); });
@@ -12296,7 +12263,7 @@ function _mpagoCrearGastos(motoObj, pagos, opts){
   opts = opts || {};
   if(!motoObj || !Array.isArray(pagos) || !pagos.length) return [];
   var fecha = opts.fecha || new Date().toISOString().split('T')[0];
-  var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
+  var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
   var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
   var conceptoBase = 'Compra de moto · '+(motoObj.modelo||'')+(motoObj.vin?' · VIN '+motoObj.vin:'')+' (Moto #'+motoObj.id+')';
   var creados = [];
@@ -12376,7 +12343,7 @@ function _mpagoReversarGastos(motoId, devolver, audit){
   });
   // 3) Si se devuelve, crear movimientos de reverso (depósito) por cada retiro
   if(devolver){
-    var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
+    var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
     (S.movimientos||[]).slice().forEach(function(m){
       if(m.eliminado && String(m.motoIdRef)===String(motoId) && m.tipoOperacion==='compra_moto' && m.tipo==='retiro' && !m.reversoCreado){
         var rev = {
@@ -15890,7 +15857,7 @@ function _wzGuardar(){
     fecha:newCred.fecha,
     referencia:iniRef,
     realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
-    hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false})
+    hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
   };
   S.movimientos.push(movIni);
   DB.saveMovimiento(movIni);
@@ -16050,7 +16017,7 @@ function openAddCredLegacy(motoId=null){
       referencia:iniRef,
       realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
       tasaBs:window._tasaBsGlobal||1,
-      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false})
+      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
     };
     S.movimientos.push(movIni);
     DB.saveMovimiento(movIni);
@@ -16445,7 +16412,7 @@ function openAddPago(preCredId){
         referencia:newPago.referencia||'',
         realizadoPor:newPago.realizadoPor||'Admin',
         tasaBs:window._tasaBsGlobal||1,
-        hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false})
+        hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
       };
       S.movimientos.push(mov);
       DB.saveMovimiento(mov);
@@ -17240,7 +17207,7 @@ function ejecutarLiquidacionAnticipada(){
       referencia:'LIQ-ANT',
       realizadoPor:usuario,
       tasaBs:window._tasaBsGlobal||1,
-      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false})
+      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
     };
     S.movimientos.push(mov);
     DB.saveMovimiento(mov);
@@ -17579,7 +17546,7 @@ function confirmarPago(pagoId){
         referencia: pago.referencia||'',
         realizadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
         tasaBs: pago.tasaBs || window._tasaBsGlobal || 1,
-        hora: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false})
+        hora: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
       };
       if(!S.movimientos) S.movimientos = [];
       S.movimientos.push(mov);
@@ -18360,7 +18327,7 @@ function openAddEgreso(){
         referencia:newEg.notas||'',
         realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
         tasaBs:window._tasaBsGlobal||1,
-        hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false})
+        hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})
       };
       S.movimientos.push(mov);
       DB.saveMovimiento(mov);
@@ -18438,7 +18405,7 @@ function delEgreso(id){
           referencia:'Reverso por eliminación de egreso #'+eg.id,
           realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
           tasaBs:window._tasaBsGlobal||1,
-          hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
+          hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}),
           reversoDe:'egreso:'+eg.id
         };
         S.movimientos.push(mov);
@@ -20182,7 +20149,7 @@ function _comGuardarPago(uid){
   // Validar saldo del usuario
   var s = _comGetSaldo(u);
   if(monto > s.saldo + 0.001){ toast('El monto excede lo adeudado ($'+s.saldo.toFixed(2)+')','error'); return; }
-  var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
+  var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
   var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
   // 1) Crear egreso
   var newEgId = (S.egresos&&S.egresos.length)
@@ -20421,7 +20388,7 @@ function _comConfirmarEliminarPago(egId, uid){
         referencia: 'Reverso por eliminación · ' + razon,
         realizadoPor: quien,
         tasaBs: window._tasaBsGlobal||1,
-        hora: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
+        hora: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}),
         reversoDe: 'comision:'+egId,
         usuarioComisionUid: uid
       };
@@ -23586,16 +23553,7 @@ function renderDetalleCuenta(nombre){
       +'</td>'
       +'<td>'
         +'<div style="font-size:12.5px;font-weight:700;color:var(--ink);'+(anulado?'text-decoration:line-through;':'')+'">'+(m.concepto||m.descripcion||'Movimiento')+tags+'</div>'
-        +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+function(){
-            if(!m.fecha) return '—';
-            if(m.fecha.indexOf('T')!==-1||m.fecha.length>10) return fmtFechaHora(m.fecha);
-            var h=(m.hora||'').trim();
-            if(h&&(h.indexOf('a. m.')!==-1||h.indexOf('p. m.')!==-1||h.indexOf('a.m.')!==-1||h.indexOf('p.m.')!==-1)){
-              try{var isPM=h.indexOf('p. m.')!==-1||h.indexOf('p.m.')!==-1;var parts=h.replace(/[ap]\. ?m\./i,'').trim().split(':');var hh=parseInt(parts[0],10);var mm=parseInt(parts[1]||'0',10);if(isPM&&hh!==12)hh+=12;if(!isPM&&hh===12)hh=0;h=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}catch(e){h='';}
-            }
-            var dd=m.fecha.split('-');
-            return dd.length===3?(dd[2]+'/'+dd[1]+'/'+dd[0]+(h?' '+h:'')):(m.fecha+(h?' '+h:''));
-          }()+'</div>'
+        +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+(m.fecha||'—')+(m.hora?' '+m.hora:'')+'</div>'
       +'</td>'
       +'<td style="font-size:11.5px;color:var(--ink2)">'+(m.tipo==='transferencia'?(esIng?'Desde: ':'Hacia: ')+contrap:contrap)+'</td>'
       +'<td style="font-size:11px;color:var(--ink3)">'+(m.referencia||'—')+'</td>'
@@ -23863,32 +23821,7 @@ function renderTabHistorial(){
     var tasaM=m.tasaBs||tasaBs;
     var comision=m.comision||0;
     var realizadoPor=m.realizadoPor||S.currentUser&&S.currentUser.nombre||'—';
-    var fechaFmt=(function(){
-      if(!m.fecha) return '—';
-      // If hora exists and is a clean HH:MM string, combine directly
-      var h = (m.hora||'').trim();
-      // Clean up old locale strings with "a. m."/"p. m." notation
-      if(h && (h.indexOf('a. m.')!==-1 || h.indexOf('p. m.')!==-1 || h.indexOf('a.m.')!==-1 || h.indexOf('p.m.')!==-1)){
-        try{
-          var isPM = h.indexOf('p. m.')!==-1 || h.indexOf('p.m.')!==-1;
-          var parts = h.replace(/[ap]\. ?m\./i,'').trim().split(':');
-          var hh = parseInt(parts[0],10);
-          var mm = parseInt(parts[1]||'0',10);
-          if(isPM && hh!==12) hh+=12;
-          if(!isPM && hh===12) hh=0;
-          h = String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
-        }catch(e){ h=''; }
-      }
-      // Try to parse as ISO if fecha contains time
-      if(m.fecha.indexOf('T')!==-1 || m.fecha.length>10) return fmtFechaHora(m.fecha);
-      // fecha is YYYY-MM-DD, combine with cleaned hora
-      var dd = m.fecha.split('-'); // [yyyy,mm,dd]
-      if(dd.length===3){
-        var fmtD = dd[2]+'/'+dd[1]+'/'+dd[0];
-        return h ? (fmtD+' '+h) : fmtD;
-      }
-      return m.fecha+(h?' '+h:'');
-    })();
+    var fechaFmt=m.fecha?(m.fecha+' '+(m.hora||'')).trim():'—';
     var tipoColor = anulado ? 'var(--ink3)' : (esTransfer ? 'var(--amber)' : (esIngreso ? '#27ae60' : '#e74c3c'));
     var tipoIcon = esTransfer ? '⇄' : (esIngreso ? '↩' : '↪');
     var tipoBg = anulado ? 'var(--surf2)' : (esTransfer ? 'var(--ambers)' : (esIngreso ? 'var(--greens)' : 'var(--reds)'));
@@ -24307,7 +24240,7 @@ function openDeposito(cuentaNombre){
     var mov={id:'MOV-'+Date.now(),tipo:'deposito',concepto:conc,monto:monto,
       cuentaOrigen:null,cuentaDestino:cnombre,
       fecha:($('dep_fecha')&&$('dep_fecha').value)||new Date().toISOString().split('T')[0],
-      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
+      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}),
       referencia:($('dep_ref')&&$('dep_ref').value)||'',
       tasaBs:parseFloat(($('dep_tasa')&&$('dep_tasa').value))||window._tasaBsGlobal||1,
       monedaMov:($('dep_moneda')&&$('dep_moneda').value)||'USD',
@@ -24350,7 +24283,7 @@ function openRetiro(cuentaNombre){
     var mov={id:'MOV-'+Date.now(),tipo:'retiro',concepto:conc,monto:monto,
       cuentaOrigen:cnombre,cuentaDestino:null,
       fecha:($('ret_fecha')&&$('ret_fecha').value)||new Date().toISOString().split('T')[0],
-      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
+      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}),
       referencia:($('ret_ref')&&$('ret_ref').value)||'',
       tasaBs:parseFloat(($('ret_tasa')&&$('ret_tasa').value))||window._tasaBsGlobal||1,
       monedaMov:($('ret_moneda')&&$('ret_moneda').value)||'USD',
@@ -24396,7 +24329,7 @@ function openTransferencia(cuentaNombre){
     var mov={id:'MOV-'+Date.now(),tipo:'transferencia',concepto:conc,monto:monto,
       cuentaOrigen:orig,cuentaDestino:dest,
       fecha:($('tr_fecha')&&$('tr_fecha').value)||new Date().toISOString().split('T')[0],
-      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
+      hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}),
       referencia:($('tr_ref')&&$('tr_ref').value)||'',
       tasaBs:parseFloat(($('tr_tasa')&&$('tr_tasa').value))||window._tasaBsGlobal||1,
       monedaMov:'USD',
@@ -26803,11 +26736,11 @@ setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.is
       +'#ov .wtx-modal-body{padding:0!important;background:var(--surf2)!important;max-height:calc(100vh - 185px);overflow:auto}'
       +'.wtx-wrap{display:grid;grid-template-columns:270px 1fr;min-height:720px;border-top:1px solid var(--rim)}.wtx-side{background:var(--surf2);border-right:1px solid var(--rim);padding:26px 24px;display:flex;flex-direction:column;justify-content:space-between;gap:20px}'
       +'.wtx-steps{display:flex;flex-direction:column;gap:12px}.wtx-step{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:center;padding:11px;border-radius:12px;color:var(--ink2)}.wtx-step.active{background:var(--gs);border:1px solid var(--rim2);color:var(--p1)}.wtx-step-ico{width:36px;height:36px;border-radius:11px;background:var(--surf);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);font-size:17px}.wtx-step.active .wtx-step-ico{background:var(--p1);color:#fff}.wtx-step-title{font-weight:850;font-size:14px}.wtx-step-sub{font-size:12px;color:#9095bc;margin-top:3px}'
-      +'.wtx-tip{border:1px solid var(--rim);border-radius:16px;background:var(--surf);padding:18px;color:var(--ink2);font-size:13px;line-height:1.5}.wtx-tip b{display:block;color:#2563EB;margin-bottom:8px}.wtx-save-template{height:44px;border-radius:14px;border:1px solid #dfe1ff;background:#fff;color:#4c5280;font-weight:800;padding:0 16px;text-align:left;width:100%}'
-      +'.wtx-main{padding:26px 28px 34px}.wtx-templates{border:1px solid var(--rim);border-radius:20px;background:var(--surf2);padding:20px;margin-bottom:24px}.wtx-temp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;color:#2563EB;font-weight:950;text-transform:uppercase;letter-spacing:.6px;font-size:13px}.wtx-temp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.wtx-temp-btn{height:44px;border-radius:22px;border:1px solid var(--rim);background:var(--surf);color:var(--ink2);font-weight:750;display:flex;align-items:center;gap:10px;padding:0 15px;cursor:pointer}.wtx-temp-btn:hover{border-color:#93c5fd;box-shadow:0 8px 24px rgba(37,99,235,.10);transform:translateY(-1px)}'
-      +'.wtx-grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}.wtx-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px}.wtx-field{margin-bottom:18px}.wtx-label{display:block;font-size:12px;letter-spacing:1.8px;text-transform:uppercase;color:#565b8b;font-weight:950;margin-bottom:10px}.wtx-input,.wtx-select,.wtx-textarea{width:100%;border:1px solid var(--rim2);background:var(--surf2);border-radius:12px;color:var(--ink);font-size:15px;outline:none}.wtx-input,.wtx-select{height:51px;padding:0 16px}.wtx-textarea{min-height:126px;padding:14px 16px;resize:vertical}.wtx-input:focus,.wtx-select:focus,.wtx-textarea:focus{border-color:#93c5fd;box-shadow:0 0 0 4px rgba(37,99,235,.10)}'
+      +'.wtx-tip{border:1px solid var(--rim);border-radius:16px;background:var(--surf);padding:18px;color:var(--ink2);font-size:13px;line-height:1.5}.wtx-tip b{display:block;color:#6254e9;margin-bottom:8px}.wtx-save-template{height:44px;border-radius:14px;border:1px solid #dfe1ff;background:#fff;color:#4c5280;font-weight:800;padding:0 16px;text-align:left;width:100%}'
+      +'.wtx-main{padding:26px 28px 34px}.wtx-templates{border:1px solid var(--rim);border-radius:20px;background:var(--surf2);padding:20px;margin-bottom:24px}.wtx-temp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;color:#6254e9;font-weight:950;text-transform:uppercase;letter-spacing:.6px;font-size:13px}.wtx-temp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.wtx-temp-btn{height:44px;border-radius:22px;border:1px solid var(--rim);background:var(--surf);color:var(--ink2);font-weight:750;display:flex;align-items:center;gap:10px;padding:0 15px;cursor:pointer}.wtx-temp-btn:hover{border-color:#aaa7ff;box-shadow:0 8px 24px rgba(98,84,233,.10);transform:translateY(-1px)}'
+      +'.wtx-grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}.wtx-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px}.wtx-field{margin-bottom:18px}.wtx-label{display:block;font-size:12px;letter-spacing:1.8px;text-transform:uppercase;color:#565b8b;font-weight:950;margin-bottom:10px}.wtx-input,.wtx-select,.wtx-textarea{width:100%;border:1px solid var(--rim2);background:var(--surf2);border-radius:12px;color:var(--ink);font-size:15px;outline:none}.wtx-input,.wtx-select{height:51px;padding:0 16px}.wtx-textarea{min-height:126px;padding:14px 16px;resize:vertical}.wtx-input:focus,.wtx-select:focus,.wtx-textarea:focus{border-color:#8f86ff;box-shadow:0 0 0 4px rgba(98,84,233,.10)}'
       +'.wtx-editor{border:1px solid var(--rim2);border-radius:14px;background:var(--surf2);overflow:hidden}.wtx-toolbar{height:45px;border-bottom:1px solid var(--rim);display:flex;align-items:center;gap:18px;padding:0 18px;color:#4d5482;font-weight:900}.wtx-editor textarea{border:0!important;border-radius:0!important;box-shadow:none!important;min-height:100px}.wtx-help{border:1px solid #e4e5fb;background:#f7f8ff;border-radius:10px;color:#9aa0c9;font-size:12px;padding:12px 14px;margin-top:2px}'
-      +'.wtx-check-card{border:1px solid var(--rim);border-radius:16px;background:var(--surf);overflow:hidden;margin-top:24px}.wtx-check-head{height:48px;padding:0 16px;border-bottom:1px solid #eceefa;display:flex;align-items:center;justify-content:space-between}.wtx-check-title{font-size:12px;letter-spacing:1.7px;text-transform:uppercase;color:#59608d;font-weight:950}.wtx-progress-pill{font-size:12px;color:#2563EB;background:#eff6ff;border-radius:999px;padding:4px 9px;margin-left:8px}.wtx-add{border:0;background:transparent;color:#2563EB;font-weight:850;cursor:pointer}.wtx-check-card #wtchecks>div{grid-template-columns:18px 26px 1fr 32px!important;margin:0!important;border-bottom:1px solid #eef0fa;padding:8px 14px;align-items:center}.wtx-check-card #wtchecks>div:before{content:"⋮⋮";color:#b7bddc;font-weight:900;font-size:14px}.wtx-check-card input[type=checkbox]{width:22px!important;height:22px!important}.wtx-check-card .fi{height:32px!important;border:0!important;background:transparent!important;box-shadow:none!important}.wtx-check-card button{color:#ef4b65!important;background:#fff2f4!important;border:0!important;border-radius:10px!important}'
+      +'.wtx-check-card{border:1px solid var(--rim);border-radius:16px;background:var(--surf);overflow:hidden;margin-top:24px}.wtx-check-head{height:48px;padding:0 16px;border-bottom:1px solid #eceefa;display:flex;align-items:center;justify-content:space-between}.wtx-check-title{font-size:12px;letter-spacing:1.7px;text-transform:uppercase;color:#59608d;font-weight:950}.wtx-progress-pill{font-size:12px;color:#6254e9;background:#f1f0ff;border-radius:999px;padding:4px 9px;margin-left:8px}.wtx-add{border:0;background:transparent;color:#6254e9;font-weight:850;cursor:pointer}.wtx-check-card #wtchecks>div{grid-template-columns:18px 26px 1fr 32px!important;margin:0!important;border-bottom:1px solid #eef0fa;padding:8px 14px;align-items:center}.wtx-check-card #wtchecks>div:before{content:"⋮⋮";color:#b7bddc;font-weight:900;font-size:14px}.wtx-check-card input[type=checkbox]{width:22px!important;height:22px!important}.wtx-check-card .fi{height:32px!important;border:0!important;background:transparent!important;box-shadow:none!important}.wtx-check-card button{color:#ef4b65!important;background:#fff2f4!important;border:0!important;border-radius:10px!important}'
       +'.wtx-comment{background:var(--surf2);border:1px solid var(--rim);border-radius:14px;padding:12px 14px;margin-bottom:9px;color:var(--ink2);font-size:13px}.wtx-comment-meta{font-size:11px;color:#969bc1;font-weight:850;margin-bottom:4px}.wtx-empty-comment{text-align:center;border:1px dashed #dfe1fb;border-radius:14px;padding:16px;color:#969bc1;font-size:13px}.wtx-footer-note{font-size:12px;color:#9aa0c9;margin-top:10px}@media(max-width:900px){.wtx-wrap{grid-template-columns:1fr}.wtx-side{display:none}.wtx-temp-grid,.wtx-grid2,.wtx-grid3{grid-template-columns:1fr}.wtx-main{padding:20px}}'
       +'</style>'
       +'<div class="wtx-wrap"><aside class="wtx-side"><div class="wtx-steps">'
