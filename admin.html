@@ -4560,8 +4560,20 @@ function nav(p){
       setTimeout(function(){
         $('cnt').innerHTML=fn();
         updateBadge();
-        // renderDashChart solo aplica al dashboard completo del admin
-        if(!isEmpleadoRole() && typeof renderDashChart==='function') renderDashChart();
+        if(!isEmpleadoRole()){
+          // Render all dashboard charts sequentially
+          if(typeof renderDashChart==='function') renderDashChart();
+          setTimeout(function(){ if(typeof renderCredChart==='function') renderCredChart(); }, 50);
+          setTimeout(function(){ if(typeof renderMoraChart==='function') renderMoraChart(); }, 100);
+          // Retry in case data arrives late from Firebase
+          setTimeout(function(){
+            if(typeof renderCredChart==='function') renderCredChart();
+            if(typeof renderDashChart==='function' && !_dashChart) renderDashChart();
+          }, 800);
+          setTimeout(function(){
+            if(typeof renderCredChart==='function') renderCredChart();
+          }, 2000);
+        }
       },80);
     }
     else { $('cnt').innerHTML=fn(); wtInjectDataLabels(); }
@@ -4788,18 +4800,28 @@ function getDashData(tipo, periodo){
     }
     matchFn = function(fecha, b){ var fd=new Date(fecha); return fd.getFullYear()===b.y&&fd.getMonth()===b.m; };
   }
+  var toDateStr = function(v){
+    if(!v) return '';
+    if(typeof v === 'string') return v.slice(0,10);
+    if(v && v.toDate) return v.toDate().toISOString().slice(0,10); // Firestore Timestamp
+    if(v instanceof Date) return v.toISOString().slice(0,10);
+    if(v && v.seconds) return new Date(v.seconds*1000).toISOString().slice(0,10); // Timestamp object
+    return String(v).slice(0,10);
+  };
+
   if(tipo === 'ingresos'){
     var pagosData = _concFiltrar(S.pagos||[]);
     if(!pagosData.length) pagosData = S.pagos||[];
     pagosData.filter(function(p){ return !p.eliminado&&p.estado==='confirmado'&&p.fecha; }).forEach(function(p){
-      buckets.forEach(function(b){ if(matchFn(p.fecha,b)){ b.total+=parseFloat(p.monto)||0; b.count++; } });
+      var f = toDateStr(p.fecha);
+      buckets.forEach(function(b){ if(f && matchFn(f,b)){ b.total+=parseFloat(p.monto)||0; b.count++; } });
     });
   } else {
     var credsData = _concFiltrar(S.creds||[]);
     if(!credsData.length) credsData = S.creds||[];
-    credsData.filter(function(c){ return !c.eliminado&&(c.fecha||c.creadoEn); }).forEach(function(c){
-      var f = c.fecha || c.creadoEn || '';
-      buckets.forEach(function(b){ if(matchFn(f,b)){ b.count++; b.total+=parseFloat(c.total||c.precio||0); } });
+    credsData.filter(function(c){ return !c.eliminado; }).forEach(function(c){
+      var f = toDateStr(c.fecha || c.creadoEn || c.fechaCreacion || c.createdAt || '');
+      if(f) buckets.forEach(function(b){ if(matchFn(f,b)){ b.count++; b.total+=parseFloat(c.total||c.precio||0); } });
     });
   }
   return buckets;
