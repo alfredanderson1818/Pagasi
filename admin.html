@@ -3871,7 +3871,8 @@ const S = {
   concesionarios: [],
   concesionarioActivo: null, // null = "Todos" / id = trabajando en un concesionario
   page:'dash', mTab:'todas', credTab:'todos', pagosTab:'todos', saveFn:null, clienteFiltro:'',
-  credSort:{col:'id',dir:'asc'}, cliSort:{col:'nombre',dir:'asc'}, pagosSort:{col:'fecha',dir:'desc'}, motosSort:{col:'modelo',dir:'asc'},
+  credSort:{col:'id',dir:'asc'}, cliSort:{col:'nombre',dir:'asc'}, pagosSort:{col:'fecha',dir:'desc'}, motosSort:{col:'modelo',dir:'asc'}, credFiltro:'',
+  pagosDesde:'', pagosHasta:'',
   currentUser: null,
   tareas: []
 };
@@ -4176,6 +4177,45 @@ function updateSidebarFooter(){
     var usr = sbFoot.querySelector('.sb-usr');
     if(usr) usr.setAttribute('onclick','showAdminProfile()');
   }
+
+  // ── Badge de mora automático ──
+  actualizarBadgeMora();
+}
+
+function actualizarBadgeMora(){
+  try{
+    var cob = document.getElementById('sb-badge-cob');
+    if(!cob) return;
+    var enMora = _concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado && c.mora>0 && c.estado==='activo';}).length;
+    if(enMora>0){
+      cob.textContent = enMora;
+      cob.style.display='flex';
+      cob.style.background='var(--red)';
+      cob.style.color='#fff';
+      cob.style.fontSize='10px';
+      cob.style.fontWeight='900';
+      cob.style.minWidth='18px';
+      cob.style.height='18px';
+      cob.style.borderRadius='9px';
+      cob.style.alignItems='center';
+      cob.style.justifyContent='center';
+      cob.style.padding='0 5px';
+    } else {
+      cob.textContent='';
+      cob.style.display='none';
+    }
+    // Toast de alerta si hay créditos nuevos en mora (mora entre 1-3 días)
+    var _moraKey = 'pagasi_mora_alert_'+new Date().toISOString().slice(0,10);
+    if(enMora>0 && !sessionStorage.getItem(_moraKey)){
+      var nuevosEnMora = _concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado && c.mora>0 && c.mora<=3 && c.estado==='activo';});
+      if(nuevosEnMora.length>0){
+        sessionStorage.setItem(_moraKey,'1');
+        setTimeout(function(){
+          toast('⚠️ '+nuevosEnMora.length+' crédito'+(nuevosEnMora.length>1?'s':'')+(nuevosEnMora.length>1?' entraron':' entró')+' en mora hoy','warning',6000);
+        }, 1500);
+      }
+    }
+  }catch(e){}
 }
 function canDeleteAction(){ return isAdminUser() || getCurrentPerms().includes('perm_delete'); }
 
@@ -4523,7 +4563,7 @@ function closeGlobalSearch(){
 function toggleDark(){
   var isDark = document.documentElement.getAttribute('data-theme')==='dark';
   setDark(!isDark);
-  setTimeout(function(){ if(typeof renderDashChart==='function') renderDashChart(); }, 50);
+  setTimeout(function(){ if(typeof renderDashChart==='function') renderDashChart(); if(typeof renderMoraChart==='function') renderMoraChart(); }, 50);
 }
 function setDark(on){
   if(on){
@@ -4552,6 +4592,20 @@ document.addEventListener('DOMContentLoaded', function(){
 // CHART.JS — DASHBOARD INGRESOS
 // ══════════════════════════════════════════
 var _dashChart = null;
+var _moraChart = null;
+function renderMoraChart(){
+  var canvas=document.getElementById('mora-chart');
+  if(!canvas||typeof Chart==='undefined') return;
+  var data=getMoraMensual();
+  var labels=data.map(function(x){return x.label;});
+  var values=data.map(function(x){return x.mora;});
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  var red=isDark?'#E05575':'#D93B5A';
+  var redt=isDark?'rgba(217,59,90,0.15)':'rgba(217,59,90,0.08)';
+  var ink3=isDark?'#6B6896':'#9794BB';
+  if(_moraChart){_moraChart.destroy();_moraChart=null;}
+  _moraChart=new Chart(canvas,{type:'line',data:{labels:labels,datasets:[{label:'En mora',data:values,borderColor:red,backgroundColor:redt,borderWidth:2,pointBackgroundColor:red,pointRadius:4,fill:true,tension:0.35}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:isDark?'#252844':'#fff',borderColor:isDark?'rgba(217,59,90,0.3)':'rgba(217,59,90,0.2)',borderWidth:1,titleColor:isDark?'#E8E6FF':'#0B0B1E',bodyColor:isDark?'#B0ADDB':'#4A4870',padding:10,callbacks:{label:function(ctx){return ' '+ctx.raw+' créd. en mora';}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:ink3,font:{size:10}}},y:{grid:{color:isDark?'rgba(217,59,90,0.08)':'rgba(217,59,90,0.05)'},border:{display:false},ticks:{color:ink3,font:{size:10},stepSize:1,maxTicksLimit:5}}}}});
+}
 function renderDashChart(){
   var canvas = document.getElementById('dash-chart');
   if(!canvas || typeof Chart === 'undefined') return;
@@ -5388,7 +5442,7 @@ function renderClienteList(q=''){
       <td><div class="tdm">${c.tel}</div><div class="tds">${c.ciudad||'—'}</div></td>
       <td><div class="tdm">${c.trabajo||'—'}</div><div class="tds" style="color:var(--green);font-weight:700">${fmt(c.ingreso)}/mes</div></td>
       <td>${sc?`<span style="font-weight:900;font-size:14px;color:${scoreCol}">${sc}</span><div class="tds">/850</div>`:'<span style="color:var(--ink3)">—</span>'}</td>
-      <td><div class="tdm">${credsCli.length} crédito${credsCli.length!==1?'s':''}</div><div class="tds">${activo?'Activo: '+activo.id:'Sin activo'}</div></td>
+      <td><div class="tdm">${credsCli.length} crédito${credsCli.length!==1?'s':''}</div><div class="tds">${activo?'Activo: '+activo.id:'Sin activo'}${(()=>{var cv=activo?getCuotasVencidas(activo):0;return cv>0?` <span style="background:rgba(217,59,90,.15);color:var(--red);font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px">${cv} venc.</span>`:'';})()}</div></td>
       <td>${clienteBadgesHTML(c)}</td>
       <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
         <button class="btn btn-g btn-xs" onclick="editCliente(\'${c.id}\')">Editar</button>
@@ -5921,6 +5975,31 @@ function getMonthlyIngresos(){
       return pd.getFullYear()===m.y && pd.getMonth()===m.m;
     }).reduce(function(a,p){return a+(parseFloat(p.monto)||0);},0);
     return {label:m.label,total:total};
+  });
+}
+
+function getMoraMensual(){
+  var now=new Date(), months=[];
+  for(var i=5;i>=0;i--){
+    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push({y:d.getFullYear(),m:d.getMonth(),label:d.toLocaleDateString('es-VE',{month:'short'})});
+  }
+  var creds=_concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado;});
+  return months.map(function(mo){
+    // Pagos confirmados en mora ese mes (fecha de pago > fecha de vencimiento estimada)
+    var enMora=creds.filter(function(c){
+      if(!c.fecha||c.estado==='cancelado') return false;
+      var pagos=(S.pagos||[]).filter(function(p){
+        return !p.eliminado && p.cred===c.id && p.estado==='confirmado' && p.fecha;
+      });
+      var pagosMes=pagos.filter(function(p){
+        var pd=new Date(p.fecha);
+        return pd.getFullYear()===mo.y && pd.getMonth()===mo.m;
+      });
+      return pagosMes.length>0 && c.mora>0;
+    }).length;
+    var totalActivos=creds.filter(function(c){ return c.estado==='activo'; }).length;
+    return {label:mo.label, mora:enMora, total:Math.max(1,totalActivos)};
   });
 }
 
@@ -6617,8 +6696,8 @@ dash(){
     </div>
   </div>
 
-  <!-- ROW 2: Bar chart + Cuotas próximas -->
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
+  <!-- ROW 2: Bar charts + Cuotas próximas -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
 
     <div class="card">
       <div class="ch" style="margin-bottom:14px">
@@ -6630,6 +6709,19 @@ dash(){
       </div>
       <div style="position:relative;height:150px">
         <canvas id="dash-chart" style="width:100%;height:100%"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch" style="margin-bottom:14px">
+        <div>
+          <div class="ct" style="color:var(--red)">Mora por Mes</div>
+          <div class="cs">Créditos activos con mora · 6 meses</div>
+        </div>
+        <button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('cobranza')">Ver detalle</button>
+      </div>
+      <div style="position:relative;height:150px">
+        <canvas id="mora-chart" style="width:100%;height:100%"></canvas>
       </div>
     </div>
 
@@ -7255,6 +7347,17 @@ creditos(){
     return 0;
   });
 
+  // ─── 11c. Filtro de búsqueda en tiempo real ───
+  var _credQ = (S.credFiltro||'').toLowerCase().trim();
+  if(_credQ){
+    filtered = filtered.filter(function(c){
+      return (c.id||'').toLowerCase().includes(_credQ)
+        || (c.cli||'').toLowerCase().includes(_credQ)
+        || (c.modelo||'').toLowerCase().includes(_credQ)
+        || (c.estado||'').toLowerCase().includes(_credQ)
+        || (c.fecha||'').includes(_credQ);
+    });
+  }
 
   const total = Math.max(1, allCreds.length);
   const segs = [
@@ -7512,6 +7615,7 @@ creditos(){
   <div class="card">
     <div class="ch">
       <div><div class="ct">${tab==='archivados'?'Archivados':'Listado de créditos'}</div><div class="cs">${filtered.length} resultado${filtered.length!==1?'s':''} · ${tab==='todos'?'activos, en mora y completados':tab==='archivados'?'créditos cancelados o recuperados':'filtrado por '+tab}</div></div>
+      <div class="srch" style="width:240px"><span class="srch-i">◆</span><input type="text" id="credQ" placeholder="Buscar crédito, cliente, modelo..." value="${S.credFiltro||''}" oninput="liveSearchCred(this.value)" style="width:100%"></div>
     </div>
     <div class="tw tw-compact"><table>
     <thead><tr>
@@ -7627,6 +7731,12 @@ pagos(){
     if(col==='id'){return dir*((a.id||'').localeCompare(b.id||''));}
     return 0;
   });
+
+  // ─── Filtro por rango de fechas ───
+  var _pDesde = S.pagosDesde||'';
+  var _pHasta = S.pagosHasta||'';
+  if(_pDesde) filtered = filtered.filter(function(p){ return (p.fecha||'') >= _pDesde; });
+  if(_pHasta) filtered = filtered.filter(function(p){ return (p.fecha||'') <= _pHasta; });
 
   // Cuotas próximas (mismo criterio que dashboard) — créditos activos con cuota próxima o vencida
   const proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
@@ -7753,6 +7863,15 @@ pagos(){
       }).join('')}
       </div>`
     }
+  </div>
+
+  <!-- Filtro por fecha -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <label style="font-size:11px;color:var(--ink3);font-weight:700">Desde:</label>
+    <input type="date" value="${S.pagosDesde||''}" onchange="S.pagosDesde=this.value;pgSet('pagos',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
+    <label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta:</label>
+    <input type="date" value="${S.pagosHasta||''}" onchange="S.pagosHasta=this.value;pgSet('pagos',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
+    ${(S.pagosDesde||S.pagosHasta)?`<button class="btn btn-g btn-sm" onclick="S.pagosDesde='';S.pagosHasta='';nav('pagos')">✕ Limpiar</button>`:''}
   </div>
 
   <!-- Filter tabs -->
@@ -8014,7 +8133,8 @@ cobranza(){
     [
       {label:'Reporte PDF', onclick:'window.print()'},
       {label:'Ver todos los pagos', onclick:"nav('pagos')"},
-      {label:'↓ Exportar mora', onclick:"exportarCSV('creditos')", primary:true}
+      {label:'↓ Exportar mora CSV', onclick:"exportarCSV('cobranza')"},
+      {label:'↓ Exportar créditos', onclick:"exportarCSV('creditos')", primary:true}
     ]
   )}
 
@@ -11876,12 +11996,20 @@ function _mGuardarPlanApy(){
 }
 function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
-function setCredTab(t){S.credTab=t;window._pages={};nav('creditos');}
+function setCredTab(t){S.credTab=t;S.credFiltro='';window._pages={};nav('creditos');}
 function setCredSort(col){var cur=S.credSort||{col:'id',dir:'asc'};S.credSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('creditos');}
+function liveSearchCred(q){S.credFiltro=q||'';pgSet('creditos',1);var card=$('credList');if(card)card.innerHTML=renderCredList();else nav('creditos');}
 function setCliSort(col){var cur=S.cliSort||{col:'nombre',dir:'asc'};S.cliSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('clientes');}
 function setPagosSort(col){var cur=S.pagosSort||{col:'fecha',dir:'desc'};S.pagosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('pagos');}
 function setMotosSort(col){var cur=S.motosSort||{col:'modelo',dir:'asc'};S.motosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('motos');}
 function _thSort(sortState,setFn,col,label){var isActive=sortState.col===col;var arrow=isActive?(sortState.dir==='asc'?'↑':'↓'):'';return '<th onclick="'+setFn+'(\''+col+'\')" style="cursor:pointer;user-select:none;white-space:nowrap">'+label+(arrow?' <span style="color:var(--p1);font-size:10px">'+arrow+'</span>':'<span style="color:var(--ink3);font-size:9px;opacity:.4"> ⇅</span>')+'</th>';}
+function getCuotasVencidas(c){
+  // Devuelve cuántas cuotas están vencidas sin pagar
+  if(!c||c.estado==='completado'||c.estado==='cancelado') return 0;
+  var mora = parseInt(c.mora||0,10);
+  if(mora<=0) return 0;
+  return Math.ceil(mora/15); // 1 cuota cada 15 días
+}
 function setPagosTab(t){S.pagosTab=t;window._pages={};nav('pagos');}
 function setReportesTab(t){S.reportesTab=t;nav('reportes');}
 window.setReportesTab=setReportesTab;
@@ -21889,6 +22017,16 @@ function exportarCSV(tipo){
         m.realizadoPor||'',
         estado
       ]));
+    });
+  } else if(tipo==='cobranza'){
+    filename='cobranza-mora-'+new Date().toISOString().split('T')[0]+'.csv';
+    rows.push(row(['ID Crédito','Cliente','Modelo','Días mora','Cuotas vencidas','Monto mora estimado','Cuota quincenal','Saldo pendiente','Teléfono']));
+    var _cobCreds = _concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado && c.mora>0 && c.estado==='activo';});
+    _cobCreds.forEach(function(c){
+      var cli = (S.clientes||[]).find(function(x){return String(x.id)===String(c.cliId)||(x.nombre||'')===(c.cli||'');});
+      var cuotasV = Math.ceil((c.mora||0)/15);
+      var montoMora = cuotasV * parseFloat(c.cuotaQ||c.cuota||0);
+      rows.push(row([c.id,c.cli,c.modelo||'',c.mora||0,cuotasV,montoMora,c.cuotaQ||c.cuota||0,getCreditoSaldoPendiente(c),(cli&&cli.tel)||'']));
     });
   } else {
     toast('Tipo de export desconocido','error'); return;
