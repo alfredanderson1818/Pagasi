@@ -21014,11 +21014,32 @@ function _comTarjetaHtml(u){
   var accentColor = s.saldo > 0 ? 'var(--green)' : 'var(--p1)';
   var pctPagado = s.generado > 0 ? Math.round((s.pagado/s.generado)*100) : 0;
 
+  // Desglose por sede para mostrar en la card
+  var desglose = (typeof _comDesglosePorSede === 'function') ? _comDesglosePorSede(u) : [];
+  var desgloseHtml = '';
+  if(desglose.length > 1){
+    desgloseHtml = '<div style="border-top:1px solid var(--rim2);margin:10px 0;padding-top:10px">'
+      + '<div style="font-size:9px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Por sede</div>'
+      + '<div style="display:flex;flex-direction:column;gap:5px">'
+      + desglose.map(function(d){
+          var pctSede = s.generado > 0 ? Math.round((d.total/s.generado)*100) : 0;
+          return '<div style="display:flex;align-items:center;gap:8px">'
+            + '<div style="font-size:11px;font-weight:700;color:var(--ink2);min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nombre+'</div>'
+            + '<div style="font-size:10px;color:var(--ink3);flex-shrink:0">'+d.nVentas+'V · '+d.nCobranzas+'C</div>'
+            + '<div style="font-family:var(--fd);font-weight:800;font-size:11.5px;color:var(--ink1);flex-shrink:0;min-width:52px;text-align:right">$'+d.total.toFixed(2)+'</div>'
+          + '</div>'
+          + '<div style="height:3px;background:var(--rim);border-radius:2px;overflow:hidden;margin-top:2px">'
+            + '<div style="height:100%;width:'+pctSede+'%;background:var(--grad);border-radius:2px"></div>'
+          + '</div>';
+        }).join('')
+      + '</div></div>';
+  }
+
   return '<div class="com-card card" data-nombre="'+nombreEsc.toLowerCase()+'" style="cursor:default;border-top:3px solid '+accentColor+';padding:16px 18px">'
 
-    // Fila 1: avatar + nombre + "por pagar"
-    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
-      + '<div style="width:38px;height:38px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
+    // Fila 1: avatar + nombre + "por pagar" prominente
+    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
+      + '<div style="width:40px;height:40px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
       + '<div style="flex:1;min-width:0">'
         + '<div style="font-weight:800;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nombre+'</div>'
         + '<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">'
@@ -21026,35 +21047,45 @@ function _comTarjetaHtml(u){
           + '<span style="background:var(--greens);color:var(--green);padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:800">💵 '+cobroLbl+'</span>'
         + '</div>'
       + '</div>'
-      + '<div style="text-align:right;flex-shrink:0">'
-        + '<div style="font-size:9px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.4px">Por pagar</div>'
-        + '<div style="font-family:var(--fd);font-size:20px;font-weight:900;color:'+debeColor+';line-height:1.1;letter-spacing:-1px">'+fmt(s.saldo)+'</div>'
+    + '</div>'
+
+    // Total por pagar — protagonista
+    + '<div style="background:'+(s.saldo>0?'rgba(0,184,118,0.08)':'var(--gs)')+';border:1px solid '+(s.saldo>0?'rgba(0,184,118,0.25)':'var(--rim)')+';border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'
+      + '<div>'
+        + '<div style="font-size:9px;color:var(--ink3);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Total por pagar</div>'
+        + '<div style="font-family:var(--fd);font-size:24px;font-weight:900;color:'+debeColor+';line-height:1;letter-spacing:-1px">'+fmt(s.saldo)+'</div>'
+      + '</div>'
+      + '<div style="text-align:right">'
+        + '<div style="font-size:9px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.4px">Generado</div>'
+        + '<div style="font-family:var(--fd);font-weight:800;font-size:13px">'+fmt(s.generado)+'</div>'
+        + '<div style="font-size:9px;color:var(--amber);font-weight:700;margin-top:2px">Pagado: '+fmt(s.pagado)+'</div>'
       + '</div>'
     + '</div>'
 
-    // Stats en 3 columnas compactas
-    + '<div style="display:flex;gap:12px;margin-bottom:10px;font-size:11.5px">'
-      + '<div style="flex:1">'
-        + '<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Generado</div>'
-        + '<div style="font-weight:800;font-family:var(--fd)">'+fmt(s.generado)+'</div>'
-        + '<div style="font-size:10px;color:var(--ink3)">'+s.nVentas+' ventas</div>'
+    // Stats rápidas
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">'
+      + '<div style="background:var(--surf2);border-radius:8px;padding:7px 9px;text-align:center">'
+        + '<div style="font-size:9px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.3px">Ventas</div>'
+        + '<div style="font-weight:900;font-size:15px;color:var(--p1)">'+s.nVentas+'</div>'
       + '</div>'
-      + '<div style="flex:1">'
-        + '<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Pagado</div>'
-        + '<div style="font-weight:800;font-family:var(--fd);color:var(--amber)">'+fmt(s.pagado)+'</div>'
-        + '<div style="font-size:10px;color:var(--ink3)">'+s.nCobranzas+' cobros</div>'
+      + '<div style="background:var(--surf2);border-radius:8px;padding:7px 9px;text-align:center">'
+        + '<div style="font-size:9px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.3px">Cobros</div>'
+        + '<div style="font-weight:900;font-size:15px;color:var(--green)">'+s.nCobranzas+'</div>'
       + '</div>'
-      + '<div style="flex:1;text-align:right">'
-        + '<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Este mes</div>'
-        + '<div style="font-weight:800;font-family:var(--fd);color:var(--p1)">'+fmt(st.mes)+'</div>'
-        + '<div style="font-size:10px;color:var(--ink3)">'+pctPagado+'% pagado</div>'
+      + '<div style="background:var(--surf2);border-radius:8px;padding:7px 9px;text-align:center">'
+        + '<div style="font-size:9px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.3px">Este mes</div>'
+        + '<div style="font-weight:900;font-size:15px;color:var(--amber)">'+fmt(st.mes)+'</div>'
       + '</div>'
     + '</div>'
 
-    // Barra de progreso
-    + '<div style="height:4px;background:var(--rim);border-radius:2px;overflow:hidden;margin-bottom:12px">'
-      + '<div style="height:100%;width:'+pctPagado+'%;background:var(--grad);border-radius:2px"></div>'
+    // Barra de progreso global
+    + '<div style="height:4px;background:var(--rim);border-radius:2px;overflow:hidden;margin-bottom:2px">'
+      + '<div style="height:100%;width:'+pctPagado+'%;background:var(--grad);border-radius:2px;transition:width .4s"></div>'
     + '</div>'
+    + '<div style="font-size:10px;color:var(--ink3);text-align:right;margin-bottom:8px">'+pctPagado+'% pagado</div>'
+
+    // Desglose por sede (si hay más de una)
+    + desgloseHtml
 
     // Botones
     + '<div style="display:flex;gap:6px;border-top:1px solid var(--rim2);padding-top:10px">'
@@ -21277,23 +21308,33 @@ function _comAbrirDetalle(uid){
     + '<div style="background:var(--gs);padding:10px;border-radius:8px"><div style="font-size:9px;font-weight:800;color:var(--ink3);text-transform:uppercase">Por pagar</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;color:var(--green);margin-top:2px">$'+s.saldo.toFixed(2)+'</div></div>'
     + '<div style="background:var(--gs);padding:10px;border-radius:8px"><div style="font-size:9px;font-weight:800;color:var(--ink3);text-transform:uppercase">Operaciones</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;margin-top:2px">'+(s.nVentas+s.nCobranzas)+'</div></div>'
     + '</div>'
-    // Desglose por sede (Opción C — Entrega 2)
+    // Desglose por sede (Opción C — siempre visible si hay sedes)
     + (function(){
         var desglose = _comDesglosePorSede(u);
-        if(desglose.length <= 1) return '';
-        return '<div style="background:rgba(74,107,255,0.05);border:1px solid rgba(74,107,255,0.2);border-radius:10px;padding:11px 13px;margin-bottom:14px">'
-          + '<div style="font-size:10px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Desglose por sede</div>'
-          + '<div style="display:grid;gap:6px">'
+        if(!desglose.length) return '';
+        return '<div style="background:rgba(74,107,255,0.05);border:1px solid rgba(74,107,255,0.18);border-radius:12px;padding:13px 15px;margin-bottom:16px">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+            + '<div style="font-size:10px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px">Desglose por sede</div>'
+            + '<div style="font-size:10px;color:var(--ink3)">Total: <b style="color:var(--ink1)">$'+s.saldo.toFixed(2)+'</b></div>'
+          + '</div>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">'
           + desglose.map(function(d){
-              return '<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:8px;background:var(--surf);padding:8px 11px;border-radius:7px;font-size:11.5px;align-items:center">'
-                + '<div><div style="font-weight:700">'+d.nombre+'</div><div style="font-size:10px;color:var(--ink3);margin-top:1px">'+d.nVentas+' venta'+(d.nVentas===1?'':'s')+' · '+d.nCobranzas+' cobro'+(d.nCobranzas===1?'':'s')+'</div></div>'
-                + '<div style="text-align:right"><div style="font-size:9px;color:var(--ink3);font-weight:700">VENTA</div><div style="font-family:var(--fd);font-weight:800;color:var(--p1)">$'+d.porVenta.toFixed(2)+'</div></div>'
-                + '<div style="text-align:right"><div style="font-size:9px;color:var(--ink3);font-weight:700">COBRO</div><div style="font-family:var(--fd);font-weight:800;color:var(--green)">$'+d.porCobranza.toFixed(2)+'</div></div>'
-                + '<div style="text-align:right"><div style="font-size:9px;color:var(--ink3);font-weight:700">TOTAL</div><div style="font-family:var(--fd);font-weight:800">$'+d.total.toFixed(2)+'</div></div>'
-                + '</div>';
+              var pctSede = s.generado > 0 ? Math.round((d.total/s.generado)*100) : 0;
+              return '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:9px;padding:10px 12px">'
+                + '<div style="font-weight:800;font-size:12px;color:var(--ink1);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nombre+'</div>'
+                + '<div style="font-family:var(--fd);font-size:18px;font-weight:900;color:var(--p1);line-height:1;margin-bottom:6px">$'+d.total.toFixed(2)+'</div>'
+                + '<div style="display:flex;gap:8px;margin-bottom:7px">'
+                  + '<span style="font-size:10px;color:var(--ink3)">🏷 <b>'+d.nVentas+'</b> venta'+(d.nVentas===1?'':'s')+' · $'+d.porVenta.toFixed(2)+'</span>'
+                + '</div>'
+                + '<div style="font-size:10px;color:var(--ink3);margin-bottom:7px">💵 <b>'+d.nCobranzas+'</b> cobro'+(d.nCobranzas===1?'':'s')+' · $'+d.porCobranza.toFixed(2)+'</div>'
+                + '<div style="height:3px;background:var(--rim);border-radius:2px;overflow:hidden">'
+                  + '<div style="height:100%;width:'+pctSede+'%;background:var(--grad);border-radius:2px"></div>'
+                + '</div>'
+                + '<div style="font-size:9px;color:var(--ink3);margin-top:3px;text-align:right">'+pctSede+'% del total</div>'
+              + '</div>';
             }).join('')
           + '</div>'
-          + '<div style="font-size:10px;color:var(--ink3);margin-top:8px;font-style:italic">El pago se hace una sola vez sobre el total adeudado, sin importar la sede.</div>'
+          + '<div style="font-size:10px;color:var(--ink3);margin-top:10px;font-style:italic;text-align:center">El pago se realiza en un solo desembolso sobre el total adeudado, independientemente de la sede.</div>'
           + '</div>';
       })()
     // Tabs
@@ -21304,7 +21345,8 @@ function _comAbrirDetalle(uid){
     + '</div>'
     // Contenido
     + contenido;
-  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>';
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>'
+    + (s.saldo > 0 ? '<button class="btn btn-p" onclick="closeM();_comAbrirPagar(\''+uid+'\')">$ Pagar $'+s.saldo.toFixed(2)+'</button>' : '');
   $('ov').style.display='flex';
 }
 
