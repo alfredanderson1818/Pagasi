@@ -15802,6 +15802,7 @@ function _docLibreSubirCliente(input, cliId){
 
 // ── HTML del bloque en el wizard ──
 function _docLibreWizardHtml(){
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
   var existentes = Array.isArray(WZ.documentos) ? WZ.documentos : [];
   var listaHtml = '';
   if(existentes.length){
@@ -26287,6 +26288,7 @@ function nxAcUpdateHint(){
 }
 
 function nxAcFilter(){
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
   var input = $('nx-ac-input');
   if(!input) return;
   var q = (input.value||'').toLowerCase().trim();
@@ -26371,6 +26373,7 @@ function nxAcClose(){
 }
 
 function nxAcPick(id){
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
   var all = nxAcGetAllClients();
   var c = all.find(function(x){ return String(x.id)===String(id); });
   if(!c) return;
