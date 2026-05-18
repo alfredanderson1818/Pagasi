@@ -17687,62 +17687,78 @@ function editarCredSinFirma(credId){
   preload.precioBaseReal= parseFloat(c.precioBaseReal||c.precio||0);
   preload.planMode      = c.planModo||'global';
 
-  // ── Paso 2: Residencia ──
-  preload['wz_viv'] = c.viv||''; preload.viv = c.viv||'';
-  preload['wz_tdir'] = c.tdir||''; preload.tdir = c.tdir||'';
-  preload['wz_estado'] = c.estado_ubi||''; preload.estado_ubi = c.estado_ubi||'';
-  preload['wz_ciudad_res'] = c.ciudad_res||''; preload.ciudad_res = c.ciudad_res||'';
-  preload['wz_dir_det'] = c.dir_det||''; preload.dir_det = c.dir_det||'';
-  preload['wz_dir_q'] = c.dir_q||''; preload.dir_q = c.dir_q||'';
-  // ── Paso 2: Empleo ──
-  preload['wz_empresa'] = c.empresa||''; preload.empresa = c.empresa||'';
-  preload['wz_cargo'] = c.cargo||''; preload.cargo = c.cargo||'';
-  preload['wz_ing'] = c.ing||0; preload.ing = c.ing||0;
-  preload['wz_ifam'] = c.ifam||0; preload.ifam = c.ifam||0;
-  preload['wz_ant'] = c.ant||''; preload.ant = c.ant||'';
-  preload['wz_rem'] = c.rem||'no'; preload.rem = c.rem||'no';
-  preload.dep = c.dep||0; preload.emp = c.emp_tipo||'';
-  // ── Paso 2: Historial ──
-  preload['wz_banco'] = c.banco||'activa'; preload.banco = c.banco||'activa';
-  preload['wz_banco_nm'] = c.banco_nm||''; preload.banco_nm = c.banco_nm||'';
-  preload['wz_banco_cobro'] = c.banco_cobro||''; preload.banco_cobro = c.banco_cobro||'';
-  preload['wz_cuenta'] = c.cuenta||''; preload.cuenta = c.cuenta||'';
-  preload['wz_ahorro'] = c.ahorro||'no'; preload.ahorro = c.ahorro||'no';
-  preload.hist = c.hist||'ninguno'; preload.deuda = c.deuda||'no';
-  // ── Paso 2: Cashea ──
-  preload.cashea = c.cashea||'no';
-  preload['wz_cashea_nivel'] = c.cashea_nivel||''; preload.cashea_nivel = c.cashea_nivel||'';
-  preload['wz_cashea_pago'] = c.cashea_pago||''; preload.cashea_pago = c.cashea_pago||'';
-  preload['wz_cashea_estado'] = c.cashea_estado||'';
-  preload['wz_cashea_deuda'] = c.cashea_deuda||'no';
-  preload['wz_cashea_monto'] = c.cashea_monto||0;
-  preload['wz_cashea_cuotas_pend'] = c.cashea_cuotas_pend||0;
-  preload['wz_cashea_ultimo_art'] = c.cashea_ultimo_art||'';
-  preload['wz_cashea_ultimo_monto'] = c.cashea_ultimo_monto||0;
-  preload['wz_cashea_ultima_fecha'] = c.cashea_ultima_fecha||'';
-  preload['wz_cashea_total_compras'] = c.cashea_total_compras||'';
-  preload['wz_cashea_obs'] = c.cashea_obs||'';
-  // ── Paso 2: Fiador ──
-  preload.fiador_tiene = c.fiador_tiene||'no';
-  preload['wz_fiador_nom'] = c.fiador_nom||''; preload.fiador_nom = c.fiador_nom||'';
-  preload['wz_fiador_tel'] = c.fiador_tel||''; preload.fiador_tel = c.fiador_tel||'';
-  preload['wz_fiador_ci'] = c.fiador_ci||''; preload.fiador_ci = c.fiador_ci||'';
-  preload['wz_fiador_rel'] = c.fiador_rel||''; preload.fiador_rel = c.fiador_rel||'';
-  // ── Paso 2: Referencias ──
-  preload['wz_r1n'] = c.r1n||''; preload.r1n = c.r1n||'';
-  preload['wz_r1t'] = c.r1t||''; preload.r1t = c.r1t||'';
-  preload['wz_r1r'] = c.r1r||''; preload.r1r = c.r1r||'';
-  preload['wz_r1obs'] = c.r1obs||''; preload.r1obs = c.r1obs||'';
-  preload['wz_r2n'] = c.r2n||''; preload.r2n = c.r2n||'';
-  preload['wz_r2t'] = c.r2t||''; preload.r2t = c.r2t||'';
-  preload['wz_r2r'] = c.r2r||''; preload.r2r = c.r2r||'';
-  preload['wz_r2obs'] = c.r2obs||''; preload.r2obs = c.r2obs||'';
-  // ── Paso 2: Documentos y notas ──
-  preload.documentos = Array.isArray(c.documentos) ? c.documentos.slice() : [];
-  preload.docsCount = preload.documentos.length;
-  preload.impresion = c.impresion||''; preload['wz_impresion_g'] = c.impresion||'';
-  preload['wz_obs'] = c.notas||''; preload.obs = c.notas||'';
-  preload['wz_conocio'] = c.conocio||''; preload.conocio = c.conocio||'';
+  // ── Paso 2: con fallback al objeto cliente para créditos anteriores ──
+  // Helper: busca primero en el crédito, luego en el cliente
+  var _f = function(credKey, cliKey, def){
+    var v = c[credKey];
+    if(v!==undefined && v!==null && v!=='') return v;
+    v = cli && cli[cliKey];
+    if(v!==undefined && v!==null && v!=='') return v;
+    return (def!==undefined ? def : '');
+  };
+
+  // Residencia
+  preload['wz_viv'] = _f('viv','vivienda',''); preload.viv = preload['wz_viv'];
+  preload['wz_tdir'] = _f('tdir','tiempo_dir',''); preload.tdir = preload['wz_tdir'];
+  preload['wz_estado'] = _f('estado_ubi','estado_ubi',''); preload.estado_ubi = preload['wz_estado'];
+  preload['wz_ciudad_res'] = _f('ciudad_res','ciudad',''); preload.ciudad_res = preload['wz_ciudad_res'];
+  preload['wz_dir_det'] = _f('dir_det','dir',''); preload.dir_det = preload['wz_dir_det'];
+  preload['wz_dir_q'] = _f('dir_q','dir_q',''); preload.dir_q = preload['wz_dir_q'];
+  // Empleo
+  preload['wz_empresa'] = _f('empresa','empresa',''); preload.empresa = preload['wz_empresa'];
+  preload['wz_cargo'] = _f('cargo','cargo',''); preload.cargo = preload['wz_cargo'];
+  preload['wz_ing'] = parseFloat(_f('ing','ingreso',0))||0; preload.ing = preload['wz_ing'];
+  preload['wz_ifam'] = parseFloat(_f('ifam','ingreso_familiar',0))||0; preload.ifam = preload['wz_ifam'];
+  preload['wz_ant'] = _f('ant','antiguedad',''); preload.ant = preload['wz_ant'];
+  preload['wz_rem'] = _f('rem','remesas','no'); preload.rem = preload['wz_rem'];
+  preload.dep = parseInt(_f('dep','dependientes',0))||0;
+  preload.emp = c.emp_tipo || (cli&&(cli.trabajo||cli.emp)) || '';
+  // Historial
+  preload['wz_banco'] = _f('banco','banco_estado','activa'); preload.banco = preload['wz_banco'];
+  preload['wz_banco_nm'] = _f('banco_nm','banco_nombre',''); preload.banco_nm = preload['wz_banco_nm'];
+  preload['wz_banco_cobro'] = _f('banco_cobro','banco_cobro',''); preload.banco_cobro = preload['wz_banco_cobro'];
+  preload['wz_cuenta'] = _f('cuenta','cuenta_digitos',''); preload.cuenta = preload['wz_cuenta'];
+  preload['wz_ahorro'] = _f('ahorro','ahorro','no'); preload.ahorro = preload['wz_ahorro'];
+  preload.hist = _f('hist','historial','ninguno');
+  preload.deuda = _f('deuda','deudas','no');
+  // Cashea
+  preload.cashea = _f('cashea','cashea','no');
+  preload['wz_cashea_nivel'] = _f('cashea_nivel','cashea_nivel','');
+  preload['wz_cashea_pago'] = _f('cashea_pago','cashea_pago','');
+  preload['wz_cashea_estado'] = _f('cashea_estado','cashea_estado','');
+  preload['wz_cashea_deuda'] = _f('cashea_deuda','cashea_deuda','no');
+  preload['wz_cashea_monto'] = _f('cashea_monto','cashea_monto',0);
+  preload['wz_cashea_cuotas_pend'] = _f('cashea_cuotas_pend','cashea_cuotas_pend',0);
+  preload['wz_cashea_ultimo_art'] = _f('cashea_ultimo_art','cashea_ultimo_art','');
+  preload['wz_cashea_ultimo_monto'] = _f('cashea_ultimo_monto','cashea_ultimo_monto',0);
+  preload['wz_cashea_ultima_fecha'] = _f('cashea_ultima_fecha','cashea_ultima_fecha','');
+  preload['wz_cashea_total_compras'] = _f('cashea_total_compras','cashea_total_compras','');
+  preload['wz_cashea_obs'] = _f('cashea_obs','cashea_obs','');
+  // Fiador
+  preload.fiador_tiene = _f('fiador_tiene','fiador','no');
+  preload['wz_fiador_nom'] = _f('fiador_nom','fiador_nom',''); preload.fiador_nom = preload['wz_fiador_nom'];
+  preload['wz_fiador_tel'] = _f('fiador_tel','fiador_tel',''); preload.fiador_tel = preload['wz_fiador_tel'];
+  preload['wz_fiador_ci'] = _f('fiador_ci','fiador_ci',''); preload.fiador_ci = preload['wz_fiador_ci'];
+  preload['wz_fiador_rel'] = _f('fiador_rel','fiador_rel',''); preload.fiador_rel = preload['wz_fiador_rel'];
+  // Referencias
+  var _ref1 = cli&&cli.ref1 || {};
+  var _ref2 = cli&&cli.ref2 || {};
+  preload['wz_r1n'] = c.r1n||_ref1.nom||''; preload.r1n = preload['wz_r1n'];
+  preload['wz_r1t'] = c.r1t||_ref1.tel||''; preload.r1t = preload['wz_r1t'];
+  preload['wz_r1r'] = c.r1r||_ref1.rel||''; preload.r1r = preload['wz_r1r'];
+  preload['wz_r1obs'] = c.r1obs||_ref1.obs||''; preload.r1obs = preload['wz_r1obs'];
+  preload['wz_r2n'] = c.r2n||_ref2.nom||''; preload.r2n = preload['wz_r2n'];
+  preload['wz_r2t'] = c.r2t||_ref2.tel||''; preload.r2t = preload['wz_r2t'];
+  preload['wz_r2r'] = c.r2r||_ref2.rel||''; preload.r2r = preload['wz_r2r'];
+  preload['wz_r2obs'] = c.r2obs||_ref2.obs||''; preload.r2obs = preload['wz_r2obs'];
+  // Documentos — buscar en crédito, luego en cliente
+  var _docs = (Array.isArray(c.documentos)&&c.documentos.length) ? c.documentos
+              : (cli&&Array.isArray(cli.documentos)&&cli.documentos.length) ? cli.documentos : [];
+  preload.documentos = _docs.slice(); preload.docsCount = _docs.length;
+  // Notas e impresion
+  preload.impresion = c.impresion||(cli&&cli.impresion)||''; preload['wz_impresion_g'] = preload.impresion;
+  preload['wz_obs'] = c.notas||(cli&&cli.notas)||''; preload.obs = preload['wz_obs'];
+  preload['wz_conocio'] = c.conocio||(cli&&cli.conocio)||''; preload.conocio = preload['wz_conocio'];
 
   // Guardar flag y preload ANTES de openAddCred (que resetea WZ)
   window._wzEditando = credId;
