@@ -6240,9 +6240,7 @@ function verCliente(id){
     + '<button class="cf-tab is-active" data-tab="resumen" onclick="cfTab(\''+c.id+'\',\'resumen\')">Resumen</button>'
     + '<button class="cf-tab" data-tab="score" onclick="cfTab(\''+c.id+'\',\'score\')">Score <span class="cf-tab-count" style="background:'+scoreColor+';color:#fff">'+score+'</span></button>'
     + '<button class="cf-tab" data-tab="actividad" onclick="cfTab(\''+c.id+'\',\'actividad\')">Actividad</button>'
-    + '<button class="cf-tab" data-tab="personal" onclick="cfTab(\''+c.id+'\',\'personal\')">Personal</button>'
-    + '<button class="cf-tab" data-tab="laboral" onclick="cfTab(\''+c.id+'\',\'laboral\')">Laboral</button>'
-    + '<button class="cf-tab" data-tab="financiero" onclick="cfTab(\''+c.id+'\',\'financiero\')">Financiero</button>'
+    + '<button class="cf-tab" data-tab="perfil" onclick="cfTab(\''+c.id+'\',\'perfil\')">Perfil</button>'
     + '<button class="cf-tab" data-tab="referencias" onclick="cfTab(\''+c.id+'\',\'referencias\')">Referencias</button>'
     + '<button class="cf-tab" data-tab="creditos" onclick="cfTab(\''+c.id+'\',\'creditos\')">Planes <span class="cf-tab-count">'+creditos.length+'</span></button>'
     + '<button class="cf-tab" data-tab="pagos" onclick="cfTab(\''+c.id+'\',\'pagos\')">Pagos <span class="cf-tab-count">'+pagos.length+'</span></button>'
@@ -6377,8 +6375,8 @@ function verCliente(id){
   }
   html += '</div></div>';
 
-  // ── PANEL: PERSONAL ──
-  html += '<div class="cf-panel" data-tab="personal">';
+  // ── PANEL: PERFIL (Personal + Laboral + Financiero) ──
+  html += '<div class="cf-panel" data-tab="perfil">';
   html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">Datos personales</div></div>'
     + '<div class="cf-grid-3">'
     + field('Nombre completo', c.nombre)
@@ -6410,10 +6408,7 @@ function verCliente(id){
       + (c.notas?'<div class="cf-field" style="margin-top:10px"><div class="cf-field-l">Notas internas</div><div class="cf-field-v" style="line-height:1.5">'+esc(c.notas)+'</div></div>':'')
       + '</div>';
   }
-  html += '</div>';
-
-  // ── PANEL: LABORAL ──
-  html += '<div class="cf-panel" data-tab="laboral">';
+  html += '<div style="height:1px;background:var(--rim);margin:18px 0"></div>';
   html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t"> Empleo</div></div>'
     + '<div class="cf-grid-3">'
     + field('Tipo de empleo', c.trabajo)
@@ -6443,10 +6438,7 @@ function verCliente(id){
       + '</div>';
   }
   html += '</div>';
-  html += '</div>';
-
-  // ── PANEL: FINANCIERO ──
-  html += '<div class="cf-panel" data-tab="financiero">';
+  html += '<div style="height:1px;background:var(--rim);margin:18px 0"></div>';
   html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t"> Información bancaria</div></div>'
     + '<div class="cf-grid-3">'
     + field('Banco principal', c.banco_nombre)
@@ -14996,37 +14988,7 @@ function _wzRender(motoId){
 
   // ── DOCUMENTOS ──
   +_s('Documentos del Expediente')
-  +'<div style="background:rgba(37,99,235,.05);border:1px solid var(--rim2);border-radius:12px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--ink3)"> Toca cada documento para subir foto o PDF desde el teléfono.</div>'
-  +'<div style="display:flex;flex-direction:column;gap:9px" id="wz_docs_list">'
-  +(function(){
-    var groups=[]; var byGroup={};
-    Object.keys(_wzDocDefs).forEach(function(id){
-      var d=_wzDocDefs[id]||{}; var g=d.group||'Documentos';
-      if(!byGroup[g]){ byGroup[g]=[]; groups.push(g); }
-      byGroup[g].push([id,d.icon||'',d.label||id,d.accept||'image/*,.pdf',d.capture||'']);
-    });
-    return groups.map(function(g){
-      return '<div style="margin-top:4px">'
-        +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink3);margin:10px 0 7px">'+g+'</div>'
-        +byGroup[g].map(function(d){
-          return '<div id="'+d[0]+'_wrap" style="display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--surf2);border-radius:10px;border:1.5px solid var(--rim);cursor:pointer;position:relative;overflow:hidden;transition:.15s;margin-bottom:8px">'
-            +'<input type="file" accept="'+d[3]+'" '+(d[4]?('capture="'+d[4]+'"'):'')+' onchange="_wzHandleDoc(this,\''+d[0]+'\')" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">'
-            +'<div style="width:36px;height:36px;border-radius:9px;background:var(--surf);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">'+d[1]+'</div>'
-            +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">'+d[2]+'</div>'
-            +'<div id="'+d[0]+'_status" style="font-size:11px;color:var(--ink3);margin-top:2px">'+(d[4]?'Toca para tomar foto':'Toca para subir')+'</div>'
-            +'<div style="height:3px;border-radius:2px;background:var(--rim);margin-top:5px;overflow:hidden"><div id="'+d[0]+'_prog" style="height:100%;width:0%;background:var(--p1);border-radius:2px;transition:width .4s"></div></div>'
-            +'</div>'
-            +'<div id="'+d[0]+'_ico" style="font-size:18px;flex-shrink:0">'+(d[4]?'':'')+'</div>'
-            +'</div>';
-        }).join('')
-        +'</div>';
-    }).join('');
-  })()
-  +'</div>'
-  +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--rim)">'
-  +'<div style="font-size:12px;font-weight:700;color:var(--ink3)">Subidos: <span id="wz_doc_count" style="color:var(--p1)">0/'+String(_wzDocTotal())+'</span></div>'
-  +'<span id="wz_doc_tag" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--surf2);border:1px solid var(--rim);color:var(--ink3)">⏳ Pendiente</span>'
-  +'</div>'
+  +_docLibreWizardHtml()
 
   // ── NOTAS DEL VENDEDOR ──
   +_s('Notas del Vendedor')
@@ -15287,6 +15249,20 @@ function _wzHydrate(){
   pick('wz_impresion_g', WZ.impresion||WZ['_chip_wz_impresion_g']);
   pick('wz_dep_g', String(WZ.dep||WZ['_chip_wz_dep_g']||''));
   if(WZ.step===3 && WZ.precio){ var pInp=document.getElementById('wz_precio'); if(pInp) pInp.value=WZ.precio; }
+  // Restaurar radios de cashea y fiador desde WZ al editar
+  (function(){
+    var casheaVal = WZ.cashea||'no';
+    var casheaRadio = document.querySelector('input[name="wz_cashea"][value="'+casheaVal+'"]');
+    if(casheaRadio){ casheaRadio.checked=true; if(typeof _wzToggleCashea==='function') _wzToggleCashea(casheaVal); }
+    var fiadorVal = WZ.fiador_tiene||'no';
+    var fiadorRadio = document.querySelector('input[name="wz_fiador"][value="'+fiadorVal+'"]');
+    if(fiadorRadio){ fiadorRadio.checked=true; if(typeof _wzToggleFiador==='function') _wzToggleFiador(fiadorVal); }
+    // Restaurar documentos en lista visual
+    if(Array.isArray(WZ.documentos) && WZ.documentos.length){
+      WZ.documentos.forEach(function(d){ if(d&&d.id) _wzDocsUp[d.id]=d; });
+      if(typeof _docLibreWizardRefreshList==='function') setTimeout(_docLibreWizardRefreshList,50);
+    }
+  })();
   _wzScore();
   // Sincronizar el buscador de cliente (mostrar chip si ya había selección)
   if(typeof _wzCliHidratar === 'function') _wzCliHidratar();
@@ -15710,78 +15686,230 @@ function _wzSafeFileName(name){
   return String(name||'archivo').replace(/[^a-zA-Z0-9._-]+/g,'_');
 }
 function _wzDocLabel(id){ return (_wzDocDefs[id]&&_wzDocDefs[id].label)||id; }
-function _renderCliDocManager(c){
-  var docs=(c&&Array.isArray(c.documentos))?c.documentos:[];
-  var docsMap={};
-  docs.forEach(function(d){ if(d&&d.id) docsMap[d.id]=d; });
-  var groups=[]; var byGroup={};
-  Object.keys(_wzDocDefs).forEach(function(id){
-    var def=_wzDocDefs[id]||{};
-    var group=def.group||'Documentos';
-    if(!byGroup[group]){ byGroup[group]=[]; groups.push(group); }
-    byGroup[group].push({ id:id, def:def, meta:docsMap[id]||null });
-  });
+// ══════════════════════════════════════════════════════════════════
+// SISTEMA LIBRE DE DOCUMENTOS — compartido por wizard y tarjeta cliente
+// ══════════════════════════════════════════════════════════════════
 
-  // Contador resumen
-  var totalDocs = Object.keys(_wzDocDefs).length;
-  var uploadedCount = docs.length;
-  var pct = totalDocs>0 ? Math.round(uploadedCount/totalDocs*100) : 0;
-  var pctColor = pct>=80?'var(--green)':pct>=40?'var(--amber)':'var(--red)';
+// ── HTML del bloque en la tarjeta de cliente ──
+function _docLibreClienteHtml(c){
+  var cliId = String(c.id);
+  var docs = Array.isArray(c.documentos) ? c.documentos : [];
+  var html = '';
 
-  var summaryHtml = '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;margin-bottom:12px">'
-    + '<div style="font-size:28px;font-weight:900;color:'+pctColor+';line-height:1;font-family:var(--fd);min-width:60px">'+uploadedCount+'</div>'
-    + '<div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--ink)">Documentos cargados</div>'
-    + '<div style="font-size:11px;color:var(--ink3)">'+pct+'% del expediente completo · '+(totalDocs-uploadedCount)+' pendientes</div></div>'
-    + '<div style="width:80px;height:8px;background:var(--rim);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+pctColor+'"></div></div>'
+  // Lista de docs existentes
+  if(docs.length){
+    html += '<div style="margin-bottom:12px">';
+    html += docs.map(function(d){
+      if(!d) return '';
+      var isLocal = d.source==='local' || (d.url||'').indexOf('data:')===0;
+      var badge = isLocal ? '<span class="bdg b-a" style="font-size:9px;margin-left:4px">local</span>'
+                          : '<span class="bdg b-g" style="font-size:9px;margin-left:4px">nube</span>';
+      return '<div class="li" style="margin-bottom:6px">'
+        + '<div class="li-ic" style="background:var(--gs)">📄</div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-weight:700;color:var(--ink);font-size:12px">' + esc(d.label||d.name||'Documento') + badge + '</div>'
+        + '<div class="tds" style="font-size:10px">' + esc(d.name||'Archivo') + (d.size?' · '+Math.round(d.size/1024)+'KB':'') + (d.uploadedAt?' · '+fmtFechaHora(d.uploadedAt):'') + '</div>'
+        + '</div>'
+        + (d.url ? '<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener" download="'+(d.name||'').replace(/"/g,'&quot;')+'">Abrir</a>' : '')
+        + '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+cliId+'\',\''+d.id+'\')">✕</button>'
+        + '</div>';
+    }).join('');
+    html += '</div>';
+  } else {
+    html += '<div style="color:var(--ink3);font-size:12px;font-style:italic;margin-bottom:12px;padding:8px 0">Sin documentos cargados aún.</div>';
+  }
+
+  // Formulario para agregar
+  html += '<div style="background:rgba(37,99,235,.04);border:1px solid var(--rim2);border-radius:12px;padding:12px">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:8px">➕ Agregar documento</div>'
+    + '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">'
+    + '<div><label style="font-size:10.5px;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px">Nombre del documento</label>'
+    + '<input class="fi" id="cli_doc_nombre_'+cliId+'" type="text" placeholder="Ej: Cédula, Contrato, Factura..." style="width:100%;font-size:13px"></div>'
+    + '<div style="padding-bottom:1px"><label class="btn btn-p btn-sm" style="cursor:pointer;white-space:nowrap">'
+    + '📎 Seleccionar archivo'
+    + '<input type="file" accept="image/*,.pdf,.doc,.docx" multiple style="display:none" onchange="_docLibreSubirCliente(this,\''+cliId+'\')"></label></div>'
+    + '</div>'
     + '</div>';
 
-  // Storage status warning
-  var storageStatus = '';
-  if(typeof storage === 'undefined' || !storage || typeof storage.ref !== 'function'){
-    storageStatus = '<div style="padding:9px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.45">'
-      + '<b style="color:var(--amber)"> Firebase Storage no disponible.</b> Los documentos se guardarán <b>localmente en este navegador</b> (max 2MB por archivo). Para almacenamiento en la nube habilita Storage en Firebase Console.'
-      + '</div>';
-  }
+  return html;
+}
 
-  var docsHtml='';
-  if(docs.length){
-    docsHtml='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:6px"> Archivos cargados ('+docs.length+')</div>';
-    docsHtml+='<div class="lst" style="margin-bottom:16px">'+docs.map(function(d){
-      var def=_wzDocDefs[d.id]||{};
-      var isLocal = d.source==='local' || (d.url||'').indexOf('data:')===0;
-      var badge = isLocal ? '<span class="bdg b-a" style="font-size:9px;margin-left:4px">local</span>' : '<span class="bdg b-g" style="font-size:9px;margin-left:4px">nube</span>';
-      return '<div class="li">'
-        + '<div class="li-ic" style="background:var(--gs)">'+(def.icon||'')+'</div>'
-        + '<div style="flex:1;min-width:0">'
-        + '<div style="font-weight:700;color:var(--ink);font-size:12px">'+(d.label||_wzDocLabel(d.id)||'Documento')+badge+'</div>'
-        + '<div class="tds" style="font-size:10px">'+(d.name||'Archivo')+(d.size?' · '+Math.round(d.size/1024)+'KB':'')+(d.uploadedAt?(' · '+fmtFechaHora(d.uploadedAt)):'')+'</div>'
-        + '</div>'
-        + (d.url?'<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener" download="'+(d.name||'').replace(/"/g,'&quot;')+'">Abrir</a>':'')
-        + '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+c.id+'\',\''+d.id+'\')" title="Eliminar">✕</button>'
-        + '</div>';
-    }).join('')+'</div>';
-  }
+// ── Subir archivo desde tarjeta de cliente ──
+function _docLibreSubirCliente(input, cliId){
+  var nombreInput = document.getElementById('cli_doc_nombre_'+cliId);
+  var nombreBase = (nombreInput && nombreInput.value.trim()) ? nombreInput.value.trim() : '';
+  var files = input.files;
+  if(!files || !files.length) return;
+  var c = S.clientes.find(function(x){ return String(x.id)===String(cliId); });
+  if(!c){ toast('Cliente no encontrado','error'); return; }
 
-  var uploadHtml='<div style="background:rgba(37,99,235,.04);border:1px solid var(--rim2);border-radius:12px;padding:12px">'
-    +'<div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:4px">Cargar / actualizar documentos</div>'
-    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:10px">Toca el recuadro y selecciona el archivo. Se guarda automáticamente.</div>'
-    +groups.map(function(group){
-      return '<div style="margin-top:8px">'
-        +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink3);margin:10px 0 7px">'+group+'</div>'
-        +byGroup[group].map(function(item){
-          var id=item.id, def=item.def||{}, meta=item.meta;
-          return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1.5px solid '+(meta?'rgba(6,176,106,.28)':'var(--rim)')+';position:relative;overflow:hidden;margin-bottom:8px;cursor:pointer">'
-            +'<input type="file" accept="'+(def.accept||'image/*,.pdf')+'" '+(def.capture?('capture="'+def.capture+'"'):'')+' data-cliente-id="'+String(c.id).replace(/"/g,'&quot;')+'" data-doc-id="'+id+'" onchange="_cliDocUploadFromInput(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">'
-            +'<div style="width:34px;height:34px;border-radius:9px;background:var(--surf);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(def.icon||'')+'</div>'
-            +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+(def.label||id)+'</div><div style="font-size:10.5px;color:'+(meta?'var(--green)':'var(--ink3)')+';margin-top:2px">'+(meta?('✓ '+(meta.name||'Archivo')+(meta.uploadedAt?(' · '+fmtFechaHora(meta.uploadedAt)):'')):'Toca para subir')+'</div></div>'
-            +'<div style="font-size:17px;flex-shrink:0">'+(meta?'':'')+'</div>'
-            +(meta&&meta.url?'<a class="btn btn-xs btn-g" href="'+meta.url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="z-index:2;position:relative">Abrir</a>':'')
-            +'</label>';
+  Array.from(files).forEach(function(file, idx){
+    var label = files.length===1 ? (nombreBase||file.name) : (nombreBase ? nombreBase+' ('+(idx+1)+')' : file.name);
+    var docId = 'libre_'+Date.now()+'_'+Math.floor(Math.random()*100000)+'_'+idx;
+    var fakeInput = { files:[file], getAttribute: function(a){ return a==='data-cliente-id'?String(cliId):docId; } };
+    // Save label for use in upload
+    window._docLibrePendingLabel = window._docLibrePendingLabel || {};
+    window._docLibrePendingLabel[docId] = label;
+    _cliDocUpload(fakeInput, String(cliId), docId);
+  });
+
+  if(nombreInput) nombreInput.value = '';
+  input.value = '';
+}
+
+// ── HTML del bloque en el wizard ──
+function _docLibreWizardHtml(){
+  var existentes = Array.isArray(WZ.documentos) ? WZ.documentos : [];
+  var listaHtml = '';
+  if(existentes.length){
+    listaHtml = '<div id="wz_doc_libre_list" style="margin-bottom:10px">'
+      + existentes.map(function(d){
+          if(!d) return '';
+          return '<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim);margin-bottom:6px">'
+            + '<div style="font-size:16px">📄</div>'
+            + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+esc(d.label||d.name||'Documento')+'</div>'
+            + '<div style="font-size:10px;color:var(--ink3)">'+esc(d.name||'Archivo')+(d.size?' · '+Math.round(d.size/1024)+'KB':'')+'</div></div>'
+            + (d.url?'<a href="'+d.url+'" target="_blank" style="font-size:11px;color:var(--p1);font-weight:700">Abrir</a>':'')
+            + '</div>';
         }).join('')
-        +'</div>';
-    }).join('')
-    +'</div>';
-  return summaryHtml + storageStatus + docsHtml + uploadHtml;
+      + '</div>';
+  } else {
+    listaHtml = '<div id="wz_doc_libre_list" style="margin-bottom:10px"></div>';
+  }
+
+  return '<div style="background:rgba(37,99,235,.05);border:1px solid var(--rim2);border-radius:12px;padding:12px;margin-bottom:10px">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:8px">📋 Documentos del expediente</div>'
+    + listaHtml
+    + '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">'
+    + '<div><label style="font-size:10.5px;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px">Nombre del documento</label>'
+    + '<input class="fi" id="wz_doc_libre_nombre" type="text" placeholder="Ej: Cédula, Contrato, Recibo..." style="width:100%"></div>'
+    + '<div style="padding-bottom:1px"><label class="btn btn-p btn-sm" style="cursor:pointer;white-space:nowrap">'
+    + '📎 Agregar'
+    + '<input type="file" accept="image/*,.pdf,.doc,.docx" multiple style="display:none" onchange="_docLibreWizardSubir(this)"></label></div>'
+    + '</div>'
+    + '<div id="wz_doc_libre_status" style="font-size:11px;color:var(--ink3);margin-top:6px;min-height:16px"></div>'
+    + '</div>';
+}
+
+// ── Subir archivo desde el wizard ──
+function _docLibreWizardSubir(input){
+  var nombreInput = document.getElementById('wz_doc_libre_nombre');
+  var nombreBase = (nombreInput && nombreInput.value.trim()) ? nombreInput.value.trim() : '';
+  var files = input.files;
+  if(!files || !files.length) return;
+
+  var statusEl = document.getElementById('wz_doc_libre_status');
+  if(statusEl) statusEl.textContent = 'Subiendo...';
+
+  Array.from(files).forEach(function(file, idx){
+    var label = files.length===1 ? (nombreBase||file.name) : (nombreBase ? nombreBase+' ('+(idx+1)+')' : file.name);
+    var docId = 'wzdoc_'+Date.now()+'_'+Math.floor(Math.random()*100000)+'_'+idx;
+
+    window._docLibrePendingLabel = window._docLibrePendingLabel || {};
+    window._docLibrePendingLabel[docId] = label;
+
+    // Usar el mismo sistema de upload del wizard existente
+    _wzHandleDocLibre(file, docId, label, function(meta){
+      // Agregar a WZ.documentos
+      if(!Array.isArray(WZ.documentos)) WZ.documentos = [];
+      meta.label = label;
+      WZ.documentos = WZ.documentos.filter(function(d){ return d.id!==docId; });
+      WZ.documentos.push(meta);
+      WZ.docsCount = WZ.documentos.length;
+      // Actualizar lista visual sin re-renderizar wizard
+      _docLibreWizardRefreshList();
+      if(statusEl) statusEl.textContent = '✓ '+label+' guardado';
+      setTimeout(function(){ if(statusEl) statusEl.textContent=''; }, 2500);
+    });
+  });
+
+  if(nombreInput) nombreInput.value = '';
+  input.value = '';
+}
+
+function _docLibreWizardRefreshList(){
+  var listEl = document.getElementById('wz_doc_libre_list');
+  if(!listEl) return;
+  var docs = Array.isArray(WZ.documentos) ? WZ.documentos : [];
+  if(!docs.length){ listEl.innerHTML=''; return; }
+  listEl.innerHTML = docs.map(function(d){
+    if(!d) return '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim);margin-bottom:6px">'
+      + '<div style="font-size:16px">📄</div>'
+      + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+esc(d.label||d.name||'Documento')+'</div>'
+      + '<div style="font-size:10px;color:var(--ink3)">'+esc(d.name||'Archivo')+(d.size?' · '+Math.round(d.size/1024)+'KB':'')+'</div></div>'
+      + (d.url?'<a href="'+d.url+'" target="_blank" style="font-size:11px;color:var(--p1);font-weight:700">Abrir</a>':'')
+      + '</div>';
+  }).join('');
+}
+
+// ── Manejar upload individual en wizard (sin re-renderizar) ──
+function _wzHandleDocLibre(file, docId, label, onDone){
+  var cliId = _wzCurrentClienteKey();
+  var tempKey = _wzEnsureDocsTempKey();
+  var useKey = (cliId && String(cliId).indexOf('TMP-')!==0) ? String(cliId) : tempKey;
+
+  var meta = {
+    id: docId,
+    label: label,
+    name: file.name,
+    size: file.size,
+    uploadedAt: new Date().toISOString(),
+    source: 'local',
+    url: ''
+  };
+
+  // Intentar Firebase Storage primero
+  if(typeof storage !== 'undefined' && storage && typeof storage.ref === 'function'){
+    var path = 'clientes/'+useKey+'/docs/'+docId+'_'+_wzSafeFileName(file.name);
+    var ref = storage.ref().child(path);
+    var task = ref.put(file);
+    task.on('state_changed', null, function(err){
+      // Fallback a local
+      _wzHandleDocLibreLocal(file, docId, label, meta, onDone);
+    }, function(){
+      ref.getDownloadURL().then(function(url){
+        meta.url = url;
+        meta.path = path;
+        meta.source = 'firebase';
+        _wzDocsUp[docId] = meta;
+        if(onDone) onDone(meta);
+      }).catch(function(){
+        _wzHandleDocLibreLocal(file, docId, label, meta, onDone);
+      });
+    });
+  } else {
+    _wzHandleDocLibreLocal(file, docId, label, meta, onDone);
+  }
+}
+
+function _wzHandleDocLibreLocal(file, docId, label, meta, onDone){
+  if(file.size > 2*1024*1024){
+    toast('Archivo demasiado grande para guardar localmente (máx 2MB)','error');
+    meta.url = '';
+    _wzDocsUp[docId] = meta;
+    if(onDone) onDone(meta);
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    meta.url = e.target.result;
+    meta.source = 'local';
+    _wzDocsUp[docId] = meta;
+    try{
+      var key = 'pagasi_cli_docs_'+_wzCurrentClienteKey();
+      var arr = JSON.parse(localStorage.getItem(key)||'[]');
+      arr = arr.filter(function(d){ return d.id!==docId; });
+      arr.push(meta);
+      localStorage.setItem(key, JSON.stringify(arr));
+    }catch(e){}
+    if(onDone) onDone(meta);
+  };
+  reader.readAsDataURL(file);
+}
+
+function _renderCliDocManager(c){
+  return _docLibreClienteHtml(c);
 }
 
 // Eliminar documento
@@ -16754,7 +16882,41 @@ function _wzGuardar(){
         uso_moto: WZ.uso||S.creds[_ei].uso_moto||'',
         notas: WZ.obs||S.creds[_ei].notas||'',
         conocio: WZ.conocio||S.creds[_ei].conocio||'',
-        emp_tipo: WZ.emp||S.creds[_ei].emp_tipo||''
+        emp_tipo: WZ.emp||S.creds[_ei].emp_tipo||'',
+        viv: WZ.viv||S.creds[_ei].viv||'', tdir: WZ.tdir||S.creds[_ei].tdir||'',
+        estado_ubi: WZ.estado_ubi||S.creds[_ei].estado_ubi||'',
+        ciudad_res: WZ.ciudad_res||S.creds[_ei].ciudad_res||'',
+        dir_det: WZ.dir_det||S.creds[_ei].dir_det||'',
+        dir_q: WZ.dir_q||S.creds[_ei].dir_q||'',
+        empresa: WZ.empresa||S.creds[_ei].empresa||'',
+        cargo: WZ.cargo||S.creds[_ei].cargo||'',
+        ing: WZ.ing||S.creds[_ei].ing||0,
+        ifam: WZ.ifam||S.creds[_ei].ifam||0,
+        ant: WZ.ant||S.creds[_ei].ant||'',
+        rem: WZ.rem||S.creds[_ei].rem||'no',
+        dep: WZ.dep||S.creds[_ei].dep||0,
+        hist: WZ.hist||S.creds[_ei].hist||'ninguno',
+        deuda: WZ.deuda||S.creds[_ei].deuda||'no',
+        banco: WZ.banco||S.creds[_ei].banco||'activa',
+        banco_nm: WZ.banco_nm||S.creds[_ei].banco_nm||'',
+        banco_cobro: WZ.banco_cobro||S.creds[_ei].banco_cobro||'',
+        cuenta: WZ.cuenta||S.creds[_ei].cuenta||'',
+        ahorro: WZ.ahorro||S.creds[_ei].ahorro||'no',
+        cashea: WZ.cashea||S.creds[_ei].cashea||'no',
+        cashea_nivel: WZ.cashea_nivel||S.creds[_ei].cashea_nivel||'',
+        cashea_pago: WZ.cashea_pago||S.creds[_ei].cashea_pago||'',
+        fiador_tiene: WZ.fiador_tiene||S.creds[_ei].fiador_tiene||'no',
+        fiador_nom: WZ.fiador_nom||S.creds[_ei].fiador_nom||'',
+        fiador_tel: WZ.fiador_tel||S.creds[_ei].fiador_tel||'',
+        fiador_ci: WZ.fiador_ci||S.creds[_ei].fiador_ci||'',
+        fiador_rel: WZ.fiador_rel||S.creds[_ei].fiador_rel||'',
+        r1n: WZ.r1n||S.creds[_ei].r1n||'', r1t: WZ.r1t||S.creds[_ei].r1t||'',
+        r1r: WZ.r1r||S.creds[_ei].r1r||'', r1obs: WZ.r1obs||S.creds[_ei].r1obs||'',
+        r2n: WZ.r2n||S.creds[_ei].r2n||'', r2t: WZ.r2t||S.creds[_ei].r2t||'',
+        r2r: WZ.r2r||S.creds[_ei].r2r||'', r2obs: WZ.r2obs||S.creds[_ei].r2obs||'',
+        documentos: (Array.isArray(WZ.documentos)&&WZ.documentos.length)?WZ.documentos:(S.creds[_ei].documentos||[]),
+        docsCount: (Array.isArray(WZ.documentos)?WZ.documentos.length:(S.creds[_ei].docsCount||0)),
+        impresion: WZ.impresion||S.creds[_ei].impresion||''
       };
       // Actualizar cliente si hay datos nuevos
       if(existing && WZ.nom){
@@ -16824,7 +16986,39 @@ function _wzGuardar(){
     concesionarioId: (WZ.concesionarioId !== undefined ? WZ.concesionarioId : _concDefaultId()),
     creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
     creado: new Date().toISOString(),
-    contratoFirmado: false
+    contratoFirmado: false,
+    // ── Paso 2: Residencia ──
+    viv: WZ.viv||'', tdir: WZ.tdir||'',
+    estado_ubi: WZ.estado_ubi||'', ciudad_res: WZ.ciudad_res||'',
+    dir_det: WZ.dir_det||'', dir_q: WZ.dir_q||'',
+    // ── Paso 2: Empleo e ingresos ──
+    empresa: WZ.empresa||'', cargo: WZ.cargo||'',
+    ing: WZ.ing||0, ifam: WZ.ifam||0,
+    ant: WZ.ant||'', rem: WZ.rem||'no',
+    dep: WZ.dep||0,
+    // ── Paso 2: Historial ──
+    hist: WZ.hist||'ninguno', deuda: WZ.deuda||'no',
+    banco: WZ.banco||'activa', banco_nm: WZ.banco_nm||'',
+    banco_cobro: WZ.banco_cobro||'', cuenta: WZ.cuenta||'',
+    ahorro: WZ.ahorro||'no',
+    // ── Paso 2: Cashea ──
+    cashea: WZ.cashea||'no', cashea_nivel: WZ.cashea_nivel||'',
+    cashea_pago: WZ.cashea_pago||'',
+    cashea_estado: WZ.cashea_estado||'', cashea_deuda: WZ.cashea_deuda||'no',
+    cashea_monto: WZ.cashea_monto||0, cashea_cuotas_pend: WZ.cashea_cuotas_pend||0,
+    cashea_ultimo_art: WZ.cashea_ultimo_art||'', cashea_ultimo_monto: WZ.cashea_ultimo_monto||0,
+    cashea_ultima_fecha: WZ.cashea_ultima_fecha||'',
+    cashea_total_compras: WZ.cashea_total_compras||'', cashea_obs: WZ.cashea_obs||'',
+    // ── Paso 2: Fiador ──
+    fiador_tiene: WZ.fiador_tiene||'no', fiador_nom: WZ.fiador_nom||'',
+    fiador_tel: WZ.fiador_tel||'', fiador_ci: WZ.fiador_ci||'', fiador_rel: WZ.fiador_rel||'',
+    // ── Paso 2: Referencias ──
+    r1n: WZ.r1n||'', r1t: WZ.r1t||'', r1r: WZ.r1r||'', r1obs: WZ.r1obs||'',
+    r2n: WZ.r2n||'', r2t: WZ.r2t||'', r2r: WZ.r2r||'', r2obs: WZ.r2obs||'',
+    // ── Paso 2: Documentos y notas ──
+    documentos: WZ.documentos||[], docsCount: WZ.docsCount||0,
+    impresion: WZ.impresion||'',
+    conocio: WZ.conocio||''
   };
   S.creds.push(newCred);
   DB.saveCred(newCred);
@@ -17492,6 +17686,63 @@ function editarCredSinFirma(credId){
   preload.ini           = parseFloat(c.ini||0);
   preload.precioBaseReal= parseFloat(c.precioBaseReal||c.precio||0);
   preload.planMode      = c.planModo||'global';
+
+  // ── Paso 2: Residencia ──
+  preload['wz_viv'] = c.viv||''; preload.viv = c.viv||'';
+  preload['wz_tdir'] = c.tdir||''; preload.tdir = c.tdir||'';
+  preload['wz_estado'] = c.estado_ubi||''; preload.estado_ubi = c.estado_ubi||'';
+  preload['wz_ciudad_res'] = c.ciudad_res||''; preload.ciudad_res = c.ciudad_res||'';
+  preload['wz_dir_det'] = c.dir_det||''; preload.dir_det = c.dir_det||'';
+  preload['wz_dir_q'] = c.dir_q||''; preload.dir_q = c.dir_q||'';
+  // ── Paso 2: Empleo ──
+  preload['wz_empresa'] = c.empresa||''; preload.empresa = c.empresa||'';
+  preload['wz_cargo'] = c.cargo||''; preload.cargo = c.cargo||'';
+  preload['wz_ing'] = c.ing||0; preload.ing = c.ing||0;
+  preload['wz_ifam'] = c.ifam||0; preload.ifam = c.ifam||0;
+  preload['wz_ant'] = c.ant||''; preload.ant = c.ant||'';
+  preload['wz_rem'] = c.rem||'no'; preload.rem = c.rem||'no';
+  preload.dep = c.dep||0; preload.emp = c.emp_tipo||'';
+  // ── Paso 2: Historial ──
+  preload['wz_banco'] = c.banco||'activa'; preload.banco = c.banco||'activa';
+  preload['wz_banco_nm'] = c.banco_nm||''; preload.banco_nm = c.banco_nm||'';
+  preload['wz_banco_cobro'] = c.banco_cobro||''; preload.banco_cobro = c.banco_cobro||'';
+  preload['wz_cuenta'] = c.cuenta||''; preload.cuenta = c.cuenta||'';
+  preload['wz_ahorro'] = c.ahorro||'no'; preload.ahorro = c.ahorro||'no';
+  preload.hist = c.hist||'ninguno'; preload.deuda = c.deuda||'no';
+  // ── Paso 2: Cashea ──
+  preload.cashea = c.cashea||'no';
+  preload['wz_cashea_nivel'] = c.cashea_nivel||''; preload.cashea_nivel = c.cashea_nivel||'';
+  preload['wz_cashea_pago'] = c.cashea_pago||''; preload.cashea_pago = c.cashea_pago||'';
+  preload['wz_cashea_estado'] = c.cashea_estado||'';
+  preload['wz_cashea_deuda'] = c.cashea_deuda||'no';
+  preload['wz_cashea_monto'] = c.cashea_monto||0;
+  preload['wz_cashea_cuotas_pend'] = c.cashea_cuotas_pend||0;
+  preload['wz_cashea_ultimo_art'] = c.cashea_ultimo_art||'';
+  preload['wz_cashea_ultimo_monto'] = c.cashea_ultimo_monto||0;
+  preload['wz_cashea_ultima_fecha'] = c.cashea_ultima_fecha||'';
+  preload['wz_cashea_total_compras'] = c.cashea_total_compras||'';
+  preload['wz_cashea_obs'] = c.cashea_obs||'';
+  // ── Paso 2: Fiador ──
+  preload.fiador_tiene = c.fiador_tiene||'no';
+  preload['wz_fiador_nom'] = c.fiador_nom||''; preload.fiador_nom = c.fiador_nom||'';
+  preload['wz_fiador_tel'] = c.fiador_tel||''; preload.fiador_tel = c.fiador_tel||'';
+  preload['wz_fiador_ci'] = c.fiador_ci||''; preload.fiador_ci = c.fiador_ci||'';
+  preload['wz_fiador_rel'] = c.fiador_rel||''; preload.fiador_rel = c.fiador_rel||'';
+  // ── Paso 2: Referencias ──
+  preload['wz_r1n'] = c.r1n||''; preload.r1n = c.r1n||'';
+  preload['wz_r1t'] = c.r1t||''; preload.r1t = c.r1t||'';
+  preload['wz_r1r'] = c.r1r||''; preload.r1r = c.r1r||'';
+  preload['wz_r1obs'] = c.r1obs||''; preload.r1obs = c.r1obs||'';
+  preload['wz_r2n'] = c.r2n||''; preload.r2n = c.r2n||'';
+  preload['wz_r2t'] = c.r2t||''; preload.r2t = c.r2t||'';
+  preload['wz_r2r'] = c.r2r||''; preload.r2r = c.r2r||'';
+  preload['wz_r2obs'] = c.r2obs||''; preload.r2obs = c.r2obs||'';
+  // ── Paso 2: Documentos y notas ──
+  preload.documentos = Array.isArray(c.documentos) ? c.documentos.slice() : [];
+  preload.docsCount = preload.documentos.length;
+  preload.impresion = c.impresion||''; preload['wz_impresion_g'] = c.impresion||'';
+  preload['wz_obs'] = c.notas||''; preload.obs = c.notas||'';
+  preload['wz_conocio'] = c.conocio||''; preload.conocio = c.conocio||'';
 
   // Guardar flag y preload ANTES de openAddCred (que resetea WZ)
   window._wzEditando = credId;
