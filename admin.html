@@ -16953,9 +16953,14 @@ function _wzGuardar(){
         fiador_tel: WZ.fiador_tel||S.creds[_ei].fiador_tel||'',
         fiador_ci: WZ.fiador_ci||S.creds[_ei].fiador_ci||'',
         fiador_rel: WZ.fiador_rel||S.creds[_ei].fiador_rel||'',
-        r1n: WZ.r1n||S.creds[_ei].r1n||'', r1t: WZ.r1t||S.creds[_ei].r1t||'',
+        fiador_rif: WZ.fiador_rif||S.creds[_ei].fiador_rif||'',
+        fiador_dir: WZ.fiador_dir||S.creds[_ei].fiador_dir||'',
+        fiador_email: WZ.fiador_email||S.creds[_ei].fiador_email||'',
+        r1n: WZ.r1n||S.creds[_ei].r1n||'', r1ci: WZ.r1ci||S.creds[_ei].r1ci||'',
+        r1t: WZ.r1t||S.creds[_ei].r1t||'',
         r1r: WZ.r1r||S.creds[_ei].r1r||'', r1obs: WZ.r1obs||S.creds[_ei].r1obs||'',
-        r2n: WZ.r2n||S.creds[_ei].r2n||'', r2t: WZ.r2t||S.creds[_ei].r2t||'',
+        r2n: WZ.r2n||S.creds[_ei].r2n||'', r2ci: WZ.r2ci||S.creds[_ei].r2ci||'',
+        r2t: WZ.r2t||S.creds[_ei].r2t||'',
         r2r: WZ.r2r||S.creds[_ei].r2r||'', r2obs: WZ.r2obs||S.creds[_ei].r2obs||'',
         documentos: (Array.isArray(WZ.documentos)&&WZ.documentos.length)?WZ.documentos:(S.creds[_ei].documentos||[]),
         docsCount: (Array.isArray(WZ.documentos)?WZ.documentos.length:(S.creds[_ei].docsCount||0)),
@@ -17055,9 +17060,10 @@ function _wzGuardar(){
     // ── Paso 2: Fiador ──
     fiador_tiene: WZ.fiador_tiene||'no', fiador_nom: WZ.fiador_nom||'',
     fiador_tel: WZ.fiador_tel||'', fiador_ci: WZ.fiador_ci||'', fiador_rel: WZ.fiador_rel||'',
+    fiador_rif: WZ.fiador_rif||'', fiador_dir: WZ.fiador_dir||'', fiador_email: WZ.fiador_email||'',
     // ── Paso 2: Referencias ──
-    r1n: WZ.r1n||'', r1t: WZ.r1t||'', r1r: WZ.r1r||'', r1obs: WZ.r1obs||'',
-    r2n: WZ.r2n||'', r2t: WZ.r2t||'', r2r: WZ.r2r||'', r2obs: WZ.r2obs||'',
+    r1n: WZ.r1n||'', r1ci: WZ.r1ci||'', r1t: WZ.r1t||'', r1r: WZ.r1r||'', r1obs: WZ.r1obs||'',
+    r2n: WZ.r2n||'', r2ci: WZ.r2ci||'', r2t: WZ.r2t||'', r2r: WZ.r2r||'', r2obs: WZ.r2obs||'',
     // ── Paso 2: Documentos y notas ──
     documentos: WZ.documentos||[], docsCount: WZ.docsCount||0,
     impresion: WZ.impresion||'',
@@ -17802,14 +17808,19 @@ function editarCredSinFirma(credId){
   preload['wz_fiador_tel'] = _f('fiador_tel','fiador_tel',''); preload.fiador_tel = preload['wz_fiador_tel'];
   preload['wz_fiador_ci'] = _f('fiador_ci','fiador_ci',''); preload.fiador_ci = preload['wz_fiador_ci'];
   preload['wz_fiador_rel'] = _f('fiador_rel','fiador_rel',''); preload.fiador_rel = preload['wz_fiador_rel'];
+  preload['wz_fiador_rif'] = _f('fiador_rif','fiador_rif',''); preload.fiador_rif = preload['wz_fiador_rif'];
+  preload['wz_fiador_dir'] = _f('fiador_dir','fiador_dir',''); preload.fiador_dir = preload['wz_fiador_dir'];
+  preload['wz_fiador_email'] = _f('fiador_email','fiador_email',''); preload.fiador_email = preload['wz_fiador_email'];
   // Referencias
   var _ref1 = cli&&cli.ref1 || {};
   var _ref2 = cli&&cli.ref2 || {};
   preload['wz_r1n'] = c.r1n||_ref1.nom||''; preload.r1n = preload['wz_r1n'];
+  preload['wz_r1ci'] = c.r1ci||_ref1.ci||''; preload.r1ci = preload['wz_r1ci'];
   preload['wz_r1t'] = c.r1t||_ref1.tel||''; preload.r1t = preload['wz_r1t'];
   preload['wz_r1r'] = c.r1r||_ref1.rel||''; preload.r1r = preload['wz_r1r'];
   preload['wz_r1obs'] = c.r1obs||_ref1.obs||''; preload.r1obs = preload['wz_r1obs'];
   preload['wz_r2n'] = c.r2n||_ref2.nom||''; preload.r2n = preload['wz_r2n'];
+  preload['wz_r2ci'] = c.r2ci||_ref2.ci||''; preload.r2ci = preload['wz_r2ci'];
   preload['wz_r2t'] = c.r2t||_ref2.tel||''; preload.r2t = preload['wz_r2t'];
   preload['wz_r2r'] = c.r2r||_ref2.rel||''; preload.r2r = preload['wz_r2r'];
   preload['wz_r2obs'] = c.r2obs||_ref2.obs||''; preload.r2obs = preload['wz_r2obs'];
