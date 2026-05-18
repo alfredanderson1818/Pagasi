@@ -17780,18 +17780,18 @@ function editarCredSinFirma(credId){
   preload['wz_ifam'] = parseFloat(_f('ifam','ingreso_familiar',0))||0; preload.ifam = preload['wz_ifam'];
   preload['wz_ant'] = _f('ant','antiguedad',''); preload.ant = preload['wz_ant'];
   preload['wz_rem'] = _f('rem','remesas','no'); preload.rem = preload['wz_rem'];
-  preload.dep = parseInt(_f('dep','dependientes',0))||0;
-  preload.emp = c.emp_tipo || (cli&&(cli.trabajo||cli.emp)) || '';
+  preload['wz_dep'] = parseInt(_f('dep','dependientes',0))||0; preload.dep = preload['wz_dep'];
+  preload['wz_emp'] = c.emp_tipo || (cli&&(cli.trabajo||cli.emp)) || ''; preload.emp = preload['wz_emp'];
   // Historial
   preload['wz_banco'] = _f('banco','banco_estado','activa'); preload.banco = preload['wz_banco'];
   preload['wz_banco_nm'] = _f('banco_nm','banco_nombre',''); preload.banco_nm = preload['wz_banco_nm'];
   preload['wz_banco_cobro'] = _f('banco_cobro','banco_cobro',''); preload.banco_cobro = preload['wz_banco_cobro'];
   preload['wz_cuenta'] = _f('cuenta','cuenta_digitos',''); preload.cuenta = preload['wz_cuenta'];
   preload['wz_ahorro'] = _f('ahorro','ahorro','no'); preload.ahorro = preload['wz_ahorro'];
-  preload.hist = _f('hist','historial','ninguno');
-  preload.deuda = _f('deuda','deudas','no');
+  preload['wz_hist'] = _f('hist','historial','ninguno'); preload.hist = preload['wz_hist'];
+  preload['wz_deuda'] = _f('deuda','deudas','no'); preload.deuda = preload['wz_deuda'];
   // Cashea
-  preload.cashea = _f('cashea','cashea','no');
+  preload['wz_cashea'] = _f('cashea','cashea','no'); preload.cashea = preload['wz_cashea'];
   preload['wz_cashea_nivel'] = _f('cashea_nivel','cashea_nivel','');
   preload['wz_cashea_pago'] = _f('cashea_pago','cashea_pago','');
   preload['wz_cashea_estado'] = _f('cashea_estado','cashea_estado','');
