@@ -18127,13 +18127,23 @@ function openAmort(id){
   var saldoPorCuota=[];
   for(var qi=0;qi<n;qi++) saldoPorCuota[qi]=cuota;
   // Aplicar cada pago secuencialmente distribuido entre cuotas
+  // y registrar en pagosPorCuota los abonos reales por cuota
   historial.forEach(function(h){
     var montoRestante=parseFloat(h.montoPagado)||0;
-    var inicio=(h.cuota-1); // empieza en la cuota registrada
+    var inicio=(h.cuota-1);
     for(var qi=inicio;qi<n&&montoRestante>0.001;qi++){
       var aplicar=Math.min(montoRestante,saldoPorCuota[qi]);
-      saldoPorCuota[qi]=parseFloat((saldoPorCuota[qi]-aplicar).toFixed(2));
-      montoRestante=parseFloat((montoRestante-aplicar).toFixed(2));
+      aplicar=parseFloat(aplicar.toFixed(2));
+      if(aplicar>0.001){
+        saldoPorCuota[qi]=parseFloat((saldoPorCuota[qi]-aplicar).toFixed(2));
+        montoRestante=parseFloat((montoRestante-aplicar).toFixed(2));
+        // Registrar abono en pagosPorCuota para mostrarlo en la tabla
+        var cuotaNum=qi+1;
+        if(!pagosPorCuota[cuotaNum]) pagosPorCuota[cuotaNum]=[];
+        // Solo agregar si no está ya registrado para esta cuota+pagoId
+        var yaExiste=pagosPorCuota[cuotaNum].some(function(x){return x.pagoId===h.pagoId&&x.cuota===cuotaNum;});
+        if(!yaExiste) pagosPorCuota[cuotaNum].push({cuota:cuotaNum,montoPagado:aplicar,fecha:h.fecha,pagoId:h.pagoId,tipo:h.tipo||'pago'});
+      }
     }
   });
   // Redondear pequeños residuos
