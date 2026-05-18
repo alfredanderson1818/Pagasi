@@ -18123,13 +18123,21 @@ function openAmort(id){
     pagosPorCuota[h.cuota].push(h);
   });
 
-  // Calcular saldo pendiente por cuota
+  // Calcular saldo pendiente por cuota — aplicando excedentes a cuotas siguientes
   var saldoPorCuota=[];
-  for(var qi=0;qi<n;qi++){
-    var pagadoEnCuota=(pagosPorCuota[qi+1]||[]).reduce(function(a,h){return a+h.montoPagado;},0);
-    var sp=Math.max(0,parseFloat((cuota-pagadoEnCuota).toFixed(2)));
-    saldoPorCuota[qi]=sp<0.10?0:sp;
-  }
+  for(var qi=0;qi<n;qi++) saldoPorCuota[qi]=cuota;
+  // Aplicar cada pago secuencialmente distribuido entre cuotas
+  historial.forEach(function(h){
+    var montoRestante=parseFloat(h.montoPagado)||0;
+    var inicio=(h.cuota-1); // empieza en la cuota registrada
+    for(var qi=inicio;qi<n&&montoRestante>0.001;qi++){
+      var aplicar=Math.min(montoRestante,saldoPorCuota[qi]);
+      saldoPorCuota[qi]=parseFloat((saldoPorCuota[qi]-aplicar).toFixed(2));
+      montoRestante=parseFloat((montoRestante-aplicar).toFixed(2));
+    }
+  });
+  // Redondear pequeños residuos
+  for(var qi=0;qi<n;qi++) saldoPorCuota[qi]=saldoPorCuota[qi]<0.10?0:saldoPorCuota[qi];
 
   let sal=c.fin,rows='';
   const cols='.3fr 1fr .9fr 1fr 1fr .8fr .8fr .8fr';
