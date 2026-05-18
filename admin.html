@@ -14313,7 +14313,7 @@ function _cliStep2(){
 function _cliHydrate(){
   var ids=['wz_nom','wz_ci','wz_rif','wz_nacionalidad','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_dir_trabajo','wz_tel_trabajo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1ci','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2ci','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rif','wz_fiador_dir','wz_fiador_email','wz_fiador_rel','wz_obs'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null) el.value=WZ[id]; });
-  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_cashea_estado','wz_cashea_deuda','wz_cashea_total_compras','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
+  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_cashea_estado','wz_cashea_deuda','wz_cashea_total_compras','wz_r1r','wz_r2r','wz_fiador_rel','wz_uso','wz_plan_mode','wz_apy_inicial_sel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
   var cashea = WZ.cashea||'no';
   var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; _wzToggleCashea(cashea); if(WZ.cashea_deuda==='si') _wzToggleCasheaDeuda('si');
   var fiador = WZ.fiador_tiene||'no';
@@ -15230,7 +15230,14 @@ function _wzCliHidratar(){
 }
 
 function _wzHydrate(){
-  var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs'];
+  var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs',
+    // Paso 3: moto
+    'wz_vin','wz_color','wz_marca','wz_anio','wz_placa','wz_serial_motor','wz_serial_chasis','wz_gps_num','wz_uso',
+    // Paso 3: plan financiero
+    'wz_precio','wz_precio_base_real','wz_ini_real','wz_cuota_q_custom','wz_plazo_custom',
+    'wz_apy_objetivo','wz_apy_plazo','wz_apy_inicial_sel',
+    // Selector moto inventario
+    'wz_moto_inv'];
   ids.forEach(function(id){
     var el=document.getElementById(id);
     if(!el) return;
@@ -15249,6 +15256,15 @@ function _wzHydrate(){
   pick('wz_impresion_g', WZ.impresion||WZ['_chip_wz_impresion_g']);
   pick('wz_dep_g', String(WZ.dep||WZ['_chip_wz_dep_g']||''));
   if(WZ.step===3 && WZ.precio){ var pInp=document.getElementById('wz_precio'); if(pInp) pInp.value=WZ.precio; }
+  // Restaurar campos del plan financiero (paso 3)
+  if(WZ.step===3){
+    // Activar panel del modo correcto
+    var _planModeVal = WZ['wz_plan_mode']||WZ.planMode||'global';
+    var _pm = document.getElementById('wz_plan_mode');
+    if(_pm){ _pm.value=_planModeVal; }
+    if(typeof _wzTogglePlanMode==='function') _wzTogglePlanMode(_planModeVal);
+    if(WZ.precio>0 && typeof _wzActualizarFinPreview==='function') setTimeout(function(){ _wzActualizarFinPreview(WZ.precio); },80);
+  }
   // Restaurar radios de cashea y fiador desde WZ al editar
   (function(){
     var casheaVal = WZ.cashea||'no';
@@ -17685,7 +17701,26 @@ function editarCredSinFirma(credId){
   preload.cuota         = c.cuotaQ||0;
   preload.ini           = parseFloat(c.ini||0);
   preload.precioBaseReal= parseFloat(c.precioBaseReal||c.precio||0);
-  preload.planMode      = c.planModo||'global';
+  preload.planMode       = c.planModo||'global';
+  preload['wz_plan_mode']= c.planModo||'global';
+  preload.apy            = c.plan ? (c.plan.apy||0) : 0;
+  preload.factor         = c.factor||0;
+  preload.tasaMensual    = c.tasaMensual||0;
+  preload.inicialPct     = c.inicialPct||0;
+  // Precio base real
+  preload['wz_precio_base_real'] = parseFloat(c.precioBaseReal||c.precio||0)||0;
+  // Plan personalizado
+  preload['wz_ini_real']        = parseFloat(c.ini||0)||0;
+  preload['wz_cuota_q_custom']  = parseFloat(c.cuotaQ||c.cuota||0)||0;
+  preload['wz_plazo_custom']    = parseInt(c.plazo||0)||0;
+  // Plan APY
+  preload['wz_apy_objetivo']    = c.plan ? (c.plan.apy||0) : 0;
+  preload['wz_apy_plazo']       = parseInt(c.plazo||0)||0;
+  preload['wz_apy_inicial_sel'] = c.plan ? String(c.plan.inicial||'0.50') : '0.50';
+  // Selector moto inventario
+  preload['wz_moto_inv']        = c.motoId ? String(c.motoId) : '';
+  // Cliente sel
+  preload['wz_cliente_sel']     = c.clienteId ? String(c.clienteId) : '';
 
   // ── Paso 2: con fallback al objeto cliente para créditos anteriores ──
   // Helper: busca primero en el crédito, luego en el cliente
