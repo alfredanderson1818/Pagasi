@@ -16367,14 +16367,17 @@ function _wzValidar(){
       WZ.planMode = 'apy';
       window._wzCustomPct = iniSel; // asegurar que el pct quede guardado
     }
-    // Validar pago de la moto SOLO si se eligió del catálogo (no del inventario existente)
-    if(!WZ.motoInvId){
+    // Validar pago de la moto SOLO si el bloque está visible (moto del catálogo)
+    // y NO estamos en modo edición de solicitud sin firma
+    var _mpagoWrap = document.getElementById('wz-mpago-wrap');
+    var _mpagoVisible = _mpagoWrap && _mpagoWrap.style.display !== 'none';
+    if(_mpagoVisible && !_modoEdicion){
       var _precioBase = parseFloat((document.getElementById('wz_precio_base_real')||{}).value)||precio;
       var _val = _mpagoValidarContraCosto('wzmpago', _precioBase);
       if(!_val.ok){ toast(_val.error,'error'); return false; }
       WZ._pagosMoto = _val.pagos;
     } else {
-      WZ._pagosMoto = null; // viene del inventario, no se cobra de nuevo
+      WZ._pagosMoto = null; // inventario, precio manual o edición: no se cobra de nuevo
     }
     _wzActualizarFinPreview(precio);
   }
