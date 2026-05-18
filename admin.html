@@ -8905,7 +8905,8 @@ creditos(){
       <td onclick="event.stopPropagation()" style="white-space:nowrap">
         <div style="display:flex;gap:3px;align-items:center">
         <button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')" title="Ver">Ver</button>
-        <button class="btn btn-p btn-xs" onclick="openEditCred('${c.id}')" title="Editar">Editar</button>
+        ${!c.contratoFirmado && c.estado!=='cancelado' && c.estado!=='recuperado' && c.estado!=='recuperada' ? `<button class="btn btn-xs" onclick="confirmarContratoFirmado('${c.id}')" title="Confirmar contrato firmado" style="background:#d97706;color:#fff;border:1px solid #b45309;padding:4px 8px;font-weight:700;font-size:10.5px;border-radius:6px;cursor:pointer">Confirmar</button>` : ''}
+        <button class="btn btn-p btn-xs" onclick="${!c.contratoFirmado ? `editarCredSinFirma('${c.id}')` : `openEditCred('${c.id}')`}" title="Editar">Editar</button>
         ${c.estado!=="completado"&&c.estado!=="cancelado"&&c.estado!=="recuperado"&&c.estado!=="recuperada"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar">Liq.</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito" style="padding:4px 7px">✕</button>`:''}
         ${(c.estado==='cancelado'||c.estado==='recuperado'||c.estado==='recuperada')?`<button class="btn btn-p btn-xs" onclick="restaurarCred('${c.id}')" title="Restaurar crédito">↺</button>`:''}
         </div>
@@ -14628,6 +14629,11 @@ function openAddCred(motoId=null){
     document.body.appendChild(overlay);
   }
   WZ = { step:1, totalSteps:4, score:0, f1:0,f2:0,f3:0,f4:0,f5:0, cuota:0,ratio:0,monto:0,precio:0,plazo:0,ini:0,ing:0 };
+  // Si hay datos precargados desde editarCredSinFirma, restaurarlos después del reset
+  if(window._wzPreload){
+    Object.assign(WZ, window._wzPreload);
+    window._wzPreload = null;
+  }
   overlay.style.display = 'block';
   document.body.style.overflow = 'hidden';
   _wzRender(motoId);
@@ -14637,6 +14643,7 @@ function _wzClose(){
   var ov = document.getElementById('wz-overlay');
   if(ov) ov.style.display = 'none';
   document.body.style.overflow = '';
+  window._wzEditando = null; // limpiar modo edición al cerrar
 }
 
 function _wzRender(motoId){
@@ -16311,7 +16318,9 @@ function _wzActualizarPill(){
 function _wzValidar(){
   var s = WZ.step;
   var g = function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
-  if(s===1){
+  // En modo edición sin firma, las validaciones de paso 1 y precio son opcionales
+  var _modoEdicion = !!window._wzEditando;
+  if(s===1 && !_modoEdicion){
     if(!g('wz_nom')){ toast('El nombre es obligatorio','error'); return false; }
     if(!g('wz_ci')){ toast('La cédula es obligatoria','error'); return false; }
     if(!g('wz_tel')){ toast('El teléfono es obligatorio','error'); return false; }
@@ -16321,7 +16330,8 @@ function _wzValidar(){
   }
   if(s===3){
     var precio = parseFloat((document.getElementById('wz_precio')||{}).value)||0;
-    if(precio<=0){ toast('Selecciona una moto o ingresa el precio','error'); return false; }
+    if(precio<=0 && !_modoEdicion){ toast('Selecciona una moto o ingresa el precio','error'); return false; }
+    if(precio<=0) precio = WZ.precio||0; // en edición usar precio guardado
     WZ.precio = precio;
     var planMode=((document.getElementById('wz_plan_mode')||{}).value)||'global';
     if(planMode==='custom'){
@@ -16709,6 +16719,63 @@ function _wzGuardar(){
     DB.saveCliente(cliente);
   }
 
+  // ── Si estamos editando un crédito sin firma, actualizar en lugar de crear ──
+  if(window._wzEditando){
+    var _editId = window._wzEditando;
+    window._wzEditando = null;
+    var _ei = S.creds.findIndex(function(x){ return x.id===_editId; });
+    if(_ei>=0){
+      var _r = getWzPlanConfig();
+      var _upd = {
+        cli: WZ.nom||(existing&&existing.nombre)||S.creds[_ei].cli||'',
+        modelo: WZ.motoModelo||S.creds[_ei].modelo||'',
+        motoId: WZ.motoInvId||S.creds[_ei].motoId||null,
+        marca: WZ.marca||S.creds[_ei].marca||'',
+        vin: WZ.vin||S.creds[_ei].vin||'',
+        color: WZ.color||S.creds[_ei].color||'',
+        anio: WZ.anio||S.creds[_ei].anio||'',
+        placa: WZ.placa||S.creds[_ei].placa||'',
+        serialMotor: WZ.serialMotor||S.creds[_ei].serialMotor||'',
+        serialChasis: WZ.serialChasis||S.creds[_ei].serialChasis||'',
+        gpsNum: WZ.gpsNum||S.creds[_ei].gpsNum||'',
+        precio: WZ.precio||S.creds[_ei].precio||0,
+        precioBaseReal: _r.precioBaseReal||WZ.precio||S.creds[_ei].precioBaseReal||0,
+        ini: _r.ini||S.creds[_ei].ini||0,
+        fin: _r.fin||S.creds[_ei].fin||0,
+        total: _r.total||S.creds[_ei].total||0,
+        cuota: _r.cuotaQ||S.creds[_ei].cuota||0,
+        cuotaQ: _r.cuotaQ||S.creds[_ei].cuotaQ||0,
+        cuotaM: _r.cuotaM||S.creds[_ei].cuotaM||0,
+        plazo: _r.plazo||S.creds[_ei].plazo||0,
+        totalCuotas: _r.totalCuotas||S.creds[_ei].totalCuotas||0,
+        uso_moto: WZ.uso||S.creds[_ei].uso_moto||'',
+        notas: WZ.obs||S.creds[_ei].notas||'',
+        conocio: WZ.conocio||S.creds[_ei].conocio||'',
+        emp_tipo: WZ.emp||S.creds[_ei].emp_tipo||''
+      };
+      // Actualizar cliente si hay datos nuevos
+      if(existing && WZ.nom){
+        var _cliUpd = {};
+        if(WZ.nom) _cliUpd.nombre = WZ.nom;
+        if(WZ.ci) _cliUpd.cedula = WZ.ci;
+        if(WZ.tel) _cliUpd.tel = WZ.tel;
+        if(WZ.wa) _cliUpd.wa = WZ.wa;
+        if(WZ.email) _cliUpd.email = WZ.email;
+        if(WZ.emp) _cliUpd.emp = WZ.emp;
+        if(WZ.ing) _cliUpd.ing = WZ.ing;
+        if(Object.keys(_cliUpd).length && DB.updateCliente) DB.updateCliente(existing.id, _cliUpd);
+        else if(Object.keys(_cliUpd).length){ Object.assign(existing, _cliUpd); DB.saveCliente(existing); }
+      }
+      Object.assign(S.creds[_ei], _upd);
+      DB.updateCred(_editId, _upd);
+      syncEstadoClientePorCredito && syncEstadoClientePorCredito(_editId);
+    }
+    _wzClose();
+    toast('Solicitud actualizada correctamente','success');
+    if(typeof nav==='function') nav('creditos');
+    return;
+  }
+
   // Crear crédito — ID monotónico (no se recicla aunque haya eliminaciones)
   var credId = nextCredId();
   var newCred = {
@@ -16753,7 +16820,8 @@ function _wzGuardar(){
     notas: WZ.obs||'',
     concesionarioId: (WZ.concesionarioId !== undefined ? WZ.concesionarioId : _concDefaultId()),
     creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
-    creado: new Date().toISOString()
+    creado: new Date().toISOString(),
+    contratoFirmado: false
   };
   S.creds.push(newCred);
   DB.saveCred(newCred);
@@ -17304,6 +17372,132 @@ function openEditCred(credId){
 }
 
 function openAddCredConMoto(motoId){openAddCred(motoId);}
+// ══════════════════════════════════════════════════════════════════
+// CONFIRMAR CONTRATO FIRMADO
+// ══════════════════════════════════════════════════════════════════
+function confirmarContratoFirmado(credId){
+  var c = (S.creds||[]).find(function(x){ return x.id===credId; });
+  if(!c){ toast('Crédito no encontrado','error'); return; }
+
+  // Validar campos obligatorios antes de confirmar
+  var errores = [];
+  if(!(c.cli||'').trim()) errores.push('Nombre del cliente');
+  if(!(c.vin||'').trim()) errores.push('VIN / Serial de chasis');
+  if(!c.precio || parseFloat(c.precio)<=0) errores.push('Precio de la moto');
+  if(!c.cuotaQ || parseFloat(c.cuotaQ)<=0) errores.push('Cuota quincenal');
+  if(!c.plazo || parseInt(c.plazo)<=0) errores.push('Plazo');
+  if(!c.ini && c.ini!==0) errores.push('Inicial');
+
+  if(errores.length>0){
+    // Buscar cliente para cédula y teléfono
+    var cli = (S.clientes||[]).find(function(x){ return String(x.id)===String(c.clienteId||c.cliId); });
+    if(cli){
+      if(!(cli.cedula||cli.ci||'').trim()) errores.push('Cédula del cliente');
+      if(!(cli.tel||'').trim()) errores.push('Teléfono del cliente');
+    }
+  }
+
+  if(errores.length>0){
+    var msg = 'Faltan los siguientes campos obligatorios para confirmar el contrato:\n\n\u2022 ' + errores.join('\n\u2022 ');
+    alert(msg);
+    return;
+  }
+
+  if(!confirm('¿Confirmar que el contrato de ' + (c.cli||credId) + ' fue firmado?\n\nA partir de este momento el crédito contará contablemente.')) return;
+
+  var ci = S.creds.findIndex(function(x){ return x.id===credId; });
+  if(ci<0) return;
+  S.creds[ci].contratoFirmado = true;
+  S.creds[ci].fechaContratoFirmado = new Date().toISOString().split('T')[0];
+  DB.updateCred(credId, { contratoFirmado: true, fechaContratoFirmado: S.creds[ci].fechaContratoFirmado });
+  toast('Contrato confirmado. El crédito está activo contablemente.','success');
+  nav('creditos');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EDITAR CRÉDITO SIN FIRMA — abre el wizard con datos precargados
+// ══════════════════════════════════════════════════════════════════
+function editarCredSinFirma(credId){
+  var c = (S.creds||[]).find(function(x){ return x.id===credId; });
+  if(!c){ toast('Crédito no encontrado','error'); return; }
+
+  // Buscar cliente asociado
+  var cli = (S.clientes||[]).find(function(x){ return String(x.id)===String(c.clienteId||c.cliId); });
+
+  // Construir preload con los nombres que _wzFg espera (WZ['wz_nom'] etc.)
+  var preload = { step:1 };
+
+  // Datos del cliente — usar claves wz_XXX que son las que lee _wzFg
+  var nomVal  = (cli&&cli.nombre) || c.cli || '';
+  var ciVal   = (cli&&(cli.cedula||cli.ci)) || '';
+  var telVal  = (cli&&cli.tel) || '';
+  var waVal   = (cli&&cli.wa)  || '';
+  var emailVal= (cli&&cli.email)|| '';
+  var ciudadVal=(cli&&cli.ciudad)||'';
+  var empVal  = (cli&&cli.emp) || c.emp_tipo || '';
+  var ingVal  = parseFloat((cli&&cli.ing)||0);
+  var antVal  = (cli&&cli.ant) || '';
+
+  // _wzFg lee WZ['wz_nom'], WZ['wz_ci'], etc.
+  preload['wz_nom']    = nomVal;
+  preload['wz_ci']     = ciVal;
+  preload['wz_tel']    = telVal;
+  preload['wz_wa']     = waVal;
+  preload['wz_email']  = emailVal;
+  preload['wz_ciudad'] = ciudadVal;
+  preload['wz_emp']    = empVal;
+  preload['wz_ing']    = ingVal;
+  preload['wz_ant']    = antVal;
+  // También los alias sin prefijo (usados por _wzValidar y _wzGuardar)
+  preload.nom  = nomVal;  preload.ci  = ciVal;   preload.tel = telVal;
+  preload.wa   = waVal;   preload.email= emailVal;preload.ciudad=ciudadVal;
+  preload.emp  = empVal;  preload.ing = ingVal;   preload.ant = antVal;
+  if(cli) preload.clienteSel = cli.id;
+
+  // Datos de la moto — _wzFg lee WZ['wz_vin'] etc.
+  preload['wz_vin']          = c.vin||'';
+  preload['wz_color']        = c.color||'';
+  preload['wz_marca']        = c.marca||'';
+  preload['wz_anio']         = c.anio||'';
+  preload['wz_placa']        = c.placa||'';
+  preload['wz_serial_motor'] = c.serialMotor||'';
+  preload['wz_serial_chasis']= c.serialChasis||'';
+  preload['wz_gps_num']      = c.gpsNum||'';
+  preload['wz_obs']          = c.notas||'';
+  preload['wz_uso']          = c.uso_moto||'';
+  // alias sin prefijo
+  preload.vin         = c.vin||'';
+  preload.color       = c.color||'';
+  preload.marca       = c.marca||'';
+  preload.anio        = c.anio||'';
+  preload.placa       = c.placa||'';
+  preload.serialMotor = c.serialMotor||'';
+  preload.serialChasis= c.serialChasis||'';
+  preload.gpsNum      = c.gpsNum||'';
+  preload.obs         = c.notas||'';
+  preload.uso         = c.uso_moto||'';
+  preload.conocio     = c.conocio||'';
+  preload['wz_conocio']= c.conocio||'';
+
+  // Plan / precio
+  preload.motoModelo    = c.modelo||'';
+  preload.motoInvId     = c.motoId||null;
+  preload.precio        = parseFloat(c.precio||0);
+  preload['wz_precio']  = preload.precio;
+  preload.plazo         = c.plazo||0;
+  preload.cuota         = c.cuotaQ||0;
+  preload.ini           = parseFloat(c.ini||0);
+  preload.precioBaseReal= parseFloat(c.precioBaseReal||c.precio||0);
+  preload.planMode      = c.planModo||'global';
+
+  // Guardar flag y preload ANTES de openAddCred (que resetea WZ)
+  window._wzEditando = credId;
+  window._wzPreload  = preload;
+
+  // openAddCred resetea WZ, luego restaura _wzPreload antes de _wzRender
+  openAddCred(c.motoId||null);
+}
+
 
 function updCredFill(sel){
   updCredCalc(sel);
@@ -26324,6 +26518,20 @@ function init() {
 
   // Cargar datos desde Firebase o usar datos locales de demostración
   DB.load().then(function() {
+    // ── Migración única: créditos existentes (sin contratoFirmado) → confirmados automáticamente ──
+    // Los créditos creados ANTES de esta versión ya tienen historial contable,
+    // así que se marcan como firmados sin tocar nada más.
+    (function _migrarContratoFirmado(){
+      try {
+        (S.creds||[]).forEach(function(c){
+          if(c && !c.eliminado && c.contratoFirmado === undefined){
+            c.contratoFirmado = true;
+            c.fechaContratoFirmado = c.fecha || (c.creado||'').split('T')[0] || '';
+            if(DB && DB.updateCred) DB.updateCred(c.id, { contratoFirmado: true, fechaContratoFirmado: c.fechaContratoFirmado });
+          }
+        });
+      } catch(e){ console.warn('migrarContratoFirmado error:', e); }
+    })();
     renderSidebar();
     // Vendedor Concesionario → calculadora (motos). Otros roles → dashboard.
     var paginaInicial = isVendedorConcesionarioRole() ? 'motos' : 'dash';
