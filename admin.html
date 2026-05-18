@@ -6590,7 +6590,8 @@ function verCliente(id){
 
   $('mbd').innerHTML = html;
 
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
+  var _credActivoId = creditos.length>0 ? creditos.find(function(cr){return cr.estado==='activo';})||creditos[0] : null;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${_credActivoId?`<button class="btn btn-g" onclick="closeM();openAmort('${_credActivoId.id}')">Ver crédito</button>`:''}<button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
   $('ov').style.display='flex';
 
   // Render charts después de que el DOM esté visible
@@ -18371,7 +18372,10 @@ function openAmort(id){
       <div>#</div><div>Fecha</div><div>Estado</div><div>Abonos</div><div>Monto</div><div>Interés</div><div>Capital</div><div>Saldo</div>
     </div>
     <div style="max-height:280px;overflow-y:auto;margin-top:3px;border:1px solid var(--rim);border-radius:8px;padding:2px">${rows}</div>`;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${estadoCred==='activo'?`<button class="btn btn-g" onclick="closeM();openPagoRapido('${c.id}')">Registrar pago</button>`:''}<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-p" onclick="descargarAmortPDF()">↓ Descargar PDF</button>`;
+  var _cliIdAmort = c.clienteId || c.cliId || '';
+  var _cliAmort = S.clientes.find(function(x){return (c.clienteId&&String(x.id)===String(c.clienteId))||(c.cliId&&String(x.id)===String(c.cliId))||x.nombre===c.cli;});
+  if(_cliAmort) _cliIdAmort = _cliAmort.id;
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cerrar</button>'+(_cliIdAmort?'<button class="btn btn-g" onclick="closeM();verCliente(\''+_cliIdAmort+'\')" >Ver perfil</button>':'')+(estadoCred==='activo'?'<button class="btn btn-g" onclick="closeM();openPagoRapido(\''+c.id+'\')" >Registrar pago</button>':'')+'<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-p" onclick="descargarAmortPDF()">↓ Descargar PDF</button>';
   $('ov').style.display='flex';
 }
 
