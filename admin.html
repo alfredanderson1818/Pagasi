@@ -6169,7 +6169,13 @@ function verCliente(id){
   pagos.slice(0,5).forEach(function(p){
     timeline.push({fecha:p.fecha, tipo:'pago', titulo:'Pago recibido: '+fmt(p.monto||0), sub:(p.metodo||'—')+' · '+(p.cred||'—')});
   });
-  timeline.sort(function(a,b){return String(b.fecha||'').localeCompare(String(a.fecha||''));});
+  timeline.sort(function(a,b){
+    var cmp = String(b.fecha||'').localeCompare(String(a.fecha||''));
+    if(cmp!==0) return cmp;
+    // Desempate: alta siempre al final (más antiguo), pagos y créditos arriba
+    var order={pago:0,completado:1,credito:2,alta:3};
+    return (order[a.tipo]||0)-(order[b.tipo]||0);
+  });
   timeline = timeline.slice(0,8);
 
   $('mic').textContent=esPremium?'★':'CLI';
@@ -15095,6 +15101,25 @@ function _wzRender(motoId){
       var sel = document.getElementById('wz_moto_inv');
       if(sel) { sel.value = motoId; _wzPickMotoInv(sel); }
     }, 60);
+  }
+  // Si la moto viene del catálogo (sin inventario), restaurar modelo
+  if(WZ.step===3 && !motoId && WZ.motoModelo){
+    setTimeout(function(){
+      // Intentar encontrar en el selector de catálogo por modelo
+      var catSel = document.getElementById('wz_moto_cat');
+      if(catSel){
+        var opts = Array.from(catSel.options);
+        var match = opts.find(function(o){ return (o.getAttribute('data-modelo')||o.text.split(' —')[0].trim())===WZ.motoModelo; });
+        if(match){ catSel.value = match.value; _wzPickMotoCat(catSel); }
+        else {
+          // Moto no está en catálogo — mostrar como entrada manual
+          WZ.motoInvId = null;
+          var pInp = document.getElementById('wz_precio');
+          if(pInp && WZ.precio>0) pInp.value = WZ.precio;
+          if(WZ.precio>0 && typeof _wzActualizarFinPreview==='function') _wzActualizarFinPreview(WZ.precio);
+        }
+      }
+    }, 65);
   }
 }
 
