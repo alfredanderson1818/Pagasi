@@ -16965,7 +16965,23 @@ function _wzGuardar(){
         r2r: WZ.r2r||S.creds[_ei].r2r||'', r2obs: WZ.r2obs||S.creds[_ei].r2obs||'',
         documentos: (Array.isArray(WZ.documentos)&&WZ.documentos.length)?WZ.documentos:(S.creds[_ei].documentos||[]),
         docsCount: (Array.isArray(WZ.documentos)?WZ.documentos.length:(S.creds[_ei].docsCount||0)),
-        impresion: WZ.impresion||S.creds[_ei].impresion||''
+        impresion: WZ.impresion||S.creds[_ei].impresion||'',
+        cashea_estado: WZ.cashea_estado||S.creds[_ei].cashea_estado||'',
+        cashea_deuda: WZ.cashea_deuda||S.creds[_ei].cashea_deuda||'no',
+        cashea_monto: WZ.cashea_monto||S.creds[_ei].cashea_monto||0,
+        cashea_cuotas_pend: WZ.cashea_cuotas_pend||S.creds[_ei].cashea_cuotas_pend||0,
+        cashea_ultimo_art: WZ.cashea_ultimo_art||S.creds[_ei].cashea_ultimo_art||'',
+        cashea_ultimo_monto: WZ.cashea_ultimo_monto||S.creds[_ei].cashea_ultimo_monto||0,
+        cashea_ultima_fecha: WZ.cashea_ultima_fecha||S.creds[_ei].cashea_ultima_fecha||'',
+        cashea_total_compras: WZ.cashea_total_compras||S.creds[_ei].cashea_total_compras||'',
+        cashea_obs: WZ.cashea_obs||S.creds[_ei].cashea_obs||'',
+        score: WZ.score||S.creds[_ei].score||0,
+        concesionarioId: WZ.concesionarioId||S.creds[_ei].concesionarioId||'',
+        f1: WZ.f1||S.creds[_ei].f1||'',
+        f2: WZ.f2||S.creds[_ei].f2||'',
+        f3: WZ.f3||S.creds[_ei].f3||'',
+        f4: WZ.f4||S.creds[_ei].f4||'',
+        f5: WZ.f5||S.creds[_ei].f5||''
       };
       // Actualizar cliente si hay datos nuevos
       if(existing && WZ.nom){
@@ -17833,6 +17849,13 @@ function editarCredSinFirma(credId){
   preload.impresion = c.impresion||(cli&&cli.impresion)||''; preload['wz_impresion_g'] = preload.impresion;
   preload['wz_obs'] = c.notas||(cli&&cli.notas)||''; preload.obs = preload['wz_obs'];
   preload['wz_conocio'] = c.conocio||(cli&&cli.conocio)||''; preload.conocio = preload['wz_conocio'];
+  preload['wz_score'] = c.score||0; preload.score = preload['wz_score'];
+  preload['wz_concesionarioId'] = c.concesionarioId||''; preload.concesionarioId = preload['wz_concesionarioId'];
+  preload['wz_f1'] = c.f1||''; preload.f1 = preload['wz_f1'];
+  preload['wz_f2'] = c.f2||''; preload.f2 = preload['wz_f2'];
+  preload['wz_f3'] = c.f3||''; preload.f3 = preload['wz_f3'];
+  preload['wz_f4'] = c.f4||''; preload.f4 = preload['wz_f4'];
+  preload['wz_f5'] = c.f5||''; preload.f5 = preload['wz_f5'];
 
   // Guardar flag y preload ANTES de openAddCred (que resetea WZ)
   window._wzEditando = credId;
