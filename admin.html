@@ -18135,9 +18135,9 @@ function openAmort(id){
   const cols='.3fr 1fr .9fr 1fr 1fr .8fr .8fr .8fr';
   for(let i=1;i<=n;i++){
     const int=sal*tQ,cap=cuota-int;sal-=cap;
-    const pd=i<=pagado;
-    const esProx=i===pagado+1;
-    const parcial=!pd&&esProx&&saldoProxCuota>0&&saldoProxCuota<cuota;
+    const pd=saldoPorCuota[i-1]<=0.001;
+    const parcial=!pd&&saldoPorCuota[i-1]<cuota-0.001&&(pagosPorCuota[i]||[]).length>0;
+    const esProx=!pd&&!parcial&&i===pagado+1;
     const fd=new Date(startDate.getTime()+(i*15*24*60*60*1000));
     const fechaStr=fd.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
     const fechaColor=pd?'#aaa':esProx?'var(--p1)':'var(--ink2)';
