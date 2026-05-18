@@ -6352,7 +6352,7 @@ function verCliente(id){
       color:'var(--green)'
     });
   });
-  (c.notas||[]).forEach(function(n){
+  (Array.isArray(c.notas)?c.notas:[]).forEach(function(n){
     actTimeline.push({fecha:n.fecha||n.creado, tipo:'nota', ico:'📝', titulo:'Nota: '+esc(n.texto||n.titulo||'').slice(0,60), sub:'por '+(n.autor||'Sistema'), color:'var(--ink3)'});
   });
   actTimeline.sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
@@ -15734,6 +15734,7 @@ function _wzDocLabel(id){ return (_wzDocDefs[id]&&_wzDocDefs[id].label)||id; }
 
 // ── HTML del bloque en la tarjeta de cliente ──
 function _docLibreClienteHtml(c){
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
   var cliId = String(c.id);
   var docs = Array.isArray(c.documentos) ? c.documentos : [];
   var html = '';
