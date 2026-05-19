@@ -14866,7 +14866,7 @@ function _wzRender(motoId){
   // ── EMPLEO E INGRESOS ──
   +_s('Empleo e Ingresos')
   +'<div style="margin-bottom:10px">'+_fg('Tipo de empleo *',
-    '<div style="display:flex;flex-wrap:wrap;gap:7px" id="wz_emp_chips">'
+    '<div style="display:flex;flex-wrap:wrap;gap:7px" id="wz_emp_g">'
     +[['Formal','formal'],['Público','publico'],['Delivery','delivery'],['Independ.','independiente'],['Comercio','comerciante'],['Remesas','remesas'],['Informal','informal']]
     .map(function(x){ return _chip(x[0],'wz_emp_g',x[1],'_wzScore()'); }).join('')
     +'</div>'
@@ -14884,7 +14884,7 @@ function _wzRender(motoId){
     _fg('Ingreso familiar total (USD)',_inp('wz_ifam','number','0','oninput="_wzScore()" min="0" step="10"'))
   )
   +'<div style="margin-bottom:10px">'+_fg('Dependientes económicos',
-    '<div style="display:flex;gap:7px">'
+    '<div style="display:flex;gap:7px" id="wz_dep_g">'
     +[['Ninguno','0'],['1','1'],['2','2'],['3+','3']]
     .map(function(x){ return _chip(x[0],'wz_dep_g',x[1],'_wzScore()'); }).join('')
     +'</div>'
@@ -14893,13 +14893,13 @@ function _wzRender(motoId){
   // ── HISTORIAL CREDITICIO ──
   +_s('Historial Crediticio')
   +'<div style="margin-bottom:10px">'+_fg('Créditos anteriores *',
-    '<div style="display:flex;flex-wrap:wrap;gap:7px">'
+    '<div style="display:flex;flex-wrap:wrap;gap:7px" id="wz_hist_g">'
     +[['Sin historial','ninguno'],['Puntual ','bueno'],['Mora leve ️','mora_leve'],['Mora grave ','malo']]
     .map(function(x){ return _chip(x[0],'wz_hist_g',x[1],'_wzScore()'); }).join('')
     +'</div>'
   )+'</div>'
   +'<div style="margin-bottom:10px">'+_fg('Deudas activas actualmente',
-    '<div style="display:flex;gap:7px">'
+    '<div style="display:flex;gap:7px" id="wz_deuda_g">'
     +[['Sin deudas','no'],['Menores','menores'],['Importantes','graves']]
     .map(function(x){ return _chip(x[0],'wz_deuda_g',x[1],'_wzScore()'); }).join('')
     +'</div>'
@@ -15000,7 +15000,7 @@ function _wzRender(motoId){
   // ── NOTAS DEL VENDEDOR ──
   +_s('Notas del Vendedor')
   +'<div style="margin-bottom:10px">'+_fg('Impresión general',
-    '<div style="display:flex;gap:7px">'
+    '<div style="display:flex;gap:7px" id="wz_impresion_g">'
     +[['Positiva ','positiva'],['Neutral ','neutral'],['Dudosa ','dudosa']]
     .map(function(x){ return _chip(x[0],'wz_impresion_g',x[1],''); }).join('')
     +'</div>'
@@ -16597,6 +16597,15 @@ function _wzValidar(){
     WZ.cashea = (document.querySelector('input[name="wz_cashea"]:checked')||{value:'no'}).value;
     WZ.cashea_nivel = g('wz_cashea_nivel');
     WZ.cashea_pago = g('wz_cashea_pago');
+    WZ.cashea_estado = g('wz_cashea_estado');
+    WZ.cashea_deuda = g('wz_cashea_deuda');
+    WZ.cashea_monto = g('wz_cashea_monto');
+    WZ.cashea_cuotas_pend = g('wz_cashea_cuotas_pend');
+    WZ.cashea_ultimo_art = g('wz_cashea_ultimo_art');
+    WZ.cashea_ultimo_monto = g('wz_cashea_ultimo_monto');
+    WZ.cashea_ultima_fecha = g('wz_cashea_ultima_fecha');
+    WZ.cashea_total_compras = g('wz_cashea_total_compras');
+    WZ.cashea_obs = g('wz_cashea_obs');
     WZ.fiador_tiene = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value;
     WZ.fiador_nom = g('wz_fiador_nom');
     WZ.fiador_tel = g('wz_fiador_tel');
@@ -17808,17 +17817,17 @@ function editarCredSinFirma(credId){
   preload['wz_deuda'] = _f('deuda','deudas','no'); preload.deuda = preload['wz_deuda'];
   // Cashea
   preload['wz_cashea'] = _f('cashea','cashea','no'); preload.cashea = preload['wz_cashea'];
-  preload['wz_cashea_nivel'] = _f('cashea_nivel','cashea_nivel','');
-  preload['wz_cashea_pago'] = _f('cashea_pago','cashea_pago','');
-  preload['wz_cashea_estado'] = _f('cashea_estado','cashea_estado','');
-  preload['wz_cashea_deuda'] = _f('cashea_deuda','cashea_deuda','no');
-  preload['wz_cashea_monto'] = _f('cashea_monto','cashea_monto',0);
-  preload['wz_cashea_cuotas_pend'] = _f('cashea_cuotas_pend','cashea_cuotas_pend',0);
-  preload['wz_cashea_ultimo_art'] = _f('cashea_ultimo_art','cashea_ultimo_art','');
-  preload['wz_cashea_ultimo_monto'] = _f('cashea_ultimo_monto','cashea_ultimo_monto',0);
-  preload['wz_cashea_ultima_fecha'] = _f('cashea_ultima_fecha','cashea_ultima_fecha','');
-  preload['wz_cashea_total_compras'] = _f('cashea_total_compras','cashea_total_compras','');
-  preload['wz_cashea_obs'] = _f('cashea_obs','cashea_obs','');
+  preload['wz_cashea_nivel'] = _f('cashea_nivel','cashea_nivel',''); preload.cashea_nivel = preload['wz_cashea_nivel'];
+  preload['wz_cashea_pago'] = _f('cashea_pago','cashea_pago',''); preload.cashea_pago = preload['wz_cashea_pago'];
+  preload['wz_cashea_estado'] = _f('cashea_estado','cashea_estado',''); preload.cashea_estado = preload['wz_cashea_estado'];
+  preload['wz_cashea_deuda'] = _f('cashea_deuda','cashea_deuda','no'); preload.cashea_deuda = preload['wz_cashea_deuda'];
+  preload['wz_cashea_monto'] = _f('cashea_monto','cashea_monto',0); preload.cashea_monto = preload['wz_cashea_monto'];
+  preload['wz_cashea_cuotas_pend'] = _f('cashea_cuotas_pend','cashea_cuotas_pend',0); preload.cashea_cuotas_pend = preload['wz_cashea_cuotas_pend'];
+  preload['wz_cashea_ultimo_art'] = _f('cashea_ultimo_art','cashea_ultimo_art',''); preload.cashea_ultimo_art = preload['wz_cashea_ultimo_art'];
+  preload['wz_cashea_ultimo_monto'] = _f('cashea_ultimo_monto','cashea_ultimo_monto',0); preload.cashea_ultimo_monto = preload['wz_cashea_ultimo_monto'];
+  preload['wz_cashea_ultima_fecha'] = _f('cashea_ultima_fecha','cashea_ultima_fecha',''); preload.cashea_ultima_fecha = preload['wz_cashea_ultima_fecha'];
+  preload['wz_cashea_total_compras'] = _f('cashea_total_compras','cashea_total_compras',''); preload.cashea_total_compras = preload['wz_cashea_total_compras'];
+  preload['wz_cashea_obs'] = _f('cashea_obs','cashea_obs',''); preload.cashea_obs = preload['wz_cashea_obs'];
   // Fiador
   preload.fiador_tiene = _f('fiador_tiene','fiador','no');
   preload['wz_fiador_nom'] = _f('fiador_nom','fiador_nom',''); preload.fiador_nom = preload['wz_fiador_nom'];
