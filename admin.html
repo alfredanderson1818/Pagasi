@@ -8871,7 +8871,7 @@ creditos(){
       }).join('')}
       <th></th>
     </tr></thead>
-    <tbody>${(()=>{const _cp=pgGet('creditos');return filtered.slice((_cp-1)*50,_cp*50).map(c=>{
+    <tbody id="cred-tabla-body">${(()=>{const _cp=pgGet('creditos');return filtered.slice((_cp-1)*50,_cp*50).map(c=>{
       var totalCuotas = getCreditoTotalCuotas(c);
       var cuotaVal = getCreditoCuotaBase(c);
       var totalFinanciado = cuotaVal * totalCuotas;
@@ -8888,7 +8888,7 @@ creditos(){
       var fechaFmt = c.fecha ? new Date(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
       var precio = parseFloat(c.precioBaseReal||c.precio||0);
       var totalC = parseFloat(c.total||0);
-      return`<tr style="cursor:pointer" onclick="openAmort('${c.id}')">
+      return`<tr style="cursor:pointer" onclick="openAmort('${c.id}')" data-srch="${(c.id+' '+(c.cli||'')+' '+(c.modelo||'')+' '+(c.estado||'')+' '+(c.fecha||'')).toLowerCase()}">
       <td class="tdm" style="font-family:var(--fd)">${c.id}</td>
       <td style="max-width:140px"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px" title="${c.cli}">${c.cli}</div></td>
       <td class="tds">${c.modelo||'—'}</td>
@@ -13741,7 +13741,7 @@ function editMoto(id){openAddMoto(id);}
 function setMTab(t){S.mTab=t;nav('motos');}
 function setCredTab(t){S.credTab=t;S.credFiltro='';window._pages={};nav('creditos');}
 function setCredSort(col){var cur=S.credSort||{col:'id',dir:'asc'};S.credSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('creditos');}
-var _lscTimer=null;function liveSearchCred(q){S.credFiltro=q||'';pgSet('creditos',1);var el=document.getElementById('credQ');var pos=el?el.selectionStart:null;clearTimeout(_lscTimer);_lscTimer=setTimeout(function(){nav('creditos');var el2=document.getElementById('credQ');if(el2){el2.focus();try{el2.setSelectionRange(pos,pos);}catch(e){}}},220);}
+var _lscTimer=null;function liveSearchCred(q){S.credFiltro=q||'';clearTimeout(_lscTimer);_lscTimer=setTimeout(function(){var val=(q||'').toLowerCase().trim();var tbl=document.querySelector('#cred-tabla-body');if(tbl){var rows=tbl.querySelectorAll('tr');rows.forEach(function(tr){if(!val){tr.style.display='';return;}var txt=(tr.getAttribute('data-srch')||tr.textContent||'').toLowerCase();tr.style.display=txt.includes(val)?'':'none';});}else{var el=document.getElementById('credQ');var pos=el?el.selectionStart:null;nav('creditos');var el2=document.getElementById('credQ');if(el2){el2.focus();try{el2.setSelectionRange(pos,pos);}catch(e){}}}},120);}
 function setCliSort(col){var cur=S.cliSort||{col:'nombre',dir:'asc'};S.cliSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('clientes');}
 function setPagosSort(col){var cur=S.pagosSort||{col:'fecha',dir:'desc'};S.pagosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('pagos');}
 function setMotosSort(col){var cur=S.motosSort||{col:'modelo',dir:'asc'};S.motosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('motos');}
