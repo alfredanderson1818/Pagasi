@@ -19597,7 +19597,7 @@ function _renderContratoArrendamiento(){
     <p style="${p}">Leído el presente contrato por las partes, y estando conformes con su contenido, lo firman en dos ejemplares de un mismo tenor y a un solo efecto, en la ciudad de <strong>${emp.ciudad||'Caracas'}</strong>, a los _____ días del mes de __________________ de ______.</p>
 
     <!-- FIRMAS -->
-    <table style="width:100%;border-collapse:collapse;margin-top:32px;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin-top:32px;border:1px solid #EAE5F7;page-break-inside:avoid;break-inside:avoid">
       <tr>
         <th style="background:${purple};color:#fff;padding:10px;text-align:center;width:50%;font-size:12px">LA VENDEDORA<br>${empresaUp}<br>RIF ${V(emp.rif)||'J-50829589-7'}</th>
         <th style="background:${purple};color:#fff;padding:10px;text-align:center;width:50%;font-size:12px">EL COMPRADOR</th>
@@ -24119,7 +24119,7 @@ function _abrirVentanaImpresion(titulo, htmlContenido){
     .ar{display:grid;padding:5px 0;border-bottom:1px solid #eee;font-size:11px}
     .ah{display:grid;padding:5px 0;border-bottom:2px solid #111;font-weight:800;font-size:10.5px;text-transform:uppercase}
     .pd{opacity:0.45;text-decoration:line-through}
-    @media print{body{padding:12px}button{display:none!important}}
+    @media print{body{padding:12px}button{display:none!important}table{page-break-inside:avoid;break-inside:avoid}}
   `;
   var w = window.open('','_blank','width=860,height=700');
   w.document.write('<html><head><title>'+titulo+'</title><style>'+estilos+'</style></head><body>'+htmlContenido+'<br><button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px">Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},400);<\/script></body></html>');
