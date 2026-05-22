@@ -3638,6 +3638,84 @@ var DB = {
   delConcesionario: function(id){ if(!db)return; _dbSilent(function(){ return db.collection('concesionarios').doc(String(id)).delete(); }); },
 };
 
+// ══════════════════════════════════════════════════════════════════
+// TIEMPO REAL: listeners onSnapshot para creditos y clientes
+// Se activan después de DB.load(). Actualizan S en memoria y
+// re-renderizan la página actual SOLO si no hay modal/wizard abierto.
+// ══════════════════════════════════════════════════════════════════
+DB._realtimeUnsubs = [];
+DB.startRealtimeListeners = function() {
+  if (!db) return;
+  // Cancelar listeners previos si los hubiera (ej: re-login)
+  DB.stopRealtimeListeners();
+
+  // Utilidad: ¿hay algo abierto que no debemos interrumpir?
+  function _hayAlgoAbierto() {
+    try {
+      var ov = document.getElementById('ov');
+      if (ov && ov.style.display === 'flex') return true;
+      var wz = document.getElementById('wz-overlay');
+      if (wz && wz.style.display === 'block') return true;
+    } catch(e) {}
+    return false;
+  }
+
+  // ── Listener: creditos ──
+  var unsubCreds = db.collection('creditos').onSnapshot(function(snap) {
+    if (!snap || snap.metadata.hasPendingLocalWrites) return;
+    try {
+      var nuevos = [];
+      snap.forEach(function(d) { nuevos.push(mapCred(d.data())); });
+      S.creds = nuevos;
+      calcularMoraAuto();
+      if (!_hayAlgoAbierto() && (S.page === 'creditos' || S.page === 'dash' || S.page === 'cobranza' || S.page === 'pagos')) {
+        try { nav(S.page); } catch(e) {}
+      }
+    } catch(e) {}
+  }, function(err) {
+    console && console.warn && console.warn('[RT] creditos listener error:', err && err.message);
+  });
+
+  // ── Listener: clientes ──
+  var unsubCli = db.collection('clientes').onSnapshot(function(snap) {
+    if (!snap || snap.metadata.hasPendingLocalWrites) return;
+    try {
+      var nuevos = [];
+      snap.forEach(function(d) { nuevos.push(Object.assign({id: d.id}, d.data())); });
+      S.clientes = nuevos;
+      if (!_hayAlgoAbierto() && (S.page === 'clientes' || S.page === 'dash')) {
+        try { nav(S.page); } catch(e) {}
+      }
+    } catch(e) {}
+  }, function(err) {
+    console && console.warn && console.warn('[RT] clientes listener error:', err && err.message);
+  });
+
+  // ── Listener: pagos ──
+  var unsubPagos = db.collection('pagos').onSnapshot(function(snap) {
+    if (!snap || snap.metadata.hasPendingLocalWrites) return;
+    try {
+      var nuevos = [];
+      snap.forEach(function(d) { nuevos.push(mapPago(d.data())); });
+      S.pagos = nuevos;
+      if (!_hayAlgoAbierto() && (S.page === 'pagos' || S.page === 'cobranza' || S.page === 'dash')) {
+        try { nav(S.page); } catch(e) {}
+      }
+    } catch(e) {}
+  }, function(err) {
+    console && console.warn && console.warn('[RT] pagos listener error:', err && err.message);
+  });
+
+  DB._realtimeUnsubs = [unsubCreds, unsubCli, unsubPagos];
+};
+
+DB.stopRealtimeListeners = function() {
+  try {
+    DB._realtimeUnsubs.forEach(function(unsub) { if(typeof unsub === 'function') unsub(); });
+  } catch(e) {}
+  DB._realtimeUnsubs = [];
+};
+
 // Usuarios e invitaciones en Firestore
 DB.getUsuarios = function(){ if(!db) return Promise.resolve([]); return db.collection('usuarios').get().then(function(s){return s.docs.map(function(d){return Object.assign({uid:d.id},d.data());});}); };
 DB.saveUsuario = function(uid,data){ if(!db) return Promise.resolve(); return db.collection('usuarios').doc(uid).set(data,{merge:true}); };
@@ -26967,6 +27045,7 @@ function init() {
       } catch(e){ console.warn('migrarContratoFirmado error:', e); }
     })();
     renderSidebar();
+    DB.startRealtimeListeners();
     // Vendedor Concesionario → calculadora (motos). Otros roles → dashboard.
     var paginaInicial = isVendedorConcesionarioRole() ? 'motos' : 'dash';
     if(!hasModuleAccess(paginaInicial)){
