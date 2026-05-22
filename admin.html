@@ -19468,7 +19468,7 @@ function _renderContratoArrendamiento(){
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div>${logoSrc?`<img src="${logoSrc}" style="height:46px;object-fit:contain">`:`<div style="font-size:22px;font-weight:900;color:${purple}">${empresaUp}</div>`}</div>
-      <div style="font-size:11px;color:#555;text-align:right"><strong>N° de Contrato:</strong> ${c.id||'________'}<br><span style="color:#888">${c.fecha?fmtFecha(c.fecha):hoy}</span></div>
+      <div style="font-size:11px;color:#555;text-align:right"><strong>N° de Contrato:</strong> ${c.id||'________'}<br><span style="color:#888">${fmtFecha(fechaInicio)}</span></div>
     </div>
 
     <!-- Título -->
@@ -19543,7 +19543,7 @@ function _renderContratoArrendamiento(){
 
     <!-- SEXTA -->
     <h3 style="${clausH}">SEXTA: ENTREGA Y RIESGO</h3>
-    <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha ${blank(c.fecha?fmtFecha(c.fecha):hoy,20)}. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pérdida, robo, hurto, daño, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
+    <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha ${blank(fmtFecha(fechaInicio),20)}. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pérdida, robo, hurto, daño, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
 
     <!-- SÉPTIMA -->
     <h3 style="${clausH}">SÉPTIMA: USO, CONSERVACIÓN Y PROHIBICIONES</h3>
