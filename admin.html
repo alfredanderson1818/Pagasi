@@ -4048,10 +4048,26 @@ const $=id=>document.getElementById(id);
 const fmt=n=>'$'+parseFloat(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 // Formatea una fecha ISO o timestamp como "DD/MM/YYYY HH:MM"
+function hoyLocal(){
+  var d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function ymdLocal(d){
+  if(!(d instanceof Date) || isNaN(d.getTime())) return '';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function _parseFechaLocal(iso){
+  // Si es una cadena solo-fecha 'YYYY-MM-DD', interpretarla como fecha LOCAL (no UTC)
+  if(typeof iso==='string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)){
+    var p = iso.split('-');
+    return new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
+  }
+  return new Date(iso);
+}
 function fmtFechaHora(iso){
   if(!iso) return '';
   try{
-    var d = new Date(iso);
+    var d = _parseFechaLocal(iso);
     if(isNaN(d.getTime())) return '';
     var dd = String(d.getDate()).padStart(2,'0');
     var mm = String(d.getMonth()+1).padStart(2,'0');
@@ -4064,7 +4080,7 @@ function fmtFechaHora(iso){
 function fmtFecha(iso){
   if(!iso) return '';
   try{
-    var d = new Date(iso);
+    var d = _parseFechaLocal(iso);
     if(isNaN(d.getTime())) return '';
     return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
   }catch(e){ return ''; }
@@ -4944,9 +4960,9 @@ function getDashData(tipo, periodo){
   var toDateStr = function(v){
     if(!v) return '';
     if(typeof v === 'string') return v.slice(0,10);
-    if(v && v.toDate) return v.toDate().toISOString().slice(0,10); // Firestore Timestamp
-    if(v instanceof Date) return v.toISOString().slice(0,10);
-    if(v && v.seconds) return new Date(v.seconds*1000).toISOString().slice(0,10); // Timestamp object
+    if(v && v.toDate) return ymdLocal(v.toDate()); // Firestore Timestamp
+    if(v instanceof Date) return ymdLocal(v);
+    if(v && v.seconds) return ymdLocal(new Date(v.seconds*1000)); // Timestamp object
     return String(v).slice(0,10);
   };
 
@@ -6342,7 +6358,7 @@ function verCliente(id){
   creditos.forEach(function(cr){
     if(cr.fecha) actTimeline.push({fecha:cr.fecha, tipo:'credito', ico:'📋', titulo:'Crédito aprobado: '+cr.id, sub:(cr.modelo||'—')+' · Total: '+fmt(cr.total||0)+' · '+( cr.plazo||'?')+'M', color:'var(--p1)'});
     if(cr.fechaCompletado) actTimeline.push({fecha:cr.fechaCompletado, tipo:'completado', ico:'✅', titulo:'Plan completado: '+cr.id, sub:'Saldado exitosamente · '+cr.modelo, color:'var(--green)'});
-    if(cr.mora>0) actTimeline.push({fecha:new Date().toISOString().slice(0,10), tipo:'mora', ico:'⚠️', titulo:'En mora: '+cr.id, sub:cr.mora+' días · Saldo: '+fmt(cr.saldo||0), color:'var(--red)'});
+    if(cr.mora>0) actTimeline.push({fecha:hoyLocal(), tipo:'mora', ico:'⚠️', titulo:'En mora: '+cr.id, sub:cr.mora+' días · Saldo: '+fmt(cr.saldo||0), color:'var(--red)'});
   });
   pagos.forEach(function(p){
     if(!p.eliminado) actTimeline.push({
@@ -6749,7 +6765,7 @@ function empleadoDashHTML(){
   const me = (S.currentUser && S.currentUser.nombre) || 'Empleado';
   const rol = (S.currentUser && S.currentUser.rol) || 'Empleado';
   const hoy = new Date();
-  const hoyStr = hoy.toISOString().slice(0,10);
+  const hoyStr = ymdLocal(hoy);
   const hoyTxt = hoy.toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long'});
   const horaActual = hoy.getHours();
   const saludo = horaActual < 12 ? 'Buenos días' : horaActual < 19 ? 'Buenas tardes' : 'Buenas noches';
@@ -6760,12 +6776,12 @@ function empleadoDashHTML(){
   const lunesOffset = dow===0?-6:1-dow;
   const lunes = new Date(d); lunes.setDate(d.getDate()+lunesOffset);
   const domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
-  const lunesStr = lunes.toISOString().slice(0,10);
-  const domingoStr = domingo.toISOString().slice(0,10);
+  const lunesStr = ymdLocal(lunes);
+  const domingoStr = ymdLocal(domingo);
 
   // Mes actual
-  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0,10);
-  const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0).toISOString().slice(0,10);
+  const primerDiaMes = ymdLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  const ultimoDiaMes = ymdLocal(new Date(hoy.getFullYear(), hoy.getMonth()+1, 0));
 
   const activos = S.creds.filter(c=>!c.eliminado && c.estado==='activo');
 
@@ -6784,6 +6800,7 @@ function empleadoDashHTML(){
   const cobradoHoy = misPagosHoy.reduce((a,p)=>a+(p.monto||0),0);
   const cobradoSemana = misPagosSemana.reduce((a,p)=>a+(p.monto||0),0);
   const cobradoMes = misPagosMes.reduce((a,p)=>a+(p.monto||0),0);
+  const cobradoCuotasMes = misPagosMes.filter(p=>!p.esInicial && p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+(p.monto||0),0);
 
   // ─── METAS (calculadas: meta = 80% de lo cobrable) ───
   const esperadoSemana = activos.reduce((a,c)=>{
@@ -6838,7 +6855,7 @@ function empleadoDashHTML(){
 
   // ─── CLIENTES POR LLAMAR HOY (mora + vence hoy) ───
   const porLlamarHoy = enMora.slice(0,5).concat(
-    enSemana.filter(c=>c._proxima.toISOString().slice(0,10)===hoyStr).slice(0,3)
+    enSemana.filter(c=>ymdLocal(c._proxima)===hoyStr).slice(0,3)
   );
 
   return `<div class="page">
@@ -6867,6 +6884,7 @@ function empleadoDashHTML(){
           <div style="font-size:9.5px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Este mes</div>
           <div style="font-size:17px;font-weight:900;font-family:var(--fd);margin-top:2px">${fmt(cobradoMes)}</div>
           <div style="font-size:10px;opacity:.75;margin-top:1px">${misPagosMes.length} cobro${misPagosMes.length!==1?'s':''}</div>
+          <div style="font-size:10px;opacity:.75;margin-top:1px">${fmt(cobradoCuotasMes)} en cuotas</div>
         </div>
       </div>
 
@@ -6985,9 +7003,9 @@ function empleadoDashHTML(){
       <tbody>${enSemana.slice(0,6).map(c=>{
         const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
         const px = c._proxima;
-        const esHoy = px.toISOString().slice(0,10)===hoyStr;
+        const esHoy = ymdLocal(px)===hoyStr;
         const mañana = new Date(hoy); mañana.setDate(hoy.getDate()+1);
-        const esMañana = px.toISOString().slice(0,10)===mañana.toISOString().slice(0,10);
+        const esMañana = ymdLocal(px)===ymdLocal(mañana);
         const diaLbl = esHoy?'HOY':esMañana?'MAÑANA':dias[px.getDay()]+' '+px.getDate();
         const diaColor = esHoy?'var(--amber)':esMañana?'var(--p1)':'var(--ink3)';
         return `<tr ${esHoy?'style="background:rgba(232,152,10,.06)"':''}>
@@ -7114,8 +7132,8 @@ var WT_NOTIFIED=false;
 var _wtDragId=null;
 
 function wtEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
-function wtToday(){ return new Date().toISOString().slice(0,10); }
-function wtDateAdd(days){ var d=new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+function wtToday(){ return hoyLocal(); }
+function wtDateAdd(days){ var d=new Date(); d.setDate(d.getDate()+days); return ymdLocal(d); }
 function wtUserName(){ return (S.currentUser&&(S.currentUser.nombre||S.currentUser.email||S.currentUser.uid))||'Administrador'; }
 function wtIsMine(t){ if(isAdminUser()) return true; var me=(S.currentUser&&S.currentUser.email)||wtUserName(); var ass=String(t.asignadoEmail||t.asignadoA||'').toLowerCase(); var meL=me.toLowerCase(); return !ass||ass===meL||ass.indexOf(meL)>=0||meL.indexOf(ass)>=0; }
 
@@ -8885,7 +8903,7 @@ creditos(){
         ? `<span class="bdg ${c.mora>60?'b-r':c.mora>30?'b-a':'b-b'}">${c.mora}d</span>`
         : `<span style="color:var(--ink3);font-size:11px">—</span>`;
       var apyVal = Number.isFinite(parseFloat(c.apy)) ? parseFloat(c.apy) : (Number.isFinite(parseFloat((c.plan||{}).apy)) ? parseFloat((c.plan||{}).apy) : parseFloat(PLAN.apy||0));
-      var fechaFmt = c.fecha ? new Date(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+      var fechaFmt = c.fecha ? _parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
       var precio = parseFloat(c.precioBaseReal||c.precio||0);
       var totalC = parseFloat(c.total||0);
       return`<tr style="cursor:pointer" onclick="openAmort('${c.id}')" data-srch="${(c.id+' '+(c.cli||'')+' '+(c.modelo||'')+' '+(c.estado||'')+' '+(c.fecha||'')).toLowerCase()}">
@@ -9051,7 +9069,7 @@ pagos(){
   const dias = [];
   for(let i=13;i>=0;i--){
     const d = new Date(hoy); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
-    const k = d.toISOString().slice(0,10);
+    const k = ymdLocal(d);
     const tot = confs.filter(p=>p.fecha===k).reduce((a,p)=>a+p.monto,0);
     dias.push({k,d,tot,lbl:d.getDate()});
   }
@@ -9341,11 +9359,11 @@ cobranza(){
 
   // Pagos confirmados hoy y esta semana
   var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var hoyStr = hoy.toISOString().slice(0,10);
+  var hoyStr = ymdLocal(hoy);
   var iniSemana = new Date(hoy); iniSemana.setDate(hoy.getDate() - hoy.getDay());
-  var iniSemanaStr = iniSemana.toISOString().slice(0,10);
+  var iniSemanaStr = ymdLocal(iniSemana);
   var iniMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  var iniMesStr = iniMes.toISOString().slice(0,10);
+  var iniMesStr = ymdLocal(iniMes);
 
   var pagosHoy = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha===hoyStr;});
   var cobradoHoy = pagosHoy.reduce(function(a,p){return a+p.monto;},0);
@@ -9353,6 +9371,7 @@ cobranza(){
   var cobradoSemana = pagosSemana.reduce(function(a,p){return a+p.monto;},0);
   var pagosMes = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha>=iniMesStr;});
   var cobradoMes = pagosMes.reduce(function(a,p){return a+p.monto;},0);
+  var cobradoCuotasMes = pagosMes.filter(function(p){return !p.esInicial && p.tipoOperacion!=='inicial_credito';}).reduce(function(a,p){return a+p.monto;},0);
 
   // Efectividad cobranza (% del cuotas del mes cobradas)
   var cuotasEsperadasMes = _SCREDS.filter(function(c){return c.estado==='activo' && !c.eliminado;}).reduce(function(a,c){return a+parseFloat(c.cuotaM||0);},0);
@@ -9366,8 +9385,8 @@ cobranza(){
   for(let i=7;i>=0;i--){
     const inicio = new Date(hoy); inicio.setDate(hoy.getDate() - (i*7 + hoy.getDay()));
     const fin = new Date(inicio); fin.setDate(inicio.getDate()+6);
-    const iniStr = inicio.toISOString().slice(0,10);
-    const finStr = fin.toISOString().slice(0,10);
+    const iniStr = ymdLocal(inicio);
+    const finStr = ymdLocal(fin);
     const tot = _SPAGOS
       .filter(p=>!p.eliminado && p.estado==='confirmado' && p.fecha>=iniStr && p.fecha<=finStr)
       .reduce((a,p)=>a+p.monto,0);
@@ -9387,7 +9406,7 @@ cobranza(){
   var dias14 = [];
   for(var d=13; d>=0; d--){
     var dia = new Date(hoy); dia.setDate(hoy.getDate()-d);
-    var diaStr = dia.toISOString().slice(0,10);
+    var diaStr = ymdLocal(dia);
     var tot = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha===diaStr;}).reduce(function(a,p){return a+p.monto;},0);
     var diaLbl = String(dia.getDate()).padStart(2,'0');
     var dayOfWeek = dia.getDay();
@@ -9510,6 +9529,7 @@ cobranza(){
       <div class="st-v" style="color:var(--green);font-size:26px">${efectividadMes}%</div>
       <div class="st-l">Efectividad mes</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${fmt(cobradoMes)} cobrado</div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:1px">${fmt(cobradoCuotasMes)} en cuotas</div>
     </div>
     <div class="stat" style="border-top:3px solid var(--ink3)">
       <div class="st-v" style="font-size:22px">${alDia}</div>
@@ -9885,7 +9905,7 @@ contratos(){
 
   // Contratos del mes
   var hoy = new Date();
-  var iniMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0,10);
+  var iniMes = ymdLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
   var nuevosMes = credsActivos.filter(function(c){return c.fecha && c.fecha >= iniMes;}).length;
 
   // Contratos por tipo de documento (contamos los 3 tipos)
@@ -10227,7 +10247,7 @@ notif(){
   var diasNotif = [];
   for(let i=13;i>=0;i--){
     let d = new Date(hoyNotif); d.setDate(d.getDate()-i);
-    let k = d.toISOString().slice(0,10);
+    let k = ymdLocal(d);
     let n = historial.filter(h=>h.fecha && h.fecha.startsWith(k)).reduce((a,h)=>a+(h.cantidad||1),0);
     diasNotif.push({lbl:d.getDate(), n});
   }
@@ -13269,7 +13289,7 @@ function _mpagoValidarContraCosto(prefix, costo){
 function _mpagoCrearGastos(motoObj, pagos, opts){
   opts = opts || {};
   if(!motoObj || !Array.isArray(pagos) || !pagos.length) return [];
-  var fecha = opts.fecha || new Date().toISOString().split('T')[0];
+  var fecha = opts.fecha || hoyLocal();
   var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
   var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
   var conceptoBase = 'Compra de moto · '+(motoObj.modelo||'')+(motoObj.vin?' · VIN '+motoObj.vin:'')+' (Moto #'+motoObj.id+')';
@@ -13360,7 +13380,7 @@ function _mpagoReversarGastos(motoId, devolver, audit){
           monto: parseFloat(m.monto)||0,
           cuentaOrigen:null,
           cuentaDestino: m.cuentaOrigen,
-          fecha: new Date().toISOString().split('T')[0],
+          fecha: hoyLocal(),
           referencia:'Reverso por eliminación de moto #'+motoId,
           realizadoPor: quien,
           tasaBs: window._tasaBsGlobal||1,
@@ -13548,7 +13568,7 @@ function openAddMoto(id=null){
     DB.saveMoto(obj);
     // ── Crear egresos + movimientos por la compra de la moto (solo nueva) ──
     if(!ed && _pagosMoto && _pagosMoto.length){
-      _mpagoCrearGastos(obj, _pagosMoto, {fecha: new Date().toISOString().split('T')[0]});
+      _mpagoCrearGastos(obj, _pagosMoto, {fecha: hoyLocal()});
     }
     closeM();nav('motos');toast(ed?'Moto actualizada':'✓ Moto agregada','success');return true;
   };
@@ -17047,7 +17067,7 @@ function _wzGuardar(){
     planModo: r.mode||'global',
     plan: {plazo:r.plazo||PLAN.plazo, factor:r.factor||PLAN.factor, inicial:(typeof r.inicialPct==='number') ? r.inicialPct : PLAN.inicial, tasaMensual:(typeof r.tasaMensual==='number') ? r.tasaMensual : PLAN.tasaMensual, apy:(typeof r.apy==='number') ? r.apy : PLAN.apy, precioBaseReal:r.precioBaseReal||WZ.precio||0},
     frecuencia: 'quincenal',
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: hoyLocal(),
     estado: ((S.currentUser&&S.currentUser.rol)==='Vendedor Concesionario') ? 'pendiente_revision' : 'activo',
     pagado: 0,
     mora: 0,
@@ -17227,7 +17247,7 @@ function openAddCredLegacy(motoId=null){
     <div class="fsec">Datos del Cliente</div>
     <div class="fgr">
       <div class="fg"><label>Cliente *</label><select class="fs" id="k_cli">${S.clientes.map(c=>`<option value="${c.id}">${c.nombre} — C.I. ${c.cedula}</option>`).join('')}</select></div>
-      <div class="fg"><label>Fecha inicio *</label><input class="fi" id="k_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div class="fg"><label>Fecha inicio *</label><input class="fi" id="k_fecha" type="date" value="${hoyLocal()}"></div>
     </div>
 
     <div class="fsec" style="margin-top:14px">Motocicleta a Financiar</div>
@@ -17316,7 +17336,7 @@ function openAddCredLegacy(motoId=null){
       plazo:PLAN.plazo,
       totalCuotas:PLAN.plazo*2,
       frecuencia:'quincenal',
-      fecha:($('k_fecha')&&$('k_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('k_fecha')&&$('k_fecha').value)||hoyLocal(),
       estado:'activo',
       pagado:0,
       mora:0,
@@ -17680,7 +17700,7 @@ function confirmarContratoFirmado(credId){
   var ci = S.creds.findIndex(function(x){ return x.id===credId; });
   if(ci<0) return;
   S.creds[ci].contratoFirmado = true;
-  S.creds[ci].fechaContratoFirmado = new Date().toISOString().split('T')[0];
+  S.creds[ci].fechaContratoFirmado = hoyLocal();
   DB.updateCred(credId, { contratoFirmado: true, fechaContratoFirmado: S.creds[ci].fechaContratoFirmado });
   toast('Contrato confirmado. El crédito está activo contablemente.','success');
   nav('creditos');
@@ -17933,7 +17953,7 @@ function openAddPago(preCredId){
     <div class="fgr c1" style="gap:9px"><div class="fg"><label>Crédito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}" ${preCredId&&String(c.id)===String(preCredId)?'selected':''}>${c.id} — ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
     <div class="fgr" style="margin-top:9px">
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
-      <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${hoyLocal()}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
 <div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">— Sin cuentas configuradas —</option>':''}</select></div>
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
@@ -17959,7 +17979,7 @@ function openAddPago(preCredId){
     const newPago={
       id:'PAG-'+Date.now(),
       cli:cred.cli,cred:credId,
-      fecha:($('p_fecha')&&$('p_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('p_fecha')&&$('p_fecha').value)||hoyLocal(),
       monto:monto,
       metodo:($('p_forma')&&$('p_forma').value)||'Efectivo USD',
       cuenta:($('p_forma')&&$('p_forma').value)||'—',
@@ -18051,7 +18071,7 @@ function openAddPago(preCredId){
       if(cuotasPagadas>=totalCuotas && S.creds[ci].estado!=='completado'){
         recienCompletado = true;
         S.creds[ci].estado='completado';
-        S.creds[ci].fechaCompletado=new Date().toISOString().split('T')[0];
+        S.creds[ci].fechaCompletado=hoyLocal();
 
         // ── Punto 2: Cambiar estado de la moto a 'propia' ──
         var mIdx=S.motos.findIndex(function(m){return String(m.id)===String(S.creds[ci].motoId);});
@@ -18157,7 +18177,7 @@ function openAmort(id){
   const cuota=parseFloat(c.cuotaQ||c.cuota||0);
   const n=c.totalCuotas||(c.plazo*2);
   const pagado=Math.max(0, Math.min(getCreditoCuotasPagadas(c), n));
-  const startDate=new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
+  const startDate=new Date((c.fecha||hoyLocal())+'T12:00:00');
   const historial=c.pagosRegistrados||[];
   const saldoProxCuota=(c.saldoProxCuota||0)<0.10?0:(c.saldoProxCuota||0);
   const infoLiquidacion=(c.tipoCierre==='liquidacion_anticipada') ? ('<div class="note" style="margin:8px 0 12px 0"><strong>Liquidación anticipada:</strong> saldo '+fmt(c.saldoOriginalLiquidacion||0)+' · descuento '+fmt(c.descuentoLiquidacion||0)+' · pago final '+fmt(c.montoLiquidado||0)+'</div>') : '';
@@ -18695,7 +18715,7 @@ function openLiquidarAnticipado(credId){
     + '<div class="fg"><label>Descuento</label><input id="liq_descuento" class="fi" type="number" min="0" step="0.01" value="0" oninput="updLiquidacionFinal()"></div>'
     + '<div class="fg"><label>Monto final a pagar</label><input id="liq_monto_final" class="fi" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'" oninput="updLiquidacionDescuento()"></div>'
     + '<div class="fg"><label>Cuenta destino</label><select id="liq_cuenta" class="fs">'+((((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]).map(function(ct){return '<option value="'+ct.nombre+'">'+ct.nombre+'</option>';}).join('')))+'</select></div>'
-    + '<div class="fg"><label>Fecha</label><input id="liq_fecha" class="fi" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+    + '<div class="fg"><label>Fecha</label><input id="liq_fecha" class="fi" type="date" value="'+hoyLocal()+'"></div>'
     + '<div class="fg"><label>Motivo del descuento</label><input id="liq_motivo" class="fi" placeholder="Negociación por pago anticipado"></div>'
     +'</div>'
     +'<div class="fgr" style="gap:10px;margin-top:10px">'
@@ -18759,7 +18779,7 @@ function ejecutarLiquidacionAnticipada(){
   if(descuento > saldo*0.4){
     if(!confirm('El descuento supera 40% del saldo pendiente. ¿Deseas continuar?')) return;
   }
-  var fecha=(($('liq_fecha')&&$('liq_fecha').value)||new Date().toISOString().split('T')[0]);
+  var fecha=(($('liq_fecha')&&$('liq_fecha').value)||hoyLocal());
   var cuenta=(($('liq_cuenta')&&$('liq_cuenta').value)||(((window._cuentasBanc&&window._cuentasBanc[0]&&window._cuentasBanc[0].nombre))||'Caja principal'));
   var motivo=(($('liq_motivo')&&$('liq_motivo').value)||'Liquidación anticipada').trim();
   var observacion=(($('liq_obs')&&$('liq_obs').value)||'').trim();
@@ -18942,7 +18962,7 @@ function recalcularCreditoDesdePagos(credId){
   pagosAplicables.forEach(function(p){
     var montoRestante=parseFloat(p.monto)||0;
     if(montoRestante<=0) return;
-    var fechaPago=p.fecha||new Date().toISOString().split('T')[0];
+    var fechaPago=p.fecha||hoyLocal();
     for(var qi=0;qi<totalCuotas && montoRestante>0.001;qi++){
       if(saldoPorCuota[qi]>0.001){
         var aplicar=Math.min(montoRestante,saldoPorCuota[qi]);
@@ -18961,7 +18981,7 @@ function recalcularCreditoDesdePagos(credId){
     });
     if(liquidacionActiva){
       var descRestante=parseFloat(c.descuentoLiquidacion)||0;
-      var fechaDesc=c.fechaCompletado||new Date().toISOString().split('T')[0];
+      var fechaDesc=c.fechaCompletado||hoyLocal();
       for(var qd=0;qd<totalCuotas && descRestante>0.001;qd++){
         if(saldoPorCuota[qd]>0.001){
           var aplicarDesc=Math.min(descRestante,saldoPorCuota[qd]);
@@ -18989,7 +19009,7 @@ function recalcularCreditoDesdePagos(credId){
   S.creds[ci].pagosRegistrados=historial;
   S.creds[ci].saldoProxCuota=saldoProxCuota;
   S.creds[ci].estado=nuevoEstado;
-  if(nuevoEstado==='completado' && !S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=new Date().toISOString().split('T')[0];
+  if(nuevoEstado==='completado' && !S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=hoyLocal();
   if(nuevoEstado!=='completado' && S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=null;
 
   // Si el crédito era liquidación anticipada pero ya no hay pago de liquidación activo,
@@ -19280,7 +19300,7 @@ function openNota(id){
       montoAcordado: monto ? parseFloat(monto) : null,
       fechaCompromiso: fechaComp,
       proximaAccion: prox,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: hoyLocal(),
       cobrador: (S.currentUser&&S.currentUser.nombre)||'Admin'
     };
     if(db){
@@ -19433,7 +19453,7 @@ function _renderContratoArrendamiento(){
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div>${logoSrc?`<img src="${logoSrc}" style="height:46px;object-fit:contain">`:`<div style="font-size:22px;font-weight:900;color:${purple}">${empresaUp}</div>`}</div>
-      <div style="font-size:11px;color:#555;text-align:right"><strong>N° de Contrato:</strong> ${c.id||'________'}<br><span style="color:#888">${fmtFecha(fechaInicio)}</span></div>
+      <div style="font-size:11px;color:#555;text-align:right"><strong>N° de Contrato:</strong> ${c.id||'________'}<br><span style="color:#888">${hoy}</span></div>
     </div>
 
     <!-- Título -->
@@ -19508,7 +19528,7 @@ function _renderContratoArrendamiento(){
 
     <!-- SEXTA -->
     <h3 style="${clausH}">SEXTA: ENTREGA Y RIESGO</h3>
-    <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha ${blank(fmtFecha(fechaInicio),20)}. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pérdida, robo, hurto, daño, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
+    <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha ${blank(hoy,20)}. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pérdida, robo, hurto, daño, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
 
     <!-- SÉPTIMA -->
     <h3 style="${clausH}">SÉPTIMA: USO, CONSERVACIÓN Y PROHIBICIONES</h3>
@@ -19897,7 +19917,7 @@ function openAddEgreso(){
     +'<div class="fg"><label>Forma de pago</label><select class="fs" id="eg_forma">'+_metodosOpts+'</select></div>'
     +'</div>'
     +'<div class="fgr" style="gap:8px">'
-    +'<div class="fg"><label>Fecha</label><input class="fi" id="eg_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="eg_fecha" type="date" value="'+hoyLocal()+'"></div>'
     +'<div class="fg"><label>Referencia</label><input class="fi" id="eg_notas" placeholder="Opcional"></div>'
     +'</div>'
     +'</div>';
@@ -19906,7 +19926,7 @@ function openAddEgreso(){
     var monto=parseFloat(($('eg_monto')&&$('eg_monto').value))||0;
     if(!conc||monto<=0){toast('Concepto y monto son obligatorios','error');return false;}
     var newId=S.egresos.length?Math.max.apply(null,S.egresos.map(function(x){return x.id;}))+1:1;
-    var newEg={id:newId,concepto:conc,monto:monto,fecha:($('eg_fecha')&&$('eg_fecha').value)||new Date().toISOString().split('T')[0],categoria:($('eg_cat')&&$('eg_cat').value)||'otros',forma:($('eg_forma')&&$('eg_forma').value)||'',notas:($('eg_notas')&&$('eg_notas').value)||'',eliminado:false};
+    var newEg={id:newId,concepto:conc,monto:monto,fecha:($('eg_fecha')&&$('eg_fecha').value)||hoyLocal(),categoria:($('eg_cat')&&$('eg_cat').value)||'otros',forma:($('eg_forma')&&$('eg_forma').value)||'',notas:($('eg_notas')&&$('eg_notas').value)||'',eliminado:false};
     S.egresos.push(newEg);
     DB.saveEgreso(newEg);
 
@@ -19999,7 +20019,7 @@ function delEgreso(id){
           monto:parseFloat(eg.monto)||0,
           cuentaOrigen:null,
           cuentaDestino:cuentaSalida,
-          fecha:new Date().toISOString().split('T')[0],
+          fecha:hoyLocal(),
           referencia:'Reverso por eliminación de egreso #'+eg.id,
           realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
           tasaBs:window._tasaBsGlobal||1,
@@ -20180,9 +20200,9 @@ function abrirWhatsAppRecibo(pago){
 // FEATURE 3: DASHBOARD DE COBRANZA POR COBRADOR
 // ══════════════════════════════════════════════════════════════
 function renderDashboardCobradores(){
-  var hoy = new Date().toISOString().split('T')[0];
+  var hoy = hoyLocal();
   var inicioSemana = (function(){
-    var d = new Date(); d.setDate(d.getDate()-d.getDay()); return d.toISOString().split('T')[0];
+    var d = new Date(); d.setDate(d.getDate()-d.getDay()); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   })();
   var inicioMes = hoy.slice(0,7)+'-01';
 
@@ -20399,7 +20419,7 @@ function abrirGenerarFactura(pagoId){
     + '<div class="fgr" style="gap:10px">'
     + '<div class="fg"><label>N° de Factura</label><input class="fi" id="fac_numero" value="'+nextNum+'" style="font-family:var(--fd);font-weight:700"></div>'
     + '<div class="fg"><label>N° de Control SENIAT</label><input class="fi" id="fac_control" value="'+nextCtrl+'" style="font-family:var(--fd);font-weight:700"></div>'
-    + '<div class="fg"><label>Fecha de Emisión</label><input class="fi" id="fac_fecha" type="date" value="'+(new Date().toISOString().split('T')[0])+'"></div>'
+    + '<div class="fg"><label>Fecha de Emisión</label><input class="fi" id="fac_fecha" type="date" value="'+(hoyLocal())+'"></div>'
     + '</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DATOS DEL EMISOR (EMPRESA)</div>'
     + '<div class="fgr" style="gap:10px">'
@@ -20448,7 +20468,7 @@ function crearFactura(pagoId){
     numero: numero,
     numeroControl: control,
     pagoId: p.id,
-    fechaEmision: ($('fac_fecha')&&$('fac_fecha').value)||new Date().toISOString().split('T')[0],
+    fechaEmision: ($('fac_fecha')&&$('fac_fecha').value)||hoyLocal(),
     fechaCreacion: new Date().toISOString(),
     creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
     creadoPorUid: (S.currentUser&&S.currentUser.uid)||'',
@@ -21362,11 +21382,11 @@ function _comGetSaldo(u){
 function _comStatsRango(u){
   var gen = _comCalcGenerado(u);
   var hoy = new Date();
-  var hoyYmd = hoy.toISOString().split('T')[0];
+  var hoyYmd = ymdLocal(hoy);
   // Inicio de semana (lunes)
   var diaSem = hoy.getDay() || 7; // domingo = 7
   var lunes = new Date(hoy.getTime() - (diaSem-1)*86400000);
-  var lunesYmd = lunes.toISOString().split('T')[0];
+  var lunesYmd = ymdLocal(lunes);
   // Inicio de mes
   var primMesYmd = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-01';
   var totalPeriodo = function(items, desde){
@@ -21729,7 +21749,7 @@ function _comAbrirPagar(uid){
     + '<select class="fs" id="comp_cuenta" onchange="_comValidarPago()">'+cuentasOpts+'</select>'
     + '<div id="comp_saldo_warn" style="font-size:10.5px;margin-top:3px;color:var(--ink3)"></div></div>'
     + '<div class="fg"><label>Fecha</label>'
-    + '<input class="fi" type="date" id="comp_fecha" value="'+(new Date().toISOString().split('T')[0])+'"></div>'
+    + '<input class="fi" type="date" id="comp_fecha" value="'+(hoyLocal())+'"></div>'
     + '<div class="fg"><label>Notas (opcional)</label>'
     + '<textarea class="fi" id="comp_notas" rows="2" placeholder="Ej: Pago de comisiones primera quincena"></textarea></div>'
     + '</div>';
@@ -21768,7 +21788,7 @@ function _comGuardarPago(uid){
   if(!u){ toast('Usuario no encontrado','error'); return; }
   var monto = parseFloat(($('comp_monto')&&$('comp_monto').value)||0)||0;
   var cuenta = ($('comp_cuenta')&&$('comp_cuenta').value)||'';
-  var fecha = ($('comp_fecha')&&$('comp_fecha').value)||new Date().toISOString().split('T')[0];
+  var fecha = ($('comp_fecha')&&$('comp_fecha').value)||hoyLocal();
   var notas = ($('comp_notas')&&$('comp_notas').value)||'';
   if(monto <= 0){ toast('Monto inválido','error'); return; }
   if(!cuenta){ toast('Selecciona una cuenta','error'); return; }
@@ -22024,7 +22044,7 @@ function _comConfirmarEliminarPago(egId, uid){
         monto: parseFloat(eg.monto)||0,
         cuentaOrigen: null,
         cuentaDestino: mov.cuentaOrigen,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: hoyLocal(),
         referencia: 'Reverso por eliminación · ' + razon,
         realizadoPor: quien,
         tasaBs: window._tasaBsGlobal||1,
@@ -23981,7 +24001,7 @@ function abrirFiniquito(credId){
   var emp = (typeof getEmpresa==='function') ? getEmpresa() : {nombre:'Pagasi',rif:'',ciudad:'Caracas',tel:'',email:'',direccion:'',representante:'',repCI:''};
   var empresaUp = (emp.nombre||'PAGASI').toUpperCase();
   var totalPagado=getCreditoPagosConfirmados(c);
-  var fechaFin=c.fechaCompletado||new Date().toISOString().split('T')[0];
+  var fechaFin=c.fechaCompletado||hoyLocal();
   var totalCuotas = c.totalCuotas||c.plazo*2;
   var mModelo = c.modelo || moto.modelo || '';
   var mVin = c.vin || moto.vin || '';
@@ -24145,7 +24165,7 @@ function descargarAmortPDF(){
 
   // Fechas
   var fechaInicio = c.fecha || '—';
-  var startDate = new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
+  var startDate = new Date((c.fecha||hoyLocal())+'T12:00:00');
   var fechaFin = new Date(startDate.getTime() + (totalCuotas*15*24*60*60*1000));
   var fechaFinStr = fechaFin.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
   var proxFd = new Date(startDate.getTime() + ((cuotasPag+1)*15*24*60*60*1000));
@@ -24359,7 +24379,7 @@ function descargarEstadoPDF(){
   var hoy = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
 
   var fechaInicio = c.fecha || '—';
-  var startDate = new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
+  var startDate = new Date((c.fecha||hoyLocal())+'T12:00:00');
 
   // Pagos por cuota (para columna Abonos)
   var historial = c.pagosRegistrados||[];
@@ -25847,7 +25867,7 @@ function savePendiente(tipo){
     monto:monto,
     fechaVenc:($('pnd_fecha')||{}).value||'',
     notas:($('pnd_notas')||{}).value||'',
-    creadoEn:new Date().toISOString().split('T')[0],
+    creadoEn:hoyLocal(),
     creadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
     pagado:false,
     eliminado:false
@@ -25877,7 +25897,7 @@ function marcarPendientePagado(id){
   var idx=S.cuentasPendientes.findIndex(function(p){return p.id===id;});
   if(idx<0) return;
   S.cuentasPendientes[idx].pagado=true;
-  S.cuentasPendientes[idx].pagadoEn=new Date().toISOString().split('T')[0];
+  S.cuentasPendientes[idx].pagadoEn=hoyLocal();
   if(db){db.collection('cuentasPendientes').doc(id).update({pagado:true,pagadoEn:S.cuentasPendientes[idx].pagadoEn}).catch(function(){});}
   nav('cuentas');
   toast('Marcado como '+(S.cuentasPendientes[idx].tipo==='cobrar'?'cobrado':'pagado'),'success');
@@ -25900,7 +25920,7 @@ function openDeposito(cuentaNombre){
     +'<div class="fg"><label>Concepto *</label><input class="fi" id="dep_conc" placeholder="Ej: Cobro cuota, pago inicial..."></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="dep_monto" type="number" step="0.01" placeholder="0.00"></div>'
-    +'<div class="fg"><label>Fecha</label><input class="fi" id="dep_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="dep_fecha" type="date" value="'+hoyLocal()+'"></div></div>'
     +'<div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="dep_ref" placeholder="Opcional"></div>'
     +'<div class="fgr" style="gap:8px"><div class="fg"><label>Tasa Bs./$</label><input class="fi" id="dep_tasa" type="number" step="0.01" placeholder="Ej: 478.58" value="'+(window._tasaBsGlobal||1)+'"></div>'
     +'<div class="fg"><label>Moneda</label><select class="fs" id="dep_moneda"><option value="USD">USD $</option><option value="BS">Bs.</option></select></div></div>'
@@ -25913,7 +25933,7 @@ function openDeposito(cuentaNombre){
     if(!conc||monto<=0){toast('Concepto y monto obligatorios','error');return false;}
     var mov={id:'MOV-'+Date.now(),tipo:'deposito',concepto:conc,monto:monto,
       cuentaOrigen:null,cuentaDestino:cnombre,
-      fecha:($('dep_fecha')&&$('dep_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('dep_fecha')&&$('dep_fecha').value)||hoyLocal(),
       hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
       referencia:($('dep_ref')&&$('dep_ref').value)||'',
       tasaBs:parseFloat(($('dep_tasa')&&$('dep_tasa').value))||window._tasaBsGlobal||1,
@@ -25943,7 +25963,7 @@ function openRetiro(cuentaNombre){
     +'<div class="fg"><label>Concepto *</label><input class="fi" id="ret_conc" placeholder="Ej: Pago proveedor, nómina..."></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="ret_monto" type="number" step="0.01" placeholder="0.00"></div>'
-    +'<div class="fg"><label>Fecha</label><input class="fi" id="ret_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="ret_fecha" type="date" value="'+hoyLocal()+'"></div></div>'
     +'<div class="fg"><label>Referencia</label><input class="fi" id="ret_ref" placeholder="Opcional"></div>'
     +'<div class="fgr" style="gap:8px"><div class="fg"><label>Tasa Bs./$</label><input class="fi" id="ret_tasa" type="number" step="0.01" placeholder="Ej: 478.58" value="'+(window._tasaBsGlobal||1)+'"></div>'
     +'<div class="fg"><label>Moneda</label><select class="fs" id="ret_moneda"><option value="USD">USD $</option><option value="BS">Bs.</option></select></div></div>'
@@ -25956,7 +25976,7 @@ function openRetiro(cuentaNombre){
     if(!conc||monto<=0){toast('Concepto y monto obligatorios','error');return false;}
     var mov={id:'MOV-'+Date.now(),tipo:'retiro',concepto:conc,monto:monto,
       cuentaOrigen:cnombre,cuentaDestino:null,
-      fecha:($('ret_fecha')&&$('ret_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('ret_fecha')&&$('ret_fecha').value)||hoyLocal(),
       hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
       referencia:($('ret_ref')&&$('ret_ref').value)||'',
       tasaBs:parseFloat(($('ret_tasa')&&$('ret_tasa').value))||window._tasaBsGlobal||1,
@@ -25987,7 +26007,7 @@ function openTransferencia(cuentaNombre){
     +'<div class="fg"><label>Cuenta destino *</label><select class="fs" id="tr_destino">'+opts+'</select></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="tr_monto" type="number" step="0.01" placeholder="0.00"></div>'
-    +'<div class="fg"><label>Fecha</label><input class="fi" id="tr_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="tr_fecha" type="date" value="'+hoyLocal()+'"></div></div>'
     +'<div class="fg"><label>Concepto</label><input class="fi" id="tr_conc" placeholder="Ej: Traspaso operativo..."></div>'
     +'<div class="fg"><label>Referencia</label><input class="fi" id="tr_ref" placeholder="Opcional"></div>'
     +'<div class="fg"><label>Tasa Bs./$</label><input class="fi" id="tr_tasa" type="number" step="0.01" placeholder="Ej: 478.58" value="'+(window._tasaBsGlobal||1)+'"></div>'
@@ -26002,7 +26022,7 @@ function openTransferencia(cuentaNombre){
     var conc=($('tr_conc')&&$('tr_conc').value)||'Transferencia interna';
     var mov={id:'MOV-'+Date.now(),tipo:'transferencia',concepto:conc,monto:monto,
       cuentaOrigen:orig,cuentaDestino:dest,
-      fecha:($('tr_fecha')&&$('tr_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('tr_fecha')&&$('tr_fecha').value)||hoyLocal(),
       hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
       referencia:($('tr_ref')&&$('tr_ref').value)||'',
       tasaBs:parseFloat(($('tr_tasa')&&$('tr_tasa').value))||window._tasaBsGlobal||1,
@@ -27078,7 +27098,7 @@ function exportarBackup(){
   var blob = new Blob([json], {type:'application/json'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
-  var fecha = new Date().toISOString().split('T')[0];
+  var fecha = hoyLocal();
   a.href = url; a.download = 'backup-pagasi-'+fecha+'.json'; a.click();
   URL.revokeObjectURL(url);
   toast('✓ Backup exportado · '+
@@ -27151,8 +27171,8 @@ function showAdminProfile() {
   for(var i=11;i>=0;i--){
     var ini = new Date(hoyProf); ini.setDate(hoyProf.getDate() - (i*7 + hoyProf.getDay()));
     var fin = new Date(ini); fin.setDate(ini.getDate()+6);
-    var iniS = ini.toISOString().slice(0,10);
-    var finS = fin.toISOString().slice(0,10);
+    var iniS = ymdLocal(ini);
+    var finS = ymdLocal(fin);
     var tot = misPagosConf
       .filter(function(p){ return p.fecha>=iniS && p.fecha<=finS; })
       .reduce(function(a,p){ return a+p.monto; }, 0);
