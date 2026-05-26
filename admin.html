@@ -4651,6 +4651,7 @@ window.addEventListener('popstate', function(ev){
 });
 
 function nav(p){
+  var _prevPage = S.page;
   if(typeof closeMobileMenu==='function') closeMobileMenu();
   // Verificar permiso
   if(S.currentUser){
@@ -4674,7 +4675,7 @@ function nav(p){
   }
   S.page=p;
   S.clienteFiltro='';
-  window._pages={}; // reset pagination on module change
+  if(_prevPage !== p) window._pages={}; // reset pagination only on real module change
   if(p !== 'cuentas') window._cuentasDetalle = null; // reset account detail view
   document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.si[data-nav]').forEach(e=>{if(e.dataset.nav===p)e.classList.add('on');});
