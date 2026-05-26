@@ -8812,7 +8812,7 @@ creditos(){
   filtered = filtered.slice().sort(function(a,b){
     var col=_cs.col, dir=_cs.dir==='asc'?1:-1;
     var va,vb;
-    if(col==='id') return dir*(parseInt(a.id)||0 < parseInt(b.id)||0 ? -1 : parseInt(a.id)||0 > parseInt(b.id)||0 ? 1 : 0);
+    if(col==='id'){ var na=parseInt(String(a.id).replace(/\D/g,''))||0, nb=parseInt(String(b.id).replace(/\D/g,''))||0; return dir*(na-nb); }
     if(col==='cli') { va=(a.cli||'').toLowerCase(); vb=(b.cli||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='modelo') { va=(a.modelo||'').toLowerCase(); vb=(b.modelo||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='fecha') { va=a.fecha||''; vb=b.fecha||''; return dir*(va<vb?-1:va>vb?1:0); }
