@@ -21,9 +21,9 @@
 <link rel="stylesheet" href="assets/pagasi.css?v=20260526-forms">
 <script charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-/* TEST NETWORK — diferenciacion visual del entorno de prueba */
-.sb-logo img{ filter:hue-rotate(160deg) saturate(1.55) brightness(1.05); }
-.sb-logo::after{ content:"TEST NETWORK"; display:block; text-align:center; margin:7px auto 0; width:max-content; background:#E8335A; color:#fff; font-size:9px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; padding:3px 11px; border-radius:50px; }
+/* ===== ENTORNO DE PRUEBA — TODO EN GRIS (diferenciar de produccion) ===== */
+html{ filter:grayscale(1); }
+.sb-logo::after{ content:"TEST NETWORK"; display:block; text-align:center; margin:7px auto 0; width:max-content; background:#555; color:#fff; font-size:9px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; padding:3px 11px; border-radius:50px; }
 </style>
 </head>
 <body>
