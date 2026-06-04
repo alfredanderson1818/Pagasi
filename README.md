@@ -1,2 +1,0 @@
-# Pagasi
-Somos Pagasi
