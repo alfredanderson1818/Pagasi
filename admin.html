@@ -23,7 +23,9 @@
 <style>
 /* ===== ENTORNO DE PRUEBA — TODO EN GRIS (diferenciar de produccion) ===== */
 html{ filter:grayscale(1); }
-.sb-logo::after{ content:"TEST NETWORK"; display:block; text-align:center; margin:7px auto 0; width:max-content; background:#555; color:#fff; font-size:9px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; padding:3px 11px; border-radius:50px; }
+.sb-logo{ height:auto !important; min-height:0 !important; max-height:none !important; overflow:visible !important; display:flex !important; flex-direction:column !important; align-items:center !important; padding-bottom:14px !important; }
+.sb-logo img{ max-width:100%; }
+.sb-logo::after{ content:"TEST NETWORK"; order:99; display:block; text-align:center; margin:9px auto 0; width:max-content; background:#555; color:#fff; font-size:9px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; padding:4px 12px; border-radius:50px; line-height:1; white-space:nowrap; }
 </style>
 </head>
 <body>
